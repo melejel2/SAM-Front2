@@ -1,15 +1,15 @@
 import { Helmet } from "react-helmet-async";
 
 type PageMetaDataProps = {
-    title: string;
+  title: string;
 };
 
 const PageMetaData = ({ title }: PageMetaDataProps) => {
-    return (
-        <Helmet>
-            <title> {title} | Nexus, Client & Admin React Dashboard</title>
-        </Helmet>
-    );
+  return (
+    <Helmet>
+      <title> {title} | SAM, Subcontracts Administrative Management</title>
+    </Helmet>
+  );
 };
 
 export default PageMetaData;

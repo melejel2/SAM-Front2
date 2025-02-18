@@ -3,30 +3,27 @@ import { Toaster } from "sonner";
 
 import { Theme, useTheme } from "@/components/daisyui";
 
-import configureFakeBackend from "@/services/api/fake-backend";
 import Router from "@/services/routes/Router";
 import { AuthContextProvider } from "@/states/auth";
 import { LayoutContextProvider } from "@/states/layout";
 
-configureFakeBackend();
-
 function App() {
-    const { theme } = useTheme();
+  const { theme } = useTheme();
 
-    return (
-        <>
-            <HelmetProvider>
-                <Theme dataTheme={theme}>
-                    <LayoutContextProvider>
-                        <AuthContextProvider>
-                            <Router />
-                            <Toaster richColors />
-                        </AuthContextProvider>
-                    </LayoutContextProvider>
-                </Theme>
-            </HelmetProvider>
-        </>
-    );
+  return (
+    <>
+      <HelmetProvider>
+        <Theme dataTheme={theme}>
+          <LayoutContextProvider>
+            <AuthContextProvider>
+              <Router />
+              <Toaster richColors />
+            </AuthContextProvider>
+          </LayoutContextProvider>
+        </Theme>
+      </HelmetProvider>
+    </>
+  );
 }
 
 export default App;
