@@ -1,0 +1,5 @@
+.filepond--wrapper .filepond--drop-label,
+.filepond--panel-center.filepond--panel-root,
+.filepond--panel-bottom.filepond--panel-root {
+    @apply rounded bg-base-200 text-base-content;
+}

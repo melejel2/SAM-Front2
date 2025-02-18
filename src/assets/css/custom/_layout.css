@@ -1,0 +1,23 @@
+:root {
+    --leftbar-width: 240px;
+}
+
+.leftmenu-wrapper {
+    width: var(--leftbar-width);
+    transition: all 0.3s;
+    @apply sticky bottom-0 top-0 h-screen min-w-60 border-e-[1px] border-base-200 bg-leftmenu-background;
+}
+
+.leftmenu-wrapper.hide {
+    margin-inline-start: calc(var(--leftbar-width) * -1);
+}
+
+.main-wrapper {
+    width: 100%;
+    max-width: 100vw;
+    height: 100vh;
+}
+
+.content-wrapper {
+    @apply grow bg-content-background p-6 transition-all;
+}

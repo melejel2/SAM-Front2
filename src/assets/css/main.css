@@ -1,0 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;1000&display=swap");
+
+@import "_tailwind.css";
+@import "custom/_layout.css";
+@import "custom/_components.css";
+@import "custom/_animation.css";
+
+@import "plugins/_filepond.css";
+
+body {
+    font-family: "DM Sans", serif;
+}
