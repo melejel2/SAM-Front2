@@ -1,5 +1,12 @@
 import clsx from "clsx";
-import { Children, HTMLAttributes, ReactElement, cloneElement, forwardRef, isValidElement } from "react";
+import {
+    Children,
+    HTMLAttributes,
+    ReactElement,
+    cloneElement,
+    forwardRef,
+    isValidElement,
+} from "react";
 import { twMerge } from "tailwind-merge";
 
 import { cn } from "@/helpers/utils/cn";
@@ -17,14 +24,24 @@ export type WindowMockupProps = HTMLAttributes<HTMLDivElement> &
         backgroundColor?: WindowMockupColors;
         border?: boolean;
         borderColor?: WindowMockupColors;
+        children?: ReactElement<{ className?: string }> | ReactElement<{ className?: string }>[];
     };
 
 const WindowMockup = forwardRef<HTMLDivElement, WindowMockupProps>(
     (
-        { border, borderColor, backgroundColor, frameColor, dataTheme, className, children, ...props },
+        {
+            border,
+            borderColor,
+            backgroundColor,
+            frameColor,
+            dataTheme,
+            className,
+            children,
+            ...props
+        },
         ref,
     ): ReactElement => {
-        // Set border color to framecolor or 'bg-base-300', if border color is not defined
+        // Set border color to frameColor or 'base-300' if borderColor is not defined
         const borderColorValue = borderColor ? borderColor : frameColor || "base-300";
 
         const classes = twMerge(
@@ -57,11 +74,8 @@ const WindowMockup = forwardRef<HTMLDivElement, WindowMockupProps>(
             className,
         );
 
-        // If border is true, then we need to add the border-t and padding classes to the children
-        // if more than one child is passed in, or the single child is not a valid element, then we need to wrap the child/children in a div
-
         const numChildren = Children.count(children);
-        const firstChild = numChildren > 0 && Children.toArray(children)[0];
+        const firstChild = numChildren > 0 ? Children.toArray(children)[0] as ReactElement | null : null;
 
         // List of classes that child element will have
         const innerClasses = cn(
@@ -72,8 +86,8 @@ const WindowMockup = forwardRef<HTMLDivElement, WindowMockupProps>(
 
         // Add the innerClasses to the child element, merging classNames if existing, or wrapping with div and adding innerClasses
         const innerEl =
-            firstChild && isValidElement(firstChild) ? (
-                cloneElement(firstChild as ReactElement, {
+            firstChild && isValidElement<{ className?: string }>(firstChild) ? (
+                cloneElement(firstChild, {
                     className: twMerge(innerClasses, firstChild.props.className),
                 })
             ) : (

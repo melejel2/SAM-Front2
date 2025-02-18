@@ -8,7 +8,6 @@ export * from "./Breadcrumbs";
 export * from "./BrowserMockup";
 export * from "./Button";
 export * from "./Card";
-export * from "./Carousel";
 export * from "./ChatBubble";
 export * from "./Checkbox";
 export * from "./CodeMockup";
