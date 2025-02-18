@@ -35,11 +35,11 @@ const Router = (props: RouteProps) => {
             key={"admin-" + index}
             path={route.path}
             element={
-              isLoggedIn() ? (
-                <AdminLayout {...props}>{route.element}</AdminLayout>
-              ) : (
-                <Navigate to={routes.auth.login} replace />
-              )
+              // isLoggedIn() ? (
+              <AdminLayout {...props}>{route.element}</AdminLayout>
+              // ) : (
+              //   <Navigate to={routes.auth.login} replace />
+              // )
             }
           />
         ))}

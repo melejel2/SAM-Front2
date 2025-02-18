@@ -17,14 +17,14 @@ const dashboardRoutes: RoutesProps[] = [
   {
     path: "/dashboard",
     name: "dashboard",
-    element: cw(lazy(() => import("@/pages/admin/dashboard/dashboards"))),
+    element: cw(lazy(() => import("@/pages/admin/dashboard/dashboard"))),
   },
 ];
 
 const adminToolsRoutes: RoutesProps[] = [
   {
-    path: "/admin-tools/branch-data/users",
-    name: "admin-tools.branch-data.users.index",
+    path: "/admin-tools/users",
+    name: "admin-tools.users",
     element: cw(lazy(() => import("@/pages/admin/adminTools/users"))),
   },
 ];

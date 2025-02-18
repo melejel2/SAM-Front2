@@ -11,13 +11,7 @@ const routes = {
 
   adminTools: {
     users: {
-      index: "/admin-tools/branch-data/users",
-    },
-  },
-
-  apps: {
-    chat: {
-      home: "/apps/chat",
+      index: "/admin-tools/users",
     },
   },
 };
