@@ -4,54 +4,56 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
-import httpRequest from "@/services/api/request";
 import routes from "@/services/routes";
+import apiRequest from "@/services/api/api";
 
 const useRegister = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-    const toggleShowPassword = () => {
-        setShowPassword(!showPassword);
-    };
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
 
-    const registerSchema = z.object({
-        username: z.string(),
-        email: z.string().email(),
-        password: z.string(),
-    });
+  const registerSchema = z.object({
+    username: z.string(),
+    email: z.string().email(),
+    password: z.string(),
+  });
 
-    type RegisterSchemaType = z.infer<typeof registerSchema>;
+  type RegisterSchemaType = z.infer<typeof registerSchema>;
 
-    const { control, handleSubmit, setError } = useForm<RegisterSchemaType>({
-        resolver: zodResolver(registerSchema),
-    });
+  const { control, handleSubmit, setError } = useForm<RegisterSchemaType>({
+    resolver: zodResolver(registerSchema),
+  });
 
-    const transformErrorToForm = (errors: Record<string, any>) => {
-        Object.entries(errors).forEach(([key, value]: any[]) => setError(key, { message: value }));
-    };
+  const transformErrorToForm = (errors: Record<string, any>) => {
+    Object.entries(errors).forEach(([key, value]: any[]) =>
+      setError(key, { message: value })
+    );
+  };
 
-    const onSubmit = handleSubmit(async (data) => {
-        setIsLoading(true);
+  const onSubmit = handleSubmit(async (data) => {
+    setIsLoading(true);
 
-        try {
-            await httpRequest.post("/api/any/success/", data);
-            navigate(routes.auth.login);
-        } catch (e: any) {
-            transformErrorToForm(e.response.data);
-        }
-        setIsLoading(false);
-    });
+    try {
+      await apiRequest("/api/any/success/", "POST", "", data);
+      navigate(routes.auth.login);
+    } catch (e: any) {
+      transformErrorToForm(e.response.data);
+    }
+    setIsLoading(false);
+  });
 
-    return {
-        showPassword,
-        isLoading,
-        control,
-        onSubmit,
-        toggleShowPassword,
-    };
+  return {
+    showPassword,
+    isLoading,
+    control,
+    onSubmit,
+    toggleShowPassword,
+  };
 };
 
 export default useRegister;
