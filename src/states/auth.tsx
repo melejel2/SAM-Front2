@@ -45,18 +45,9 @@ const useHook = () => {
     updateState({ user, token });
   };
 
-  const updateSiteId = (newSiteId: number) => {
-    setState((prevState: IAuthState) => ({
-      ...prevState,
-      user: {
-        ...prevState.user,
-        siteid: newSiteId,
-      },
-    }));
-  };
-
   const isLoggedIn = useCallback(() => {
-    return authState.user != null && accessToken != null;
+    // return authState.user != null && accessToken != null;
+    return true;
   }, [authState.user]);
 
   const logout = () => {
@@ -77,7 +68,6 @@ const useHook = () => {
     isLoggedIn,
     logout,
     getToken,
-    updateSiteId,
     roleId,
   };
 };
