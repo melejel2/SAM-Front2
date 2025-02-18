@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { useAuthContext } from "@/states/auth";
-import PAMTable from "./Table";
+import SAMTable from "./Table";
 import { cn } from "@/helpers/utils/cn";
 
 interface InputField {
@@ -325,7 +325,7 @@ const DialogComponent: React.FC<DialogProps> = ({
           </div>
         ) : dialogType === "Preview" ? (
           <form onSubmit={handleSubmit}>
-            <PAMTable
+            <SAMTable
               columns={previewColumns ?? {}}
               tableData={data ?? []}
               inputFields={[]}
@@ -343,7 +343,7 @@ const DialogComponent: React.FC<DialogProps> = ({
             </Button>
           </form>
         ) : dialogType === "Select" ? (
-          <PAMTable
+          <SAMTable
             columns={previewColumns ?? {}}
             tableData={data ?? []}
             inputFields={[]}
@@ -354,7 +354,7 @@ const DialogComponent: React.FC<DialogProps> = ({
           />
         ) : dialogType === "Approve" ? (
           <div className="space-y-5">
-            <PAMTable
+            <SAMTable
               columns={previewColumns ?? {}}
               tableData={data ?? []}
               inputFields={[]}

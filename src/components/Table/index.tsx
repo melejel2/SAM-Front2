@@ -2,7 +2,7 @@ import { Loader } from "../Loader";
 import AccordionComponent from "./Components/Accordion";
 import TableComponent from "./Components/Table";
 
-interface PAMTableProps {
+interface SAMTableProps {
   columns: Record<string, string>;
   previewColumns?: Record<string, string>;
   tableData: any[];
@@ -35,7 +35,7 @@ interface PAMTableProps {
   select?: boolean;
 }
 
-const PAMTable: React.FC<PAMTableProps> = ({
+const SAMTable: React.FC<SAMTableProps> = ({
   columns,
   previewColumns,
   tableData,
@@ -106,4 +106,4 @@ const PAMTable: React.FC<PAMTableProps> = ({
   );
 };
 
-export default PAMTable;
+export default SAMTable;
