@@ -5,7 +5,7 @@
 .leftmenu-wrapper {
     width: var(--leftbar-width);
     transition: all 0.3s;
-    @apply sticky bottom-0 top-0 h-screen min-w-60 border-e-[1px] border-base-200 bg-leftmenu-background;
+    @apply sticky bottom-0 top-0 h-screen min-w-60;
 }
 
 .leftmenu-wrapper.hide {
@@ -19,5 +19,5 @@
 }
 
 .content-wrapper {
-    @apply grow bg-content-background p-6 transition-all;
+    @apply grow bg-base-100 p-6 transition-all;
 }

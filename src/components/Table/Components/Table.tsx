@@ -190,7 +190,7 @@ const TableComponent: React.FC<TableProps> = ({
 
   return (
     <>
-      <Card className="bg-base-100">
+      <Card className="bg-base-200 mt-4 shadow">
         <CardBody className="p-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-between px-5 pt-5 space-y-4 sm:space-y-0">
             {/* Left side with "New" button and (conditionally) the toggle */}
@@ -225,7 +225,7 @@ const TableComponent: React.FC<TableProps> = ({
             </div>
 
             {/* Right side with search */}
-            <div className="form-control flex flex-row items-center rounded-box border border-base-content/20 px-2">
+            <div className="form-control flex flex-row items-center rounded-box shadow bg-base-100 px-2">
               <Icon
                 icon={searchIcon}
                 className="text-base-content/60"

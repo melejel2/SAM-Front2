@@ -13,6 +13,7 @@ import {
 } from "@/data/layout/admin";
 import { useLayoutContext } from "@/states/layout";
 import { IMenuItem } from "@/types/layout/admin";
+import { cn } from "@/helpers/utils/cn";
 
 const AdminLayout = ({ children }: { children: any }) => {
   const {
@@ -51,12 +52,19 @@ const AdminLayout = ({ children }: { children: any }) => {
                 side={<Leftbar menuItems={activeMenuItems} />}
               ></Drawer>
             </div>
-            <div className="hidden lg:block">
+            <div
+              className={cn("hidden lg:block", {
+                "px-4": !leftbar.drawerOpen,
+              })}
+            >
               <Leftbar menuItems={activeMenuItems} hide={leftbar.hide} />
             </div>
             <div className="main-wrapper overflow-auto">
-              <div className="flex h-full flex-col ">
-                <Topbar menuItems={mobileActiveMenuItems} />
+              <div className="flex h-full flex-col">
+                <div className="p-4">
+                  <Topbar menuItems={mobileActiveMenuItems} />
+                </div>
+
                 <div className="content-wrapper">
                   <Suspense>{children}</Suspense>
                 </div>

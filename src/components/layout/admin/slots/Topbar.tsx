@@ -228,12 +228,12 @@ const Topbar = ({ menuItems }: { menuItems: IMenuItem[] }) => {
 
       {/* md screen */}
       {isLoggedIn() && menuItems.length !== 0 ? (
-        <Navbar className="z-10 border-b border-base-200 px-3 hidden md:flex items-center">
+        <Navbar className="z-10 bg-base-200 px-3 hidden md:flex items-center rounded-box">
           <NavbarStart className="">
             <Button
               shape="square"
               color="ghost"
-              size="sm"
+              className="w-5 h-5"
               onClick={() => toggleLeftbarDrawer(!state.leftbar.drawerOpen)}
             >
               <Icon icon={menuIcon} className="inline-block" fontSize={24} />
@@ -273,7 +273,8 @@ const Topbar = ({ menuItems }: { menuItems: IMenuItem[] }) => {
               >
                 <div className="flex items-center gap-2">
                   <div className="flex items-center space-x-2">
-                    <p className="text-sm/none">{authState.user?.username}</p>
+                    {/* <p className="text-sm/none">{authState.user?.username}</p> */}
+                    <p className="text-sm/none">username</p>
                   </div>
                 </div>
               </DropdownToggle>

@@ -5,7 +5,7 @@ import { type ReactNode, Suspense } from "react";
 
 const AuthLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="h-screen w-screen flex flex-col justify-center items-center space-y-2 sm:space-y-6 bg-base-200/50">
+    <div className="h-screen w-screen flex flex-col justify-center items-center space-y-2 sm:space-y-6 bg-base-200">
       <div className="flex items-center justify-between w-full max-w-[26rem] p-4 sm:p-0">
         <Logo />
         <ThemeToggle />

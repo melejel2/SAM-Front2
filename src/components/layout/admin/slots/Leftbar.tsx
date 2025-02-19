@@ -32,8 +32,8 @@ const LeftMenuItem = ({
       <MenuItem className="mb-0.5">
         <Link
           to={url ?? ""}
-          className={cn("hover:bg-base-content/15", {
-            "bg-base-content/10": selected,
+          className={cn("hover:bg-base-content/15 rounded-box", {
+            "bg-[#EAECFA]": selected,
           })}
         >
           <div className="flex items-center gap-2">
@@ -86,25 +86,27 @@ const Leftbar = ({
 
   return (
     <div
-      className={cn("leftmenu-wrapper", {
+      className={cn("leftmenu-wrapper py-4", {
         hide: hide,
       })}
     >
-      <div className="flex h-16 items-center justify-center">
-        <Logo />
+      <div className="h-full bg-base-200  rounded-box shadow">
+        <div className="flex h-16 items-center justify-center">
+          <Logo />
+        </div>
+        <SimpleBar className="h-full">
+          <Menu>
+            {menuItems.map((item) => (
+              <LeftMenuItem
+                menuItem={item}
+                key={item.key}
+                activated={activatedParents}
+                isAdmin={isAdmin}
+              />
+            ))}
+          </Menu>
+        </SimpleBar>
       </div>
-      <SimpleBar className="h-full">
-        <Menu className="mb-6">
-          {menuItems.map((item) => (
-            <LeftMenuItem
-              menuItem={item}
-              key={item.key}
-              activated={activatedParents}
-              isAdmin={isAdmin}
-            />
-          ))}
-        </Menu>
-      </SimpleBar>
     </div>
   );
 };
