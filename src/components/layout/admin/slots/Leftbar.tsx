@@ -33,7 +33,7 @@ const LeftMenuItem = ({
         <Link
           to={url ?? ""}
           className={cn("hover:bg-base-content/15 rounded-box", {
-            "bg-[#EAECFA]": selected,
+            "light:bg-[#EAECFA] dark:bg-base-100/50": selected,
           })}
         >
           <div className="flex items-center gap-2">
