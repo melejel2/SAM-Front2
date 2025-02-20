@@ -13,7 +13,7 @@ const QuickChat = () => {
   const data = useMemo(() => getEcommerceDashboardMessageData, []);
 
   return (
-    <Card className="bg-base-100">
+    <Card className="bg-base-200">
       <CardBody>
         <div className="flex items-center gap-3">
           <Icon
