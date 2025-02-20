@@ -225,18 +225,14 @@ const TableComponent: React.FC<TableProps> = ({
             </div>
 
             {/* Right side with search */}
-            <div className="form-control flex flex-row items-center rounded-box shadow bg-base-100 px-2">
-              <Icon
-                icon={searchIcon}
-                className="text-base-content/60"
-                fontSize={15}
-              />
+            <div className="form-control flex flex-row items-center rounded-box px-2  bg-base-200 border dark:border-base-content/60 text-base-content/60">
+              <Icon icon={searchIcon} fontSize={15} />
               <Input
                 size="sm"
                 placeholder="Search data"
                 bordered={false}
                 borderOffset={false}
-                className="w-full focus:border-transparent focus:outline-0"
+                className="w-full focus:border-transparent focus:outline-0 bg-base-200"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
