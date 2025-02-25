@@ -22,8 +22,28 @@ const dashboardRoutes: IRoutesProps[] = [
 
 const adminToolsRoutes: IRoutesProps[] = [
     {
+        path: "/admin-tools/connection",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/connection"))),
+    },
+    {
+        path: "/admin-tools/currencies-and-units",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/currencies-and-units"))),
+    },
+    {
         path: "/admin-tools/users",
         element: cw(lazy(() => import("@/pages/admin/adminTools/users"))),
+    },
+    {
+        path: "/admin-tools/trades",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/trades"))),
+    },
+    {
+        path: "/admin-tools/cost-codes",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/cost-codes"))),
+    },
+    {
+        path: "/admin-tools/templates",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/templates"))),
     },
 ];
 
