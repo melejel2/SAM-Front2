@@ -214,7 +214,7 @@ const DialogComponent: React.FC<DialogProps> = ({
         {
             if (type === "select") {
                 return (
-                    <label className="input input-sm input-bordered xs:gap-4 flex items-center text-sm md:text-base lg:gap-12">
+                    <label className="input input-sm input-bordered xs:gap-4 flex items-center text-sm lg:gap-12">
                         <span className="w-20 font-normal capitalize opacity-45">{name}</span>
                         <Select
                             className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
@@ -238,9 +238,9 @@ const DialogComponent: React.FC<DialogProps> = ({
             } else {
                 return (
                     <label
-                        className="input input-sm input-bordered flex flex-col items-center gap-2 sm:flex-row"
+                        className="input input-sm input-bordered flex w-full flex-col items-center gap-2 sm:flex-row"
                         key={name}>
-                        <span className="min-w-16 text-sm font-normal opacity-45 md:w-28 md:text-base">
+                        <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
                             {name.charAt(0).toUpperCase() + name.slice(1)}
                         </span>
                         <input
@@ -278,7 +278,8 @@ const DialogComponent: React.FC<DialogProps> = ({
                         <p>{confirmMsg}</p>
                         <div className="flex items-center justify-end space-x-4">
                             <Button
-                                className="btn btn-sm btn-success"
+                                color="success"
+                                size="sm"
                                 type="button"
                                 disabled={isLoading}
                                 loading={isLoading}
@@ -286,7 +287,8 @@ const DialogComponent: React.FC<DialogProps> = ({
                                 Confirm
                             </Button>
                             <Button
-                                className="btn btn-sm btn-error"
+                                color="error"
+                                size="sm"
                                 type="button"
                                 disabled={isLoading}
                                 loading={isLoading}
@@ -305,7 +307,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                             title={"Request Details"}
                         />
 
-                        <Button className="btn btn-sm w-full" type="submit" disabled={isLoading} loading={isLoading}>
+                        <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
                             Export
                         </Button>
                     </form>
@@ -331,7 +333,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                         {showRejectionNote && (
                             <>
                                 <label className="input input-sm input-bordered flex flex-col items-center gap-2 sm:flex-row">
-                                    <span className="min-w-16 text-sm font-normal opacity-45 md:w-28 md:text-base">
+                                    <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
                                         Rejection Note
                                     </span>
                                     <input
@@ -353,7 +355,8 @@ const DialogComponent: React.FC<DialogProps> = ({
                         <div className="text-right">
                             <div className="flex items-center justify-end space-x-4">
                                 <Button
-                                    className="btn btn-sm btn-success"
+                                    color="success"
+                                    size="sm"
                                     type="button"
                                     disabled={isLoading}
                                     loading={isLoading}
@@ -361,8 +364,10 @@ const DialogComponent: React.FC<DialogProps> = ({
                                     Approve
                                 </Button>
                                 <Button
-                                    className="btn btn-sm btn-error disabled:bg-error/30"
+                                    className="disabled:bg-error/30"
+                                    size="sm"
                                     type="button"
+                                    color="error"
                                     disabled={isLoading || (showRejectionNote && rejectionNote === "")}
                                     loading={isLoading}
                                     onClick={handleReject}>
@@ -372,15 +377,16 @@ const DialogComponent: React.FC<DialogProps> = ({
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit}>
-                        <div>
+                    <form onSubmit={handleSubmit} className="py-4">
+                        <div className="space-y-4">
                             {inputFields.map((field) => (
                                 <div key={field.name}>{renderInput(field)}</div>
                             ))}
 
                             {(dialogType === "Add" || dialogType === "Edit") && (
                                 <Button
-                                    className="btn btn-sm w-full"
+                                    className="mt-2 w-full"
+                                    size="sm"
                                     type="submit"
                                     disabled={isLoading}
                                     loading={isLoading}>
