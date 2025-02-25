@@ -6,7 +6,7 @@ import SAMTable from "@/components/Table";
 import useCostCodes from "./use-cost-codes";
 
 const CostCodes = () => {
-    const { columns, tableData, inputFields, hasActions } = useCostCodes();
+    const { columns, tableData, inputFields } = useCostCodes();
 
     return (
         <div>
@@ -18,9 +18,12 @@ const CostCodes = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={hasActions}
-                    title={"Cost Codes"}
+                    actions={true}
+                    editAction={true}
+                    deleteAction={true}
+                    title={"Cost Code"}
                     loading={false}
+                    addBtn
                 />
             </div>
         </div>
