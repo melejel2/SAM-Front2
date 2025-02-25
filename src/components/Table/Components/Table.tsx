@@ -1,0 +1,451 @@
+import React, { useMemo, useState } from "react";
+
+import Icon from "@/components/Icon";
+import { Button, Card, CardBody, Input, Pagination, useDialog } from "@/components/daisyui";
+import { cn } from "@/helpers/utils/cn";
+
+import DialogComponent from "./Dialog";
+
+interface TableProps {
+    tableData: any[];
+    columns: Record<string, string>;
+    previewColumns?: Record<string, string>;
+    actions: boolean;
+    showAction?: boolean;
+    deleteAction?: boolean;
+    editAction?: boolean;
+    title: string;
+    inputFields: Array<{
+        name: string;
+        label: string;
+        type: string;
+        required: boolean;
+    }>;
+    addBtn?: boolean;
+    dynamicDialog?: boolean;
+    openStaticDialog?: (type: "Add" | "Edit" | "Preview", Data?: any) => void;
+    onRowSelect?: (selectedRow: any) => void;
+
+    // OPTIONAL PROPS for the "Show Available Only" toggle
+    showAvailableOnly?: boolean;
+    onToggleAvailableOnly?: () => void;
+
+    // Added property for selectable mode
+    select?: boolean;
+    loading?: boolean; // new prop added
+}
+
+const TableComponent: React.FC<TableProps> = ({
+    tableData,
+    columns,
+    previewColumns,
+    actions,
+    showAction,
+    deleteAction,
+    editAction,
+    inputFields,
+    title,
+    addBtn,
+    dynamicDialog = true,
+    openStaticDialog,
+    onRowSelect,
+    showAvailableOnly,
+    onToggleAvailableOnly,
+    select, // new prop destructured here
+    loading, // new prop destructured here
+}) => {
+    const [sortColumn, setSortColumn] = useState<string | null>(null);
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Preview">("Add");
+    const [currentRow, setCurrentRow] = useState<any | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage] = useState(10);
+    const { dialogRef, handleShow, handleHide } = useDialog();
+
+    const handleRowClick = (row: any) => {
+        if (onRowSelect) {
+            onRowSelect(row);
+        }
+    };
+
+    // Filter the data by search
+    const filteredData = useMemo(() => {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        return tableData.filter((d) =>
+            Object.values(d).some(
+                (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
+            ),
+        );
+    }, [searchQuery, tableData]);
+
+    // Sort the data by the chosen column
+    const sortedData = useMemo(() => {
+        if (!sortColumn) return filteredData;
+        return [...filteredData].sort((a, b) => {
+            const aValue = a[sortColumn];
+            const bValue = b[sortColumn];
+
+            if (aValue === undefined || bValue === undefined) return 0;
+
+            if (typeof aValue === "string" && typeof bValue === "string") {
+                return sortOrder === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            }
+
+            if (typeof aValue === "number" && typeof bValue === "number") {
+                return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+            }
+
+            return 0;
+        });
+    }, [filteredData, sortColumn, sortOrder]);
+
+    // Paginate the data
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        return sortedData.slice(startIndex, endIndex);
+    }, [sortedData, currentPage, rowsPerPage]);
+
+    const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+
+    // Sorting behavior
+    const handleSort = (column: string) => {
+        setSortOrder((prevOrder) => (sortColumn === column && prevOrder === "asc" ? "desc" : "asc"));
+        setSortColumn(column);
+    };
+
+    // Search behavior
+    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(event.target.value);
+        setCurrentPage(1);
+    };
+
+    // Pagination controls
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    // Opening the Add/Edit/Preview dialogs
+    const openDialog = async () => {
+        setDialogType("Add");
+        setCurrentRow(null);
+        if (dynamicDialog) {
+            handleShow();
+        } else {
+            if (openStaticDialog) {
+                openStaticDialog("Add");
+            }
+        }
+    };
+
+    const openEditDialog = (row: any) => {
+        setDialogType("Edit");
+        setCurrentRow(row);
+        if (dynamicDialog) {
+            handleShow();
+        } else {
+            if (openStaticDialog) {
+                openStaticDialog("Edit", row);
+            }
+        }
+    };
+
+    const openPreviewDialog = async (row: any) => {
+        setDialogType("Preview");
+        setCurrentRow(row);
+        if (dynamicDialog) {
+            handleShow();
+        } else {
+            if (openStaticDialog) {
+                openStaticDialog("Preview", row);
+            }
+        }
+    };
+
+    const handleDelete = (id: number) => {
+        console.log(`Delete row with ID: ${id}`);
+    };
+
+    const handleSuccess = (data: any) => {
+        console.log(data);
+        handleHide();
+    };
+
+    return (
+        <>
+            <Card className="bg-base-100 mt-4 shadow">
+                <CardBody className="p-0">
+                    <div className="flex flex-col items-start justify-start space-y-4 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                        {/* Left side with "New" button and (conditionally) the toggle */}
+                        <div className="flex items-center space-x-2">
+                            {addBtn ? (
+                                <Button
+                                    onClick={openDialog}
+                                    className="btn btn-ghost btn-xs border-base-content/20 h-8 border">
+                                    <Icon icon={"plus"} fontSize={4} />
+                                    New {title}
+                                </Button>
+                            ) : (
+                                <span className="hidden lg:block"></span>
+                            )}
+
+                            {/* Render the toggle ONLY if both props are provided */}
+                            {typeof showAvailableOnly === "boolean" && typeof onToggleAvailableOnly === "function" && (
+                                <div className="form-control !-ml-1">
+                                    <label className="label cursor-pointer space-x-2">
+                                        <span className="label-text">Only Available</span>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox-xs checkbox checkbox-info"
+                                            checked={showAvailableOnly}
+                                            onChange={onToggleAvailableOnly}
+                                        />
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right side with search */}
+                        <div className="form-control rounded-box bg-base-100 dark:border-base-content/60 text-base-content/60 flex flex-row items-center border px-2">
+                            <Icon icon={"search"} fontSize={4} />
+                            <Input
+                                size="sm"
+                                placeholder="Search data"
+                                borderOffset={false}
+                                className="bg-base-100 w-full border-none focus:border-transparent focus:outline-0"
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                            />
+                        </div>
+                    </div>
+                    <div className="overflow-auto">
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="hover:bg-base-200/40">
+                                    {select && (
+                                        <th className="border-base-content/5 border-b px-2 py-3 pl-6 text-left text-sm font-normal">
+                                            Select
+                                        </th>
+                                    )}
+                                    {Object.entries(columns).map(([columnKey, columnLabel], index) => (
+                                        <th
+                                            key={columnKey}
+                                            className={cn(
+                                                "border-base-content/5 border-b px-2 py-3 pl-6 text-left text-sm font-normal",
+                                                { "pl-6": index === 0 },
+                                            )}>
+                                            <div
+                                                className="flex cursor-pointer items-center justify-start"
+                                                onClick={() => handleSort(columnKey)}>
+                                                <span>{columnLabel}</span>
+                                                {sortColumn === columnKey && (
+                                                    <Icon
+                                                        icon={sortOrder === "asc" ? "chevron-up" : "chevron-down"}
+                                                        className="ml-1"
+                                                        fontSize={14}
+                                                    />
+                                                )}
+                                            </div>
+                                        </th>
+                                    ))}
+                                    {actions && (
+                                        <th className="border-base-content/5 border-b py-3 pr-6 pl-2 text-right text-sm font-normal">
+                                            Actions
+                                        </th>
+                                    )}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td
+                                            colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                            className="p-2 text-center">
+                                            Loading...
+                                        </td>
+                                    </tr>
+                                ) : paginatedData.length > 0 ? (
+                                    paginatedData.map((row, index) => (
+                                        <tr
+                                            key={index}
+                                            className="hover:bg-base-200/40 cursor-pointer"
+                                            onClick={() => handleRowClick(row)}>
+                                            {select && (
+                                                <td className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="checkbox-xs checkbox checkbox-info ml-2"
+                                                    />
+                                                </td>
+                                            )}
+                                            {Object.keys(columns).map((columnKey) => (
+                                                <td
+                                                    key={columnKey}
+                                                    className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
+                                                    {row[columnKey] ?? "-"}
+                                                </td>
+                                            ))}
+                                            {actions && (
+                                                <td className="border-base-content/5 border-y px-2 py-3 pr-6 text-right text-sm font-medium">
+                                                    <div className="inline-flex w-fit">
+                                                        {showAction && (
+                                                            <Button
+                                                                color="ghost"
+                                                                size="sm"
+                                                                shape="square"
+                                                                aria-label="Preview Row"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openPreviewDialog(row);
+                                                                }}>
+                                                                <Icon
+                                                                    icon={"eye"}
+                                                                    className="text-base-content/70"
+                                                                    fontSize={4}
+                                                                />
+                                                            </Button>
+                                                        )}
+                                                        {editAction && (
+                                                            <Button
+                                                                color="ghost"
+                                                                size="sm"
+                                                                shape="square"
+                                                                aria-label="Edit Row"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openEditDialog(row);
+                                                                }}>
+                                                                <Icon
+                                                                    icon={"pencil"}
+                                                                    className="text-base-content/70"
+                                                                    fontSize={4}
+                                                                />
+                                                            </Button>
+                                                        )}
+                                                        {deleteAction && (
+                                                            <Button
+                                                                color="ghost"
+                                                                className="text-error/70 hover:bg-error/20"
+                                                                size="sm"
+                                                                shape="square"
+                                                                aria-label="Delete Row"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(row.id);
+                                                                }}>
+                                                                <Icon icon={"trash"} fontSize={4} />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr className="hover:bg-base-200/40 cursor-pointer">
+                                        <td
+                                            colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                            className="p-2 text-center">
+                                            No data available
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-end px-5 pt-3 pb-5">
+                            <Pagination>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    aria-label="pagination-prev"
+                                    className="join-item"
+                                    disabled={currentPage === 1}
+                                    onClick={() => handlePageChange(currentPage - 1)}>
+                                    <Icon icon={"chevron-left"} fontSize={4} />
+                                </Button>
+
+                                {/* Always show the first page */}
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className={cn("join-item", {
+                                        "bg-base-100": currentPage === 1,
+                                    })}
+                                    active={currentPage === 1}
+                                    onClick={() => handlePageChange(1)}>
+                                    1
+                                </Button>
+
+                                {currentPage > 3 && <span className="join-item"> </span>}
+
+                                {Array.from({ length: 3 }, (_, index) => {
+                                    const page = currentPage - 1 + index;
+                                    if (page > 1 && page < totalPages) {
+                                        return (
+                                            <Button
+                                                type="button"
+                                                key={page}
+                                                size="sm"
+                                                className={cn("join-item", {
+                                                    "bg-base-100": currentPage === page,
+                                                })}
+                                                active={currentPage === page}
+                                                onClick={() => handlePageChange(page)}>
+                                                {page}
+                                            </Button>
+                                        );
+                                    }
+                                    return null;
+                                })}
+
+                                {currentPage < totalPages - 2 && <span className="join-item"> </span>}
+
+                                {totalPages > 1 && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        className={cn("join-item", {
+                                            "bg-base-100": currentPage === totalPages,
+                                        })}
+                                        active={currentPage === totalPages}
+                                        onClick={() => handlePageChange(totalPages)}>
+                                        {totalPages}
+                                    </Button>
+                                )}
+
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    aria-label="pagination-next"
+                                    className="join-item"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => handlePageChange(currentPage + 1)}>
+                                    <Icon icon={"chevron-right"} fontSize={4} />
+                                </Button>
+                            </Pagination>
+                        </div>
+                    )}
+                </CardBody>
+            </Card>
+
+            {(addBtn || actions) && (
+                <DialogComponent
+                    handleHide={handleHide}
+                    dialogRef={dialogRef}
+                    dialogType={dialogType}
+                    current={currentRow}
+                    onSuccess={handleSuccess}
+                    inputFields={inputFields}
+                    title={title}
+                    previewColumns={previewColumns}
+                    data={[]}
+                />
+            )}
+        </>
+    );
+};
+
+export default TableComponent;

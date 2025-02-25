@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" class="group/html">
+
+<head>
+    <meta charset="UTF-8" />
+    <link href="/images/favicon-light.png" media="(prefers-color-scheme: light)" rel="icon" />
+    <link href="/images/favicon-dark.png" media="(prefers-color-scheme: dark)" rel="icon" />
+
+    <script>
+        try {
+            const localStorageItem = localStorage.getItem("__SAM_CONFIG__");
+            if (localStorageItem) {
+                const theme = JSON.parse(localStorageItem).theme;
+                if (theme !== "system") {
+                    document.documentElement.setAttribute("data-theme", theme);
+                }
+            }
+        } catch (err) {
+            console.log(err);
+        }
+    </script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main"></script>
+</body>
+
+</html>
