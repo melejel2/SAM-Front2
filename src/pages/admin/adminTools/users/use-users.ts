@@ -4,59 +4,70 @@ const useUsers = () => {
     const [hasActions, _] = useState<boolean>(true);
 
     const columns = {
-        id: "ID",
-        name: "Name",
+        first_name: "First Name",
+        last_name: "Last Name",
+        telephone: "Telephone",
+        email: "Email",
         username: "Username",
         password: "Password",
-        site_name: "Site Name",
-        type: "Type",
-        last_login: "Last Login",
+        role: "Role",
     };
     const tableData = [
         {
             id: "1",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            first_name: "First Name 1",
+            last_name: "Last Name 1",
+            telephone: "Telephone 1",
+            email: "Email 1",
+            username: "Username 1",
+            password: "Password 1",
+            role: "Role 1",
         },
         {
             id: "2",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            first_name: "First Name 2",
+            last_name: "Last Name 2",
+            telephone: "Telephone 2",
+            email: "Email 2",
+            username: "Username 2",
+            password: "Password 2",
+            role: "Role 2",
         },
         {
             id: "3",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            first_name: "First Name 3",
+            last_name: "Last Name 3",
+            telephone: "Telephone 3",
+            email: "Email 3",
+            username: "Username 3",
+            password: "Password 3",
+            role: "Role 3",
         },
     ];
 
     const inputFields = [
         {
-            name: "type",
-            label: "Type",
-            type: "select",
+            name: "first_name",
+            label: "First Name",
+            type: "text",
             required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
         },
         {
-            name: "name",
-            label: "Name",
+            name: "last_name",
+            label: "Last Name",
             type: "text",
+            required: true,
+        },
+        {
+            name: "telephone",
+            label: "Telephone",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "email",
+            label: "Email",
+            type: "email",
             required: true,
         },
         {
@@ -73,11 +84,18 @@ const useUsers = () => {
         },
 
         {
-            name: "site",
-            label: "Site",
+            name: "role",
+            label: "Role",
             type: "select",
             required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
+            options: [
+                "Regional Operations Manager",
+                "General Manager",
+                "Operations Manager",
+                "Contracts Manager",
+                "Accountant",
+                "Admin",
+            ],
         },
     ];
 

@@ -1,4 +1,3 @@
-import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -18,9 +17,12 @@ const Users = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={hasActions}
+                    actions={true}
+                    editAction={true}
+                    deleteAction={true}
                     title={"Users"}
                     loading={false}
+                    addBtn
                 />
             </div>
         </div>
