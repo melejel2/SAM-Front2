@@ -18,9 +18,12 @@ const Connection = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={hasActions}
+                    actions={true}
+                    editAction={true}
+                    deleteAction={true}
                     title={"Connection"}
                     loading={false}
+                    addBtn
                 />
             </div>
         </div>

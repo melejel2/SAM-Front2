@@ -4,58 +4,53 @@ const useConnection = () => {
     const [hasActions, _] = useState<boolean>(true);
 
     const columns = {
-        id: "ID",
-        name: "Name",
+        data_source: "Data Source",
+        database: "Database",
         username: "Username",
         password: "Password",
-        site_name: "Site Name",
-        type: "Type",
-        last_login: "Last Login",
+        name: "Name",
+        acronym: "Acronym",
     };
     const tableData = [
         {
             id: "1",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            data_source: "Data Source 1",
+            database: "Database 1",
+            username: "Username 1",
+            password: "Password 1",
+            name: "Name 1",
+            acronym: "Acronym 1",
         },
         {
             id: "2",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            data_source: "Data Source 2",
+            database: "Database 2",
+            username: "Username 2",
+            password: "Password 2",
+            name: "Name 2",
+            acronym: "Acronym 2",
         },
         {
             id: "3",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            data_source: "Data Source 3",
+            database: "Database 3",
+            username: "Username 3",
+            password: "Password 3",
+            name: "Name 3",
+            acronym: "Acronym 3",
         },
     ];
 
     const inputFields = [
         {
-            name: "type",
-            label: "Type",
-            type: "select",
+            name: "data Source",
+            label: "Data Source",
+            type: "text",
             required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
         },
         {
-            name: "name",
-            label: "Name",
+            name: "database",
+            label: "Database",
             type: "text",
             required: true,
         },
@@ -71,13 +66,17 @@ const useConnection = () => {
             type: "text",
             required: true,
         },
-
         {
-            name: "site",
-            label: "Site",
-            type: "select",
+            name: "name",
+            label: "Name",
+            type: "text",
             required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
+        },
+        {
+            name: "acronym",
+            label: "Acronym",
+            type: "text",
+            required: true,
         },
     ];
 
