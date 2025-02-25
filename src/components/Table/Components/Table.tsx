@@ -299,11 +299,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     openPreviewDialog(row);
                                                                 }}>
-                                                                <Icon
-                                                                    icon={"eye"}
-                                                                    className="text-base-content/70"
-                                                                    fontSize={4}
-                                                                />
+                                                                <Icon icon={"eye"} className="text-base-content/70" />
                                                             </Button>
                                                         )}
                                                         {editAction && (
@@ -319,7 +315,6 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 <Icon
                                                                     icon={"pencil"}
                                                                     className="text-base-content/70"
-                                                                    fontSize={4}
                                                                 />
                                                             </Button>
                                                         )}
@@ -334,7 +329,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     handleDelete(row.id);
                                                                 }}>
-                                                                <Icon icon={"trash"} fontSize={4} />
+                                                                <Icon icon={"trash"} />
                                                             </Button>
                                                         )}
                                                     </div>
