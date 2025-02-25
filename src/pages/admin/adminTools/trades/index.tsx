@@ -6,7 +6,7 @@ import SAMTable from "@/components/Table";
 import useTrades from "./use-trades";
 
 const Trades = () => {
-    const { columns, tableData, inputFields, hasActions } = useTrades();
+    const { columns, tableData, inputFields } = useTrades();
 
     return (
         <div>
@@ -18,9 +18,12 @@ const Trades = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={hasActions}
+                    actions={true}
+                    editAction={true}
+                    deleteAction={true}
                     title={"Trades"}
                     loading={false}
+                    addBtn
                 />
             </div>
         </div>
