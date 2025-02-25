@@ -16,10 +16,40 @@ export const adminToolsMenuItems: ISidebarMenuItem[] = [
         isTitle: true,
     },
     {
+        id: "admin-tools-connection",
+        icon: "lucide--server",
+        label: "Connection",
+        url: "/admin-tools/connection",
+    },
+    {
+        id: "admin-tools-currencies-and-units",
+        icon: "lucide--dollar-sign",
+        label: "Currencies and Units",
+        url: "/admin-tools/currencies-and-units",
+    },
+    {
         id: "admin-tools-users",
         icon: "lucide--users",
         label: "Users",
         url: "/admin-tools/users",
+    },
+    {
+        id: "admin-tools-trades",
+        icon: "lucide--list",
+        label: "Trades",
+        url: "/admin-tools/trades",
+    },
+    {
+        id: "admin-tools-cost-codes",
+        icon: "lucide--cloud-rain",
+        label: "Cost Codes",
+        url: "/admin-tools/cost-codes",
+    },
+    {
+        id: "admin-tools-templates",
+        icon: "lucide--layout",
+        label: "Templates",
+        url: "/admin-tools/templates",
     },
 ];
 
