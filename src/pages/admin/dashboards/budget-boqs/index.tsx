@@ -2,7 +2,7 @@ import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
 
-import useBudgetBOQs from "./use-budget-boqs";
+import useBudgetBOQs from "./use-budget-BOQs";
 
 const BudgetBOQs = () => {
     const { columns, tableData, inputFields } = useBudgetBOQs();
