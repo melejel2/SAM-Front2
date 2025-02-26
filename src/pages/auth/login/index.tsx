@@ -94,11 +94,17 @@ const LoginPage = () => {
                                 </span>
                             </label>
                         </div>
-                        <Link to="/dashboard" className="btn btn-primary btn-wide mt-2 max-w-full gap-3">
-                            <Icon icon={"log-in"} />
-                            Login
-                        </Link>
-                        <Button color="ghost" className="btn-wide border-base-300 max-w-full gap-3">
+                        <Button color="primary" className="btn-wide mt-2 max-w-full" disabled={!isTermsAgreed}>
+                            <Link to="/dashboard" className="btn btn-wide btn-ghost max-w-full gap-3">
+                                <Icon icon={"log-in"} />
+                                Login
+                            </Link>
+                        </Button>
+
+                        <Button
+                            color="ghost"
+                            className="btn-wide border-base-300 max-w-full gap-3"
+                            disabled={!isTermsAgreed}>
                             <img
                                 src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
                                 className="size-4.5"
