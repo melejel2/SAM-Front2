@@ -31,7 +31,7 @@ const LoginPage = () => {
                         <fieldset className="fieldset">
                             <legend className="fieldset-legend">Database</legend>
                             <label className="input w-full focus:outline-0">
-                                <Icon icon={"server"} fontSize={5} className="text-base-content/80" />
+                                <Icon icon={"server"} fontSize={5} className="text-base-content/40" />
                                 <Select
                                     className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
                                     value={0}
@@ -53,14 +53,14 @@ const LoginPage = () => {
                         <fieldset className="fieldset">
                             <legend className="fieldset-legend">Email</legend>
                             <label className="input w-full focus:outline-0">
-                                <Icon icon={"user-2"} fontSize={5} className="text-base-content/80" />
+                                <Icon icon={"user-2"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Email Address" type="email" />
                             </label>
                         </fieldset>
                         <fieldset className="fieldset">
                             <legend className="fieldset-legend">Password</legend>
                             <label className="input w-full focus:outline-0">
-                                <Icon icon={"key-round"} fontSize={5} className="text-base-content/80" />
+                                <Icon icon={"key-round"} fontSize={5} className="text-base-content/40" />
                                 <input
                                     className="grow focus:outline-0"
                                     placeholder="Password"
@@ -84,10 +84,9 @@ const LoginPage = () => {
                                 color="primary"
                                 size="xs"
                                 aria-label="agreement"
-                                id="agreement"
                                 onChange={() => setIsTermsAgreed(!isTermsAgreed)}
                             />
-                            <label htmlFor="agreement" className="text-sm">
+                            <label className="text-sm">
                                 I agree with
                                 <span className="text-primary ms-1 cursor-pointer hover:underline">
                                     terms and conditions

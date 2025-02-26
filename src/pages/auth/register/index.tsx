@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 
+import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
+import { Button } from "@/components/daisyui";
 
 const RegisterPage = () => {
-    const [showPassword, setShowPassword] = useState(false);
     const [isTermsAgreed, setIsTermsAgreed] = useState<boolean>(false);
 
     return (
@@ -26,20 +27,20 @@ const RegisterPage = () => {
                         }}>
                         <fieldset className="fieldset">
                             <label className="input w-full focus:outline-0">
-                                <span className="iconify lucide--user-2 text-base-content/40 size-5"></span>
+                                <Icon icon={"user-2"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Name" type="text" />
                             </label>
                         </fieldset>
                         <fieldset className="fieldset">
                             <label className="input w-full focus:outline-0">
-                                <span className="iconify lucide--mail text-base-content/40 size-5"></span>
+                                <Icon icon={"mail"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Email Address" type="email" />
                             </label>
                         </fieldset>
 
                         <fieldset className="fieldset">
                             <label className="input w-full focus:outline-0">
-                                <span className="iconify lucide--phone text-base-content/40 size-5"></span>
+                                <Icon icon={"phone"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Phone Number" type="text" />
                             </label>
                         </fieldset>
@@ -49,10 +50,9 @@ const RegisterPage = () => {
                                 className="checkbox checkbox-xs checkbox-primary"
                                 aria-label="Checkbox"
                                 type="checkbox"
-                                id="agreement"
                                 onChange={() => setIsTermsAgreed(!isTermsAgreed)}
                             />
-                            <label htmlFor="agreement" className="text-sm">
+                            <label className="text-sm">
                                 I agree with
                                 <span className="text-primary ms-1 cursor-pointer hover:underline">
                                     terms and conditions
@@ -60,10 +60,12 @@ const RegisterPage = () => {
                             </label>
                         </div>
 
-                        <Link to="/auth/login" className="btn btn-primary btn-wide mt-2 max-w-full gap-3">
-                            <span className="iconify lucide--user-plus size-4" />
-                            Register
-                        </Link>
+                        <Button color="primary" className="btn-wide mt-2 max-w-full" disabled={!isTermsAgreed}>
+                            <Link to="/auth/login" className="btn btn-wide btn-ghost max-w-full gap-3">
+                                <Icon icon={"user-plus"} />
+                                Register
+                            </Link>
+                        </Button>
 
                         <p className="text-base-content/80 mt-4 text-center text-sm md:mt-6">
                             I have already to

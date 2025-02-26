@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router";
 
+import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
+import { Button } from "@/components/daisyui";
 
 const ForgotPasswordPage = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -37,10 +39,9 @@ const ForgotPasswordPage = () => {
                                 className="checkbox checkbox-xs checkbox-primary"
                                 aria-label="Checkbox"
                                 type="checkbox"
-                                id="agreement"
                                 onChange={() => setIsTermsAgreed(!isTermsAgreed)}
                             />
-                            <label htmlFor="agreement" className="text-sm">
+                            <label className="text-sm">
                                 I agree with
                                 <span className="text-primary ms-1 cursor-pointer hover:underline">
                                     terms and conditions
@@ -48,10 +49,12 @@ const ForgotPasswordPage = () => {
                             </label>
                         </div>
 
-                        <Link to="/auth/reset-password" className="btn btn-primary btn-wide mt-2 max-w-full gap-3">
-                            <span className="iconify lucide--mail-plus size-4" />
-                            Send a reset link
-                        </Link>
+                        <Button color="primary" className="btn-wide mt-2 max-w-full" disabled={!isTermsAgreed}>
+                            <Link to="/auth/reset-password" className="btn btn-wide btn-ghost max-w-full gap-3">
+                                <Icon icon={"mail-plus"} />
+                                Send a reset link
+                            </Link>
+                        </Button>
 
                         <p className="text-base-content/80 mt-4 text-center text-sm md:mt-6">
                             I have already to
