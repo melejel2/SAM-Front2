@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router";
 
+import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
+import { Button, Checkbox, Select, SelectOption } from "@/components/daisyui";
 
 const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isTermsAgreed, setIsTermsAgreed] = useState<boolean>(false);
+
+    const databases: any[] = ["DB1", "DB2", "DB3"];
 
     return (
         <>
@@ -25,17 +29,38 @@ const LoginPage = () => {
                             // onSubmit();
                         }}>
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Email</legend>
+                            <legend className="fieldset-legend">Database</legend>
                             <label className="input w-full focus:outline-0">
-                                <span className="iconify lucide--user-2 text-base-content/80 size-5"></span>
-                                <input className="grow focus:outline-0" placeholder="Email Address" type="email" />
+                                <Icon icon={"server"} fontSize={5} className="text-base-content/80" />
+                                <Select
+                                    className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
+                                    value={0}
+                                    required={true}
+                                    onTouchStart={(e) => {
+                                        if (e.touches.length > 1) {
+                                            e.preventDefault();
+                                        }
+                                    }}>
+                                    {(databases ?? []).map((database) => (
+                                        <SelectOption key={database} value={database} className="bg-base-100">
+                                            {database}
+                                        </SelectOption>
+                                    ))}
+                                </Select>
                             </label>
                         </fieldset>
 
                         <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Email</legend>
+                            <label className="input w-full focus:outline-0">
+                                <Icon icon={"user-2"} fontSize={5} className="text-base-content/80" />
+                                <input className="grow focus:outline-0" placeholder="Email Address" type="email" />
+                            </label>
+                        </fieldset>
+                        <fieldset className="fieldset">
                             <legend className="fieldset-legend">Password</legend>
                             <label className="input w-full focus:outline-0">
-                                <span className="iconify lucide--key-round text-base-content/80 size-5"></span>
+                                <Icon icon={"key-round"} fontSize={5} className="text-base-content/80" />
                                 <input
                                     className="grow focus:outline-0"
                                     placeholder="Password"
@@ -45,26 +70,20 @@ const LoginPage = () => {
                                     className="btn btn-xs btn-ghost btn-circle"
                                     onClick={() => setShowPassword(!showPassword)}
                                     aria-label="Password">
-                                    {showPassword ? (
-                                        <span className="iconify lucide--eye-off size-4" />
-                                    ) : (
-                                        <span className="iconify lucide--eye size-4" />
-                                    )}
+                                    {showPassword ? <Icon icon={"eye-off"} /> : <Icon icon={"eye"} />}
                                 </button>
                             </label>
                         </fieldset>
-
                         <div className="text-end">
                             <Link className="label-text text-base-content/80 text-xs" to="/auth/forgot-password">
                                 Forgot Password?
                             </Link>
                         </div>
-
                         <div className="mt-4 flex items-center gap-3 md:mt-6">
-                            <input
-                                className="checkbox checkbox-xs checkbox-primary"
-                                aria-label="Checkbox"
-                                type="checkbox"
+                            <Checkbox
+                                color="primary"
+                                size="xs"
+                                aria-label="agreement"
                                 id="agreement"
                                 onChange={() => setIsTermsAgreed(!isTermsAgreed)}
                             />
@@ -75,21 +94,18 @@ const LoginPage = () => {
                                 </span>
                             </label>
                         </div>
-
                         <Link to="/dashboard" className="btn btn-primary btn-wide mt-2 max-w-full gap-3">
-                            <span className="iconify lucide--log-in size-4" />
+                            <Icon icon={"log-in"} />
                             Login
                         </Link>
-
-                        <button className="btn btn-ghost btn-wide border-base-300 max-w-full gap-3">
+                        <Button color="ghost" className="btn-wide border-base-300 max-w-full gap-3">
                             <img
                                 src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
                                 className="size-4.5"
-                                alt=""
+                                alt="Microsoft Logo"
                             />
                             Sign in with Microsoft
-                        </button>
-
+                        </Button>
                         <p className="text-base-content/80 mt-4 text-center text-sm md:mt-6">
                             Haven&apos;t account
                             <Link className="text-primary ms-1 hover:underline" to="/auth/register">
