@@ -18,6 +18,26 @@ const dashboardRoutes: IRoutesProps[] = [
         path: "/dashboard",
         element: cw(lazy(() => import("@/pages/admin/dashboards/dashboard"))),
     },
+    {
+        path: "/dashboard/budget-BOQs",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/budget-BOQs"))),
+    },
+    {
+        path: "/dashboard/contracts-database",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database"))),
+    },
+    {
+        path: "/dashboard/deductions-database",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/deductions-database"))),
+    },
+    {
+        path: "/dashboard/IPCs-database",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/IPCs-database"))),
+    },
+    {
+        path: "/dashboard/reports",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/reports"))),
+    },
 ];
 
 const adminToolsRoutes: IRoutesProps[] = [
