@@ -4,80 +4,87 @@ const useTemplates = () => {
     const [hasActions, _] = useState<boolean>(true);
 
     const columns = {
-        id: "ID",
-        name: "Name",
-        username: "Username",
-        password: "Password",
-        site_name: "Site Name",
+        code: "Code",
+        template_name: "Template Name",
+        function: "Function",
         type: "Type",
-        last_login: "Last Login",
+        contract_type: "Contract Type",
+        language: "Language",
     };
     const tableData = [
         {
             id: "1",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            code: "Code 1",
+            template_name: "Template Name 1",
+            function: "Function 1",
+            type: "Type 1",
+            contract_type: "Contract Type 1",
+            language: "Language 1",
         },
         {
             id: "2",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            code: "Code 2",
+            template_name: "Template Name 2",
+            function: "Function 2",
+            type: "Type 2",
+            contract_type: "Contract Type 2",
+            language: "Language 2",
         },
         {
             id: "3",
-            name: "Ralph BOU JAOUDE",
-            username: "raboujaoude",
-            password: "***",
-            site_name:
-                "Passcam Yaounde, Passcam Douala, Maroua CHR, Centre Hospitalier Y, Garoua CHR, Ngaoundere CHR, Bertoua CHR, CM Office",
-            type: "Operations Manager",
-            last_login: "11/12/2024",
+            code: "Code 3",
+            template_name: "Template Name 3",
+            function: "Function 3",
+            type: "Type 3",
+            contract_type: "Contract Type 3",
+            language: "Language 3",
         },
     ];
 
     const inputFields = [
         {
+            name: "code",
+            label: "Code",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "template_name",
+            label: "Template Name",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "function",
+            label: "Function",
+            type: "select",
+            required: true,
+            options: ["Contract", "VO", "Termination Letter", "Discharge"],
+        },
+        {
             name: "type",
             label: "Type",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "contract_type",
+            label: "Contract Type",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "language",
+            label: "Language",
             type: "select",
             required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
+            options: ["EN", "FR"],
         },
         {
-            name: "name",
-            label: "Name",
-            type: "text",
+            name: "file",
+            label: "Upload File",
+            type: "file",
             required: true,
-        },
-        {
-            name: "username",
-            label: "Username",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "password",
-            label: "Password",
-            type: "text",
-            required: true,
-        },
-
-        {
-            name: "site",
-            label: "Site",
-            type: "select",
-            required: true,
-            options: ["option 1", "option 2", "option 3", "option 4", "option 5"],
         },
     ];
 

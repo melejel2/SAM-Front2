@@ -18,9 +18,12 @@ const Templates = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={hasActions}
-                    title={"Templates"}
+                    actions={true}
+                    deleteAction={true}
+                    showAction={true}
+                    title={"Template"}
                     loading={false}
+                    addBtn={true}
                 />
             </div>
         </div>
