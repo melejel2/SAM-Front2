@@ -1,4 +1,3 @@
-import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -23,7 +22,7 @@ const CostCodes = () => {
                     deleteAction={true}
                     title={"Cost Code"}
                     loading={false}
-                    addBtn
+                    addBtn={true}
                 />
             </div>
         </div>

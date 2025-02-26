@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 const useConnection = () => {
-    const [hasActions, _] = useState<boolean>(true);
-
     const columns = {
         data_source: "Data Source",
         database: "Database",
@@ -43,7 +39,7 @@ const useConnection = () => {
 
     const inputFields = [
         {
-            name: "data Source",
+            name: "data_source",
             label: "Data Source",
             type: "text",
             required: true,
@@ -84,7 +80,6 @@ const useConnection = () => {
         columns,
         tableData,
         inputFields,
-        hasActions,
     };
 };
 

@@ -1,4 +1,3 @@
-import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -6,15 +5,8 @@ import SAMTable from "@/components/Table";
 import useCurrenciesAndUnits from "./use-currencies-and-units";
 
 const CurrenciesAndUnits = () => {
-    const {
-        currenciesColumns,
-        currencyTableData,
-        currencyInputFields,
-        unitsColumns,
-        unitsTableData,
-        unitInputFields,
-        hasActions,
-    } = useCurrenciesAndUnits();
+    const { currenciesColumns, currencyTableData, currencyInputFields, unitsColumns, unitsTableData, unitInputFields } =
+        useCurrenciesAndUnits();
 
     return (
         <div>

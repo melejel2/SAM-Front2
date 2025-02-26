@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 const useCurrenciesAndUnits = () => {
-    const [hasActions, _] = useState<boolean>(true);
-
     const currenciesColumns = {
         currency_code: "Currency Code",
         currency_full_name: "Currency Full Name",
@@ -105,7 +101,6 @@ const useCurrenciesAndUnits = () => {
         unitsTableData,
         currencyInputFields,
         unitInputFields,
-        hasActions,
     };
 };
 

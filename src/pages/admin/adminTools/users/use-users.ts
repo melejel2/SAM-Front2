@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 const useUsers = () => {
-    const [hasActions, _] = useState<boolean>(true);
-
     const columns = {
         first_name: "First Name",
         last_name: "Last Name",
@@ -103,7 +99,6 @@ const useUsers = () => {
         columns,
         tableData,
         inputFields,
-        hasActions,
     };
 };
 

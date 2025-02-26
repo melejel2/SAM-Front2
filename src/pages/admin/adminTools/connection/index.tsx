@@ -1,4 +1,3 @@
-import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -6,7 +5,7 @@ import SAMTable from "@/components/Table";
 import useConnection from "./use-connection";
 
 const Connection = () => {
-    const { columns, tableData, inputFields, hasActions } = useConnection();
+    const { columns, tableData, inputFields } = useConnection();
 
     return (
         <div>
@@ -23,7 +22,7 @@ const Connection = () => {
                     deleteAction={true}
                     title={"Connection"}
                     loading={false}
-                    addBtn
+                    addBtn={true}
                 />
             </div>
         </div>

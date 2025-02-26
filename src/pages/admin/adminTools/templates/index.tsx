@@ -1,4 +1,3 @@
-import Icon from "@/components/Icon";
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -6,7 +5,7 @@ import SAMTable from "@/components/Table";
 import useTemplates from "./use-templates";
 
 const Templates = () => {
-    const { columns, tableData, inputFields, hasActions } = useTemplates();
+    const { columns, tableData, inputFields } = useTemplates();
 
     return (
         <div>

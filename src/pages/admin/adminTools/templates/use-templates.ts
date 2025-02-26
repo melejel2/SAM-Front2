@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 const useTemplates = () => {
-    const [hasActions, _] = useState<boolean>(true);
-
     const columns = {
         code: "Code",
         template_name: "Template Name",
@@ -92,7 +88,6 @@ const useTemplates = () => {
         columns,
         tableData,
         inputFields,
-        hasActions,
     };
 };
 

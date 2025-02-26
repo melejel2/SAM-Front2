@@ -9,6 +9,7 @@ import SAMTable from "./Table";
 
 interface InputField {
     name: string;
+    label: string;
     type: string;
     value?: any;
     required?: boolean;
@@ -210,11 +211,11 @@ const DialogComponent: React.FC<DialogProps> = ({
 
     // Dynamically render inputs based on inputFields
     const renderInput = (field: InputField) => {
-        const { name, type, required, options } = field;
+        const { name, type, required, options, label } = field;
         {
             if (type === "select") {
                 return (
-                    <label className="input input-sm input-bordered xs:gap-4 flex items-center text-sm lg:gap-12">
+                    <label className="input input-sm input-bordered xs:gap-4 flex w-full items-center text-sm lg:gap-12">
                         <span className="w-20 font-normal capitalize opacity-45">{name}</span>
                         <Select
                             className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
@@ -228,9 +229,11 @@ const DialogComponent: React.FC<DialogProps> = ({
                                 }
                             }}>
                             {(options ?? []).map((option) => (
-                                <SelectOption key={option} value={option} className="bg-base-100">
-                                    {option.name}
-                                </SelectOption>
+                                <>
+                                    <SelectOption key={option} value={option} className="bg-base-100">
+                                        {option}
+                                    </SelectOption>
+                                </>
                             ))}
                         </Select>
                     </label>
@@ -241,7 +244,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                         className="input input-sm input-bordered flex w-full flex-col items-center gap-2 sm:flex-row"
                         key={name}>
                         <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
-                            {name.charAt(0).toUpperCase() + name.slice(1)}
+                            {label.charAt(0).toUpperCase() + label.slice(1)}
                         </span>
                         <input
                             type={type}

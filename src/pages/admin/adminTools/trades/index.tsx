@@ -23,7 +23,7 @@ const Trades = () => {
                     deleteAction={true}
                     title={"Trades"}
                     loading={false}
-                    addBtn
+                    addBtn={true}
                 />
             </div>
         </div>

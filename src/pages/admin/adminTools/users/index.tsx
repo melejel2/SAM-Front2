@@ -5,7 +5,7 @@ import SAMTable from "@/components/Table";
 import useUsers from "./use-users";
 
 const Users = () => {
-    const { columns, tableData, inputFields, hasActions } = useUsers();
+    const { columns, tableData, inputFields } = useUsers();
 
     return (
         <div>
@@ -22,7 +22,7 @@ const Users = () => {
                     deleteAction={true}
                     title={"Users"}
                     loading={false}
-                    addBtn
+                    addBtn={true}
                 />
             </div>
         </div>
