@@ -7,6 +7,36 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
         label: "Dashboard",
         url: "/dashboard",
     },
+    {
+        id: "dashboard-budget-BOQs",
+        icon: "lucide--hard-drive",
+        label: "Budget BOQs",
+        url: "/dashboard/budget-BOQs",
+    },
+    {
+        id: "dashboard-contracts-database",
+        icon: "lucide--archive",
+        label: "Contracts Database",
+        url: "/dashboard/contracts-database",
+    },
+    {
+        id: "dashboard-deductions-database",
+        icon: "lucide--truck",
+        label: "Deductions Database",
+        url: "/dashboard/deductions-database",
+    },
+    {
+        id: "dashboard-IPCs-database",
+        icon: "lucide--database",
+        label: "IPCs Database",
+        url: "/dashboard/IPCs-database",
+    },
+    {
+        id: "dashboard-reports",
+        icon: "lucide--file-text",
+        label: "Reports",
+        url: "/dashboard/reports",
+    },
 ];
 
 export const adminToolsMenuItems: ISidebarMenuItem[] = [
