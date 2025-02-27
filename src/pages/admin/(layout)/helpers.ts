@@ -52,10 +52,16 @@ export const adminToolsMenuItems: ISidebarMenuItem[] = [
         url: "/admin-tools/connection",
     },
     {
-        id: "admin-tools-currencies-and-units",
+        id: "admin-tools-currencies",
         icon: "lucide--dollar-sign",
-        label: "Currencies and Units",
-        url: "/admin-tools/currencies-and-units",
+        label: "Currencies",
+        url: "/admin-tools/currencies",
+    },
+    {
+        id: "admin-tools-units",
+        icon: "lucide--pencil-ruler",
+        label: "Units",
+        url: "/admin-tools/units",
     },
     {
         id: "admin-tools-users",

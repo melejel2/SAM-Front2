@@ -46,8 +46,12 @@ const adminToolsRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/adminTools/connection"))),
     },
     {
-        path: "/admin-tools/currencies-and-units",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/currencies-and-units"))),
+        path: "/admin-tools/currencies",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/currencies"))),
+    },
+    {
+        path: "/admin-tools/units",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/units"))),
     },
     {
         path: "/admin-tools/users",
