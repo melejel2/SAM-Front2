@@ -2,16 +2,16 @@ import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
 
-import useTemplates from "./use-templates";
+import useTerminateTemplates from "./use-terminate-templates";
 
-const Templates = () => {
-    const { columns, tableData, inputFields } = useTemplates();
+const TerminatesTemplates = () => {
+    const { columns, tableData, inputFields } = useTerminateTemplates();
 
     return (
         <div>
-            <MetaData title={"Templates"} />
+            <MetaData title={"Terminate - Templates"} />
 
-            <PageTitle title={"Templates"} centerItem={"Admin tools"} />
+            <PageTitle title={"Terminate Templates"} centerItem={"Admin tools"} />
             <div>
                 <SAMTable
                     columns={columns}
@@ -29,4 +29,4 @@ const Templates = () => {
     );
 };
 
-export default Templates;
+export default TerminatesTemplates;
