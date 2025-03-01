@@ -83,9 +83,32 @@ export const adminToolsMenuItems: ISidebarMenuItem[] = [
     },
     {
         id: "admin-tools-templates",
-        icon: "lucide--layout",
         label: "Templates",
-        url: "/admin-tools/templates",
+        isTitle: true,
+    },
+    {
+        id: "admin-tools-templates-contract",
+        icon: "lucide--layout",
+        label: "Contract",
+        url: "/admin-tools/templates/contract",
+    },
+    {
+        id: "admin-tools-templates-vo",
+        icon: "lucide--layout",
+        label: "VO",
+        url: "/admin-tools/templates/VO",
+    },
+    {
+        id: "admin-tools-templates-terminate",
+        icon: "lucide--layout",
+        label: "Terminate",
+        url: "/admin-tools/templates/terminate",
+    },
+    {
+        id: "admin-tools-templates-decharge",
+        icon: "lucide--layout",
+        label: "Decharge",
+        url: "/admin-tools/templates/decharge",
     },
 ];
 
