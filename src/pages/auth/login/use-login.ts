@@ -1,4 +1,3 @@
-import { log } from "console";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -42,7 +41,6 @@ const useLogin = () => {
                 method: "POST",
                 body: loginData,
             });
-            console.log("response", response);
             if (response.isSuccess === true) {
                 toaster.success("Login successful...");
                 setLoggedInUser(response.value);
