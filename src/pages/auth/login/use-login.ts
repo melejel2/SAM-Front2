@@ -68,7 +68,7 @@ const useLogin = () => {
                 endpoint: "Auth/GetDataBases",
                 method: "GET",
             });
-            setDatabases(response);
+            setDatabases(["Select Database", ...response]);
         } catch (error) {
             console.error("error on get databases", error);
         } finally {

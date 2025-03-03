@@ -46,9 +46,13 @@ const LoginPage = () => {
                                     value={selectedDb}
                                     required
                                     onChange={(e) => setSelectedDb(e.target.value)}>
-                                    {databases.map((database) => (
-                                        <SelectOption key={database} value={database} className="bg-base-100">
-                                            {database}
+                                    {databases.map((db) => (
+                                        <SelectOption
+                                            key={db}
+                                            value={db}
+                                            className="bg-base-100"
+                                            hidden={db === databases[0]}>
+                                            {db}
                                         </SelectOption>
                                     ))}
                                 </Select>
@@ -58,6 +62,7 @@ const LoginPage = () => {
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"user-2"} fontSize={5} className="text-base-content/40" />
                                 <input
+                                    disabled={!selectedDb || selectedDb === databases[0]}
                                     className="grow focus:outline-0"
                                     placeholder="Email Address"
                                     type="text"
@@ -71,6 +76,7 @@ const LoginPage = () => {
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"key-round"} fontSize={5} className="text-base-content/40" />
                                 <input
+                                    disabled={!selectedDb || selectedDb === databases[0]}
                                     className="grow focus:outline-0"
                                     placeholder="Password"
                                     type={showPassword ? "text" : "password"}
