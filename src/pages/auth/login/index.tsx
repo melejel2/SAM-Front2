@@ -85,12 +85,13 @@ const LoginPage = () => {
                                     {showPassword ? <Icon icon={"eye-off"} /> : <Icon icon={"eye"} />}
                                 </button>
                             </label>
+                            {error && <div className="text-error">{error}</div>}
+
                             <div className="text-end">
                                 <Link className="label-text text-base-content/80 text-xs" to="/auth/forgot-password">
                                     Forgot Password?
                                 </Link>
                             </div>
-                            {error && <div className="text-error">{error}</div>}
                         </fieldset>
                         <div className="mt-4 flex items-center gap-3 md:mt-6">
                             <Checkbox

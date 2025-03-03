@@ -48,12 +48,9 @@ const useLogin = () => {
                 setLoggedInUser(response.value);
                 navigate("/dashboard");
             }
-            if (response.status === 404) {
+            if (response.status === 404 || response.status === 400) {
                 toaster.error(response.message);
-                setError("User not Found");
-            } else if (response.status === 400) {
-                toaster.error(response.message);
-                setError("Incorrect Password");
+                setError("Invalid username or password");
             } else {
                 toaster.error(response.message);
             }
