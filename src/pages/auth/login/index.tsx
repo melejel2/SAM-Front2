@@ -11,7 +11,7 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isTermsAgreed, setIsTermsAgreed] = useState<boolean>(false);
 
-    const { onSubmit, databases, isLoading } = useLogin();
+    const { onSubmit, databases, isLoading, error } = useLogin();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [selectedDb, setSelectedDb] = useState(databases[0] ?? "");
@@ -90,6 +90,7 @@ const LoginPage = () => {
                                     Forgot Password?
                                 </Link>
                             </div>
+                            {error && <div className="text-error">{error}</div>}
                         </fieldset>
                         <div className="mt-4 flex items-center gap-3 md:mt-6">
                             <Checkbox

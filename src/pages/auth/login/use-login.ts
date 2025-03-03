@@ -13,6 +13,7 @@ const useLogin = () => {
 
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [databases, setDatabases] = useState<string[]>([]);
 
@@ -33,6 +34,7 @@ const useLogin = () => {
             password: data.password,
             dataBaseName: data.db,
         };
+        setError(null);
 
         try {
             const response: any = await apiRequest({
@@ -45,6 +47,15 @@ const useLogin = () => {
                 toaster.success("Login successful...");
                 setLoggedInUser(response.value);
                 navigate("/dashboard");
+            }
+            if (response.status === 404) {
+                toaster.error(response.message);
+                setError("User not Found");
+            } else if (response.status === 400) {
+                toaster.error(response.message);
+                setError("Incorrect Password");
+            } else {
+                toaster.error(response.message);
             }
         } catch (error) {
             console.error("error", error);
@@ -78,6 +89,7 @@ const useLogin = () => {
         databases,
         showPassword,
         isLoading,
+        error,
         onSubmit,
         toggleShowPassword,
         onMicrosoftLogin,
