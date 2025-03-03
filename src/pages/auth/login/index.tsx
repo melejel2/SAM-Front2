@@ -116,13 +116,13 @@ const LoginPage = () => {
                         <Button
                             color="primary"
                             className="btn-wide mt-2 max-w-full"
-                            disabled={!isTermsAgreed || isLoading}>
+                            disabled={!isTermsAgreed || isLoading || !selectedDb || !email || !password}>
                             {isLoading ? "Logging in..." : "Login"}
                         </Button>
                         <Button
                             color="ghost"
                             className="btn-wide border-base-300 max-w-full gap-3"
-                            disabled={!isTermsAgreed}>
+                            disabled={!isTermsAgreed || isLoading || !selectedDb}>
                             <img
                                 src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
                                 className="size-4.5"
