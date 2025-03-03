@@ -4,16 +4,14 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 
 type IAuthState = {
     user?: any;
-    token?: string;
 };
 
 const useHook = () => {
     const [authState, setState] = useLocalStorage<IAuthState>("__SAM_ADMIN_AUTH__", {
         user: undefined,
-        token: undefined,
     });
 
-    let accessToken: string | null = authState.token ?? null;
+    let accessToken: string | null = authState.user?.token ?? null;
 
     const updateState = (changes: Partial<IAuthState>) => {
         setState((prevState: IAuthState) => ({
@@ -22,9 +20,9 @@ const useHook = () => {
         }));
     };
 
-    const setLoggedInUser = (user: any, token: string) => {
-        accessToken = token;
-        updateState({ user, token });
+    const setLoggedInUser = (user: any) => {
+        accessToken = user.token;
+        updateState({ user });
     };
 
     const isLoggedIn = useCallback(() => {
@@ -36,7 +34,6 @@ const useHook = () => {
         accessToken = null;
         updateState({
             user: undefined,
-            token: undefined,
         });
     };
 
