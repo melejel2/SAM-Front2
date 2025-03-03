@@ -26,9 +26,8 @@ const useHook = () => {
     };
 
     const isLoggedIn = useCallback(() => {
-        // return authState.user != null && accessToken != null;
-        return true;
-    }, []);
+        return authState.user != null && accessToken != null;
+    }, [accessToken, authState.user]);
 
     const logout = () => {
         accessToken = null;
