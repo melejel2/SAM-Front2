@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Navigate, Route, RouteProps, Routes } from "react-router";
 
 import { useAuth } from "@/contexts/auth";
@@ -24,9 +24,13 @@ export const Router = (props: RouteProps) => {
                         key={"admin-" + index}
                         path={route.path}
                         element={
-                            <AdminLayout {...props}>
-                                <Suspense>{route.element}</Suspense>
-                            </AdminLayout>
+                            isLoggedIn() ? (
+                                <AdminLayout {...props}>
+                                    <Suspense>{route.element}</Suspense>
+                                </AdminLayout>
+                            ) : (
+                                <Navigate to={"/auth/login"} replace />
+                            )
                         }
                     />
                 ))}
