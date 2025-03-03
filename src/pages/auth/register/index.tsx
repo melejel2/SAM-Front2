@@ -26,19 +26,20 @@ const RegisterPage = () => {
                             // onSubmit();
                         }}>
                         <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Name</legend>
+
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"user-2"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Name" type="text" />
                             </label>
-                        </fieldset>
-                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Email</legend>
+
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"mail"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Email Address" type="email" />
                             </label>
-                        </fieldset>
+                            <legend className="fieldset-legend">Phone Number</legend>
 
-                        <fieldset className="fieldset">
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"phone"} fontSize={5} className="text-base-content/40" />
                                 <input className="grow focus:outline-0" placeholder="Phone Number" type="text" />
