@@ -1,12 +1,15 @@
 import { Link } from "react-router";
 
 import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
+import { Button } from "@/components/daisyui";
+import { useAuth } from "@/contexts/auth";
 import { ConfigProvider, useConfig } from "@/contexts/config";
 
 import { TopbarNotificationButton } from "./TopbarNotificationButton";
 import { TopbarToggleDashboardButton } from "./TopbarToggleDashboardButton";
 
 export const Topbar = () => {
+    const { logout } = useAuth();
     return (
         <div
             role="navigation"
@@ -42,15 +45,15 @@ export const Topbar = () => {
                     <div tabIndex={0} className="dropdown-content bg-base-100 rounded-box mt-4 w-44 shadow">
                         <ul className="menu w-full p-2">
                             <li className="py-1">
-                                <Link className="text-error hover:bg-error/10" to="/auth/login">
-                                    <span className="iconify lucide--log-out size-4" />
+                                <Button className="text-error hover:bg-error/10" color="ghost">
+                                    <span className="iconify lucide--trash size-4" />
                                     <span>Delete Account</span>
-                                </Link>
+                                </Button>
                             </li>
                             <hr className="border-base-300" />
 
                             <li className="py-1">
-                                <Link className="text-error hover:bg-error/10" to="/auth/login">
+                                <Link onClick={logout} className="text-error hover:bg-error/10" to="/auth/login">
                                     <span className="iconify lucide--log-out size-4" />
                                     <span>Logout</span>
                                 </Link>
