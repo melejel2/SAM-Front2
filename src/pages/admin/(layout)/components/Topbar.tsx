@@ -9,7 +9,7 @@ import { TopbarNotificationButton } from "./TopbarNotificationButton";
 import { TopbarToggleDashboardButton } from "./TopbarToggleDashboardButton";
 
 export const Topbar = () => {
-    const { logout } = useAuth();
+    const { logout, authState } = useAuth();
     return (
         <div
             role="navigation"
@@ -40,7 +40,7 @@ export const Topbar = () => {
 
                 <div className="dropdown dropdown-bottom dropdown-end">
                     <div tabIndex={0} role="button" className="btn btn-ghost rounded-btn px-1.5">
-                        <p className="text-sm">username</p>
+                        <p className="text-sm">{authState.user?.userName}</p>
                     </div>
                     <div tabIndex={0} className="dropdown-content bg-base-100 rounded-box mt-4 w-44 shadow">
                         <ul className="menu w-full p-2">
