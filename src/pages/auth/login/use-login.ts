@@ -1,5 +1,5 @@
 import { log } from "console";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import apiRequest from "@/api/api";
@@ -14,7 +14,7 @@ const useLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const databases: any[] = ["TEST", "DefaultConnection"];
+    const [databases, setDatabases] = useState<string[]>([]);
 
     const toggleShowPassword = () => {
         setShowPassword(!showPassword);
@@ -54,6 +54,25 @@ const useLogin = () => {
     };
 
     const onMicrosoftLogin = async () => {};
+
+    const getDatabases = async () => {
+        setIsLoading(true);
+        try {
+            const response = await apiRequest({
+                endpoint: "Auth/GetDataBases",
+                method: "GET",
+            });
+            setDatabases(response);
+        } catch (error) {
+            console.error("error on get databases", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        getDatabases();
+    }, []);
 
     return {
         databases,
