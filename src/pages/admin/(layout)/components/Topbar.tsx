@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
 import { Button } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
-import { ConfigProvider, useConfig } from "@/contexts/config";
 
 import { TopbarNotificationButton } from "./TopbarNotificationButton";
 import { TopbarToggleDashboardButton } from "./TopbarToggleDashboardButton";
