@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 
-import Icon from "@/components/Icon";
 import { Button, Card, CardBody, Input, Pagination, useDialog } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
 
@@ -183,7 +182,7 @@ const TableComponent: React.FC<TableProps> = ({
                                 <Button
                                     onClick={openDialog}
                                     className="btn btn-ghost btn-xs border-base-content/20 h-8 border">
-                                    <Icon icon={"plus"} fontSize={4} />
+                                    <span className="iconify lucide--plus size-4"></span>
                                     New {title}
                                 </Button>
                             ) : (
@@ -208,7 +207,8 @@ const TableComponent: React.FC<TableProps> = ({
 
                         {/* Right side with search */}
                         <div className="form-control rounded-box bg-base-100 dark:border-base-content/60 text-base-content/60 flex flex-row items-center border px-2">
-                            <Icon icon={"search"} fontSize={4} />
+                            <span className="iconify lucide--search size-4"></span>
+
                             <Input
                                 size="sm"
                                 placeholder="Search data"
@@ -240,11 +240,11 @@ const TableComponent: React.FC<TableProps> = ({
                                                 onClick={() => handleSort(columnKey)}>
                                                 <span>{columnLabel}</span>
                                                 {sortColumn === columnKey && (
-                                                    <Icon
-                                                        icon={sortOrder === "asc" ? "chevron-up" : "chevron-down"}
-                                                        className="ml-1"
-                                                        fontSize={14}
-                                                    />
+                                                    <span
+                                                        className={cn("iconify text-base-content/70 ml-1 size-4", {
+                                                            "lucide--chevron-up": sortOrder === "asc",
+                                                            "lucide--chevron-down": sortOrder !== "asc",
+                                                        })}></span>
                                                 )}
                                             </div>
                                         </th>
@@ -299,7 +299,8 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     openPreviewDialog(row);
                                                                 }}>
-                                                                <Icon icon={"eye"} className="text-base-content/70" />
+                                                                {/* <Icon icon={"eye"} className="text-base-content/70" /> */}
+                                                                <span className="iconify lucide--eye text-base-content/70 size-4"></span>
                                                             </Button>
                                                         )}
                                                         {editAction && (
@@ -312,10 +313,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     openEditDialog(row);
                                                                 }}>
-                                                                <Icon
-                                                                    icon={"pencil"}
-                                                                    className="text-base-content/70"
-                                                                />
+                                                                <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
                                                             </Button>
                                                         )}
                                                         {deleteAction && (
@@ -329,7 +327,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     handleDelete(row.id);
                                                                 }}>
-                                                                <Icon icon={"trash"} />
+                                                                <span className="iconify lucide--trash size-4"></span>
                                                             </Button>
                                                         )}
                                                     </div>
@@ -359,7 +357,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     className="join-item"
                                     disabled={currentPage === 1}
                                     onClick={() => handlePageChange(currentPage - 1)}>
-                                    <Icon icon={"chevron-left"} fontSize={4} />
+                                    <span className="iconify lucide--chevron-left text-base-content/70 size-4"></span>
                                 </Button>
 
                                 {/* Always show the first page */}
@@ -418,7 +416,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     className="join-item"
                                     disabled={currentPage === totalPages}
                                     onClick={() => handlePageChange(currentPage + 1)}>
-                                    <Icon icon={"chevron-right"} fontSize={4} />
+                                    <span className="iconify lucide--chevron-right text-base-content/70 size-4"></span>
                                 </Button>
                             </Pagination>
                         </div>
