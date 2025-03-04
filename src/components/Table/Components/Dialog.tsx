@@ -216,7 +216,7 @@ const DialogComponent: React.FC<DialogProps> = ({
             if (type === "select") {
                 return (
                     <label className="input input-sm input-bordered xs:gap-4 flex w-full items-center text-sm lg:gap-12">
-                        <span className="w-20 font-normal capitalize opacity-45">{name}</span>
+                        <span className="w-20 font-normal capitalize opacity-45">{label}</span>
                         <Select
                             className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
                             onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
@@ -229,11 +229,9 @@ const DialogComponent: React.FC<DialogProps> = ({
                                 }
                             }}>
                             {(options ?? []).map((option) => (
-                                <>
-                                    <SelectOption key={option} value={option} className="bg-base-100">
-                                        {option}
-                                    </SelectOption>
-                                </>
+                                <SelectOption key={option} value={option} className="bg-base-100">
+                                    {option}
+                                </SelectOption>
                             ))}
                         </Select>
                     </label>
