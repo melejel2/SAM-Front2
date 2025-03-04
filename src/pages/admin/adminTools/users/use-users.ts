@@ -1,62 +1,42 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useUsers = () => {
+    const [tableData, setTableData] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const { getToken } = useAuth();
+
+    const token = getToken();
+
     const columns = {
-        first_name: "First Name",
-        last_name: "Last Name",
-        telephone: "Telephone",
+        firstName: "First Name",
+        lastName: "Last Name",
+        phone: "Phone",
         email: "Email",
-        username: "Username",
+        userName: "Username",
         password: "Password",
-        role: "Role",
+        userRole: "Role",
     };
-    const tableData = [
-        {
-            id: "1",
-            first_name: "First Name 1",
-            last_name: "Last Name 1",
-            telephone: "Telephone 1",
-            email: "Email 1",
-            username: "Username 1",
-            password: "Password 1",
-            role: "Role 1",
-        },
-        {
-            id: "2",
-            first_name: "First Name 2",
-            last_name: "Last Name 2",
-            telephone: "Telephone 2",
-            email: "Email 2",
-            username: "Username 2",
-            password: "Password 2",
-            role: "Role 2",
-        },
-        {
-            id: "3",
-            first_name: "First Name 3",
-            last_name: "Last Name 3",
-            telephone: "Telephone 3",
-            email: "Email 3",
-            username: "Username 3",
-            password: "Password 3",
-            role: "Role 3",
-        },
-    ];
 
     const inputFields = [
         {
-            name: "first_name",
+            name: "firstName",
             label: "First Name",
             type: "text",
             required: true,
         },
         {
-            name: "last_name",
+            name: "lastName",
             label: "Last Name",
             type: "text",
             required: true,
         },
         {
-            name: "telephone",
-            label: "Telephone",
+            name: "phone",
+            label: "Phone",
             type: "text",
             required: true,
         },
@@ -67,7 +47,7 @@ const useUsers = () => {
             required: true,
         },
         {
-            name: "username",
+            name: "userName",
             label: "Username",
             type: "text",
             required: true,
@@ -80,7 +60,7 @@ const useUsers = () => {
         },
 
         {
-            name: "role",
+            name: "userRole",
             label: "Role",
             type: "select",
             required: true,
@@ -95,10 +75,25 @@ const useUsers = () => {
         },
     ];
 
+    const getUsers = async () => {
+        setLoading(true);
+
+        try {
+            const data = await apiRequest({ endpoint: "Users/GetUsers", method: "GET", token: token ?? "" });
+            setTableData(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         columns,
         tableData,
         inputFields,
+        getUsers,
+        loading,
     };
 };
 
