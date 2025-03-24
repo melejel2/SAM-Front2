@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -5,7 +7,12 @@ import SAMTable from "@/components/Table";
 import useCurrencies from "./use-currencies";
 
 const Currencies = () => {
-    const { columns, tableData, inputFields } = useCurrencies();
+    const { columns, tableData, inputFields, getCurrencies } = useCurrencies();
+
+    useEffect(() => {
+        getCurrencies();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div>
