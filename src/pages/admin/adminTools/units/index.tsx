@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -5,8 +7,12 @@ import SAMTable from "@/components/Table";
 import useUnits from "./use-units";
 
 const Units = () => {
-    const { columns, tableData, inputFields } = useUnits();
+    const { columns, tableData, inputFields, getUnits } = useUnits();
 
+    useEffect(() => {
+        getUnits();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     return (
         <div>
             <MetaData title={"Units"} />

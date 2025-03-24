@@ -1,36 +1,48 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useUnits = () => {
+    const [tableData, setTableData] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const { getToken } = useAuth();
+
+    const token = getToken();
+
     const columns = {
-        unit_list: "Unit List",
+        name: "Unit List",
     };
-    const tableData = [
-        { id: "1", unit_list: "ft" },
-        { id: "2", unit_list: "U" },
-        { id: "3", unit_list: "D" },
-        { id: "4", unit_list: "dm" },
-        { id: "5", unit_list: "ens" },
-        { id: "6", unit_list: "ml" },
-        { id: "7", unit_list: "m2" },
-        { id: "8", unit_list: "m3" },
-        { id: "9", unit_list: "kg" },
-        { id: "10", unit_list: "ton" },
-        { id: "11", unit_list: "liter" },
-        { id: "12", unit_list: "mois" },
-        { id: "13", unit_list: "jour" },
-    ];
 
     const inputFields = [
         {
-            name: "unit_list",
+            name: "name",
             label: "Unit List",
             type: "text",
             required: true,
         },
     ];
 
+    const getUnits = async () => {
+        setLoading(true);
+
+        try {
+            const data = await apiRequest({ endpoint: "Unit/GetUnits", method: "GET", token: token ?? "" });
+            setTableData(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         columns,
         tableData,
         inputFields,
+        getUnits,
+        loading,
     };
 };
 
