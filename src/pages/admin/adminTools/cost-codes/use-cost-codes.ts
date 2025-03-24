@@ -43,7 +43,7 @@ const useCostCodes = () => {
 
         try {
             const data = await apiRequest({
-                endpoint: "CodeCostLibrary/GetCodeCostLibrary",
+                endpoint: "CostCode/GetCodeCostLibrary",
                 method: "GET",
                 token: token ?? "",
             });
