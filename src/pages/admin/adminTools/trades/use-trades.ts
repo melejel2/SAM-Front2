@@ -1,55 +1,62 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useTrades = () => {
+    const [tableData, setTableData] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const { getToken } = useAuth();
+
+    const token = getToken();
+
     const columns = {
-        en: "EN",
-        fr: "FR",
-        code: "Code",
+        name: "EN",
+        nameFr: "FR",
+        costCode: "Code",
     };
-    const tableData = [
-        {
-            id: "1",
-            en: "EN 1",
-            fr: "FR 1",
-            code: "Code 1",
-        },
-        {
-            id: "2",
-            en: "EN 2",
-            fr: "FR 2",
-            code: "Code 2",
-        },
-        {
-            id: "3",
-            en: "EN 3",
-            fr: "FR 3",
-            code: "Code 3",
-        },
-    ];
 
     const inputFields = [
         {
-            name: "en",
+            name: "name",
             label: "EN",
             type: "text",
             required: true,
         },
         {
-            name: "fr",
+            name: "nameFr",
             label: "FR",
             type: "text",
             required: true,
         },
         {
-            name: "code",
+            name: "costCode",
             label: "Code",
             type: "text",
             required: true,
         },
     ];
 
+    const getTrades = async () => {
+        setLoading(true);
+
+        try {
+            const data = await apiRequest({ endpoint: "Sheets/GetSheets", method: "GET", token: token ?? "" });
+            setTableData(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         columns,
         tableData,
         inputFields,
+        getTrades,
+        loading,
     };
 };
 

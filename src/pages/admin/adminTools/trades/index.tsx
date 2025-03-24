@@ -1,4 +1,5 @@
-import Icon from "@/components/Icon";
+import { useEffect } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -6,7 +7,12 @@ import SAMTable from "@/components/Table";
 import useTrades from "./use-trades";
 
 const Trades = () => {
-    const { columns, tableData, inputFields } = useTrades();
+    const { columns, tableData, inputFields, getTrades } = useTrades();
+
+    useEffect(() => {
+        getTrades();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div>
