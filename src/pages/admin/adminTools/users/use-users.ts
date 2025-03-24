@@ -17,7 +17,7 @@ const useUsers = () => {
         phone: "Phone",
         email: "Email",
         userName: "Username",
-        password: "Password",
+        // password: "Password",
         userRole: "Role",
     };
 
@@ -55,7 +55,7 @@ const useUsers = () => {
         {
             name: "password",
             label: "Password",
-            type: "text",
+            type: "password",
             required: true,
         },
 
