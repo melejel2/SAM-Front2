@@ -33,6 +33,8 @@ const CostCodes = () => {
                         title={"Cost Code"}
                         loading={false}
                         addBtn={true}
+                        editEndPoint="CostCode/UpdateCostCode"
+                        createEndPoint="CostCode/AddCostCode"
                     />
                 )}
             </div>
