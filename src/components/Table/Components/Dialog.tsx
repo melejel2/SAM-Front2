@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+import apiRequest from "@/api/api";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
 import { cn } from "@/helpers/utils/cn";
@@ -31,8 +32,9 @@ interface DialogProps {
     title: string;
     data?: any[];
     onSelect?: (costCode: any) => void;
-    materialId?: number;
     confirmMsg?: string;
+    editEndPoint?: string;
+    createEndPoint?: string;
 }
 
 const DialogComponent: React.FC<DialogProps> = ({
@@ -47,6 +49,8 @@ const DialogComponent: React.FC<DialogProps> = ({
     data,
     onSelect,
     confirmMsg,
+    editEndPoint,
+    createEndPoint,
 }) => {
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -87,7 +91,7 @@ const DialogComponent: React.FC<DialogProps> = ({
         e.preventDefault();
         setIsLoading(true);
 
-        console.log(formData);
+        console.log("formData", formData);
 
         try {
             const token = getToken();
@@ -97,15 +101,48 @@ const DialogComponent: React.FC<DialogProps> = ({
             }
 
             if (dialogType === "Edit" && current) {
-                console.log("");
+                try {
+                    const response = await apiRequest({
+                        endpoint: editEndPoint ?? "",
+                        method: "PUT",
+                        token: token ?? "",
+                        body: formData,
+                    });
+                    console.log(response);
+                    if (response.isSuccess) {
+                        console.log("isSuccess");
+                        toaster.success("Updated successfully.");
+                        onSuccess(dialogType, formData);
+                    }
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    setIsLoading(false);
+                }
             } else if (dialogType === "Add") {
-                console.log("");
+                try {
+                    const response = await apiRequest({
+                        endpoint: createEndPoint ?? "",
+                        method: "POST",
+                        token: token ?? "",
+                        body: formData,
+                    });
+                    console.log(response);
+                    if (response.isSuccess) {
+                        toaster.success("Created successfully.");
+                        onSuccess(dialogType, formData);
+                    }
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    setIsLoading(false);
+                }
             } else if (dialogType === "Preview") {
                 console.log("");
             }
 
-            toaster.success(`${dialogType === "Edit" ? "updated" : "created"} successfully.`);
-            onSuccess(dialogType, formData);
+            // toaster.success(`${dialogType === "Edit" ? "updated" : "created"} successfully.`);
+            // onSuccess(dialogType, formData);
         } catch (error: any) {
             console.error("Error saving user:", error);
             if (error.response) {
