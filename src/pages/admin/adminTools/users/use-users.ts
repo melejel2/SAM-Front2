@@ -65,10 +65,10 @@ const useUsers = () => {
             type: "select",
             required: true,
             options: [
-                "Regional Operations Manager",
-                "General Manager",
-                "Operations Manager",
-                "Contracts Manager",
+                "RegionalOperationsManager",
+                "GeneralManager",
+                "OperationsManager",
+                "ContractsManager",
                 "Accountant",
                 "Admin",
             ],
@@ -81,6 +81,7 @@ const useUsers = () => {
         try {
             const data = await apiRequest({ endpoint: "Users/GetUsers", method: "GET", token: token ?? "" });
             setTableData(data);
+            console.log(data);
         } catch (error) {
             console.error(error);
         } finally {
