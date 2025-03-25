@@ -32,6 +32,9 @@ interface TableProps {
     // Added property for selectable mode
     select?: boolean;
     loading?: boolean; // new prop added
+
+    editEndPoint?: string;
+    createEndPoint?: string;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -52,6 +55,9 @@ const TableComponent: React.FC<TableProps> = ({
     onToggleAvailableOnly,
     select, // new prop destructured here
     loading, // new prop destructured here
+
+    editEndPoint,
+    createEndPoint,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -166,10 +172,7 @@ const TableComponent: React.FC<TableProps> = ({
         console.log(`Delete row with ID: ${id}`);
     };
 
-    const handleSuccess = (data: any) => {
-        console.log(data);
-        handleHide();
-    };
+    const handleSuccess = (type: string, data: any) => {};
 
     return (
         <>
@@ -435,6 +438,8 @@ const TableComponent: React.FC<TableProps> = ({
                     title={title}
                     previewColumns={previewColumns}
                     data={[]}
+                    editEndPoint={editEndPoint}
+                    createEndPoint={createEndPoint}
                 />
             )}
         </>

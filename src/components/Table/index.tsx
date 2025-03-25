@@ -30,6 +30,9 @@ interface SAMTableProps {
 
     // Added property for selectable mode
     select?: boolean;
+
+    editEndPoint?: string;
+    createEndPoint?: string;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -50,6 +53,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
     showAvailableOnly,
     onToggleAvailableOnly,
     select, // destructure the new prop
+    editEndPoint,
+    createEndPoint,
 }) => {
     return (
         <div className="mt-5">
@@ -77,6 +82,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onToggleAvailableOnly={onToggleAvailableOnly}
                             // Pass the select prop along
                             select={select}
+                            editEndPoint={editEndPoint}
+                            createEndPoint={createEndPoint}
                         />
                     </div>
 
