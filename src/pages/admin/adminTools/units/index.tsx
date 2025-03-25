@@ -29,6 +29,8 @@ const Units = () => {
                     title={"Unit"}
                     loading={false}
                     addBtn={true}
+                    editEndPoint="Unit/UpdateUnit"
+                    createEndPoint="Unit/AddUnit"
                 />
             </div>
         </div>
