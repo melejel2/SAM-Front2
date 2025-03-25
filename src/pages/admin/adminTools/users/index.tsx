@@ -34,6 +34,8 @@ const Users = () => {
                         title={"Users"}
                         loading={false}
                         addBtn={true}
+                        editEndPoint="Users/UpdateUser"
+                        createEndPoint="Users/AddUser"
                     />
                 )}
             </div>
