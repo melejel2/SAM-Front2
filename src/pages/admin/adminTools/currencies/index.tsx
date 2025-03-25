@@ -30,6 +30,8 @@ const Currencies = () => {
                     title={"Currency"}
                     loading={false}
                     addBtn={true}
+                    editEndPoint="Currencie/UpdateCurrencie"
+                    createEndPoint="Currencie/AddCurrencie"
                 />
             </div>
         </div>
