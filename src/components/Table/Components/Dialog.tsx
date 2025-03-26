@@ -68,6 +68,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     const [rejectionNote, setRejectionNote] = useState<string>("");
     const [showRejectionNote, setShowRejectionNote] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
+
     const { toaster } = useToast();
     const { getToken } = useAuth();
 
