@@ -11,6 +11,11 @@ type ApiRequestParams = {
     headers?: Record<string, string>;
 };
 
+const handleUnauthorized = () => {
+    localStorage.removeItem("__SAM_ADMIN_AUTH__");
+    window.location.href = "/auth/login";
+};
+
 const apiRequest = async <T = any>({
     endpoint,
     method,
@@ -24,15 +29,13 @@ const apiRequest = async <T = any>({
 
     const headersInit: HeadersInit = {};
 
-    // Add Authorization header if token exists
     if (token) {
         headersInit.Authorization = `Bearer ${token}`;
     }
 
-    // Determine Content-Type based on body type
     if (body) {
         if (body instanceof FormData) {
-            // Let browser set Content-Type for FormData
+            // Let browser set Content-Type
         } else if (body instanceof URLSearchParams) {
             headersInit["Content-Type"] = "application/x-www-form-urlencoded";
         } else if (typeof body === "object") {
@@ -40,16 +43,13 @@ const apiRequest = async <T = any>({
         }
     }
 
-    // Merge headers
     const mergedHeaders = { ...headersInit, ...headers };
 
-    // Prepare request options
     const requestOptions: RequestInit = {
         method,
         headers: mergedHeaders,
     };
 
-    // Handle body
     if (body) {
         requestOptions.body = body instanceof FormData || body instanceof URLSearchParams ? body : JSON.stringify(body);
     }
@@ -68,6 +68,16 @@ const apiRequest = async <T = any>({
                 errorMessage = errorText || errorMessage;
             }
 
+            // Explicit 401 Handling
+            if (response.status === 401) {
+                handleUnauthorized();
+                return {
+                    success: false,
+                    message: "Unauthorized. Please log in again.",
+                    status: 401,
+                };
+            }
+
             return {
                 success: false,
                 message: errorMessage,
@@ -80,7 +90,6 @@ const apiRequest = async <T = any>({
         }
 
         if (response.status === 204) {
-            // No Content
             return {} as T;
         }
 
@@ -93,5 +102,4 @@ const apiRequest = async <T = any>({
         };
     }
 };
-
 export default apiRequest;
