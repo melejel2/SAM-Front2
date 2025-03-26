@@ -43,7 +43,7 @@ const useCurrencies = () => {
 
         try {
             const data = await apiRequest({ endpoint: "Currencie/GetCurrencies", method: "GET", token: token ?? "" });
-            if (data.success) {
+            if (data) {
                 setTableData(data);
             } else {
                 setTableData([]);

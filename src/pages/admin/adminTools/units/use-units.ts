@@ -29,7 +29,7 @@ const useUnits = () => {
 
         try {
             const data = await apiRequest({ endpoint: "Unit/GetUnits", method: "GET", token: token ?? "" });
-            if (data.success) {
+            if (data) {
                 setTableData(data);
             } else {
                 setTableData([]);

@@ -43,7 +43,7 @@ const useTrades = () => {
 
         try {
             const data = await apiRequest({ endpoint: "Sheets/GetSheets", method: "GET", token: token ?? "" });
-            if (data.success) {
+            if (data) {
                 setTableData(data);
             } else {
                 setTableData([]);
