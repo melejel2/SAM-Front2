@@ -80,8 +80,11 @@ const useUsers = () => {
 
         try {
             const data = await apiRequest({ endpoint: "Users/GetUsers", method: "GET", token: token ?? "" });
-            setTableData(data);
-            console.log(data);
+            if (data.success) {
+                setTableData(data);
+            } else {
+                setTableData([]);
+            }
         } catch (error) {
             console.error(error);
         } finally {

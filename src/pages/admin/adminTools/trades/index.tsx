@@ -30,6 +30,8 @@ const Trades = () => {
                     title={"Trades"}
                     loading={false}
                     addBtn={true}
+                    editEndPoint="Sheets/UpdateSheet"
+                    createEndPoint="Sheets/AddSheet"
                 />
             </div>
         </div>

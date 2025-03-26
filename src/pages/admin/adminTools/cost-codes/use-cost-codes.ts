@@ -47,7 +47,11 @@ const useCostCodes = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            setTableData(data);
+            if (data.success) {
+                setTableData(data);
+            } else {
+                setTableData([]);
+            }
         } catch (error) {
             console.error(error);
         } finally {
