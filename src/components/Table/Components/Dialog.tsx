@@ -251,17 +251,32 @@ const DialogComponent: React.FC<DialogProps> = ({
                 return;
             }
 
-            const response = await apiRequest({
-                endpoint: deleteEndPoint ?? "",
-                method: "DELETE",
-                token: token ?? "",
-                body: current ?? "",
-            });
-            console.log(response);
-            if (response.isSuccess) {
-                toaster.success("Deleted successfully.");
-                onSuccess(dialogType, current);
-                handleClose();
+            if (title === "User") {
+                const response = await apiRequest({
+                    endpoint: deleteEndPoint ?? "",
+                    method: "DELETE",
+                    token: token ?? "",
+                    body: current ?? "",
+                });
+                console.log(response);
+                if (response.isSuccess) {
+                    toaster.success("Deleted successfully.");
+                    onSuccess(dialogType, current);
+                    handleClose();
+                }
+            } else {
+                const deleteEndPointWithId = deleteEndPoint ? `${deleteEndPoint}?id=${current?.id}` : "";
+                const response = await apiRequest({
+                    endpoint: deleteEndPointWithId,
+                    method: "DELETE",
+                    token: token ?? "",
+                });
+                console.log(response);
+                if (response.isSuccess) {
+                    toaster.success("Deleted successfully.");
+                    onSuccess(dialogType, current);
+                    handleClose();
+                }
             }
         } catch (error) {
             console.error(error);
