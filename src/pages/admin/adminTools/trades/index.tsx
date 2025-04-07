@@ -32,6 +32,7 @@ const Trades = () => {
                     addBtn={true}
                     editEndPoint="Sheets/UpdateSheet"
                     createEndPoint="Sheets/AddSheet"
+                    deleteEndPoint="Sheets/DeleteSheet"
                 />
             </div>
         </div>
