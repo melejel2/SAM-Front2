@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+
+import useCostCodes from "../cost-codes/use-cost-codes";
 
 const useTrades = () => {
     const [tableData, setTableData] = useState<any[]>([]);
@@ -33,7 +35,8 @@ const useTrades = () => {
         {
             name: "costCode",
             label: "Code",
-            type: "text",
+            type: "select",
+            options: [],
             required: true,
         },
     ];

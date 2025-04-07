@@ -70,6 +70,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     const [rejectionNote, setRejectionNote] = useState<string>("");
     const [showRejectionNote, setShowRejectionNote] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [costCodes, setCostCodes] = useState<any[]>([]);
 
     const { toaster } = useToast();
     const { getToken } = useAuth();
@@ -167,6 +168,7 @@ const DialogComponent: React.FC<DialogProps> = ({
         setShowRejectionNote(false);
         setRejectionNote("");
         setIsLoading(false);
+        setCostCodes([]);
         handleHide();
     };
 
@@ -291,6 +293,29 @@ const DialogComponent: React.FC<DialogProps> = ({
         toaster.success("Confirmed Successfully...");
     };
 
+    useEffect(() => {
+        if (title === "Trades" && (dialogType === "Add" || dialogType === "Edit")) {
+            const fetchCostCodes = async () => {
+                const token = getToken();
+
+                try {
+                    const data = await apiRequest({
+                        endpoint: "CostCode/GetCodeCostLibrary",
+                        method: "GET",
+                        token: token ?? "",
+                    });
+                    const costCodes = data || [];
+                    // Do something with costCodes (e.g., set state)
+                    setCostCodes(costCodes);
+                } catch (error) {
+                    console.error(error);
+                }
+            };
+
+            fetchCostCodes();
+        }
+    }, [dialogType, getToken, title]);
+
     // Dynamically render inputs based on inputFields
     const renderInput = (field: InputField) => {
         const { name, type, required, options, label } = field;
@@ -301,20 +326,55 @@ const DialogComponent: React.FC<DialogProps> = ({
                         <span className="w-20 font-normal capitalize opacity-45">{label}</span>
                         <Select
                             className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
-                            onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
+                            onChange={(e) => {
+                                if (title === "Trades" && name === "costCode") {
+                                    const selectedOption = JSON.parse(e.target.value);
+                                    setFormData({
+                                        ...formData,
+                                        costCode: selectedOption.code,
+                                        costCodeId: selectedOption.id,
+                                    });
+                                } else {
+                                    setFormData({ ...formData, [name]: e.target.value });
+                                }
+                            }}
                             name={name}
-                            value={formData[name]}
+                            value={
+                                title === "Trades" && name === "costCode"
+                                    ? JSON.stringify({
+                                          code: formData.costCode,
+                                          id: formData.costCodeId,
+                                      })
+                                    : formData[name]
+                            }
                             required={required}
                             onTouchStart={(e) => {
                                 if (e.touches.length > 1) {
                                     e.preventDefault();
                                 }
                             }}>
-                            {(options ?? []).map((option) => (
-                                <SelectOption key={option} value={option} className="bg-base-100">
-                                    {option}
-                                </SelectOption>
-                            ))}
+                            <>
+                                {dialogType === "Add" && (
+                                    <SelectOption value="" disabled hidden>
+                                        Select {label}
+                                    </SelectOption>
+                                )}
+
+                                {title === "Trades" && name === "costCode" && costCodes.length > 0
+                                    ? costCodes.map((option) => (
+                                          <SelectOption
+                                              key={option.id}
+                                              value={JSON.stringify({ code: option.code, id: option.id })}
+                                              className="bg-base-100">
+                                              {option.code} - {option.en} / {option.fr}
+                                          </SelectOption>
+                                      ))
+                                    : (options ?? []).map((option) => (
+                                          <SelectOption key={option} value={option} className="bg-base-100">
+                                              {option}
+                                          </SelectOption>
+                                      ))}
+                            </>
                         </Select>
                     </label>
                 );
