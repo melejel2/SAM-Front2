@@ -33,6 +33,7 @@ const Currencies = () => {
                     editEndPoint="Currencie/UpdateCurrencie"
                     createEndPoint="Currencie/AddCurrencie"
                     deleteEndPoint="Currencie/DeleteCurrencie"
+                    onSuccess={getCurrencies}
                 />
             </div>
         </div>
