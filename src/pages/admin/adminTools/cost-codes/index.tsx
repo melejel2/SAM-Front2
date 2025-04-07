@@ -35,6 +35,7 @@ const CostCodes = () => {
                         addBtn={true}
                         editEndPoint="CostCode/UpdateCostCode"
                         createEndPoint="CostCode/AddCostCode"
+                        deleteEndPoint="CostCode/DeleteCostCode"
                     />
                 )}
             </div>
