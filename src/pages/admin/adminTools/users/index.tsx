@@ -37,6 +37,7 @@ const Users = () => {
                         editEndPoint="Users/UpdateUser"
                         createEndPoint="Users/AddUser"
                         deleteEndPoint="Users/DeleteUser"
+                        onSuccess={getUsers}
                     />
                 )}
             </div>
