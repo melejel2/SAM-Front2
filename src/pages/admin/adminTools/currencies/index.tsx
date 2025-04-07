@@ -32,6 +32,7 @@ const Currencies = () => {
                     addBtn={true}
                     editEndPoint="Currencie/UpdateCurrencie"
                     createEndPoint="Currencie/AddCurrencie"
+                    deleteEndPoint="Currencie/DeleteCurrencie"
                 />
             </div>
         </div>
