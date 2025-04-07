@@ -31,6 +31,7 @@ const Units = () => {
                     addBtn={true}
                     editEndPoint="Unit/UpdateUnit"
                     createEndPoint="Unit/AddUnit"
+                    deleteEndPoint="Unit/DeleteUnit"
                 />
             </div>
         </div>
