@@ -16,6 +16,8 @@ interface SAMTableProps {
     actions: boolean;
     title: string;
     loading: boolean;
+    onSuccess: () => void;
+
     dynamicDialog?: boolean;
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void;
     showAction?: boolean;
@@ -47,6 +49,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     editAction,
     title,
     loading,
+    onSuccess,
     addBtn,
     dynamicDialog,
     openStaticDialog,
@@ -87,6 +90,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             editEndPoint={editEndPoint}
                             createEndPoint={createEndPoint}
                             deleteEndPoint={deleteEndPoint}
+                            onSuccess={onSuccess}
                         />
                     </div>
 

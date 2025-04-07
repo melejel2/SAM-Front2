@@ -26,7 +26,7 @@ interface DialogProps {
     dialogRef: React.RefObject<HTMLDialogElement | null>;
     dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Approve" | "Confirm";
     current: CurrentData | null;
-    onSuccess: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Approve" | "Confirm", formData: any) => void;
+    onSuccess: () => void;
     inputFields: InputField[];
     previewColumns?: Record<string, string>;
     title: string;
@@ -116,7 +116,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     if (response.isSuccess) {
                         console.log("isSuccess");
                         toaster.success("Updated successfully.");
-                        onSuccess(dialogType, formData);
+                        onSuccess();
                     }
                 } catch (error) {
                     console.error(error);
@@ -134,7 +134,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     console.log(response);
                     if (response.isSuccess) {
                         toaster.success("Created successfully.");
-                        onSuccess(dialogType, formData);
+                        onSuccess();
                     }
                 } catch (error) {
                     console.error(error);
@@ -146,7 +146,7 @@ const DialogComponent: React.FC<DialogProps> = ({
             }
 
             // toaster.success(`${dialogType === "Edit" ? "updated" : "created"} successfully.`);
-            // onSuccess(dialogType, formData);
+            // onSuccess();
         } catch (error: any) {
             console.error("Error saving user:", error);
             if (error.response) {
@@ -184,7 +184,7 @@ const DialogComponent: React.FC<DialogProps> = ({
 
             try {
                 toaster.success("Approved successfully.");
-                onSuccess(dialogType, formData);
+                onSuccess();
 
                 handleClose();
             } catch (error) {
@@ -223,7 +223,7 @@ const DialogComponent: React.FC<DialogProps> = ({
 
             try {
                 toaster.success("Rejected successfully.");
-                onSuccess(dialogType, formData);
+                onSuccess();
                 handleClose();
             } catch (error) {
                 console.error("Error reject request:", error);
@@ -263,7 +263,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                 console.log(response);
                 if (response.isSuccess) {
                     toaster.success("Deleted successfully.");
-                    onSuccess(dialogType, current);
+                    onSuccess();
                     handleClose();
                 }
             } else {
@@ -276,7 +276,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                 console.log(response);
                 if (response.isSuccess) {
                     toaster.success("Deleted successfully.");
-                    onSuccess(dialogType, current);
+                    onSuccess();
                     handleClose();
                 }
             }
@@ -472,6 +472,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                             inputFields={[]}
                             actions={false}
                             title={"Request Details"}
+                            onSuccess={() => {}}
                         />
 
                         <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
@@ -487,6 +488,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                         title={"Cost Code"}
                         select
                         onRowSelect={handleRowSelect}
+                        onSuccess={() => {}}
                     />
                 ) : dialogType === "Approve" ? (
                     <div className="space-y-5">
@@ -496,6 +498,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                             inputFields={[]}
                             actions={false}
                             title={"Request Details"}
+                            onSuccess={() => {}}
                         />
                         {showRejectionNote && (
                             <>

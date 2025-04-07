@@ -20,6 +20,8 @@ interface TableProps {
         type: string;
         required: boolean;
     }>;
+    onSuccess: () => void;
+
     addBtn?: boolean;
     dynamicDialog?: boolean;
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void;
@@ -60,6 +62,8 @@ const TableComponent: React.FC<TableProps> = ({
     editEndPoint,
     createEndPoint,
     deleteEndPoint,
+
+    onSuccess,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -180,13 +184,6 @@ const TableComponent: React.FC<TableProps> = ({
                 openStaticDialog("Delete", row);
             }
         }
-    };
-
-    const handleSuccess = (type: string, data: any) => {
-        console.log("SUCCESS");
-        console.log("type:", type);
-        console.log("data:", data);
-        console.log("SUCCESS");
     };
 
     return (
@@ -448,7 +445,7 @@ const TableComponent: React.FC<TableProps> = ({
                     dialogRef={dialogRef}
                     dialogType={dialogType}
                     current={currentRow}
-                    onSuccess={handleSuccess}
+                    onSuccess={onSuccess}
                     inputFields={inputFields}
                     title={title}
                     previewColumns={previewColumns}
