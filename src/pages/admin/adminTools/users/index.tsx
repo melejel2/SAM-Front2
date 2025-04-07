@@ -36,6 +36,7 @@ const Users = () => {
                         addBtn={true}
                         editEndPoint="Users/UpdateUser"
                         createEndPoint="Users/AddUser"
+                        deleteEndPoint="Users/DeleteUser"
                     />
                 )}
             </div>
