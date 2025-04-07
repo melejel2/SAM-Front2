@@ -133,7 +133,7 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
 
-    const openDialog = () => {
+    const openCreateDialog = () => {
         setDialogType("Add");
         setCurrentRow(null);
         handleShow();
@@ -163,7 +163,9 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     return (
         <>
             {addBtn && (
-                <Button onClick={openDialog} className="btn btn-ghost btn-xs border-base-content/20 mb-4 h-8 border">
+                <Button
+                    onClick={openCreateDialog}
+                    className="btn btn-ghost btn-xs border-base-content/20 mb-4 h-8 border">
                     <Icon icon={"plus"} fontSize={4} />
                     New {title}
                 </Button>
