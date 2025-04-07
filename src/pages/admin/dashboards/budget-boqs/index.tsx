@@ -23,6 +23,7 @@ const BudgetBOQs = () => {
                     title={"Budget BOQs"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

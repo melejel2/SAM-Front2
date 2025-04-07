@@ -23,6 +23,7 @@ const ContractsTemplates = () => {
                     title={"Template"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

@@ -23,6 +23,7 @@ const ContractsDatabase = () => {
                     title={"Contract"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

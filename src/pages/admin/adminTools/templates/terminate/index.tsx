@@ -23,6 +23,7 @@ const TerminatesTemplates = () => {
                     title={"Template"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

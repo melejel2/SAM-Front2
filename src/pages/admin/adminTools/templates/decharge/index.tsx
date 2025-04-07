@@ -23,6 +23,7 @@ const DechargesTemplates = () => {
                     title={"Template"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

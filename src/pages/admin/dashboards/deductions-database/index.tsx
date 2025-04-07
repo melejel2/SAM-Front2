@@ -23,6 +23,7 @@ const DeductionsDatabase = () => {
                     title={"Deduction"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

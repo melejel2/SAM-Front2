@@ -23,6 +23,7 @@ const Connection = () => {
                     title={"Connection"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

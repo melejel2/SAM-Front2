@@ -23,6 +23,7 @@ const Reports = () => {
                     title={"Report"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>

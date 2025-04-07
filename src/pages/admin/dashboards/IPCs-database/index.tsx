@@ -23,6 +23,7 @@ const IPCsDatabase = () => {
                     title={"IPC"}
                     loading={false}
                     addBtn={true}
+                    onSuccess={() => {}}
                 />
             </div>
         </div>
