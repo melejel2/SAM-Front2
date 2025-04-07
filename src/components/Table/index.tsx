@@ -17,7 +17,7 @@ interface SAMTableProps {
     title: string;
     loading: boolean;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Preview" | "Select", Data?: any) => void;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void;
     showAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
@@ -33,6 +33,7 @@ interface SAMTableProps {
 
     editEndPoint?: string;
     createEndPoint?: string;
+    deleteEndPoint?: string;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -52,9 +53,10 @@ const SAMTable: React.FC<SAMTableProps> = ({
     onRowSelect,
     showAvailableOnly,
     onToggleAvailableOnly,
-    select, // destructure the new prop
+    select,
     editEndPoint,
     createEndPoint,
+    deleteEndPoint,
 }) => {
     return (
         <div className="mt-5">
@@ -84,6 +86,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             select={select}
                             editEndPoint={editEndPoint}
                             createEndPoint={createEndPoint}
+                            deleteEndPoint={deleteEndPoint}
                         />
                     </div>
 
