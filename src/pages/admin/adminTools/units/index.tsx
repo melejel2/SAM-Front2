@@ -32,6 +32,7 @@ const Units = () => {
                     editEndPoint="Unit/UpdateUnit"
                     createEndPoint="Unit/AddUnit"
                     deleteEndPoint="Unit/DeleteUnit"
+                    onSuccess={getUnits}
                 />
             </div>
         </div>
