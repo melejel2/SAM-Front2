@@ -36,6 +36,7 @@ const CostCodes = () => {
                         editEndPoint="CostCode/UpdateCostCode"
                         createEndPoint="CostCode/AddCostCode"
                         deleteEndPoint="CostCode/DeleteCostCode"
+                        onSuccess={getCostCodes}
                     />
                 )}
             </div>
