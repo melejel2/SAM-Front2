@@ -33,6 +33,7 @@ const Trades = () => {
                     editEndPoint="Sheets/UpdateSheet"
                     createEndPoint="Sheets/AddSheet"
                     deleteEndPoint="Sheets/DeleteSheet"
+                    onSuccess={getTrades}
                 />
             </div>
         </div>
