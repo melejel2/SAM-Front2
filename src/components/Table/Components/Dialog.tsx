@@ -24,9 +24,9 @@ interface CurrentData {
 interface DialogProps {
     handleHide: () => void;
     dialogRef: React.RefObject<HTMLDialogElement | null>;
-    dialogType: "Add" | "Edit" | "Preview" | "Select" | "Approve" | "Confirm";
+    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Approve" | "Confirm";
     current: CurrentData | null;
-    onSuccess: (type: "Add" | "Edit" | "Preview" | "Select" | "Approve" | "Confirm", formData: any) => void;
+    onSuccess: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Approve" | "Confirm", formData: any) => void;
     inputFields: InputField[];
     previewColumns?: Record<string, string>;
     title: string;
@@ -35,6 +35,7 @@ interface DialogProps {
     confirmMsg?: string;
     editEndPoint?: string;
     createEndPoint?: string;
+    deleteEndPoint?: string;
 }
 
 const DialogComponent: React.FC<DialogProps> = ({
@@ -51,6 +52,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     confirmMsg,
     editEndPoint,
     createEndPoint,
+    deleteEndPoint,
 }) => {
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -241,6 +243,33 @@ const DialogComponent: React.FC<DialogProps> = ({
         }
     };
 
+    const handleDelete = async () => {
+        try {
+            const token = getToken();
+            if (!token) {
+                toaster.error("Token is missing, unable to save.");
+                return;
+            }
+
+            const response = await apiRequest({
+                endpoint: deleteEndPoint ?? "",
+                method: "DELETE",
+                token: token ?? "",
+                body: current ?? "",
+            });
+            console.log(response);
+            if (response.isSuccess) {
+                toaster.success("Deleted successfully.");
+                onSuccess(dialogType, current);
+                handleClose();
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleConfirm = () => {
         console.log("Confirmed");
         handleClose();
@@ -302,6 +331,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                 className={cn("modal-box relative", {
                     "max-w-7xl": dialogType === "Preview" || dialogType === "Approve",
                     "max-w-5xl": dialogType === "Select",
+                    "max-w-xl": dialogType === "Delete",
                 })}>
                 <button
                     type="button"
@@ -310,7 +340,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     aria-label="Close">
                     ✕
                 </button>
-                <h3 className="text-lg font-bold">{title}</h3>
+                <h3 className="text-lg font-bold">{dialogType === "Delete" ? `Delete ${title}` : title}</h3>
 
                 {dialogType === "Confirm" ? (
                     <div>
@@ -333,6 +363,29 @@ const DialogComponent: React.FC<DialogProps> = ({
                                 loading={isLoading}
                                 onClick={handleClose}>
                                 Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : dialogType === "Delete" ? (
+                    <div className="space-y-4">
+                        <p className="pt-2">This action cannot be undone!</p>
+                        <div className="flex items-center justify-end space-x-4">
+                            <Button
+                                size="sm"
+                                type="button"
+                                disabled={isLoading}
+                                loading={isLoading}
+                                onClick={handleClose}>
+                                Cancel
+                            </Button>
+                            <Button
+                                color="error"
+                                size="sm"
+                                type="button"
+                                disabled={isLoading}
+                                loading={isLoading}
+                                onClick={handleDelete}>
+                                Delete
                             </Button>
                         </div>
                     </div>
