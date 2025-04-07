@@ -22,7 +22,7 @@ interface TableProps {
     }>;
     addBtn?: boolean;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Preview", Data?: any) => void;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void;
     onRowSelect?: (selectedRow: any) => void;
 
     // OPTIONAL PROPS for the "Show Available Only" toggle
@@ -35,6 +35,7 @@ interface TableProps {
 
     editEndPoint?: string;
     createEndPoint?: string;
+    deleteEndPoint?: string;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -58,11 +59,12 @@ const TableComponent: React.FC<TableProps> = ({
 
     editEndPoint,
     createEndPoint,
+    deleteEndPoint,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Preview">("Add");
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage] = useState(10);
@@ -132,7 +134,7 @@ const TableComponent: React.FC<TableProps> = ({
     };
 
     // Opening the Add/Edit/Preview dialogs
-    const openDialog = async () => {
+    const openCreateDialog = async () => {
         setDialogType("Add");
         setCurrentRow(null);
         if (dynamicDialog) {
@@ -168,11 +170,24 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
-    const handleDelete = (id: number) => {
-        console.log(`Delete row with ID: ${id}`);
+    const openDeleteDialog = (row: any) => {
+        setDialogType("Delete");
+        setCurrentRow(row);
+        if (dynamicDialog) {
+            handleShow();
+        } else {
+            if (openStaticDialog) {
+                openStaticDialog("Delete", row);
+            }
+        }
     };
 
-    const handleSuccess = (type: string, data: any) => {};
+    const handleSuccess = (type: string, data: any) => {
+        console.log("SUCCESS");
+        console.log("type:", type);
+        console.log("data:", data);
+        console.log("SUCCESS");
+    };
 
     return (
         <>
@@ -183,7 +198,7 @@ const TableComponent: React.FC<TableProps> = ({
                         <div className="flex items-center space-x-2">
                             {addBtn ? (
                                 <Button
-                                    onClick={openDialog}
+                                    onClick={openCreateDialog}
                                     className="btn btn-ghost btn-xs border-base-content/20 h-8 border">
                                     <span className="iconify lucide--plus size-4"></span>
                                     New {title}
@@ -328,7 +343,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 aria-label="Delete Row"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(row.id);
+                                                                    openDeleteDialog(row);
                                                                 }}>
                                                                 <span className="iconify lucide--trash size-4"></span>
                                                             </Button>
@@ -440,6 +455,7 @@ const TableComponent: React.FC<TableProps> = ({
                     data={[]}
                     editEndPoint={editEndPoint}
                     createEndPoint={createEndPoint}
+                    deleteEndPoint={deleteEndPoint}
                 />
             )}
         </>
