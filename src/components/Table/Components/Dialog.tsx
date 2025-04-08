@@ -95,8 +95,6 @@ const DialogComponent: React.FC<DialogProps> = ({
         e.preventDefault();
         setIsLoading(true);
 
-        console.log("formData", formData);
-
         try {
             const token = getToken();
             if (!token) {
@@ -112,9 +110,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                         token: token ?? "",
                         body: formData,
                     });
-                    console.log(response);
                     if (response.isSuccess) {
-                        console.log("isSuccess");
                         toaster.success("Updated successfully.");
                         onSuccess();
                     }
@@ -131,7 +127,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                         token: token ?? "",
                         body: formData,
                     });
-                    console.log(response);
                     if (response.isSuccess) {
                         toaster.success("Created successfully.");
                         onSuccess();
@@ -142,7 +137,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     setIsLoading(false);
                 }
             } else if (dialogType === "Preview") {
-                console.log("");
+                console.log("Preview");
             }
 
             // toaster.success(`${dialogType === "Edit" ? "updated" : "created"} successfully.`);
@@ -252,33 +247,16 @@ const DialogComponent: React.FC<DialogProps> = ({
                 toaster.error("Token is missing, unable to save.");
                 return;
             }
-
-            if (title === "User") {
-                const response = await apiRequest({
-                    endpoint: deleteEndPoint ?? "",
-                    method: "DELETE",
-                    token: token ?? "",
-                    body: current ?? "",
-                });
-                console.log(response);
-                if (response.isSuccess) {
-                    toaster.success("Deleted successfully.");
-                    onSuccess();
-                    handleClose();
-                }
-            } else {
-                const deleteEndPointWithId = deleteEndPoint ? `${deleteEndPoint}?id=${current?.id}` : "";
-                const response = await apiRequest({
-                    endpoint: deleteEndPointWithId,
-                    method: "DELETE",
-                    token: token ?? "",
-                });
-                console.log(response);
-                if (response.isSuccess) {
-                    toaster.success("Deleted successfully.");
-                    onSuccess();
-                    handleClose();
-                }
+            const deleteEndPointWithId = deleteEndPoint ? `${deleteEndPoint}?id=${current?.id}` : "";
+            const response = await apiRequest({
+                endpoint: deleteEndPointWithId,
+                method: "DELETE",
+                token: token ?? "",
+            });
+            if (response.isSuccess) {
+                toaster.success("Deleted successfully.");
+                onSuccess();
+                handleClose();
             }
         } catch (error) {
             console.error(error);
@@ -288,7 +266,6 @@ const DialogComponent: React.FC<DialogProps> = ({
     };
 
     const handleConfirm = () => {
-        console.log("Confirmed");
         handleClose();
         toaster.success("Confirmed Successfully...");
     };
