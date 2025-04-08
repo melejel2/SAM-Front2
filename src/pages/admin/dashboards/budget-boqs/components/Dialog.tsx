@@ -35,6 +35,17 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
             <div className="modal-box relative max-w-7xl">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
+                        <div className="text-center">
+                            <ul className="steps text-sm">
+                                <li className="step step-primary">Project</li>
+                                <li className="step">Trade</li>
+                                <li className="step">Buildings</li>
+                                <li className="step">Subcontractor</li>
+                                <li className="step">Particular Conditions</li>
+                                <li className="step">BOQ</li>
+                                <li className="step">Preview</li>
+                            </ul>
+                        </div>
                         <button
                             type="button"
                             className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
