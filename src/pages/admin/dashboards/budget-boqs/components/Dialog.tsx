@@ -3,7 +3,13 @@ import React, { useState } from "react";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
+import BOQStep from "./BOQStep";
+import BuildingsStep from "./BuildingsStep";
+import ParticularConditionsStep from "./ParticularConditionsStep";
+import PreviewStep from "./PreviewStep";
 import ProjectStep from "./ProjectStep";
+import SubcontractorsStep from "./SubcontractorsStep";
+import TradeStep from "./TradeStep";
 
 interface BOQDialogProps {
     handleHide: () => void;
@@ -20,12 +26,12 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
 
     const steps = [
         { label: "Project", content: <ProjectStep /> },
-        { label: "Trade", content: <div>Trade content here</div> },
-        { label: "Buildings", content: <div>Buildings content here</div> },
-        { label: "Subcontractor", content: <div>Subcontractor content here</div> },
-        { label: "Particular Conditions", content: <div>Particular Conditions content here</div> },
-        { label: "BOQ", content: <div>BOQ content here</div> },
-        { label: "Preview", content: <div>Preview content here</div> },
+        { label: "Trade", content: <TradeStep /> },
+        { label: "Buildings", content: <BuildingsStep /> },
+        { label: "Subcontractor", content: <SubcontractorsStep /> },
+        { label: "Particular Conditions", content: <ParticularConditionsStep /> },
+        { label: "BOQ", content: <BOQStep /> },
+        { label: "Preview", content: <PreviewStep /> },
     ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
