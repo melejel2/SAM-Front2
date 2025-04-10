@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
-import useBudgetBOQs from "../use-budget-BOQs";
 import BOQStep from "./BOQ";
 import BuildingsStep from "./Buildings";
 import ParticularConditionsStep from "./ParticularConditions";
@@ -11,6 +10,7 @@ import PreviewStep from "./Preview";
 import ProjectStep from "./Projects";
 import SubcontractorsStep from "./Subcontractors";
 import TradeStep from "./Trade";
+import useBudgetBOQsDialog from "./use-budget-boq-dialog";
 
 interface BOQDialogProps {
     handleHide: () => void;
@@ -22,7 +22,14 @@ interface BOQDialogProps {
 const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const { setSelectedProject, selectedProject, setSelectedTrade, selectedTrade } = useBudgetBOQs();
+    const {
+        setSelectedProject,
+        selectedProject,
+        setSelectedTrade,
+        selectedTrade,
+        setSelectedBuilding,
+        selectedBuilding,
+    } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
 
@@ -34,10 +41,14 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
         setSelectedTrade(trade);
     };
 
+    const handleSelectBuilding = (building: any) => {
+        setSelectedBuilding(building);
+    };
+
     const steps = [
         { label: "Project", content: <ProjectStep onSelectProject={handleSelectProject} /> },
         { label: "Trade", content: <TradeStep onSelectTrade={handleSelectTrade} /> },
-        { label: "Buildings", content: <BuildingsStep /> },
+        { label: "Buildings", content: <BuildingsStep onSelectBuilding={handleSelectBuilding} /> },
         { label: "Subcontractor", content: <SubcontractorsStep /> },
         { label: "Particular Conditions", content: <ParticularConditionsStep /> },
         { label: "BOQ", content: <BOQStep /> },
@@ -90,7 +101,11 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                             type="button"
                             color="ghost"
                             className="btn-circle"
-                            disabled={currentStep < 2 || (currentStep === 2 && selectedTrade)}
+                            disabled={
+                                currentStep < 2 ||
+                                (currentStep === 2 && selectedTrade) ||
+                                (currentStep === 3 && selectedBuilding)
+                            }
                             onClick={() => setCurrentStep((prev) => prev - 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
@@ -116,7 +131,8 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                             disabled={
                                 currentStep === steps.length - 1 ||
                                 !selectedProject ||
-                                (currentStep === 1 && !selectedTrade)
+                                (currentStep === 1 && !selectedTrade) ||
+                                (currentStep === 2 && !selectedBuilding)
                             }
                             onClick={() => setCurrentStep((prev) => prev + 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
