@@ -4,23 +4,27 @@ import SAMTable from "@/components/Table";
 
 import useBudgetBOQs from "../../use-budget-BOQs";
 
-function ProjectStep() {
+interface ProjectStepProps {
+    onSelect?: (project: any) => void;
+}
+
+const ProjectStep: React.FC<ProjectStepProps> = ({ onSelect }) => {
     const { columns, tableData, inputFields } = useBudgetBOQs();
 
     return (
-        <div className="">
+        <div>
             <SAMTable
                 columns={columns}
                 tableData={tableData}
                 inputFields={inputFields}
                 actions={false}
-                title={"Projects"}
-                select
+                title={"Project"}
+                onRowSelect={onSelect}
                 loading={false}
                 onSuccess={() => {}}
             />
         </div>
     );
-}
+};
 
 export default ProjectStep;
