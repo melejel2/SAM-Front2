@@ -1,19 +1,30 @@
 import React from "react";
 
-function BuildingsStep() {
+import SAMTable from "@/components/Table";
+
+import useBuildings from "./use-buildings";
+
+interface BuildingsStepProps {
+    onSelectBuilding?: (Building: any) => void;
+}
+
+const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
+    const { columns, tableData } = useBuildings();
+
     return (
-        <div>
-            Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus reprehenderit qui ut
-            exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet sequi. Impedit,
-            possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus
-            reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet
-            sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus
-            doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore
-            est amet sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint
-            ducimus doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis
-            tempore est amet sequi. Impedit, possimus voluptates.
+        <div className="border-base-200 border">
+            <SAMTable
+                columns={columns}
+                tableData={tableData}
+                inputFields={[]}
+                actions={false}
+                title={"Building"}
+                onRowSelect={onSelectBuilding}
+                loading={false}
+                onSuccess={() => {}}
+            />
         </div>
     );
-}
+};
 
 export default BuildingsStep;
