@@ -7,32 +7,25 @@ const useProjects = () => {
     };
     const tableData = [
         {
-            id: "1",
+            id: 1,
             project_cost_center: "First Name 1",
             project_name: "Project Name 1",
             project_acronym: "Project Acronym 1",
             project_city: "Project City 1",
-            buildings: [
-                { id: 1, name: "Building 1", code: "B1" },
-                { id: 2, name: "Building 2", code: "B2" },
-                { id: 3, name: "Building 3", code: "B3" },
-            ],
         },
         {
-            id: "2",
+            id: 2,
             project_cost_center: "First Name 2",
             project_name: "Project Name 2",
             project_acronym: "Project Acronym 2",
             project_city: "Project City 2",
-            buildings: [{ id: 1, name: "Building 1", code: "B1" }],
         },
         {
-            id: "3",
+            id: 3,
             project_cost_center: "First Name 3",
             project_name: "Project Name 3",
             project_acronym: "Project Acronym 3",
             project_city: "Project City 3",
-            buildings: [],
         },
     ];
 
