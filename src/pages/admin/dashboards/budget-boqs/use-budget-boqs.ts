@@ -7,23 +7,24 @@ const useBudgetBOQs = () => {
         project_acronym: "Project Acronym",
         project_city: "Project City",
     };
+
     const tableData = [
         {
-            id: "1",
+            id: 1,
             project_cost_center: "First Name 1",
             project_name: "Project Name 1",
             project_acronym: "Project Acronym 1",
             project_city: "Project City 1",
         },
         {
-            id: "2",
+            id: 2,
             project_cost_center: "First Name 2",
             project_name: "Project Name 2",
             project_acronym: "Project Acronym 2",
             project_city: "Project City 2",
         },
         {
-            id: "3",
+            id: 3,
             project_cost_center: "First Name 3",
             project_name: "Project Name 3",
             project_acronym: "Project Acronym 3",
@@ -58,17 +59,10 @@ const useBudgetBOQs = () => {
         },
     ];
 
-    const [selectedProject, setSelectedProject] = useState<any>(null);
-    const [selectedTrade, setSelectedTrade] = useState<any>(null);
-
     return {
         columns,
         tableData,
         inputFields,
-        selectedProject,
-        selectedTrade,
-        setSelectedProject,
-        setSelectedTrade,
     };
 };
 
