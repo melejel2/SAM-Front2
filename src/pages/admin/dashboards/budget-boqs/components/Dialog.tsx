@@ -22,17 +22,21 @@ interface BOQDialogProps {
 const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const { setSelectedProject, selectedProject } = useBudgetBOQs();
+    const { setSelectedProject, selectedProject, setSelectedTrade, selectedTrade } = useBudgetBOQs();
 
     const { toaster } = useToast();
 
-    const handleProjectSelect = (project: any) => {
+    const handleSelectProject = (project: any) => {
         setSelectedProject(project);
     };
 
+    const handleSelectTrade = (trade: any) => {
+        setSelectedTrade(trade);
+    };
+
     const steps = [
-        { label: "Project", content: <ProjectStep onSelect={handleProjectSelect} /> },
-        { label: "Trade", content: <TradeStep /> },
+        { label: "Project", content: <ProjectStep onSelectProject={handleSelectProject} /> },
+        { label: "Trade", content: <TradeStep onSelectTrade={handleSelectTrade} /> },
         { label: "Buildings", content: <BuildingsStep /> },
         { label: "Subcontractor", content: <SubcontractorsStep /> },
         { label: "Particular Conditions", content: <ParticularConditionsStep /> },
@@ -53,6 +57,7 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
 
     const handleClose = () => {
         setSelectedProject(null);
+        setSelectedTrade(null);
         handleHide();
     };
 
@@ -84,7 +89,7 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                             type="button"
                             color="ghost"
                             className="btn-circle"
-                            disabled={currentStep < 2}
+                            disabled={currentStep < 2 || (currentStep === 2 && selectedTrade)}
                             onClick={() => setCurrentStep((prev) => prev - 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
@@ -107,7 +112,11 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                             type="button"
                             color="ghost"
                             className="btn-circle"
-                            disabled={currentStep === steps.length - 1 || !selectedProject}
+                            disabled={
+                                currentStep === steps.length - 1 ||
+                                !selectedProject ||
+                                (currentStep === 1 && !selectedTrade)
+                            }
                             onClick={() => setCurrentStep((prev) => prev + 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g

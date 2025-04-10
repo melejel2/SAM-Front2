@@ -59,13 +59,16 @@ const useBudgetBOQs = () => {
     ];
 
     const [selectedProject, setSelectedProject] = useState<any>(null);
+    const [selectedTrade, setSelectedTrade] = useState<any>(null);
 
     return {
         columns,
         tableData,
         inputFields,
         selectedProject,
+        selectedTrade,
         setSelectedProject,
+        setSelectedTrade,
     };
 };
 
