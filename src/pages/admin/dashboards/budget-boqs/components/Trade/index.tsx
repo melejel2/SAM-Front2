@@ -1,19 +1,34 @@
-import React from "react";
+import { useEffect } from "react";
 
-function TradeStep() {
+import SAMTable from "@/components/Table";
+import useTrades from "@/pages/admin/adminTools/trades/use-trades";
+
+interface TradeStepProps {
+    onSelectTrade?: (trade: any) => void;
+}
+
+const TradeStep: React.FC<TradeStepProps> = ({ onSelectTrade }) => {
+    const { columns, tableData, getTrades } = useTrades();
+
+    useEffect(() => {
+        getTrades();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     return (
-        <div>
-            Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus reprehenderit qui ut
-            exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet sequi. Impedit,
-            possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus
-            reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet
-            sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus
-            doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore
-            est amet sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint
-            ducimus doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis
-            tempore est amet sequi. Impedit, possimus voluptates.
+        <div className="border-base-200 border">
+            <SAMTable
+                columns={columns}
+                tableData={tableData}
+                inputFields={[]}
+                actions={false}
+                title={"Trades"}
+                loading={false}
+                onSuccess={() => {}}
+                onRowSelect={onSelectTrade}
+            />
         </div>
     );
-}
+};
 
 export default TradeStep;
