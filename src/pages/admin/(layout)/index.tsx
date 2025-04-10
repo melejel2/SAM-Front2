@@ -1,5 +1,4 @@
-import { log } from "console";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode } from "react";
 
 import { useConfig } from "@/contexts/config";
 
