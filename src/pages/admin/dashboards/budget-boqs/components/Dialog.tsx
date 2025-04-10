@@ -82,9 +82,9 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                                 <g
                                     fill="none"
                                     stroke="currentColor"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2">
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <path d="M16 12H8m4-4l-4 4l4 4" />
                                 </g>
@@ -104,9 +104,9 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                                 <g
                                     fill="none"
                                     stroke="currentColor"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2">
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2">
                                     <circle cx="12" cy="12" r="10" />
                                     <path d="M8 12h8m-4 4l4-4l-4-4" />
                                 </g>
