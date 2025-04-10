@@ -14,6 +14,12 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
         url: "/dashboard/budget-BOQs",
     },
     {
+        id: "dashboard-subcontractors-BOQs",
+        icon: "lucide--hard-drive",
+        label: "Subcontractors BOQs",
+        url: "/dashboard/subcontractors-BOQs",
+    },
+    {
         id: "dashboard-contracts-database",
         icon: "lucide--archive",
         label: "Contracts Database",
