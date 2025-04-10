@@ -73,9 +73,11 @@ const TableComponent: React.FC<TableProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage] = useState(10);
     const { dialogRef, handleShow, handleHide } = useDialog();
+    const [selectedRow, setSelectedRow] = useState<any>();
 
     const handleRowClick = (row: any) => {
         if (onRowSelect) {
+            setSelectedRow(row);
             onRowSelect(row);
         }
     };
@@ -284,7 +286,9 @@ const TableComponent: React.FC<TableProps> = ({
                                     paginatedData.map((row, index) => (
                                         <tr
                                             key={index}
-                                            className="hover:bg-base-200/40 cursor-pointer"
+                                            className={cn("hover:bg-base-200/40 cursor-pointer", {
+                                                "bg-base-300": selectedRow?.id === row.id,
+                                            })}
                                             onClick={() => handleRowClick(row)}>
                                             {select && (
                                                 <td className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
