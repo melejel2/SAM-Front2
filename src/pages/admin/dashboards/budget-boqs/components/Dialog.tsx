@@ -3,13 +3,13 @@ import React, { useState } from "react";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
-import BOQStep from "./BOQStep";
-import BuildingsStep from "./BuildingsStep";
-import ParticularConditionsStep from "./ParticularConditionsStep";
-import PreviewStep from "./PreviewStep";
-import ProjectStep from "./ProjectStep";
-import SubcontractorsStep from "./SubcontractorsStep";
-import TradeStep from "./TradeStep";
+import BOQStep from "./BOQ";
+import BuildingsStep from "./Buildings";
+import ParticularConditionsStep from "./ParticularConditions";
+import PreviewStep from "./Preview";
+import ProjectStep from "./Projects";
+import SubcontractorsStep from "./Subcontractors";
+import TradeStep from "./Trade";
 
 interface BOQDialogProps {
     handleHide: () => void;
@@ -92,7 +92,7 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                         </Button>
 
                         {/* Content */}
-                        <div className="h-full px-2">{steps[currentStep].content}</div>
+                        <div className="h-full w-full px-2">{steps[currentStep].content}</div>
 
                         <Button
                             type="button"

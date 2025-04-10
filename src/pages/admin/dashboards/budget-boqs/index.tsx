@@ -9,12 +9,12 @@ import BOQDialogComponent from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-BOQs";
 
 const BudgetBOQs = () => {
-    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
+    // const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
 
     const { columns, tableData, inputFields } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
 
-    const openCreateDialog = async (type: string) => {};
+    // const openCreateDialog = async (type: string) => {};
 
     return (
         <div>
