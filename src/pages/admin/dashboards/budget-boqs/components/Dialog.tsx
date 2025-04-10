@@ -59,6 +59,7 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
         setSelectedProject(null);
         setSelectedTrade(null);
         handleHide();
+        setCurrentStep(0);
     };
 
     return (
