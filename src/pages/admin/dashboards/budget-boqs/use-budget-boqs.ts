@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const useBudgetBOQs = () => {
     const columns = {
         project_cost_center: "Project Cost Center",
@@ -56,10 +58,14 @@ const useBudgetBOQs = () => {
         },
     ];
 
+    const [selectedProject, setSelectedProject] = useState<any>(null);
+
     return {
         columns,
         tableData,
         inputFields,
+        selectedProject,
+        setSelectedProject,
     };
 };
 

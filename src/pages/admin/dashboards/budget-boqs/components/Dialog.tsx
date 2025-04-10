@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
+import useBudgetBOQs from "../use-budget-BOQs";
 import BOQStep from "./BOQ";
 import BuildingsStep from "./Buildings";
 import ParticularConditionsStep from "./ParticularConditions";
@@ -21,11 +22,16 @@ interface BOQDialogProps {
 const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const { setSelectedProject, selectedProject } = useBudgetBOQs();
 
     const { toaster } = useToast();
 
+    const handleProjectSelect = (project: any) => {
+        setSelectedProject(project);
+    };
+
     const steps = [
-        { label: "Project", content: <ProjectStep /> },
+        { label: "Project", content: <ProjectStep onSelect={handleProjectSelect} /> },
         { label: "Trade", content: <TradeStep /> },
         { label: "Buildings", content: <BuildingsStep /> },
         { label: "Subcontractor", content: <SubcontractorsStep /> },
@@ -46,6 +52,7 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
     };
 
     const handleClose = () => {
+        setSelectedProject(null);
         handleHide();
     };
 
@@ -72,11 +79,12 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                         </button>
                     </div>
                     <div className="mt-4 flex h-full items-center justify-between">
+                        {/* Back btn */}
                         <Button
                             type="button"
                             color="ghost"
                             className="btn-circle"
-                            disabled={currentStep === 0}
+                            disabled={currentStep < 2}
                             onClick={() => setCurrentStep((prev) => prev - 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
@@ -94,11 +102,12 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
                         {/* Content */}
                         <div className="h-full w-full px-2">{steps[currentStep].content}</div>
 
+                        {/* Next Btn */}
                         <Button
                             type="button"
                             color="ghost"
                             className="btn-circle"
-                            disabled={currentStep === steps.length - 1}
+                            disabled={currentStep === steps.length - 1 || !selectedProject}
                             onClick={() => setCurrentStep((prev) => prev + 1)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
