@@ -1,15 +1,9 @@
 import React, { useState } from "react";
 
-import { Button } from "@/components/daisyui";
+import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
 import BOQStep from "./BOQ";
-import BuildingsStep from "./Buildings";
-import ParticularConditionsStep from "./ParticularConditions";
-import PreviewStep from "./Preview";
-import ProjectStep from "./Projects";
-import SubcontractorsStep from "./Subcontractors";
-import TradeStep from "./Trade";
 import useBudgetBOQsDialog from "./use-budget-boq-dialog";
 
 interface BudgetBOQDialogProps {
@@ -21,21 +15,9 @@ interface BudgetBOQDialogProps {
 
 const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [currentStep, setCurrentStep] = useState(0);
-    const {
-        setSelectedProject,
-        selectedProject,
-        setSelectedTrade,
-        selectedTrade,
-        setSelectedBuilding,
-        selectedBuilding,
-    } = useBudgetBOQsDialog();
+    const { setSelectedTrade, selectedTrade, setSelectedBuilding, selectedBuilding, buildings } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
-
-    const handleSelectProject = (project: any) => {
-        setSelectedProject(project);
-    };
 
     const handleSelectTrade = (trade: any) => {
         setSelectedTrade(trade);
@@ -44,16 +26,6 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
     const handleSelectBuilding = (building: any) => {
         setSelectedBuilding(building);
     };
-
-    const steps = [
-        { label: "Project", content: <ProjectStep onSelectProject={handleSelectProject} /> },
-        { label: "Trade", content: <TradeStep onSelectTrade={handleSelectTrade} /> },
-        { label: "Buildings", content: <BuildingsStep onSelectBuilding={handleSelectBuilding} /> },
-        { label: "Subcontractor", content: <SubcontractorsStep /> },
-        { label: "Particular Conditions", content: <ParticularConditionsStep /> },
-        { label: "BOQ", content: <BOQStep /> },
-        { label: "Preview", content: <PreviewStep /> },
-    ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -67,95 +39,73 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
     };
 
     const handleClose = () => {
-        setSelectedProject(null);
         setSelectedTrade(null);
         handleHide();
-        setCurrentStep(0);
     };
 
     return (
-        <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
-            <div className="modal-box relative h-[85%] max-w-[85%]">
-                <form onSubmit={handleSubmit} className="h-[84%] space-y-4">
-                    <div>
-                        <div className="text-center">
-                            <ul className="steps overflow-x-auto text-sm">
-                                {steps.map((step, index) => (
-                                    <li key={index} className={`step ${index <= currentStep ? "step-primary" : ""}`}>
-                                        {step.label}
-                                    </li>
-                                ))}
-                            </ul>
+        <>
+            <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
+                <div className="modal-box relative h-[85%] max-w-[85%]">
+                    <form onSubmit={handleSubmit} className="h-[82%] space-y-4">
+                        <div>
+                            <span className="font-semibold">Budget BOQ</span>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
+                                onClick={handleClose}
+                                aria-label="Close">
+                                ✕
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
-                            onClick={handleClose}
-                            aria-label="Close">
-                            ✕
-                        </button>
-                    </div>
-                    <div className="mt-4 flex h-full items-center justify-between">
-                        {/* Back btn */}
-                        <Button
-                            type="button"
-                            color="ghost"
-                            className="btn-circle"
-                            disabled={
-                                currentStep < 2 ||
-                                (currentStep === 2 && selectedTrade) ||
-                                (currentStep === 3 && selectedBuilding)
-                            }
-                            onClick={() => setCurrentStep((prev) => prev - 1)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-                                <g
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M16 12H8m4-4l-4 4l4 4" />
-                                </g>
-                            </svg>
-                        </Button>
+                        <div className="flex w-full items-center justify-between">
+                            <Button type="button" size="sm">
+                                Clear BOQ
+                            </Button>
+                            <div className="flex items-center justify-end space-x-2">
+                                <Select
+                                    className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
+                                    onChange={(e) => {
+                                        // setFormData({ ...formData, [name]: e.target.value });
+                                    }}
+                                    name="building"
+                                    onTouchStart={(e) => {
+                                        if (e.touches.length > 1) {
+                                            e.preventDefault();
+                                        }
+                                    }}>
+                                    <>
+                                        {dialogType === "Add" && (
+                                            <SelectOption value="" disabled hidden>
+                                                Select Building
+                                            </SelectOption>
+                                        )}
 
-                        {/* Content */}
-                        <div className="h-full w-full px-2">{steps[currentStep].content}</div>
-
-                        {/* Next Btn */}
-                        <Button
-                            type="button"
-                            color="ghost"
-                            className="btn-circle"
-                            disabled={
-                                currentStep === steps.length - 1 ||
-                                !selectedProject ||
-                                (currentStep === 1 && !selectedTrade) ||
-                                (currentStep === 2 && !selectedBuilding)
-                            }
-                            onClick={() => setCurrentStep((prev) => prev + 1)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-                                <g
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="M8 12h8m-4 4l4-4l-4-4" />
-                                </g>
-                            </svg>
-                        </Button>
-                    </div>
-                    {currentStep === steps.length - 1 && (
+                                        {(buildings ?? []).map((building) => (
+                                            <SelectOption key={building.id} value={building.id} className="bg-base-100">
+                                                {building.name}
+                                            </SelectOption>
+                                        ))}
+                                    </>
+                                </Select>
+                                <Button type="button" size="sm">
+                                    Create buildings
+                                </Button>
+                                <Button type="button" size="sm">
+                                    Import BOQ
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="h-full w-full">
+                            <BOQStep />
+                        </div>
                         <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
-                            {dialogType === "Add" ? "Add" : "Save"}
+                            Save
                         </Button>
-                    )}
-                </form>
-            </div>
-        </dialog>
+                    </form>
+                </div>
+            </dialog>
+        </>
     );
 };
 
