@@ -13,6 +13,12 @@ const useBudgetBOQsDialog = () => {
         total_price: "Total Price",
     };
 
+    const buildings = [
+        { id: 1, name: "Building 1", code: "B1" },
+        { id: 2, name: "Building 2", code: "B2" },
+        { id: 3, name: "Building 3", code: "B3" },
+    ];
+
     const tableData = [
         {
             id: 1,
@@ -50,6 +56,7 @@ const useBudgetBOQsDialog = () => {
         selectedBuilding,
         setSelectedTrade,
         setSelectedBuilding,
+        buildings,
     };
 };
 
