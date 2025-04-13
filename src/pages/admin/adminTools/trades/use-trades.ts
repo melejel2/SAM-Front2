@@ -7,6 +7,7 @@ import useCostCodes from "../cost-codes/use-cost-codes";
 
 const useTrades = () => {
     const [tableData, setTableData] = useState<any[]>([]);
+    const [sheets, setSheets] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
     const { getToken } = useAuth();
@@ -47,8 +48,10 @@ const useTrades = () => {
         try {
             const data = await apiRequest({ endpoint: "Sheets/GetSheets", method: "GET", token: token ?? "" });
             if (data) {
+                setSheets(data);
                 setTableData(data);
             } else {
+                setSheets([]);
                 setTableData([]);
             }
         } catch (error) {
@@ -61,6 +64,7 @@ const useTrades = () => {
     return {
         columns,
         tableData,
+        sheets,
         inputFields,
         getTrades,
         loading,
