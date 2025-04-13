@@ -85,11 +85,13 @@ const TableComponent: React.FC<TableProps> = ({
     // Filter the data by search
     const filteredData = useMemo(() => {
         const lowercasedQuery = searchQuery.toLowerCase();
-        return tableData.filter((d) =>
-            Object.values(d).some(
-                (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
-            ),
-        );
+        return tableData.length > 0
+            ? tableData.filter((d) =>
+                  Object.values(d).some(
+                      (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
+                  ),
+              )
+            : [];
     }, [searchQuery, tableData]);
 
     // Sort the data by the chosen column

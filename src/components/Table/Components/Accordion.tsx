@@ -171,21 +171,22 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                 </Button>
             )}
             <div className="w-full space-y-4">
-                {accordionData.map((data, index) => (
-                    <Accordion
-                        rowData={data}
-                        key={index}
-                        onEdit={openEditDialog}
-                        onDelete={handleDelete}
-                        onShow={openPreviewDialog}
-                        title={"title"}
-                        actions={actions}
-                        showAction={showAction}
-                        editAction={editAction}
-                        deleteAction={deleteAction}
-                        select={select} // pass the prop to each Accordion
-                    />
-                ))}
+                {accordionData.length > 0 &&
+                    accordionData.map((data, index) => (
+                        <Accordion
+                            rowData={data}
+                            key={index}
+                            onEdit={openEditDialog}
+                            onDelete={handleDelete}
+                            onShow={openPreviewDialog}
+                            title={"title"}
+                            actions={actions}
+                            showAction={showAction}
+                            editAction={editAction}
+                            deleteAction={deleteAction}
+                            select={select} // pass the prop to each Accordion
+                        />
+                    ))}
             </div>
 
             {(addBtn || actions) && (
