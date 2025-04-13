@@ -36,6 +36,8 @@ interface SAMTableProps {
     editEndPoint?: string;
     createEndPoint?: string;
     deleteEndPoint?: string;
+    hasSheets?: boolean;
+    sheets?: any[];
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -54,12 +56,12 @@ const SAMTable: React.FC<SAMTableProps> = ({
     dynamicDialog,
     openStaticDialog,
     onRowSelect,
-    showAvailableOnly,
-    onToggleAvailableOnly,
     select,
     editEndPoint,
     createEndPoint,
     deleteEndPoint,
+    hasSheets = false,
+    sheets = [],
 }) => {
     return (
         <div className="mt-5">
@@ -83,14 +85,14 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             openStaticDialog={openStaticDialog}
                             onRowSelect={onRowSelect}
                             // Forward optional toggle props (if provided)
-                            showAvailableOnly={showAvailableOnly}
-                            onToggleAvailableOnly={onToggleAvailableOnly}
                             // Pass the select prop along
                             select={select}
                             editEndPoint={editEndPoint}
                             createEndPoint={createEndPoint}
                             deleteEndPoint={deleteEndPoint}
                             onSuccess={onSuccess}
+                            hasSheets={hasSheets}
+                            sheets={sheets}
                         />
                     </div>
 
