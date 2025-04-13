@@ -5,16 +5,19 @@ import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
 
-import BOQDialogComponent from "./components/Dialog";
-import useBudgetBOQs from "./use-budget-BOQs";
+import BudgetBOQDialog from "./components/Dialog";
+import useBudgetBOQs from "./use-budget-boqs";
 
 const BudgetBOQs = () => {
-    // const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
 
     const { columns, tableData, inputFields } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
 
-    // const openCreateDialog = async (type: string) => {};
+    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select") => {
+        setDialogType(type);
+        handleShow();
+    };
 
     return (
         <div>
@@ -34,11 +37,16 @@ const BudgetBOQs = () => {
                     addBtn={true}
                     onSuccess={() => {}}
                     dynamicDialog={false}
-                    openStaticDialog={handleShow}
+                    openStaticDialog={openCreateDialog}
                 />
             </div>
 
-            <BOQDialogComponent handleHide={handleHide} dialogRef={dialogRef} dialogType={"Add"} onSuccess={() => {}} />
+            <BudgetBOQDialog
+                handleHide={handleHide}
+                dialogRef={dialogRef}
+                dialogType={dialogType}
+                onSuccess={() => {}}
+            />
         </div>
     );
 };

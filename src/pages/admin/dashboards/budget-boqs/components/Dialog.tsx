@@ -12,14 +12,14 @@ import SubcontractorsStep from "./Subcontractors";
 import TradeStep from "./Trade";
 import useBudgetBOQsDialog from "./use-budget-boq-dialog";
 
-interface BOQDialogProps {
+interface BudgetBOQDialogProps {
     handleHide: () => void;
     dialogRef: React.RefObject<HTMLDialogElement | null>;
-    dialogType: "Add" | "Edit" | "Preview";
+    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select";
     onSuccess: () => void;
 }
 
-const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
+const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
     const {
@@ -159,4 +159,4 @@ const BOQDialogComponent: React.FC<BOQDialogProps> = ({ handleHide, dialogRef, d
     );
 };
 
-export default BOQDialogComponent;
+export default BudgetBOQDialog;
