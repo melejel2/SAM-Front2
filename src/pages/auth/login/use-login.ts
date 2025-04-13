@@ -45,12 +45,13 @@ const useLogin = () => {
                 toaster.success("Login successful...");
                 setLoggedInUser(response.value);
                 navigate("/dashboard");
-            }
-            if (response.status === 404 || response.status === 400) {
-                toaster.error(response.message);
-                setError("Invalid username or password");
-            } else {
-                toaster.error(response.message);
+            } else if (!response.success) {
+                if (response.status === 404 || response.status === 400) {
+                    toaster.error("Invalid username or password");
+                    setError("Invalid username or password");
+                } else {
+                    toaster.error(response.message);
+                }
             }
         } catch (error) {
             console.error("error", error);
