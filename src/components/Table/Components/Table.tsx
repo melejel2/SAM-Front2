@@ -27,17 +27,14 @@ interface TableProps {
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void;
     onRowSelect?: (selectedRow: any) => void;
 
-    // OPTIONAL PROPS for the "Show Available Only" toggle
-    showAvailableOnly?: boolean;
-    onToggleAvailableOnly?: () => void;
-
-    // Added property for selectable mode
     select?: boolean;
-    loading?: boolean; // new prop added
+    loading?: boolean;
 
     editEndPoint?: string;
     createEndPoint?: string;
     deleteEndPoint?: string;
+    hasSheets?: boolean;
+    sheets?: any[];
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -54,16 +51,16 @@ const TableComponent: React.FC<TableProps> = ({
     dynamicDialog = true,
     openStaticDialog,
     onRowSelect,
-    showAvailableOnly,
-    onToggleAvailableOnly,
-    select, // new prop destructured here
-    loading, // new prop destructured here
+    select,
+    loading,
 
     editEndPoint,
     createEndPoint,
     deleteEndPoint,
 
     onSuccess,
+    hasSheets = false,
+    sheets = [],
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -74,6 +71,7 @@ const TableComponent: React.FC<TableProps> = ({
     const [rowsPerPage] = useState(10);
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [selectedRow, setSelectedRow] = useState<any>();
+    const [activeSheetId, setActiveSheetId] = useState<number>(sheets[0]?.id ?? 0);
 
     const handleRowClick = (row: any) => {
         if (onRowSelect) {
@@ -192,7 +190,7 @@ const TableComponent: React.FC<TableProps> = ({
 
     return (
         <>
-            <Card className="bg-base-100 mt-4 shadow">
+            <Card className="bg-base-100 border-base-200 mt-4 border shadow">
                 <CardBody className="p-0">
                     <div className="flex flex-col items-start justify-start space-y-4 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         {/* Left side with "New" button and (conditionally) the toggle */}
@@ -206,21 +204,6 @@ const TableComponent: React.FC<TableProps> = ({
                                 </Button>
                             ) : (
                                 <span className="hidden lg:block"></span>
-                            )}
-
-                            {/* Render the toggle ONLY if both props are provided */}
-                            {typeof showAvailableOnly === "boolean" && typeof onToggleAvailableOnly === "function" && (
-                                <div className="form-control !-ml-1">
-                                    <label className="label cursor-pointer space-x-2">
-                                        <span className="label-text">Only Available</span>
-                                        <input
-                                            type="checkbox"
-                                            className="checkbox-xs checkbox checkbox-info"
-                                            checked={showAvailableOnly}
-                                            onChange={onToggleAvailableOnly}
-                                        />
-                                    </label>
-                                </div>
                             )}
                         </div>
 
@@ -442,6 +425,22 @@ const TableComponent: React.FC<TableProps> = ({
                             </Pagination>
                         </div>
                     )}
+                    {/* Sheets */}
+                    <div className="bg-base-100 flex w-full overflow-x-auto">
+                        {sheets.map((sheet) => (
+                            <span
+                                key={sheet.id}
+                                className={cn(
+                                    "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
+                                    sheet.id === activeSheetId
+                                        ? "bg-base-300 border-base-300 text-base-content"
+                                        : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
+                                )}
+                                onClick={() => setActiveSheetId(sheet.id)}>
+                                {sheet.name}
+                            </span>
+                        ))}
+                    </div>
                 </CardBody>
             </Card>
 
