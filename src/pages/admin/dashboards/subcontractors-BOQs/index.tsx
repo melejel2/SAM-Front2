@@ -1,17 +1,29 @@
+import { useState } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
+import { useDialog } from "@/components/daisyui";
 
+import SubcontractorsBOQDialog from "./components/Dialog";
 import useSubcontractorsBOQs from "./use-subcontractors-boqs";
 
 const SubcontractorsBOQs = () => {
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
+
     const { columns, tableData, inputFields } = useSubcontractorsBOQs();
+    const { dialogRef, handleShow, handleHide } = useDialog();
+
+    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select") => {
+        setDialogType(type);
+        handleShow();
+    };
 
     return (
         <div>
-            <MetaData title={"Subcontractor BOQs"} />
+            <MetaData title={"Subcontractors BOQs"} />
 
-            <PageTitle title={"Subcontractor BOQs"} centerItem={"Dashboard"} />
+            <PageTitle title={"Subcontractors BOQs"} centerItem={"Dashboard"} />
             <div>
                 <SAMTable
                     columns={columns}
@@ -20,13 +32,20 @@ const SubcontractorsBOQs = () => {
                     actions={true}
                     editAction={true}
                     deleteAction={true}
-                    showAction={true}
                     title={"Subcontractor BOQ"}
                     loading={false}
                     addBtn={true}
                     onSuccess={() => {}}
+                    dynamicDialog={false}
+                    openStaticDialog={openCreateDialog}
                 />
             </div>
+            <SubcontractorsBOQDialog
+                handleHide={handleHide}
+                dialogRef={dialogRef}
+                dialogType={dialogType}
+                onSuccess={() => {}}
+            />
         </div>
     );
 };
