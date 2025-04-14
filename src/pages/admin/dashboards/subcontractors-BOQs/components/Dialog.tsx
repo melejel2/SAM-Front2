@@ -34,6 +34,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         selectedTrade,
         setSelectedBuilding,
         selectedBuilding,
+        setSelectedSubcontractor,
+        selectedSubcontractor,
     } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
@@ -50,11 +52,23 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         setSelectedBuilding(building);
     };
 
+    const handleSelectSubcontractor = (subcontractor: any) => {
+        setSelectedSubcontractor(subcontractor);
+    };
+
+    const handleBack = () => {
+        setCurrentStep((prev) => prev - 1);
+    };
+
+    const handleNext = () => {
+        setCurrentStep((prev) => prev + 1);
+    };
+
     const steps = [
         { label: "Project", content: <ProjectStep onSelectProject={handleSelectProject} /> },
         { label: "Trade", content: <TradeStep onSelectTrade={handleSelectTrade} /> },
         { label: "Buildings", content: <BuildingsStep onSelectBuilding={handleSelectBuilding} /> },
-        { label: "Subcontractor", content: <SubcontractorsStep /> },
+        { label: "Subcontractor", content: <SubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} /> },
         { label: "Particular Conditions", content: <ParticularConditionsStep /> },
         { label: "BOQ", content: <BOQStep /> },
         { label: "Preview", content: <PreviewStep /> },
@@ -74,6 +88,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
     const handleClose = () => {
         setSelectedProject(null);
         setSelectedTrade(null);
+        selectedBuilding(null);
+        setSelectedSubcontractor(null);
         handleHide();
         setCurrentStep(0);
     };
@@ -107,11 +123,13 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                             color="ghost"
                             className="btn-circle"
                             disabled={
-                                currentStep < 2 ||
+                                currentStep === 0 ||
+                                (currentStep === 1 && selectedProject) ||
                                 (currentStep === 2 && selectedTrade) ||
-                                (currentStep === 3 && selectedBuilding)
+                                (currentStep === 3 && selectedBuilding) ||
+                                (currentStep === 4 && selectedSubcontractor)
                             }
-                            onClick={() => setCurrentStep((prev) => prev - 1)}>
+                            onClick={handleBack}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
                                     fill="none"
@@ -137,9 +155,10 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                                 currentStep === steps.length - 1 ||
                                 !selectedProject ||
                                 (currentStep === 1 && !selectedTrade) ||
-                                (currentStep === 2 && !selectedBuilding)
+                                (currentStep === 2 && !selectedBuilding) ||
+                                (currentStep === 3 && !selectedSubcontractor)
                             }
-                            onClick={() => setCurrentStep((prev) => prev + 1)}>
+                            onClick={handleNext}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
                                 <g
                                     fill="none"
