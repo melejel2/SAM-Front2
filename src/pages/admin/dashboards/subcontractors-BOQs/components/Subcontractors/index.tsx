@@ -1,17 +1,30 @@
-function SubcontractorsStep() {
+import React from "react";
+
+import SAMTable from "@/components/Table";
+
+import useSubcontractors from "./use-subcontractors";
+
+interface SubcontractorsStepProps {
+    onSelectSubcontractor?: (subcontractor: any) => void;
+}
+
+const SubcontractorsStep: React.FC<SubcontractorsStepProps> = ({ onSelectSubcontractor }) => {
+    const { columns, tableData } = useSubcontractors();
+
     return (
         <div>
-            Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus reprehenderit qui ut
-            exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet sequi. Impedit,
-            possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus doloribus
-            reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore est amet
-            sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint ducimus
-            doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis tempore
-            est amet sequi. Impedit, possimus voluptates. Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sint
-            ducimus doloribus reprehenderit qui ut exercitationem nulla ipsam eligendi tenetur! Sed, quis eos! Corporis
-            tempore est amet sequi. Impedit, possimus voluptates.
+            <SAMTable
+                columns={columns}
+                tableData={tableData}
+                inputFields={[]}
+                actions={false}
+                title={"Subcontractor"}
+                onRowSelect={onSelectSubcontractor}
+                loading={false}
+                onSuccess={() => {}}
+            />
         </div>
     );
-}
+};
 
 export default SubcontractorsStep;
