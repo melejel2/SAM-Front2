@@ -1,29 +1,22 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useVOsTemplates = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [tableData, setTableData] = useState<any[]>([]);
+
+    const { getToken } = useAuth();
+
+    const token = getToken();
+
     const columns = {
         code: "Code",
-        template_name: "Template Name",
+        name: "Template Name",
+        type: "Type",
         language: "Language",
     };
-    const tableData = [
-        {
-            id: "1",
-            code: "Code 1",
-            template_name: "Template Name 1",
-            language: "Language 1",
-        },
-        {
-            id: "2",
-            code: "Code 2",
-            template_name: "Template Name 2",
-            language: "Language 2",
-        },
-        {
-            id: "3",
-            code: "Code 3",
-            template_name: "Template Name 3",
-            language: "Language 3",
-        },
-    ];
 
     const inputFields = [
         {
@@ -33,8 +26,14 @@ const useVOsTemplates = () => {
             required: true,
         },
         {
-            name: "template_name",
+            name: "name",
             label: "Template Name",
+            type: "text",
+            required: true,
+        },
+        {
+            name: "type",
+            label: "Type",
             type: "text",
             required: true,
         },
@@ -53,10 +52,34 @@ const useVOsTemplates = () => {
         },
     ];
 
+    const getVOContractTemplates = async () => {
+        setLoading(true);
+
+        try {
+            const data = await apiRequest({
+                endpoint: "Templates/GetVOContracts?type=VO",
+                method: "GET",
+                token: token ?? "",
+            });
+            if (data) {
+                setTableData(data);
+                console.log(data);
+            } else {
+                setTableData([]);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         columns,
         tableData,
         inputFields,
+        getVOContractTemplates,
+        loading,
     };
 };
 
