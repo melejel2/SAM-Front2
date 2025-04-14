@@ -63,7 +63,6 @@ const useVOsTemplates = () => {
             });
             if (data) {
                 setTableData(data);
-                console.log(data);
             } else {
                 setTableData([]);
             }

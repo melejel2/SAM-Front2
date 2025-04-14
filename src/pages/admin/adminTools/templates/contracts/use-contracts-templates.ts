@@ -66,7 +66,6 @@ const useContractsTemplates = () => {
             const data = await apiRequest({ endpoint: "Templates/GetContracts", method: "GET", token: token ?? "" });
             if (data) {
                 setTableData(data);
-                console.log(data);
             } else {
                 setTableData([]);
             }
