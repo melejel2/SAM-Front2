@@ -92,14 +92,12 @@ const ParticularConditionsStep = () => {
     };
 
     return (
-        <div className="h-full">
-            <form className="flex h-full items-center justify-center">
-                <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
-                    {inputFields.map((field) => (
-                        <div key={field.name}>{renderInput(field)}</div>
-                    ))}
-                </div>
-            </form>
+        <div className="flex h-full items-center justify-center">
+            <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
+                {inputFields.map((field) => (
+                    <div key={field.name}>{renderInput(field)}</div>
+                ))}
+            </div>
         </div>
     );
 };
