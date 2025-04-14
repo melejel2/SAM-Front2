@@ -88,7 +88,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
     const handleClose = () => {
         setSelectedProject(null);
         setSelectedTrade(null);
-        selectedBuilding(null);
+        setSelectedBuilding(null);
         setSelectedSubcontractor(null);
         handleHide();
         setCurrentStep(0);
