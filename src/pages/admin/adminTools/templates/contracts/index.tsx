@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
@@ -5,7 +7,12 @@ import SAMTable from "@/components/Table";
 import useContractsTemplates from "./use-contracts-templates";
 
 const ContractsTemplates = () => {
-    const { columns, tableData, inputFields } = useContractsTemplates();
+    const { columns, tableData, inputFields, getContractTemplates } = useContractsTemplates();
+
+    useEffect(() => {
+        getContractTemplates();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div>

@@ -1,37 +1,23 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useContractsTemplates = () => {
+    const [loading, setLoading] = useState<boolean>(false);
+    const [tableData, setTableData] = useState<any[]>([]);
+
+    const { getToken } = useAuth();
+
+    const token = getToken();
+
     const columns = {
         code: "Code",
-        template_name: "Template Name",
+        templateName: "Template Name",
         type: "Type",
-        contract_type: "Contract Type",
+        contractType: "Contract Type",
         language: "Language",
     };
-    const tableData = [
-        {
-            id: "1",
-            code: "Code 1",
-            template_name: "Template Name 1",
-            type: "Type 1",
-            contract_type: "Contract Type 1",
-            language: "Language 1",
-        },
-        {
-            id: "2",
-            code: "Code 2",
-            template_name: "Template Name 2",
-            type: "Type 2",
-            contract_type: "Contract Type 2",
-            language: "Language 2",
-        },
-        {
-            id: "3",
-            code: "Code 3",
-            template_name: "Template Name 3",
-            type: "Type 3",
-            contract_type: "Contract Type 3",
-            language: "Language 3",
-        },
-    ];
 
     const inputFields = [
         {
@@ -41,7 +27,7 @@ const useContractsTemplates = () => {
             required: true,
         },
         {
-            name: "template_name",
+            name: "templateName",
             label: "Template Name",
             type: "text",
             required: true,
@@ -53,7 +39,7 @@ const useContractsTemplates = () => {
             required: true,
         },
         {
-            name: "contract_type",
+            name: "contractType",
             label: "Contract Type",
             type: "text",
             required: true,
@@ -73,10 +59,30 @@ const useContractsTemplates = () => {
         },
     ];
 
+    const getContractTemplates = async () => {
+        setLoading(true);
+
+        try {
+            const data = await apiRequest({ endpoint: "Templates/GetContracts", method: "GET", token: token ?? "" });
+            if (data) {
+                setTableData(data);
+                console.log(data);
+            } else {
+                setTableData([]);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         columns,
         tableData,
         inputFields,
+        loading,
+        getContractTemplates,
     };
 };
 
