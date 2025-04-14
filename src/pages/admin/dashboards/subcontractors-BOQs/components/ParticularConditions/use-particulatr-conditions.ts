@@ -5,6 +5,7 @@ interface InputField {
     value?: any;
     required?: boolean;
     options?: any[];
+    prefix?: string;
 }
 
 const useParticularConditions = () => {
@@ -96,6 +97,7 @@ const useParticularConditions = () => {
             name: "contractNumber",
             label: "Contract Number",
             type: "text",
+            prefix: "CS-RIV-",
         },
         {
             name: "advancePayment",

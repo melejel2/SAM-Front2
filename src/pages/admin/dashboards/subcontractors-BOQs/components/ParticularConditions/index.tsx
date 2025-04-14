@@ -11,6 +11,7 @@ interface InputField {
     value?: any;
     required?: boolean;
     options?: any[];
+    prefix?: string;
 }
 
 const ParticularConditionsStep = () => {
@@ -25,7 +26,7 @@ const ParticularConditionsStep = () => {
     });
 
     const renderInput = (field: InputField) => {
-        const { name, type, required, options, label } = field;
+        const { name, type, required, options, label, prefix } = field;
         {
             if (type === "select") {
                 return (
@@ -61,20 +62,35 @@ const ParticularConditionsStep = () => {
                 return (
                     <label className="floating-label" key={name}>
                         <span>{label.charAt(0).toUpperCase() + label.slice(1)}</span>
-                        <input
-                            type={type}
-                            name={name}
-                            placeholder={label}
-                            className="input input-md"
-                            value={formData[name]}
-                            required={required}
-                            onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
-                        />
+                        {prefix ? (
+                            <label className="input input-md">
+                                <span>{prefix}</span>
+                                <input
+                                    type={type}
+                                    name={name}
+                                    className="-ml-2"
+                                    value={formData[name]}
+                                    required={required}
+                                    onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
+                                />
+                            </label>
+                        ) : (
+                            <input
+                                type={type}
+                                name={name}
+                                placeholder={label}
+                                className="input input-md"
+                                value={formData[name]}
+                                required={required}
+                                onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
+                            />
+                        )}
                     </label>
                 );
             }
         }
     };
+
     return (
         <div className="h-full">
             <form className="flex h-full items-center justify-center">
