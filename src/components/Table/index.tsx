@@ -38,6 +38,7 @@ interface SAMTableProps {
     deleteEndPoint?: string;
     hasSheets?: boolean;
     sheets?: any[];
+    rowsPerPage?: number;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -62,6 +63,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     deleteEndPoint,
     hasSheets = false,
     sheets = [],
+    rowsPerPage,
 }) => {
     return (
         <div className="mt-5">
@@ -93,6 +95,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onSuccess={onSuccess}
                             hasSheets={hasSheets}
                             sheets={sheets}
+                            rowsPerPage={rowsPerPage}
                         />
                     </div>
 

@@ -35,6 +35,7 @@ interface TableProps {
     deleteEndPoint?: string;
     hasSheets?: boolean;
     sheets?: any[];
+    rowsPerPage?: number;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -61,6 +62,7 @@ const TableComponent: React.FC<TableProps> = ({
     onSuccess,
     hasSheets = false,
     sheets = [],
+    rowsPerPage = 10,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -68,7 +70,7 @@ const TableComponent: React.FC<TableProps> = ({
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage] = useState(10);
+    // const [rowsPerPage] = useState(7);
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [selectedRow, setSelectedRow] = useState<any>();
     const [activeSheetId, setActiveSheetId] = useState<number>(sheets[0]?.id ?? 0);
