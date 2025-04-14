@@ -15,17 +15,9 @@ interface BudgetBOQDialogProps {
 
 const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef, dialogType, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const { setSelectedTrade, selectedTrade, setSelectedBuilding, selectedBuilding, buildings } = useBudgetBOQsDialog();
+    const { setSelectedTrade, buildings } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
-
-    const handleSelectTrade = (trade: any) => {
-        setSelectedTrade(trade);
-    };
-
-    const handleSelectBuilding = (building: any) => {
-        setSelectedBuilding(building);
-    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
