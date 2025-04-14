@@ -27,7 +27,7 @@ const VOsTemplates = () => {
                     actions={true}
                     deleteAction={true}
                     showAction={true}
-                    title={"Template"}
+                    title={"VO Template"}
                     loading={false}
                     addBtn={true}
                     onSuccess={() => {}}
