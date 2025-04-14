@@ -12,7 +12,7 @@ const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
     const { columns, tableData } = useBuildings();
 
     return (
-        <div className="border-base-200 border">
+        <div>
             <SAMTable
                 columns={columns}
                 tableData={tableData}

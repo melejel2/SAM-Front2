@@ -12,7 +12,7 @@ const ProjectStep: React.FC<ProjectStepProps> = ({ onSelectProject }) => {
     const { columns, tableData } = useProjects();
 
     return (
-        <div className="border-base-200 border">
+        <div>
             <SAMTable
                 columns={columns}
                 tableData={tableData}
