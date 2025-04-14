@@ -96,8 +96,9 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
 
     return (
         <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
-            <div className="modal-box relative h-[85%] max-w-[85%]">
-                <form onSubmit={handleSubmit} className="h-[84%] space-y-4">
+            <div className="modal-box relative flex h-[85%] max-w-[85%] flex-col">
+                <form onSubmit={handleSubmit} className="flex h-full flex-col space-y-4">
+                    {/* Stepper & Close */}
                     <div>
                         <div className="text-center">
                             <ul className="steps overflow-x-auto text-sm">
@@ -116,8 +117,10 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                             ✕
                         </button>
                     </div>
-                    <div className="mt-4 flex h-full items-center justify-between">
-                        {/* Back btn */}
+
+                    {/* Navigation + Content Area */}
+                    <div className="flex flex-1 items-center justify-between overflow-hidden">
+                        {/* Back Btn */}
                         <Button
                             type="button"
                             color="ghost"
@@ -143,8 +146,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                             </svg>
                         </Button>
 
-                        {/* Content */}
-                        <div className="h-full w-full px-2">{steps[currentStep].content}</div>
+                        {/* Main Content */}
+                        <div className="h-full w-full overflow-y-auto px-2">{steps[currentStep].content}</div>
 
                         {/* Next Btn */}
                         <Button
@@ -172,6 +175,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                             </svg>
                         </Button>
                     </div>
+
+                    {/* Submit Button */}
                     {currentStep === steps.length - 1 && (
                         <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
                             {dialogType === "Add" ? "Add" : "Save"}
