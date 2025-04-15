@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const useBudgetBOQsDialog = () => {
+const useSubcontractorBOQsDialog = () => {
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const [selectedTrade, setSelectedTrade] = useState<any>(null);
     const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
@@ -18,4 +18,4 @@ const useBudgetBOQsDialog = () => {
     };
 };
 
-export default useBudgetBOQsDialog;
+export default useSubcontractorBOQsDialog;

@@ -3,14 +3,15 @@ import React, { useState } from "react";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
-import BOQStep from "./BOQ";
+import SubcontractorBOQStep from "./BOQ";
 import BuildingsStep from "./Buildings";
+import useBuildings from "./Buildings/use-buildings";
 import ParticularConditionsStep from "./ParticularConditions";
 import PreviewStep from "./Preview";
 import ProjectStep from "./Projects";
 import SubcontractorsStep from "./Subcontractors";
 import TradeStep from "./Trade";
-import useBudgetBOQsDialog from "./use-budget-boq-dialog";
+import useSubcontractorBOQsDialog from "./use-subcontractor-boq-dialog";
 
 interface SubcontractorsBOQDialogProps {
     handleHide: () => void;
@@ -36,7 +37,9 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         selectedBuilding,
         setSelectedSubcontractor,
         selectedSubcontractor,
-    } = useBudgetBOQsDialog();
+    } = useSubcontractorBOQsDialog();
+
+    const { tableData } = useBuildings();
 
     const { toaster } = useToast();
 
@@ -70,7 +73,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         { label: "Buildings", content: <BuildingsStep onSelectBuilding={handleSelectBuilding} /> },
         { label: "Subcontractor", content: <SubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} /> },
         { label: "Particular Conditions", content: <ParticularConditionsStep /> },
-        { label: "BOQ", content: <BOQStep /> },
+        { label: "BOQ", content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} /> },
         { label: "Preview", content: <PreviewStep /> },
     ];
 
