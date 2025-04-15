@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import apiRequest from "@/api/api";
+import CloseBtn from "@/components/CloseBtn";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
 import { cn } from "@/helpers/utils/cn";
@@ -385,13 +386,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     "max-w-5xl": dialogType === "Select",
                     "max-w-xl": dialogType === "Delete",
                 })}>
-                <button
-                    type="button"
-                    className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
-                    onClick={handleClose}
-                    aria-label="Close">
-                    ✕
-                </button>
+                <CloseBtn handleClose={handleClose} />
                 <h3 className="text-lg font-bold">{dialogType === "Delete" ? `Delete ${title}` : title}</h3>
 
                 {dialogType === "Confirm" ? (

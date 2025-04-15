@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 
+import CloseBtn from "@/components/CloseBtn";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
@@ -43,13 +44,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
                         <div className="flex h-full flex-col space-y-4">
                             <div>
                                 <span className="font-semibold">Budget BOQ</span>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
-                                    onClick={handleClose}
-                                    aria-label="Close">
-                                    ✕
-                                </button>
+                                <CloseBtn handleClose={handleClose} />
                             </div>
                             <div className="h-full">
                                 <BOQStep dialogType={dialogType} buildings={buildings} />
