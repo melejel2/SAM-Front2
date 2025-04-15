@@ -17,7 +17,6 @@ const SubcontractorsStep: React.FC<SubcontractorsStepProps> = ({ onSelectSubcont
                 columns={columns}
                 tableData={tableData}
                 inputFields={[]}
-                actions={false}
                 title={"Subcontractor"}
                 onRowSelect={onSelectSubcontractor}
                 loading={false}

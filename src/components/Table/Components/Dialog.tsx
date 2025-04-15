@@ -447,7 +447,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                             columns={previewColumns ?? {}}
                             tableData={data ?? []}
                             inputFields={[]}
-                            actions={false}
                             title={"Request Details"}
                             onSuccess={() => {}}
                         />
@@ -461,7 +460,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                         columns={previewColumns ?? {}}
                         tableData={data ?? []}
                         inputFields={[]}
-                        actions={false}
                         title={"Cost Code"}
                         select
                         onRowSelect={handleRowSelect}
@@ -473,7 +471,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                             columns={previewColumns ?? {}}
                             tableData={data ?? []}
                             inputFields={[]}
-                            actions={false}
                             title={"Request Details"}
                             onSuccess={() => {}}
                         />

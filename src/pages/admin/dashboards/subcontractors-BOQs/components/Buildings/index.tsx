@@ -17,7 +17,6 @@ const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
                 columns={columns}
                 tableData={tableData}
                 inputFields={[]}
-                actions={false}
                 title={"Building"}
                 onRowSelect={onSelectBuilding}
                 loading={false}

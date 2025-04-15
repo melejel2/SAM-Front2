@@ -17,7 +17,6 @@ const ProjectStep: React.FC<ProjectStepProps> = ({ onSelectProject }) => {
                 columns={columns}
                 tableData={tableData}
                 inputFields={[]}
-                actions={false}
                 title={"Project"}
                 onRowSelect={onSelectProject}
                 loading={false}

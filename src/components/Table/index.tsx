@@ -13,7 +13,7 @@ interface SAMTableProps {
         required: boolean;
         options?: string[];
     }>;
-    actions: boolean;
+    actions?: boolean;
     title: string;
     loading: boolean;
     onSuccess: () => void;
@@ -46,7 +46,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     previewColumns,
     tableData,
     inputFields,
-    actions,
+    actions = false,
     showAction,
     deleteAction,
     editAction,

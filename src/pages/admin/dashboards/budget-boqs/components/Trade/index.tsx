@@ -21,7 +21,6 @@ const TradeStep: React.FC<TradeStepProps> = ({ onSelectTrade }) => {
                 columns={columns}
                 tableData={tableData}
                 inputFields={[]}
-                actions={false}
                 title={"Trades"}
                 loading={false}
                 onSuccess={() => {}}
