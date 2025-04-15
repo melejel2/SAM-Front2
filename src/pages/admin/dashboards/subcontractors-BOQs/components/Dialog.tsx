@@ -68,13 +68,43 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
     };
 
     const steps = [
-        { label: "Project", content: <ProjectStep onSelectProject={handleSelectProject} /> },
-        { label: "Trade", content: <TradeStep onSelectTrade={handleSelectTrade} /> },
-        { label: "Buildings", content: <BuildingsStep onSelectBuilding={handleSelectBuilding} /> },
-        { label: "Subcontractor", content: <SubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} /> },
-        { label: "Particular Conditions", content: <ParticularConditionsStep /> },
-        { label: "BOQ", content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} /> },
-        { label: "Preview", content: <PreviewStep /> },
+        {
+            label: "Project",
+            value: selectedProject ? selectedProject.name : null,
+            symbol: "P",
+            content: <ProjectStep onSelectProject={handleSelectProject} />,
+        },
+        {
+            label: "Trade",
+            value: selectedTrade ? selectedTrade.name : null,
+            symbol: "T",
+            content: <TradeStep onSelectTrade={handleSelectTrade} />,
+        },
+        {
+            label: "Buildings",
+            value: selectedBuilding ? selectedBuilding.name : null,
+            symbol: "B",
+            content: <BuildingsStep onSelectBuilding={handleSelectBuilding} />,
+        },
+        {
+            label: "Subcontractor",
+            value: "",
+            symbol: "S",
+            content: <SubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} />,
+        },
+        {
+            label: "Particular Conditions",
+            value: "",
+            symbol: "",
+            content: <ParticularConditionsStep />,
+        },
+        {
+            label: "BOQ",
+            value: "",
+            symbol: "",
+            content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} />,
+        },
+        { label: "Preview", value: "", symbol: "", content: <PreviewStep /> },
     ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -106,8 +136,11 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                         <div className="text-center">
                             <ul className="steps overflow-x-auto text-sm">
                                 {steps.map((step, index) => (
-                                    <li key={index} className={`step ${index <= currentStep ? "step-primary" : ""}`}>
-                                        {step.label}
+                                    <li
+                                        key={index}
+                                        data-content={step.symbol}
+                                        className={`step ${index <= currentStep ? "step-primary" : ""}`}>
+                                        <span>{step.value ? step.value : step.label}</span>
                                     </li>
                                 ))}
                             </ul>
