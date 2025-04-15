@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+import CloseBtn from "@/components/CloseBtn";
+import Stepper from "@/components/Stepper";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
@@ -133,25 +135,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                 <form onSubmit={handleSubmit} className="flex h-full flex-col space-y-4">
                     {/* Stepper & Close */}
                     <div>
-                        <div className="text-center">
-                            <ul className="steps overflow-x-auto text-sm">
-                                {steps.map((step, index) => (
-                                    <li
-                                        key={index}
-                                        data-content={step.symbol}
-                                        className={`step ${index <= currentStep ? "step-primary" : ""}`}>
-                                        <span>{step.value ? step.value : step.label}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <button
-                            type="button"
-                            className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
-                            onClick={handleClose}
-                            aria-label="Close">
-                            ✕
-                        </button>
+                        <Stepper steps={steps} currentStep={currentStep} />
+                        <CloseBtn handleClose={handleClose} />
                     </div>
 
                     {/* Navigation + Content Area */}
