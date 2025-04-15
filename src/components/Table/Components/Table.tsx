@@ -9,7 +9,7 @@ interface TableProps {
     tableData: any[];
     columns: Record<string, string>;
     previewColumns?: Record<string, string>;
-    actions: boolean;
+    actions?: boolean;
     showAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
@@ -42,7 +42,7 @@ const TableComponent: React.FC<TableProps> = ({
     tableData,
     columns,
     previewColumns,
-    actions,
+    actions = false,
     showAction,
     deleteAction,
     editAction,
@@ -428,21 +428,23 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
                     )}
                     {/* Sheets */}
-                    <div className="bg-base-100 flex w-full overflow-x-auto">
-                        {sheets.map((sheet) => (
-                            <span
-                                key={sheet.id}
-                                className={cn(
-                                    "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
-                                    sheet.id === activeSheetId
-                                        ? "bg-base-300 border-base-300 text-base-content"
-                                        : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
-                                )}
-                                onClick={() => setActiveSheetId(sheet.id)}>
-                                {sheet.name}
-                            </span>
-                        ))}
-                    </div>
+                    {hasSheets && (
+                        <div className="bg-base-100 flex w-full overflow-x-auto">
+                            {sheets.map((sheet) => (
+                                <span
+                                    key={sheet.id}
+                                    className={cn(
+                                        "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
+                                        sheet.id === activeSheetId
+                                            ? "bg-base-300 border-base-300 text-base-content"
+                                            : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
+                                    )}
+                                    onClick={() => setActiveSheetId(sheet.id)}>
+                                    {sheet.name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </CardBody>
             </Card>
 
