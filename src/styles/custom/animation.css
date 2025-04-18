@@ -30,3 +30,7 @@
     background-clip: text;
     color: transparent;
 }
+
+.animated-width {
+    transition: width 0.4s ease;
+}
