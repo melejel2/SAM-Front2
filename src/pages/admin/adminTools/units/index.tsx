@@ -23,12 +23,12 @@ const Units = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Unit"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     editEndPoint="Unit/UpdateUnit"
                     createEndPoint="Unit/AddUnit"
                     deleteEndPoint="Unit/DeleteUnit"

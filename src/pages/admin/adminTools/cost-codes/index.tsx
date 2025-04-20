@@ -27,12 +27,12 @@ const CostCodes = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions={true}
-                        editAction={true}
-                        deleteAction={true}
+                        actions
+                        editAction
+                        deleteAction
                         title={"Cost Code"}
                         loading={false}
-                        addBtn={true}
+                        addBtn
                         editEndPoint="CostCode/UpdateCostCode"
                         createEndPoint="CostCode/AddCostCode"
                         deleteEndPoint="CostCode/DeleteCostCode"

@@ -17,12 +17,12 @@ const DeductionsDatabase = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Deduction"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                 />
             </div>

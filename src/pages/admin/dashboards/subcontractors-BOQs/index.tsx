@@ -29,12 +29,12 @@ const SubcontractorsBOQs = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Subcontractor BOQ"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                     dynamicDialog={false}
                     openStaticDialog={openCreateDialog}

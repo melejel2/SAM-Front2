@@ -29,12 +29,12 @@ const BudgetBOQs = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Budget BOQs"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                     dynamicDialog={false}
                     openStaticDialog={openCreateDialog}

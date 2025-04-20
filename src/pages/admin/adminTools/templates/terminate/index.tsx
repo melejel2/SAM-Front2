@@ -17,12 +17,12 @@ const TerminatesTemplates = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    deleteAction={true}
-                    showAction={true}
+                    actions
+                    deleteAction
+                    showAction
                     title={"Template"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                 />
             </div>

@@ -17,12 +17,12 @@ const Reports = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Report"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                 />
             </div>

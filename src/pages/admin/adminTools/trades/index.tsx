@@ -24,12 +24,12 @@ const Trades = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Trades"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     editEndPoint="Sheets/UpdateSheet"
                     createEndPoint="Sheets/AddSheet"
                     deleteEndPoint="Sheets/DeleteSheet"

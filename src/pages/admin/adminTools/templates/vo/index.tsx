@@ -24,12 +24,12 @@ const VOsTemplates = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    deleteAction={true}
-                    showAction={true}
+                    actions
+                    deleteAction
+                    showAction
                     title={"VO Template"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     onSuccess={() => {}}
                 />
             </div>

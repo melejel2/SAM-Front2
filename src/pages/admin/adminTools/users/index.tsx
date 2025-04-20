@@ -28,12 +28,12 @@ const Users = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions={true}
-                        editAction={true}
-                        deleteAction={true}
+                        actions
+                        editAction
+                        deleteAction
                         title={"Users"}
                         loading={false}
-                        addBtn={true}
+                        addBtn
                         editEndPoint="Users/UpdateUser"
                         createEndPoint="Users/AddUser"
                         deleteEndPoint="Users/DeleteUser"

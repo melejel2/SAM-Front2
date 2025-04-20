@@ -24,12 +24,12 @@ const Currencies = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions={true}
-                    editAction={true}
-                    deleteAction={true}
+                    actions
+                    editAction
+                    deleteAction
                     title={"Currency"}
                     loading={false}
-                    addBtn={true}
+                    addBtn
                     editEndPoint="Currencie/UpdateCurrencie"
                     createEndPoint="Currencie/AddCurrencie"
                     deleteEndPoint="Currencie/DeleteCurrencie"
