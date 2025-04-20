@@ -23,6 +23,8 @@ interface SAMTableProps {
     showAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
+    exportAction?: boolean;
+    generateAction?: boolean;
     addBtn?: boolean;
     onRowSelect?: (selectedRow: any) => void;
 
@@ -50,6 +52,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
     showAction,
     deleteAction,
     editAction,
+    generateAction,
+    exportAction,
     title,
     loading,
     onSuccess,
@@ -96,6 +100,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             hasSheets={hasSheets}
                             sheets={sheets}
                             rowsPerPage={rowsPerPage}
+                            exportAction={exportAction}
+                            generateAction={generateAction}
                         />
                     </div>
 

@@ -13,6 +13,8 @@ interface TableProps {
     showAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
+    exportAction?: boolean;
+    generateAction?: boolean;
     title: string;
     inputFields: Array<{
         name: string;
@@ -46,6 +48,8 @@ const TableComponent: React.FC<TableProps> = ({
     showAction,
     deleteAction,
     editAction,
+    generateAction,
+    exportAction,
     inputFields,
     title,
     addBtn,
@@ -305,7 +309,6 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     e.stopPropagation();
                                                                     openPreviewDialog(row);
                                                                 }}>
-                                                                {/* <Icon icon={"eye"} className="text-base-content/70" /> */}
                                                                 <span className="iconify lucide--eye text-base-content/70 size-4"></span>
                                                             </Button>
                                                         )}
@@ -320,6 +323,32 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     openEditDialog(row);
                                                                 }}>
                                                                 <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
+                                                            </Button>
+                                                        )}
+                                                        {exportAction && (
+                                                            <Button
+                                                                color="ghost"
+                                                                size="sm"
+                                                                shape="square"
+                                                                aria-label="Export"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openEditDialog(row);
+                                                                }}>
+                                                                <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
+                                                            </Button>
+                                                        )}
+                                                        {generateAction && (
+                                                            <Button
+                                                                color="ghost"
+                                                                size="sm"
+                                                                shape="square"
+                                                                aria-label="Generate"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openEditDialog(row);
+                                                                }}>
+                                                                <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
                                                             </Button>
                                                         )}
                                                         {deleteAction && (
