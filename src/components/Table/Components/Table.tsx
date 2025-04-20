@@ -304,7 +304,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 color="ghost"
                                                                 size="sm"
                                                                 shape="square"
+                                                                className="tooltip"
                                                                 aria-label="Preview Row"
+                                                                data-tip="Preview"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openPreviewDialog(row);
@@ -317,7 +319,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 color="ghost"
                                                                 size="sm"
                                                                 shape="square"
+                                                                className="tooltip"
                                                                 aria-label="Edit Row"
+                                                                data-tip="Edit"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openEditDialog(row);
@@ -330,7 +334,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 color="ghost"
                                                                 size="sm"
                                                                 shape="square"
+                                                                className="tooltip"
                                                                 aria-label="Export"
+                                                                data-tip="Export"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openEditDialog(row);
@@ -343,7 +349,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 color="ghost"
                                                                 size="sm"
                                                                 shape="square"
+                                                                className="tooltip"
                                                                 aria-label="Generate"
+                                                                data-tip="Generate"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openEditDialog(row);
@@ -354,10 +362,11 @@ const TableComponent: React.FC<TableProps> = ({
                                                         {deleteAction && (
                                                             <Button
                                                                 color="ghost"
-                                                                className="text-error/70 hover:bg-error/20"
+                                                                className="text-error/70 hover:bg-error/20 tooltip"
                                                                 size="sm"
                                                                 shape="square"
                                                                 aria-label="Delete Row"
+                                                                data-tip="Delete"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     openDeleteDialog(row);
@@ -448,6 +457,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     type="button"
                                     size="sm"
                                     aria-label="pagination-next"
+                                    data-tip="pagination-next"
                                     className="join-item"
                                     disabled={currentPage === totalPages}
                                     onClick={() => handlePageChange(currentPage + 1)}>
