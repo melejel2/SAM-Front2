@@ -1,62 +1,93 @@
 const useContractsDatabase = () => {
-    const columns = {
-        first_name: "First Name",
-        last_name: "Last Name",
-        telephone: "Telephone",
-        email: "Email",
-        username: "Username",
-        password: "Password",
-        role: "Role",
+    const contractsColumns = {
+        contractNb: "Contract Number",
+        project: "Project",
+        subcontractor: "Subcontractor",
+        trade: "Trade",
+        dateOfSignature: "Date of Signature",
+        endDate: "End Date",
+        contractAmount: "Contract Amount",
+        totalAmount: "Total Amount",
+        status: "Status",
     };
+
+    const vosColumns = {
+        contractNb: "Contract Number",
+        voNumber: "VO Number",
+        subcontractor: "Subcontractor",
+        trade: "Trade",
+        type: "Type",
+        date: "Date",
+        totalAmount: "Total Amount",
+        status: "Status",
+    };
+
+    const terminatedColumns = {
+        contractNb: "Contract Number",
+        project: "Project",
+        subcontractor: "Subcontractor",
+        trade: "Trade",
+        dateOfSignature: "Date of Signature",
+        endDate: "End Date",
+        contractAmount: "Contract Amount",
+        status: "Status",
+    };
+
     const tableData = [
         {
             id: "1",
-            first_name: "First Name 1",
-            last_name: "Last Name 1",
-            telephone: "Telephone 1",
-            email: "Email 1",
-            username: "Username 1",
-            password: "Password 1",
-            role: "Role 1",
+            contractNb: "Contract Number 1",
+            project: "Last Name 1",
+            subcontractor: "subcontractor 1",
+            trade: "Username 1",
+            dateOfSignature: "dateOfSignature 1",
+            endDate: "endDate 1",
+            contractAmount: "endDate 1",
+            totalAmount: "endDate 1",
+            status: "endDate 1",
         },
         {
             id: "2",
-            first_name: "First Name 2",
-            last_name: "Last Name 2",
-            telephone: "Telephone 2",
-            email: "Email 2",
-            username: "Username 2",
-            password: "Password 2",
-            role: "Role 2",
+            contractNb: "First Name 2",
+            project: "Last Name 2",
+            subcontractor: "subcontractor 2",
+            trade: "Username 2",
+            dateOfSignature: "dateOfSignature 2",
+            endDate: "endDate 2",
+            contractAmount: "endDate 2",
+            totalAmount: "endDate 2",
+            status: "endDate 2",
         },
         {
             id: "3",
-            first_name: "First Name 3",
-            last_name: "Last Name 3",
-            telephone: "Telephone 3",
-            email: "Email 3",
-            username: "Username 3",
-            password: "Password 3",
-            role: "Role 3",
+            contractNb: "First Name 3",
+            project: "Last Name 3",
+            subcontractor: "subcontractor 3",
+            trade: "Username 3",
+            dateOfSignature: "dateOfSignature 3",
+            endDate: "endDate 3",
+            contractAmount: "endDate 3",
+            totalAmount: "endDate 3",
+            status: "endDate 3",
         },
     ];
 
     const inputFields = [
         {
-            name: "first_name",
+            name: "contractNb",
             label: "First Name",
             type: "text",
             required: true,
         },
         {
-            name: "last_name",
+            name: "project",
             label: "Last Name",
             type: "text",
             required: true,
         },
         {
-            name: "telephone",
-            label: "Telephone",
+            name: "subcontractor",
+            label: "subcontractor",
             type: "text",
             required: true,
         },
@@ -67,21 +98,21 @@ const useContractsDatabase = () => {
             required: true,
         },
         {
-            name: "username",
+            name: "trade",
             label: "Username",
             type: "text",
             required: true,
         },
         {
-            name: "password",
-            label: "Password",
+            name: "dateOfSignature",
+            label: "dateOfSignature",
             type: "text",
             required: true,
         },
 
         {
-            name: "role",
-            label: "Role",
+            name: "endDate",
+            label: "endDate",
             type: "select",
             required: true,
             options: [
@@ -96,7 +127,9 @@ const useContractsDatabase = () => {
     ];
 
     return {
-        columns,
+        contractsColumns,
+        vosColumns,
+        terminatedColumns,
         tableData,
         inputFields,
     };
