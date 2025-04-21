@@ -20,7 +20,7 @@ interface SAMTableProps {
 
     dynamicDialog?: boolean;
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void;
-    showAction?: boolean;
+    previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
     exportAction?: boolean;
@@ -54,7 +54,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     tableData,
     inputFields,
     actions = false,
-    showAction,
+    previewAction,
     deleteAction,
     editAction,
     generateAction,
@@ -88,7 +88,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             actions={actions}
                             inputFields={inputFields}
                             title={title}
-                            showAction={showAction}
+                            previewAction={previewAction}
                             deleteAction={deleteAction}
                             editAction={editAction}
                             previewColumns={previewColumns}
@@ -120,7 +120,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             actions={actions}
                             inputFields={inputFields}
                             title={title}
-                            showAction={showAction}
+                            previewAction={previewAction}
                             deleteAction={deleteAction}
                             editAction={editAction}
                             previewColumns={previewColumns}

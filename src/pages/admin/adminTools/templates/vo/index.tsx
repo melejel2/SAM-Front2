@@ -26,7 +26,7 @@ const VOsTemplates = () => {
                     inputFields={inputFields}
                     actions
                     deleteAction
-                    showAction
+                    previewAction
                     title={"VO Template"}
                     loading={false}
                     addBtn

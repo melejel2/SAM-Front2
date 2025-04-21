@@ -10,7 +10,7 @@ interface TableProps {
     columns: Record<string, string>;
     previewColumns?: Record<string, string>;
     actions?: boolean;
-    showAction?: boolean;
+    previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
     exportAction?: boolean;
@@ -52,7 +52,7 @@ const TableComponent: React.FC<TableProps> = ({
     columns,
     previewColumns,
     actions = false,
-    showAction,
+    previewAction,
     deleteAction,
     editAction,
     generateAction,
@@ -312,7 +312,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 {actions && (
                                                     <td className="border-base-content/5 border-y px-2 py-3 pr-6 text-right text-sm font-medium">
                                                         <div className="inline-flex w-fit">
-                                                            {showAction && (
+                                                            {previewAction && (
                                                                 <Button
                                                                     color="ghost"
                                                                     size="sm"

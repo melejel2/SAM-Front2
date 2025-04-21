@@ -21,7 +21,7 @@ const IPCsDatabase = () => {
                     title={"IPC"}
                     loading={false}
                     addBtn
-                    showAction
+                    previewAction
                     exportAction
                     rowActions={(row) => ({
                         deleteAction: row.status === "Editable",

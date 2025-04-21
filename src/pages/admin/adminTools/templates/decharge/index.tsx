@@ -19,7 +19,7 @@ const DechargesTemplates = () => {
                     inputFields={inputFields}
                     actions
                     deleteAction
-                    showAction
+                    previewAction
                     title={"Template"}
                     loading={false}
                     addBtn

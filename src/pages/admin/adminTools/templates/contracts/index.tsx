@@ -26,7 +26,7 @@ const ContractsTemplates = () => {
                     inputFields={inputFields}
                     actions
                     deleteAction
-                    showAction
+                    previewAction
                     title={"Template"}
                     loading={false}
                     addBtn

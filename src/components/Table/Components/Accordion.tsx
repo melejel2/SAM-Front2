@@ -9,7 +9,7 @@ import DialogComponent from "./Dialog";
 interface AccordionProps {
     rowData: object;
     actions: boolean;
-    showAction?: boolean;
+    previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
     onEdit?: (data: any) => void;
@@ -25,7 +25,7 @@ interface AccordionsProps {
     columns: Record<string, string>;
     previewColumns?: Record<string, string>;
     actions: boolean;
-    showAction?: boolean;
+    previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
     inputFields: Array<{
@@ -47,7 +47,7 @@ const Accordion: React.FC<AccordionProps> = ({
     title,
     rowData,
     actions,
-    showAction,
+    previewAction,
     deleteAction,
     editAction,
     select, // now destructured and used
@@ -83,7 +83,7 @@ const Accordion: React.FC<AccordionProps> = ({
                 ))}
                 {actions && (
                     <div className="flex w-full items-center justify-end">
-                        {showAction && (
+                        {previewAction && (
                             <Button
                                 color="ghost"
                                 size="sm"
@@ -123,7 +123,7 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     accordionData,
     inputFields,
     title,
-    showAction,
+    previewAction,
     deleteAction,
     editAction,
     addBtn,
@@ -181,7 +181,7 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                             onShow={openPreviewDialog}
                             title={"title"}
                             actions={actions}
-                            showAction={showAction}
+                            previewAction={previewAction}
                             editAction={editAction}
                             deleteAction={deleteAction}
                             select={select} // pass the prop to each Accordion
