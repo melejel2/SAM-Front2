@@ -18,14 +18,16 @@ const IPCsDatabase = () => {
                     tableData={tableData}
                     inputFields={inputFields}
                     actions
-                    editAction
-                    deleteAction
                     title={"IPC"}
                     loading={false}
                     addBtn
                     showAction
                     exportAction
-                    generateAction
+                    rowActions={(row) => ({
+                        deleteAction: row.status === "Editable",
+                        generateAction: row.status === "Editable",
+                        editAction: row.status === "Editable",
+                    })}
                     onSuccess={() => {}}
                 />
             </div>
