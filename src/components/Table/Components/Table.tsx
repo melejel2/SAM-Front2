@@ -327,7 +327,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <span className="iconify lucide--eye text-base-content/70 size-4"></span>
                                                                 </Button>
                                                             )}
-                                                            {editAction && (
+                                                            {(rowAction?.editAction || editAction) && (
                                                                 <Button
                                                                     color="ghost"
                                                                     size="sm"
@@ -372,7 +372,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
                                                                 </Button>
                                                             )}
-                                                            {deleteAction && (
+                                                            {(rowAction?.deleteAction || deleteAction) && (
                                                                 <Button
                                                                     color="ghost"
                                                                     className="text-error/70 hover:bg-error/20 tooltip"
