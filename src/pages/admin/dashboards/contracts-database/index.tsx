@@ -12,7 +12,8 @@ const ContractsDatabase = () => {
         "Contract Database",
     );
 
-    const { tableData, inputFields, contractsColumns, vosColumns, terminatedColumns } = useContractsDatabase();
+    const { contractsColumns, vosColumns, terminatedColumns, contractsData, vosData, terminatedData } =
+        useContractsDatabase();
 
     const getColumns = () => {
         switch (activeView) {
@@ -22,6 +23,17 @@ const ContractsDatabase = () => {
                 return terminatedColumns;
             default:
                 return contractsColumns;
+        }
+    };
+
+    const getTableData = () => {
+        switch (activeView) {
+            case "VOs Database":
+                return vosData;
+            case "Terminated Contracts":
+                return terminatedData;
+            default:
+                return contractsData;
         }
     };
 
@@ -56,8 +68,8 @@ const ContractsDatabase = () => {
 
                 <SAMTable
                     columns={getColumns()}
-                    tableData={tableData}
-                    inputFields={inputFields}
+                    tableData={getTableData()}
+                    inputFields={[]}
                     actions
                     editAction
                     deleteAction
