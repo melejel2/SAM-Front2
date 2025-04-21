@@ -12,12 +12,22 @@ const ContractsDatabase = () => {
         "Contract Database",
     );
 
-    const { columns, tableData, inputFields } = useContractsDatabase();
+    const { tableData, inputFields, contractsColumns, vosColumns, terminatedColumns } = useContractsDatabase();
+
+    const getColumns = () => {
+        switch (activeView) {
+            case "VOs Database":
+                return vosColumns;
+            case "Terminated Contracts":
+                return terminatedColumns;
+            default:
+                return contractsColumns;
+        }
+    };
 
     return (
         <div>
             <MetaData title={"Contracts Database"} />
-
             <PageTitle title={"Contracts Database"} centerItem={"Dashboard"} />
             <div>
                 <div className="flex items-center justify-center space-x-6">
@@ -43,8 +53,9 @@ const ContractsDatabase = () => {
                         <span>Terminated Contracts</span>
                     </Button>
                 </div>
+
                 <SAMTable
-                    columns={columns}
+                    columns={getColumns()}
                     tableData={tableData}
                     inputFields={inputFields}
                     actions
