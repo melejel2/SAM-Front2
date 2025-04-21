@@ -15,6 +15,13 @@ interface TableProps {
     editAction?: boolean;
     exportAction?: boolean;
     generateAction?: boolean;
+
+    rowActions?: (row: any) => {
+        generateAction?: boolean;
+        editAction?: boolean;
+        deleteAction?: boolean;
+    };
+
     title: string;
     inputFields: Array<{
         name: string;
@@ -50,6 +57,7 @@ const TableComponent: React.FC<TableProps> = ({
     editAction,
     generateAction,
     exportAction,
+    rowActions,
     inputFields,
     title,
     addBtn,
@@ -274,111 +282,117 @@ const TableComponent: React.FC<TableProps> = ({
                                         </td>
                                     </tr>
                                 ) : paginatedData.length > 0 ? (
-                                    paginatedData.map((row, index) => (
-                                        <tr
-                                            key={index}
-                                            className={cn("hover:bg-base-200/40 cursor-pointer", {
-                                                "bg-base-300": selectedRow?.id === row.id,
-                                            })}
-                                            onClick={() => handleRowClick(row)}>
-                                            {select && (
-                                                <td className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="checkbox-xs checkbox checkbox-info ml-2"
-                                                    />
-                                                </td>
-                                            )}
-                                            {Object.keys(columns).map((columnKey) => (
-                                                <td
-                                                    key={columnKey}
-                                                    className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
-                                                    {row[columnKey] ?? "-"}
-                                                </td>
-                                            ))}
-                                            {actions && (
-                                                <td className="border-base-content/5 border-y px-2 py-3 pr-6 text-right text-sm font-medium">
-                                                    <div className="inline-flex w-fit">
-                                                        {showAction && (
-                                                            <Button
-                                                                color="ghost"
-                                                                size="sm"
-                                                                shape="square"
-                                                                className="tooltip"
-                                                                aria-label="Preview Row"
-                                                                data-tip="Preview"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openPreviewDialog(row);
-                                                                }}>
-                                                                <span className="iconify lucide--eye text-base-content/70 size-4"></span>
-                                                            </Button>
-                                                        )}
-                                                        {editAction && (
-                                                            <Button
-                                                                color="ghost"
-                                                                size="sm"
-                                                                shape="square"
-                                                                className="tooltip"
-                                                                aria-label="Edit Row"
-                                                                data-tip="Edit"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openEditDialog(row);
-                                                                }}>
-                                                                <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
-                                                            </Button>
-                                                        )}
-                                                        {exportAction && (
-                                                            <Button
-                                                                color="ghost"
-                                                                size="sm"
-                                                                shape="square"
-                                                                className="tooltip"
-                                                                aria-label="Export"
-                                                                data-tip="Export"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openEditDialog(row);
-                                                                }}>
-                                                                <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
-                                                            </Button>
-                                                        )}
-                                                        {generateAction && (
-                                                            <Button
-                                                                color="ghost"
-                                                                size="sm"
-                                                                shape="square"
-                                                                className="tooltip"
-                                                                aria-label="Generate"
-                                                                data-tip="Generate"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openEditDialog(row);
-                                                                }}>
-                                                                <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
-                                                            </Button>
-                                                        )}
-                                                        {deleteAction && (
-                                                            <Button
-                                                                color="ghost"
-                                                                className="text-error/70 hover:bg-error/20 tooltip"
-                                                                size="sm"
-                                                                shape="square"
-                                                                aria-label="Delete Row"
-                                                                data-tip="Delete"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openDeleteDialog(row);
-                                                                }}>
-                                                                <span className="iconify lucide--trash size-4"></span>
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))
+                                    paginatedData.map((row, index) => {
+                                        const rowAction = rowActions?.(row);
+
+                                        return (
+                                            <tr
+                                                key={index}
+                                                className={cn("hover:bg-base-200/40 cursor-pointer", {
+                                                    "bg-base-300": selectedRow?.id === row.id,
+                                                })}
+                                                onClick={() => handleRowClick(row)}>
+                                                {select && (
+                                                    <td className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="checkbox-xs checkbox checkbox-info ml-2"
+                                                        />
+                                                    </td>
+                                                )}
+
+                                                {Object.keys(columns).map((columnKey) => (
+                                                    <td
+                                                        key={columnKey}
+                                                        className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
+                                                        {row[columnKey] ?? "-"}
+                                                    </td>
+                                                ))}
+
+                                                {actions && (
+                                                    <td className="border-base-content/5 border-y px-2 py-3 pr-6 text-right text-sm font-medium">
+                                                        <div className="inline-flex w-fit">
+                                                            {showAction && (
+                                                                <Button
+                                                                    color="ghost"
+                                                                    size="sm"
+                                                                    shape="square"
+                                                                    className="tooltip"
+                                                                    aria-label="Preview Row"
+                                                                    data-tip="Preview"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openPreviewDialog(row);
+                                                                    }}>
+                                                                    <span className="iconify lucide--eye text-base-content/70 size-4"></span>
+                                                                </Button>
+                                                            )}
+                                                            {editAction && (
+                                                                <Button
+                                                                    color="ghost"
+                                                                    size="sm"
+                                                                    shape="square"
+                                                                    className="tooltip"
+                                                                    aria-label="Edit Row"
+                                                                    data-tip="Edit"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openEditDialog(row);
+                                                                    }}>
+                                                                    <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
+                                                                </Button>
+                                                            )}
+                                                            {exportAction && (
+                                                                <Button
+                                                                    color="ghost"
+                                                                    size="sm"
+                                                                    shape="square"
+                                                                    className="tooltip"
+                                                                    aria-label="Export"
+                                                                    data-tip="Export"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openEditDialog(row);
+                                                                    }}>
+                                                                    <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
+                                                                </Button>
+                                                            )}
+                                                            {(rowAction?.generateAction || generateAction) && (
+                                                                <Button
+                                                                    color="ghost"
+                                                                    size="sm"
+                                                                    shape="square"
+                                                                    className="tooltip"
+                                                                    aria-label="Generate"
+                                                                    data-tip="Generate"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openEditDialog(row);
+                                                                    }}>
+                                                                    <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
+                                                                </Button>
+                                                            )}
+                                                            {deleteAction && (
+                                                                <Button
+                                                                    color="ghost"
+                                                                    className="text-error/70 hover:bg-error/20 tooltip"
+                                                                    size="sm"
+                                                                    shape="square"
+                                                                    aria-label="Delete Row"
+                                                                    data-tip="Delete"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openDeleteDialog(row);
+                                                                    }}>
+                                                                    <span className="iconify lucide--trash size-4"></span>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr className="hover:bg-base-200/40 cursor-pointer">
                                         <td

@@ -25,14 +25,19 @@ interface SAMTableProps {
     editAction?: boolean;
     exportAction?: boolean;
     generateAction?: boolean;
+
+    rowActions?: (row: any) => {
+        generateAction?: boolean;
+        editAction?: boolean;
+        deleteAction?: boolean;
+    };
+
     addBtn?: boolean;
     onRowSelect?: (selectedRow: any) => void;
 
-    // These are optional
     showAvailableOnly?: boolean;
     onToggleAvailableOnly?: () => void;
 
-    // Added property for selectable mode
     select?: boolean;
 
     editEndPoint?: string;
@@ -54,6 +59,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     editAction,
     generateAction,
     exportAction,
+    rowActions,
     title,
     loading,
     onSuccess,
@@ -102,6 +108,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             rowsPerPage={rowsPerPage}
                             exportAction={exportAction}
                             generateAction={generateAction}
+                            rowActions={rowActions}
                         />
                     </div>
 
