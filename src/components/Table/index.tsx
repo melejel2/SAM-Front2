@@ -6,7 +6,7 @@ interface SAMTableProps {
     columns: Record<string, string>;
     previewColumns?: Record<string, string>;
     tableData: any[];
-    inputFields: Array<{
+    inputFields?: Array<{
         name: string;
         label: string;
         type: string;

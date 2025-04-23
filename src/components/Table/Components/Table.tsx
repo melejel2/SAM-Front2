@@ -23,7 +23,7 @@ interface TableProps {
     };
 
     title: string;
-    inputFields: Array<{
+    inputFields?: Array<{
         name: string;
         label: string;
         type: string;

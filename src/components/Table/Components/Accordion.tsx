@@ -28,7 +28,7 @@ interface AccordionsProps {
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
-    inputFields: Array<{
+    inputFields?: Array<{
         name: string;
         label: string;
         type: string;
