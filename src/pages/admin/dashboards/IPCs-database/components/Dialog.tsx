@@ -11,7 +11,7 @@ import ProgressStep from "./Progress";
 import IPCProjectStep from "./Projects";
 import ResourcesStep from "./Resources";
 import IPCSubcontractorsStep from "./Subcontractors";
-import TypeStep from "./Type";
+import IPCTypeStep from "./Type";
 import useIPCDialog from "./use-ipc-dialog";
 
 interface IPCDialogProps {
@@ -84,7 +84,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Type",
             value: selectedType ? selectedType : null,
             symbol: "T",
-            content: <TypeStep onSelectType={handleSelectType} />,
+            content: <IPCTypeStep onSelectType={handleSelectType} />,
         },
         {
             label: "Progress",
