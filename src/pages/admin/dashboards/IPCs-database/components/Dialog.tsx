@@ -5,16 +5,13 @@ import Stepper from "@/components/Stepper";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
-import TradeStep from "./Contract";
 import ContractStep from "./Contract";
 import PreviewIPCStep from "./Preview";
-import SubcontractorBOQStep from "./Progress";
 import ProgressStep from "./Progress";
-import ProjectStep from "./Projects";
+import IPCProjectStep from "./Projects";
 import ResourcesStep from "./Resources";
 import SubcontractorsStep from "./Subcontractors";
 import TypeStep from "./Type";
-import useBuildings from "./Type/use-buildings";
 import useIPCDialog from "./use-ipc-dialog";
 
 interface IPCDialogProps {
@@ -37,8 +34,6 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
         setSelectedSubcontractor,
         selectedSubcontractor,
     } = useIPCDialog();
-
-    const { tableData } = useBuildings();
 
     const { toaster } = useToast();
 
@@ -71,7 +66,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Project",
             value: selectedProject ? selectedProject.name : null,
             symbol: "P",
-            content: <ProjectStep onSelectProject={handleSelectProject} />,
+            content: <IPCProjectStep onSelectProject={handleSelectProject} />,
         },
         {
             label: "Subcontractor",
@@ -95,7 +90,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Progress",
             value: "",
             symbol: "P",
-            content: <ProgressStep dialogType={dialogType} buildings={tableData} />,
+            content: <ProgressStep />,
         },
         {
             label: "Resources",
@@ -202,7 +197,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
                                 <span>Download</span>
                                 <span className="iconify lucide--download size-4" />
                             </Button>
-                            <Button type="submit" loading={isLoading} disabled={isLoading} color="primary">
+                            <Button type="button" loading={isLoading} disabled={isLoading} color="primary">
                                 <span>Save</span>
                                 <span className="iconify lucide--save size-4" />
                             </Button>
