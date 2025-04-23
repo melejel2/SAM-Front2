@@ -441,7 +441,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                         <SAMTable
                             columns={previewColumns ?? {}}
                             tableData={data ?? []}
-                            inputFields={[]}
                             title={"Request Details"}
                             onSuccess={() => {}}
                         />
@@ -454,7 +453,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                     <SAMTable
                         columns={previewColumns ?? {}}
                         tableData={data ?? []}
-                        inputFields={[]}
                         title={"Cost Code"}
                         select
                         onRowSelect={handleRowSelect}
@@ -465,7 +463,6 @@ const DialogComponent: React.FC<DialogProps> = ({
                         <SAMTable
                             columns={previewColumns ?? {}}
                             tableData={data ?? []}
-                            inputFields={[]}
                             title={"Request Details"}
                             onSuccess={() => {}}
                         />

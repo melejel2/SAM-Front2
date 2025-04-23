@@ -71,7 +71,6 @@ const IPCResourcesStep = () => {
             <SAMTable
                 columns={getColumns()}
                 tableData={getTableData()}
-                inputFields={[]}
                 title={"Contract"}
                 loading={false}
                 onSuccess={() => {}}

@@ -16,7 +16,6 @@ const IPCSubcontractorsStep: React.FC<IPCSubcontractorsStepProps> = ({ onSelectS
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Subcontractor"}
                 onRowSelect={onSelectSubcontractor}
                 loading={false}

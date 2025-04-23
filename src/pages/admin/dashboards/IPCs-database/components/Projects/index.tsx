@@ -16,7 +16,6 @@ const IPCProjectStep: React.FC<IPCProjectStepProps> = ({ onSelectProject }) => {
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Project"}
                 onRowSelect={onSelectProject}
                 loading={false}

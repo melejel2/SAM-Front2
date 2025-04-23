@@ -16,7 +16,6 @@ const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Building"}
                 onRowSelect={onSelectBuilding}
                 loading={false}

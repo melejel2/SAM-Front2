@@ -19,7 +19,6 @@ const BOQTable = () => {
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Budget BOQ"}
                 loading={false}
                 onSuccess={() => {}}

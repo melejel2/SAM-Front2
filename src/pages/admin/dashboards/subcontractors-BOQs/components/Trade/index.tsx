@@ -20,7 +20,6 @@ const TradeStep: React.FC<TradeStepProps> = ({ onSelectTrade }) => {
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Trades"}
                 loading={false}
                 onSuccess={() => {}}

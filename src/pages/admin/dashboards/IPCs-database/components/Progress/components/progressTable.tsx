@@ -19,7 +19,6 @@ const IPCProgressTable = () => {
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Progress"}
                 loading={false}
                 onSuccess={() => {}}

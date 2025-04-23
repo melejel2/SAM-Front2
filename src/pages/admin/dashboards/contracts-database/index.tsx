@@ -69,7 +69,6 @@ const ContractsDatabase = () => {
                 <SAMTable
                     columns={getColumns()}
                     tableData={getTableData()}
-                    inputFields={[]}
                     actions
                     editAction
                     deleteAction

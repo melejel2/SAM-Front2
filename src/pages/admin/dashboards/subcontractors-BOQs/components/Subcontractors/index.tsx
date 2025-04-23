@@ -16,7 +16,6 @@ const SubcontractorsStep: React.FC<SubcontractorsStepProps> = ({ onSelectSubcont
             <SAMTable
                 columns={columns}
                 tableData={tableData}
-                inputFields={[]}
                 title={"Subcontractor"}
                 onRowSelect={onSelectSubcontractor}
                 loading={false}

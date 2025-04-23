@@ -14,7 +14,6 @@ const IPCContractStep: React.FC<IPCContractStepProps> = ({ onSelectContract }) =
             <SAMTable
                 columns={contractsColumns}
                 tableData={contractsData}
-                inputFields={[]}
                 title={"Contracts"}
                 loading={false}
                 onSuccess={() => {}}
