@@ -7,7 +7,7 @@ import useToast from "@/hooks/use-toast";
 
 import IPCContractStep from "./Contract";
 import PreviewIPCStep from "./Preview";
-import ProgressStep from "./Progress";
+import IPCProgressStep from "./Progress";
 import IPCProjectStep from "./Projects";
 import ResourcesStep from "./Resources";
 import IPCSubcontractorsStep from "./Subcontractors";
@@ -90,7 +90,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Progress",
             value: "",
             symbol: "P",
-            content: <ProgressStep />,
+            content: <IPCProgressStep />,
         },
         {
             label: "Resources",
