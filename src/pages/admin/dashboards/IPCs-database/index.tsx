@@ -1,12 +1,23 @@
+import { useState } from "react";
+
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
+import { useDialog } from "@/components/daisyui";
 
+import IPCDialog from "./components/Dialog";
 import useIPCsDatabase from "./use-IPCs-database";
 
 const IPCsDatabase = () => {
-    const { columns, tableData, inputFields } = useIPCsDatabase();
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
 
+    const { columns, tableData, inputFields } = useIPCsDatabase();
+    const { dialogRef, handleShow, handleHide } = useDialog();
+
+    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select") => {
+        setDialogType(type);
+        handleShow();
+    };
     return (
         <div>
             <MetaData title={"IPCs Database"} />
@@ -29,8 +40,11 @@ const IPCsDatabase = () => {
                         editAction: row.status === "Editable",
                     })}
                     onSuccess={() => {}}
+                    dynamicDialog={false}
+                    openStaticDialog={openCreateDialog}
                 />
             </div>
+            <IPCDialog handleHide={handleHide} dialogRef={dialogRef} dialogType={dialogType} onSuccess={() => {}} />
         </div>
     );
 };
