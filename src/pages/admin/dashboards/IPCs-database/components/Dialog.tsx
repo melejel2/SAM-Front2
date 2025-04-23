@@ -6,7 +6,7 @@ import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
 import IPCContractStep from "./Contract";
-import PreviewIPCStep from "./Preview";
+import IPCPreviewStep from "./Preview";
 import IPCProgressStep from "./Progress";
 import IPCProjectStep from "./Projects";
 import ResourcesStep from "./Resources";
@@ -98,7 +98,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             symbol: "R",
             content: <ResourcesStep />,
         },
-        { label: "Preview", value: "", symbol: "", content: <PreviewIPCStep /> },
+        { label: "Preview", value: "", symbol: "", content: <IPCPreviewStep /> },
     ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
