@@ -10,7 +10,7 @@ import PreviewIPCStep from "./Preview";
 import ProgressStep from "./Progress";
 import IPCProjectStep from "./Projects";
 import ResourcesStep from "./Resources";
-import SubcontractorsStep from "./Subcontractors";
+import IPCSubcontractorsStep from "./Subcontractors";
 import TypeStep from "./Type";
 import useIPCDialog from "./use-ipc-dialog";
 
@@ -72,7 +72,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Subcontractor",
             value: "",
             symbol: "S",
-            content: <SubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} />,
+            content: <IPCSubcontractorsStep onSelectSubcontractor={handleSelectSubcontractor} />,
         },
         {
             label: "Contract",
