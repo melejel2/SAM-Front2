@@ -5,7 +5,7 @@ import Stepper from "@/components/Stepper";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
-import ContractStep from "./Contract";
+import IPCContractStep from "./Contract";
 import PreviewIPCStep from "./Preview";
 import ProgressStep from "./Progress";
 import IPCProjectStep from "./Projects";
@@ -78,7 +78,7 @@ const IPCDialog: React.FC<IPCDialogProps> = ({ handleHide, dialogRef, dialogType
             label: "Contract",
             value: selectedContract ? selectedContract.contractNb : null,
             symbol: "C",
-            content: <ContractStep onSelectContract={handleSelectContract} />,
+            content: <IPCContractStep onSelectContract={handleSelectContract} />,
         },
         {
             label: "Type",
