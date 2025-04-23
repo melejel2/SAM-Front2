@@ -28,7 +28,7 @@ interface DialogProps {
     dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Approve" | "Confirm";
     current: CurrentData | null;
     onSuccess: () => void;
-    inputFields: InputField[];
+    inputFields?: InputField[];
     previewColumns?: Record<string, string>;
     title: string;
     data?: any[];
@@ -58,7 +58,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
         const initialData: Record<string, any> = {};
-        inputFields.forEach((field) => {
+        inputFields?.forEach((field) => {
             if (dialogType === "Edit" && current && current[field.name] !== undefined) {
                 initialData[field.name] = current[field.name];
             } else {
@@ -518,9 +518,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                 ) : (
                     <form onSubmit={handleSubmit} className="py-4">
                         <div className="space-y-4">
-                            {inputFields.map((field) => (
-                                <div key={field.name}>{renderInput(field)}</div>
-                            ))}
+                            {inputFields?.map((field) => <div key={field.name}>{renderInput(field)}</div>)}
 
                             {(dialogType === "Add" || dialogType === "Edit") && (
                                 <Button
