@@ -1,104 +1,49 @@
 const useDeductionsDatabase = () => {
-    const columns = {
-        first_name: "First Name",
-        last_name: "Last Name",
-        telephone: "Telephone",
-        email: "Email",
-        username: "Username",
-        password: "Password",
-        role: "Role",
+    const laborColumns = {
+        ref_nb: "REF #",
+        type_of_worker: "Type of Worker",
+        description_of_activity: "Description of Activity",
+        unit: "Unit",
+        unit_price: "Unit Price",
+        qty: "Quantity",
+        amount: "Amount",
     };
-    const tableData = [
-        {
-            id: "1",
-            first_name: "First Name 1",
-            last_name: "Last Name 1",
-            telephone: "Telephone 1",
-            email: "Email 1",
-            username: "Username 1",
-            password: "Password 1",
-            role: "Role 1",
-        },
-        {
-            id: "2",
-            first_name: "First Name 2",
-            last_name: "Last Name 2",
-            telephone: "Telephone 2",
-            email: "Email 2",
-            username: "Username 2",
-            password: "Password 2",
-            role: "Role 2",
-        },
-        {
-            id: "3",
-            first_name: "First Name 3",
-            last_name: "Last Name 3",
-            telephone: "Telephone 3",
-            email: "Email 3",
-            username: "Username 3",
-            password: "Password 3",
-            role: "Role 3",
-        },
-    ];
 
-    const inputFields = [
-        {
-            name: "first_name",
-            label: "First Name",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "last_name",
-            label: "Last Name",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "telephone",
-            label: "Telephone",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "email",
-            label: "Email",
-            type: "email",
-            required: true,
-        },
-        {
-            name: "username",
-            label: "Username",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "password",
-            label: "Password",
-            type: "text",
-            required: true,
-        },
+    const materialsColumns = {
+        ref_nb: "REF #",
+        item: "Item",
+        unit: "Unit",
+        unit_price: "Unit Price",
+        allocated_qty: "Allocated Quantity",
+        transferred_qty: "Transferred Quantity",
+        transferred_to: "Transferred to",
+        stock_qty: "Stock Quantity",
+        remark: "Remarks",
+    };
 
-        {
-            name: "role",
-            label: "Role",
-            type: "select",
-            required: true,
-            options: [
-                "Regional Operations Manager",
-                "General Manager",
-                "Operations Manager",
-                "Contracts Manager",
-                "Accountant",
-                "Admin",
-            ],
-        },
-    ];
+    const machinesColumns = {
+        ref_nb: "REF #",
+        machine_code: "Machine Code",
+        type_of_machine: "Type of Machine",
+        unit: "unit",
+        unit_price: "Unit Price",
+        qty: "Quantity",
+        amount: "Amount",
+    };
+
+    const laborData: any[] = [];
+
+    const materialsData: any[] = [];
+
+    const machinesData: any[] = [];
 
     return {
-        columns,
-        tableData,
-        inputFields,
+        laborColumns,
+        materialsColumns,
+        machinesColumns,
+        laborData,
+        materialsData,
+        machinesData,
     };
 };
 
