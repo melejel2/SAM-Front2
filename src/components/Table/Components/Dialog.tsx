@@ -356,18 +356,28 @@ const DialogComponent: React.FC<DialogProps> = ({
                         </Select>
                     </label>
                 );
+            } else if (type === "file") {
+                return (
+                    <input
+                        name={name}
+                        value={formData[name]}
+                        required={required}
+                        onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
+                        type="file"
+                        className="file-input input-sm input-bordered w-full grow"
+                    />
+                );
             } else {
                 return (
                     <label
                         className="input input-sm input-bordered flex w-full flex-col items-center gap-2 sm:flex-row"
                         key={name}>
-                        <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
+                        <span className="min-w-16 text-sm font-normal opacity-45 md:min-w-28">
                             {label.charAt(0).toUpperCase() + label.slice(1)}
                         </span>
                         <input
                             type={type}
                             name={name}
-                            className="grow"
                             value={formData[name]}
                             required={required}
                             onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
