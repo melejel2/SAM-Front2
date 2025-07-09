@@ -101,7 +101,8 @@ const useIPCsDatabase = () => {
                     retention: formatCurrency(ipc.retention),
                     type: ipc.type?.split(' / ')[0] || ipc.type,
                 }));
-                setTableData(formattedData);
+                // Reverse the order to show newest first (inverse order from backend)
+                setTableData(formattedData.reverse());
             } else {
                 setTableData([]);
             }
