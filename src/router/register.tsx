@@ -20,7 +20,7 @@ const dashboardRoutes: IRoutesProps[] = [
     },
     {
         path: "/dashboard/budget-BOQs",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/budget-BOQs"))),
+        element: cw(lazy(() => import("@/pages/admin/dashboards/budget-boqs"))),
     },
     {
         path: "/dashboard/subcontractors-BOQs",
@@ -46,8 +46,8 @@ const dashboardRoutes: IRoutesProps[] = [
 
 const adminToolsRoutes: IRoutesProps[] = [
     {
-        path: "/admin-tools/connection",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/connection"))),
+        path: "/admin-tools",
+        element: cw(lazy(() => import("@/pages/admin/adminTools"))),
     },
     {
         path: "/admin-tools/currencies",
@@ -84,6 +84,22 @@ const adminToolsRoutes: IRoutesProps[] = [
     {
         path: "/admin-tools/templates/decharge",
         element: cw(lazy(() => import("@/pages/admin/adminTools/templates/decharge"))),
+    },
+    {
+        path: "/admin-tools/sheets",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/sheets"))),
+    },
+    {
+        path: "/admin-tools/projects",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/projects"))),
+    },
+    {
+        path: "/admin-tools/buildings",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/buildings"))),
+    },
+    {
+        path: "/admin-tools/subcontractors",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/subcontractors"))),
     },
 ];
 

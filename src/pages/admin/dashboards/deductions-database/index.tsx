@@ -1,7 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { MetaData } from "@/components/MetaData";
-import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 
@@ -9,6 +8,7 @@ import useDeductionsDatabase from "./use-deductions-database";
 
 const DeductionsDatabase = () => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
+    const navigate = useNavigate();
 
     const { laborColumns, materialsColumns, machinesColumns, laborData, materialsData, machinesData } =
         useDeductionsDatabase();
@@ -34,11 +34,26 @@ const DeductionsDatabase = () => {
                 return laborData;
         }
     };
+
+    const handleBackToDashboard = () => {
+        navigate('/dashboard');
+    };
+
     return (
         <div>
-            <MetaData title={"Deductions Database"} />
+            {/* Header with Back Button */}
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleBackToDashboard}
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                    >
+                        <span className="iconify lucide--arrow-left size-4"></span>
+                        <span>Back</span>
+                    </button>
+                </div>
+            </div>
 
-            <PageTitle title={"Deductions Database"} centerItem={"Dashboard"} />
             <div className="space-y-4">
                 <div className="flex items-center justify-center space-x-6">
                     <Button
@@ -48,15 +63,9 @@ const DeductionsDatabase = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 48 48">
                             <g fill="currentColor">
                                 <path
-                                    fill-rule="evenodd"
+                                    fillRule="evenodd"
                                     d="M24 6a1 1 0 0 1 1 1v.068c2.798.292 4.933 1.495 6.323 3.026c.956 1.053 1.589 2.308 1.788 3.532l.108.083c1.124.871 1.949 1.927 1.753 3.138c-.189 1.17-1.246 1.882-2.23 2.317a9 9 0 0 1-.76.296q.018.267.018.54a8 8 0 1 1-15.982-.54a9 9 0 0 1-.76-.296c-.984-.435-2.041-1.147-2.23-2.317c-.196-1.211.629-2.267 1.753-3.138l.127-.098a6 6 0 0 1 .096-.474a7.6 7.6 0 0 1 1.411-2.853C17.755 8.576 19.948 7.196 23 7.02V7a1 1 0 0 1 1-1m7.66 10.44a1 1 0 0 0 1.152-.356c.197.275.19.421.186.444c-.013.08-.166.41-1.065.808c-1.049.464-2.627.8-4.437.99a3.5 3.5 0 0 0-6.992 0c-1.81-.19-3.388-.526-4.437-.99c-.899-.398-1.052-.728-1.065-.808c-.004-.023-.011-.168.186-.444a1 1 0 0 0 1.75-.931c-.12-.324-.157-.861.009-1.543a5.6 5.6 0 0 1 1.042-2.091l.011-.014V13.5a1 1 0 1 0 2 0V9.846c.822-.435 1.817-.739 3-.823V11.5a1 1 0 1 0 2 0V9.081c1.17.147 2.168.482 3 .93V13.5a1 1 0 1 0 2 0v-1.881c1.116 1.327 1.352 2.731 1.06 3.541a1 1 0 0 0 .6 1.28m-10.193 4.475a28 28 0 0 1-3.448-.435a6 6 0 0 0 11.962 0c-1.06.208-2.234.352-3.448.435A3.5 3.5 0 0 1 24 22a3.5 3.5 0 0 1-2.533-1.085M25.5 18.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0"
-                                    clip-rule="evenodd"
-                                />
-                                <path d="M24 39a2 2 0 1 0 0-4a2 2 0 0 0 0 4" />
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M19.534 28.4L23 31h2l3.466-2.6C34.561 29.376 42 32.09 42 36v6H6v-6c0-3.91 7.439-6.624 13.534-7.6m6.133 4.6l3.31-2.483c1.003.184 2.024.415 3.023.686V40h2v-8.185c.7.24 1.371.501 2 .782V40H12v-7.403c.629-.28 1.3-.542 2-.782V40h2v-8.797c.999-.271 2.02-.502 3.023-.686L22.333 33zm13.638 1.69c.564.584.695 1.015.695 1.31v4h-2v-6.344c.54.346.976.694 1.305 1.035m-30.61 0c.33-.34.766-.688 1.305-1.034V40H8v-4c0-.295.13-.726.695-1.31"
-                                    clip-rule="evenodd"
+                                    clipRule="evenodd"
                                 />
                             </g>
                         </svg>
@@ -87,83 +96,20 @@ const DeductionsDatabase = () => {
                         <span>Machines</span>
                     </Button>
                 </div>
-                <div className="flex w-full items-center justify-start space-x-2">
-                    <label className="floating-label">
-                        <span>Project</span>
-                        <Select
-                            className="input input-sm min-w-42"
-                            name="project"
-                            value=""
-                            onTouchStart={(e) => {
-                                if (e.touches.length > 1) {
-                                    e.preventDefault();
-                                }
-                            }}>
-                            <>
-                                <SelectOption value="" disabled hidden></SelectOption>
-                                {/* {(options ?? []).map((option) => (
-                                    <SelectOption key={option} value={option} className="bg-base-100">
-                                        {option}
-                                    </SelectOption>
-                                ))} */}
-                            </>
-                        </Select>
-                    </label>
-                    <label className="floating-label">
-                        <span>Subcontractor</span>
-                        <Select
-                            className="input input-sm min-w-42"
-                            name="subcontractor"
-                            value=""
-                            onTouchStart={(e) => {
-                                if (e.touches.length > 1) {
-                                    e.preventDefault();
-                                }
-                            }}>
-                            <>
-                                <SelectOption value="" disabled hidden></SelectOption>
-                                {/* {(options ?? []).map((option) => (
-                                    <SelectOption key={option} value={option} className="bg-base-100">
-                                        {option}
-                                    </SelectOption>
-                                ))} */}
-                            </>
-                        </Select>
-                    </label>
-                    <label className="floating-label">
-                        <span>Contract</span>
-                        <Select
-                            className="input input-sm min-w-42"
-                            name="contract"
-                            value=""
-                            onTouchStart={(e) => {
-                                if (e.touches.length > 1) {
-                                    e.preventDefault();
-                                }
-                            }}>
-                            <>
-                                <SelectOption value="" disabled hidden></SelectOption>
-                                {/* {(options ?? []).map((option) => (
-                                    <SelectOption key={option} value={option} className="bg-base-100">
-                                        {option}
-                                    </SelectOption>
-                                ))} */}
-                            </>
-                        </Select>
-                    </label>
+                <div className="mt-4">
+                    <SAMTable
+                        columns={getColumns()}
+                        tableData={getTableData()}
+                        inputFields={[]}
+                        actions={false}
+                        editAction={false}
+                        deleteAction={false}
+                        title={activeView}
+                        loading={false}
+                        addBtn={false}
+                        onSuccess={() => {}}
+                    />
                 </div>
-
-                <SAMTable
-                    columns={getColumns()}
-                    tableData={getTableData()}
-                    actions
-                    editAction
-                    deleteAction
-                    title={"Contract"}
-                    loading={false}
-                    addBtn
-                    onSuccess={() => {}}
-                />
             </div>
         </div>
     );

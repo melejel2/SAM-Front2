@@ -3,7 +3,7 @@ import { useState } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 
-const useUnits = () => {
+const useSheets = () => {
     const [tableData, setTableData] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -13,7 +13,7 @@ const useUnits = () => {
 
     const columns = {
         name: "Name",
-        symbol: "Symbol",
+        description: "Description",
     };
 
     const inputFields = [
@@ -24,19 +24,19 @@ const useUnits = () => {
             required: true,
         },
         {
-            name: "symbol",
-            label: "Symbol",
+            name: "description",
+            label: "Description",
             type: "text",
             required: true,
         },
     ];
 
-    const getUnits = async () => {
+    const getSheets = async () => {
         setLoading(true);
 
         try {
             const data = await apiRequest({
-                endpoint: "Unit/GetUnits",
+                endpoint: "Sheets/GetSheets",
                 method: "GET",
                 token: token ?? "",
             });
@@ -57,8 +57,8 @@ const useUnits = () => {
         tableData,
         inputFields,
         loading,
-        getUnits,
+        getSheets,
     };
 };
 
-export default useUnits;
+export default useSheets; 

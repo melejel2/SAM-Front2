@@ -8,7 +8,7 @@ export const TopbarToggleDashboardButton = () => {
     return (
         <>
             <Link
-                to={config.dashboard ? "/admin-tools/connection" : "/dashboard"}
+                to={config.dashboard ? "/admin-tools" : "/dashboard"}
                 className="btn btn-circle btn-ghost"
                 onClick={toggleDashboard}>
                 {config.dashboard ? (

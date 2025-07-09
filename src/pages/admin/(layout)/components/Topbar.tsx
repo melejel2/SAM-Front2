@@ -1,66 +1,1160 @@
-import { Link } from "react-router";
-
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Select, SelectOption } from "@/components/daisyui";
 import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
-import { Button } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
+import { useConfig } from "@/contexts/config";
+import { cn } from "@/helpers/utils/cn";
 
-import { TopbarNotificationButton } from "./TopbarNotificationButton";
-import { TopbarToggleDashboardButton } from "./TopbarToggleDashboardButton";
+/* --- Helper Functions --- */
+// Format name to show only first name
+const formatName = (fullName: string) => {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(" ");
+  return parts[0]; // Return only the first name
+};
 
-export const Topbar = () => {
-    const { logout, authState } = useAuth();
-    return (
-        <div
-            role="navigation"
-            aria-label="Navbar"
-            className="flex items-center justify-between px-3"
-            id="layout-topbar">
-            <div className="inline-flex items-center gap-3">
-                <label
-                    className="btn btn-square btn-ghost btn-sm"
-                    aria-label="Leftmenu toggle"
-                    htmlFor="layout-sidebar-toggle-trigger">
-                    <span className="iconify lucide--menu size-5" />
-                </label>
-                {/* <TopbarSearchButton /> */}
-            </div>
-            <div className="inline-flex items-center gap-1.5">
-                <ThemeToggleDropdown
-                    triggerClass="btn btn-sm btn-circle btn-ghost"
-                    dropdownClass="dropdown-center"
-                    dropdownContentClass="mt-2"
-                    iconClass="size-4.5"
-                />
-                {/* <label htmlFor="layout-rightbar-drawer" className="btn btn-circle btn-ghost btn-sm drawer-button">
-                    <span className="iconify lucide--settings-2 size-4.5" />
-                </label> */}
-                <TopbarToggleDashboardButton />
-                <TopbarNotificationButton />
+// Get user initials for avatar (e.g., "TB" for "Tamer Al Boustany")
+const getUserInitials = (fullName: string) => {
+  if (!fullName) return "";
+  const parts = fullName.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
-                <div className="dropdown dropdown-bottom dropdown-end">
-                    <div tabIndex={0} role="button" className="btn btn-ghost rounded-btn px-1.5">
-                        <p className="text-sm">{authState.user?.userName}</p>
-                    </div>
-                    <div tabIndex={0} className="dropdown-content bg-base-100 rounded-box mt-4 w-44 shadow">
-                        <ul className="menu w-full p-2">
-                            <li className="py-1">
-                                <Button className="text-error hover:bg-error/10" color="ghost">
-                                    <span className="iconify lucide--trash size-4" />
-                                    <span>Delete Account</span>
-                                </Button>
-                            </li>
-                            <hr className="border-base-300" />
+// Get page title based on current route
+const getPageTitle = (pathname: string) => {
+  // Dashboard routes
+  if (pathname === '/' || pathname === '/dashboard') {
+    return "Dashboard";
+  }
+  if (pathname.includes('/reports')) {
+    return "Reports";
+  }
+  if (pathname.includes('/contracts-database')) {
+    return "Contracts Database";
+  }
+  if (pathname.includes('/deductions-database')) {
+    return "Deductions Database";
+  }
+  if (pathname.includes('/budget-BOQs')) {
+    return "Budget BOQs";
+  }
+  if (pathname.includes('/subcontractors-BOQs')) {
+    return "Subcontractors BOQs";
+  }
+  if (pathname.includes('/IPCs-database')) {
+    return "IPCs Database";
+  }
 
-                            <li className="py-1">
-                                <Link onClick={logout} className="text-error hover:bg-error/10" to="/auth/login">
-                                    <span className="iconify lucide--log-out size-4" />
-                                    <span>Logout</span>
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+  // Admin Tools routes
+  if (pathname === '/admin-tools') {
+    return "Admin Tools";
+  }
+  if (pathname.includes('/admin-tools/currencies')) {
+    return "Currencies";
+  }
+  if (pathname.includes('/admin-tools/units')) {
+    return "Units";
+  }
+  if (pathname.includes('/admin-tools/users')) {
+    return "Users";
+  }
+  if (pathname.includes('/admin-tools/trades')) {
+    return "Trades";
+  }
+  if (pathname.includes('/admin-tools/cost-codes')) {
+    return "Cost Codes";
+  }
+  if (pathname.includes('/admin-tools/sheets')) {
+    return "Sheets";
+  }
+  if (pathname.includes('/admin-tools/projects')) {
+    return "Projects";
+  }
+  if (pathname.includes('/admin-tools/buildings')) {
+    return "Buildings";
+  }
+  if (pathname.includes('/admin-tools/subcontractors')) {
+    return "Subcontractors";
+  }
+  if (pathname.includes('/admin-tools/templates/contracts')) {
+    return "Contract Templates";
+  }
+  if (pathname.includes('/admin-tools/templates/vo')) {
+    return "VO Templates";
+  }
+  if (pathname.includes('/admin-tools/templates/decharge')) {
+    return "Decharge Templates";
+  }
+  if (pathname.includes('/admin-tools/templates/terminate')) {
+    return "Terminate Templates";
+  }
+
+  // Auth routes
+  if (pathname.includes('/auth/login')) {
+    return "Login";
+  }
+  if (pathname.includes('/auth/register')) {
+    return "Register";
+  }
+  if (pathname.includes('/auth/forgot-password')) {
+    return "Forgot Password";
+  }
+  if (pathname.includes('/auth/reset-password')) {
+    return "Reset Password";
+  }
+
+  // Default fallback
+  return "SAM";
+};
+
+// Types for notifications
+interface Notification {
+  type: string;
+  poId?: number;
+  poNumber?: string;
+  refNo?: string;
+  message: string;
+  date?: string;
+  untreated: boolean;
+  materialId?: number;
+  expenseClaimId?: number;
+  referenceNumber?: string;
+  paymentScheduleId?: number;
+  status?: string;
+  sourceCountryId?: number;
+  sourceCountryName?: string;
+  sourceSiteId?: number;
+  sourceSiteName?: string;
+  sourceSiteAcronym?: string;
+  beneficiaryName?: string;
+}
+
+// Types for company data
+interface Company {
+  id: string;
+  name: string;
+  code: string;
+  logo?: string;
+  connectionId: string;
+}
+
+interface NotificationCardProps {
+  icon: string;
+  title: string;
+  reference?: string;
+  date?: string;
+  onClick: () => void;
+  index: number;
+  isMobile: boolean;
+  isSmallMobile: boolean;
+}
+
+// Notification Button Component
+const NotificationButton = React.memo(({
+  onClick,
+  count,
+  loading = false
+}: {
+  onClick: () => void;
+  count: number;
+  loading?: boolean;
+}) => {
+  // Only show notification dot if we have a valid count greater than 0 and not loading
+  const showNotificationDot = !loading && typeof count === 'number' && count > 0;
+  const showLoading = loading && !showNotificationDot;
+  
+  return (
+    <div className="relative group">
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className="btn btn-circle btn-ghost btn-sm relative overflow-hidden hover:bg-primary/10 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        aria-label="Open notifications"
+        type="button"
+      >
+        <span className="iconify lucide--bell w-5 h-5 text-base-content group-hover:text-primary transition-all duration-200" />
+      </button>
+      
+      {/* Loading spinner indicator */}
+      {showLoading && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center z-10">
+          <span className="iconify lucide--loader-2 w-3 h-3 text-primary animate-spin" />
         </div>
+      )}
+      
+      {/* Notification indicator with pulsing animation */}
+      {showNotificationDot && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-base-100 animate-pulse z-10"></div>
+      )}
+    </div>
+  );
+});
+
+// NotificationCard Component
+const NotificationCard: React.FC<NotificationCardProps> = React.memo(({ 
+  icon, 
+  title, 
+  reference, 
+  date, 
+  onClick,
+  index,
+  isMobile,
+  isSmallMobile
+}) => {
+  const getNotificationStyle = (iconName: string) => {
+    switch (iconName) {
+      case "lucide:receipt":
+        return { 
+          bg: "bg-base-200", 
+          border: "border-base-300", 
+          icon: "text-base-content/70"
+        };
+      case "lucide:book-open":
+        return { 
+          bg: "bg-base-200", 
+          border: "border-base-300", 
+          icon: "text-base-content/70"
+        };
+      case "lucide:file-text":
+        return { 
+          bg: "bg-base-200", 
+          border: "border-base-300", 
+          icon: "text-base-content/70"
+        };
+      case "lucide:clipboard-list":
+        return { 
+          bg: "bg-base-200", 
+          border: "border-base-300", 
+          icon: "text-base-content/70"
+        };
+      default:
+        return { 
+          bg: "bg-base-200", 
+          border: "border-base-300", 
+          icon: "text-base-content/70"
+        };
+    }
+  };
+
+  const notificationStyle = getNotificationStyle(icon);
+
+  return (
+    <div 
+      key={index} 
+      className={`
+        flex cursor-pointer items-center gap-3 rounded-lg 
+        ${isMobile ? 'p-3' : 'p-4'} 
+        bg-base-100 hover:bg-base-200 
+        transition-all duration-200 border ${notificationStyle.border} shadow-sm select-none
+        hover:shadow-md hover:border-base-400
+        group
+      `}
+      onClick={onClick}
+    >
+      <div className={`
+        flex-shrink-0 flex items-center justify-center rounded-lg ${notificationStyle.bg}
+        ${isSmallMobile ? 'w-10 h-10' : 'w-12 h-12'}
+        border ${notificationStyle.border}
+      `}>
+        <span className={`iconify ${icon} ${isSmallMobile ? 'w-5 h-5' : 'w-6 h-6'} ${notificationStyle.icon}`} />
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className={`${isSmallMobile ? 'text-sm' : 'text-sm'} font-medium text-base-content mb-1 line-clamp-2 leading-tight`}>
+              {title}
+            </p>
+            <div className="flex items-center gap-3 text-xs text-base-content/60">
+              {reference && (
+                <span className="font-mono bg-base-200 px-2 py-0.5 rounded border border-base-300">
+                  {reference}
+                </span>
+              )}
+              {date && (
+                <span className="whitespace-nowrap">
+                  {date}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 flex items-center justify-center opacity-40 group-hover:opacity-60 transition-opacity">
+            <span className="iconify lucide--chevron-right w-4 h-4 text-base-content/40" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Company Switch Confirmation Dialog
+const CompanySwitchDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  targetCompany: Company | null;
+}> = ({ isOpen, onClose, onConfirm, targetCompany }) => {
+  if (!isOpen || !targetCompany) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+            <span className="iconify lucide--building-2 w-6 h-6 text-warning" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-base-content">Switch Company</h3>
+            <p className="text-sm text-base-content/60">Confirm company change</p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-base-content/80 mb-3">
+            Are you sure you want to switch to <strong>{targetCompany.name}</strong>?
+          </p>
+          <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+            <p className="text-sm text-warning-content">
+              <span className="iconify lucide--alert-triangle w-4 h-4 inline mr-1" />
+              This action will change your active company context. You may need to log in again to access company-specific data.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="btn btn-ghost btn-sm px-6"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="btn btn-warning btn-sm px-6"
+          >
+            Switch Company
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Company Dropdown Component
+const CompanyDropdown: React.FC<{
+  isMobile?: boolean;
+}> = ({ isMobile = false }) => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [targetCompany, setTargetCompany] = useState<Company | null>(null);
+  const { config } = useConfig();
+
+  // Load companies from login database connections
+  useEffect(() => {
+    const loadCompanies = async () => {
+      setLoading(true);
+      try {
+        // Mock API call - replace with actual implementation
+        const mockCompanies: Company[] = [
+          {
+            id: '1',
+            name: 'Main Construction Ltd',
+            code: 'MAIN',
+            connectionId: 'conn_main_001'
+          },
+          {
+            id: '2',
+            name: 'BuildRight Corp',
+            code: 'BUILD',
+            connectionId: 'conn_build_002'
+          },
+          {
+            id: '3',
+            name: 'Metro Infrastructure',
+            code: 'METRO',
+            connectionId: 'conn_metro_003'
+          }
+        ];
+        
+        setCompanies(mockCompanies);
+        setSelectedCompany(mockCompanies[0]); // Default to first company
+      } catch (error) {
+        console.error('Failed to load companies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCompanies();
+  }, []);
+
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    
+    if (selectedValue === 'clear') {
+      setSelectedCompany(null);
+      return;
+    }
+
+    const company = companies.find(c => c.id === selectedValue);
+    if (company && company.id !== selectedCompany?.id) {
+      setTargetCompany(company);
+      setShowConfirmDialog(true);
+    }
+  };
+
+  const handleConfirmSwitch = async () => {
+    if (!targetCompany) return;
+
+    try {
+      setLoading(true);
+      // Mock API call to switch company context
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSelectedCompany(targetCompany);
+      setShowConfirmDialog(false);
+      setTargetCompany(null);
+      
+      // You might want to refresh the page or update auth context here
+      // window.location.reload();
+    } catch (error) {
+      console.error('Failed to switch company:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelSwitch = () => {
+    setShowConfirmDialog(false);
+    setTargetCompany(null);
+  };
+
+  // If there's only one company, show it as text without dropdown
+  if (companies.length === 1) {
+    // Auto-select the only company if not already selected
+    if (!selectedCompany || selectedCompany.id !== companies[0].id) {
+      setTimeout(() => {
+        setSelectedCompany(companies[0]);
+      }, 0);
+    }
+    
+    return (
+      <div className="bg-base-200 rounded-md px-2 h-[32px] flex items-center min-w-[100px] max-w-[160px]">
+        <span className="font-medium text-base-content truncate">{companies[0].code}</span>
+      </div>
     );
+  }
+
+  const renderOptions = () => {
+    const options: React.ReactElement[] = [];
+    
+    // Add default option if no company is selected
+    if (!selectedCompany) {
+      options.push(
+        <SelectOption 
+          key="default" 
+          value="" 
+          className={`${config.theme === "dark" ? "bg-neutral text-neutral-content" : "bg-base-100"}`}
+        >
+          Select Company
+        </SelectOption>
+      );
+    }
+    
+    // Add all companies
+    companies.forEach((company) => {
+      options.push(
+        <SelectOption 
+          key={company.id} 
+          value={company.id} 
+          className={`${config.theme === "dark" ? "bg-neutral text-neutral-content" : "bg-base-100"}`}
+        >
+          {company.name}
+        </SelectOption>
+      );
+    });
+    
+    // Add clear option if a company is selected
+    if (selectedCompany) {
+      options.unshift(
+        <SelectOption 
+          key="clear" 
+          value="clear" 
+          className={`${config.theme === "dark" ? "bg-neutral text-neutral-content" : "bg-base-100"}`}
+        >
+          Clear Selection
+        </SelectOption>
+      );
+    }
+    
+    return options;
+  };
+
+  return (
+    <>
+      <div className="bg-base-200 rounded-md px-2 h-[32px] flex items-center min-w-[100px] max-w-[160px]">
+        <Select
+          className="border-none focus:outline-none focus:ring-0 bg-transparent w-full font-medium"
+          value={selectedCompany?.id || ""}
+          onChange={handleCompanyChange}
+          disabled={loading}
+          onTouchStart={(e) => e.touches.length > 1 && e.preventDefault()}
+        >
+          <>{renderOptions()}</>
+        </Select>
+      </div>
+
+      <CompanySwitchDialog
+        isOpen={showConfirmDialog}
+        onClose={handleCancelSwitch}
+        onConfirm={handleConfirmSwitch}
+        targetCompany={targetCompany}
+      />
+    </>
+  );
+};
+
+// NotificationsDialog Component
+const NotificationsDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ isOpen, onClose }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [viewportSize, setViewportSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+  
+  const isMobile = viewportSize.width < 768;
+  const isSmallMobile = viewportSize.width < 375;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Load notifications when dialog opens - replace with real API call
+  useEffect(() => {
+    if (isOpen) {
+      setLoading(true);
+      // Simulate API call - replace with real implementation
+      setTimeout(() => {
+        setNotifications([]); // Empty for now - replace with real data
+        setLoading(false);
+      }, 500);
+    }
+  }, [isOpen]);
+
+  const formatNotificationDate = useCallback((dateString?: string): string => {
+    if (!dateString) return "Now";
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      } else if (diffDays === 1) {
+        return "Yesterday";
+      } else if (diffDays < 7) {
+        return date.toLocaleDateString(undefined, { weekday: 'long' });
+      } else {
+        return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+    } catch {
+      return dateString || "Now";
+    }
+  }, []);
+
+  const getNotificationIcon = useCallback((type: string): string => {
+    switch (type) {
+      case "expense-claim-approval":
+        return "lucide:receipt";
+      case "payment-schedule-approval":
+        return "lucide:book-open";
+      case "po-approval":
+        return "lucide:file-text";
+      case "request-approval":
+        return "lucide:clipboard-list";
+      default:
+        return "lucide:bell";
+    }
+  }, []);
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    console.log("Notification clicked:", notification);
+    // Handle notification click - replace with actual navigation logic
+  }, []);
+
+  const notificationGroups = useMemo(() => {
+    const groups: Record<string, typeof notifications> = {
+      highPriority: [],
+      others: []
+    };
+    
+    notifications.forEach(notification => {
+      if (
+        notification.type === "po-approval" ||
+        notification.type === "expense-claim-approval" ||
+        notification.type === "payment-schedule-approval" ||
+        notification.type === "request-approval"
+      ) {
+        groups.highPriority.push(notification);
+      } else {
+        groups.others.push(notification);
+      }
+    });
+    
+    const result: Array<{ title: string; notifications: typeof notifications }> = [];
+    if (groups.highPriority.length > 0) {
+      result.push({
+        title: "Pending Approvals",
+        notifications: groups.highPriority
+      });
+    }
+    if (groups.others.length > 0) {
+      result.push({
+        title: "Other Notifications",
+        notifications: groups.others
+      });
+    }
+    return result;
+  }, [notifications]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-[100] overflow-hidden bg-black/50 backdrop-blur-sm flex items-start justify-center md:items-center"
+      onClick={onClose}
+    >
+      <div
+        className={`
+          bg-base-100 flex flex-col overflow-hidden
+          ${isMobile 
+              ? 'w-full h-full max-h-full animate-[modal-slide-up_0.3s_ease-out]' 
+              : 'rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] m-4 animate-[modal-fade_0.2s]'
+          }
+        `}
+        style={{
+          height: isMobile ? '100%' : 'auto',
+          maxHeight: isMobile ? '100%' : '90vh'
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div 
+          className={`
+            sticky top-0 bg-base-100/95 backdrop-blur-md border-b border-base-200 z-10
+            flex items-center justify-between
+            ${isMobile 
+                ? 'px-4 py-3 shadow-sm' 
+                : 'px-6 py-4 rounded-t-2xl'
+            }
+          `}
+        >
+          <div className="flex items-center gap-3">
+                         <h1 className={`
+               font-bold flex items-center gap-2
+               ${isSmallMobile ? 'text-xl' : 'text-2xl'}
+             `}>
+               <span className={`iconify lucide--bell ${isSmallMobile ? 'w-6 h-6' : 'w-7 h-7'} text-primary/80`} />
+               Notifications
+             </h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                setLoading(true);
+                setTimeout(() => setLoading(false), 1000);
+              }}
+              disabled={loading}
+              className="btn btn-sm btn-circle btn-ghost tooltip tooltip-bottom" 
+              data-tip="Refresh notifications"
+              aria-label="Refresh notifications"
+            >
+                             <span className={`iconify lucide--refresh-cw w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <button 
+              onClick={onClose} 
+              className="btn btn-sm btn-circle btn-ghost" 
+              aria-label="Close"
+            >
+                             <span className={`iconify lucide--x ${isSmallMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div 
+          className="flex-1 overflow-y-auto overscroll-contain bg-base-50"
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            minHeight: isMobile ? 'calc(100vh - 4rem)' : '400px'
+          }}
+        >
+          {loading ? (
+            <div className="flex flex-col justify-center items-center py-16 gap-4">
+              <span className="loading loading-spinner loading-lg"></span>
+              <p className="text-sm text-base-content/60">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-4 px-6">
+                             <div className="w-20 h-20 rounded-lg bg-base-200 border border-base-300 flex items-center justify-center">
+                 <span className="iconify lucide--bell w-10 h-10 text-base-content/40" />
+               </div>
+              <div>
+                <p className="text-lg font-medium text-base-content mb-1">All caught up!</p>
+                <p className="text-base-content/60 text-sm">You have no notifications at this time.</p>
+              </div>
+            </div>
+          ) : (
+            <div className={`
+              ${isMobile ? "px-4 py-3" : "p-6"}
+              space-y-6
+            `}>
+              {notificationGroups.map((group, groupIndex) => (
+                <div key={groupIndex}>
+                  {notificationGroups.length > 1 && (
+                    <div className="mb-4">
+                      <h2 className={`
+                        font-semibold text-base-content flex items-center gap-2
+                        ${isMobile ? 'text-sm' : 'text-base'}
+                      `}>
+                        {group.title === "Pending Approvals" && (
+                          <div className="w-2 h-2 bg-base-content/60 rounded-full"></div>
+                        )}
+                        {group.title}
+                        <span className="text-xs font-medium text-base-content/60 bg-base-200 px-2 py-0.5 rounded border border-base-300">
+                          {group.notifications.length}
+                        </span>
+                      </h2>
+                    </div>
+                  )}
+                  <div className={isMobile ? "space-y-3" : "space-y-4"}>
+                    {group.notifications.map((notification, index) => {
+                      const notificationIcon = getNotificationIcon(notification.type);
+                      
+                      return (
+                        <NotificationCard
+                          key={`${notification.type}-${notification.expenseClaimId || notification.poId || notification.paymentScheduleId || notification.materialId || index}`}
+                          index={index}
+                          icon={notificationIcon}
+                          title={notification.message}
+                          reference={notification.referenceNumber || notification.refNo}
+                          date={formatNotificationDate(notification.date)}
+                          onClick={() => handleNotificationClick(notification)}
+                          isMobile={isMobile}
+                          isSmallMobile={isSmallMobile}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              
+              {isMobile && <div className="h-4"></div>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Account dropdown for both mobile and desktop views
+const AccountDropdown = React.memo(({
+  username,
+  userEmail,
+  onLogout,
+  isMobile = false
+}: {
+  username: string;
+  userEmail?: string;
+  onLogout: () => void;
+  isMobile?: boolean;
+}) => {
+  const { config } = useConfig();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+  
+  const handleToggle = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOpen(prev => !prev);
+  }, []);
+  
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+  
+  // For mobile bottom navigation style
+  if (isMobile) {
+    return (
+      <div className="flex-1 relative isolate" ref={dropdownRef}>
+        <button 
+          onClick={handleToggle}
+          className="w-full h-full flex flex-col items-center justify-center p-0.5"
+          aria-label="Toggle account menu"
+          type="button"
+        >
+          <div className={`flex flex-col items-center gap-0.5 ${isOpen 
+            ? 'text-primary' 
+            : (config.theme === 'dark' ? 'text-white' : 'text-black')}`}>
+            <span className="iconify lucide--user-circle text-lg" />
+            <span className="text-[10px]">Account</span>
+          </div>
+        </button>
+        
+        {isOpen && (
+          <>
+            {/* Overlay that covers entire screen for clicking outside */}
+            <div 
+              className="fixed inset-0 z-40 bg-transparent" 
+              onClick={handleClose}
+              style={{ touchAction: 'none' }}
+            />
+            
+            {/* Position the dropdown as fixed instead of absolute to avoid clipping */}
+            <div 
+              className="fixed z-[100] p-3 shadow-2xl bg-base-100 rounded-xl border border-base-300"
+              style={{
+                width: '14rem', 
+                bottom: '4rem', 
+                right: '1rem', 
+                maxHeight: 'calc(100vh - 8rem)', 
+                overflowY: 'auto'
+              }}
+            >
+              <div className="mb-3 flex flex-col items-center">
+                <div className="w-12 h-12 bg-primary text-primary-content rounded-full flex items-center justify-center mb-2">
+                  <span className="text-base font-medium">{getUserInitials(username)}</span>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-base">{username}</p>
+                  {userEmail && <p className="text-sm text-base-content/60">{userEmail}</p>}
+                </div>
+              </div>
+              
+              <hr className="my-2 border-base-content/10" />
+              
+              <button 
+                className="w-full py-2 flex items-center gap-2 text-sm hover:bg-base-200 rounded-md px-2 text-left"
+                onClick={() => {
+                  // Handle view profile
+                  handleClose();
+                }}
+                type="button"
+              >
+                <span className="iconify lucide--user-plus text-base" />
+                <span>View Profile</span>
+              </button>
+              
+              <hr className="my-2 border-base-content/10" />
+              
+              <button 
+                className="w-full text-error py-2 flex items-center gap-2 text-sm hover:bg-error/10 rounded-md px-2 text-left" 
+                onClick={() => {
+                  onLogout();
+                  handleClose();
+                }}
+                type="button"
+              >
+                <span className="iconify lucide--log-out text-base" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+  
+  // Desktop dropdown style (uses DaisyUI Dropdown)
+  return (
+    <Dropdown vertical="bottom" end>
+      <DropdownToggle className="p-0" button={false}>
+        <div className="relative group">
+          <button className="btn btn-circle btn-ghost btn-sm relative overflow-hidden hover:bg-base-300 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-base-300 cursor-pointer bg-primary text-primary-content hover:bg-primary/90">
+            <span className="text-sm font-medium">{getUserInitials(username || '')}</span>
+          </button>
+        </div>
+      </DropdownToggle>
+      <DropdownMenu className="mb-8 w-60 p-3 shadow-lg">
+        <div className="mb-3 flex flex-col items-center">
+          <div className="w-12 h-12 bg-primary text-primary-content rounded-full flex items-center justify-center mb-2">
+            <span className="text-base font-medium">{getUserInitials(username || '')}</span>
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-base">{username}</p>
+            {userEmail && <p className="text-sm text-base-content/60">{userEmail}</p>}
+          </div>
+        </div>
+        
+        <hr className="my-2 border-base-content/10" />
+        
+        <DropdownItem 
+          className="py-2 flex items-center gap-2 text-sm hover:bg-base-200 rounded-md"
+          onClick={() => {
+            // Handle view profile
+          }}
+        >
+          <span className="iconify lucide--user-plus text-base" />
+          <span>View Profile</span>
+        </DropdownItem>
+        
+        <hr className="my-2 border-base-content/10" />
+        
+        <DropdownItem 
+          className="text-error py-2 flex items-center gap-2 text-sm hover:bg-error/10 rounded-md" 
+          onClick={onLogout}
+        >
+          <span className="iconify lucide--log-out text-base" />
+          <span>Logout</span>
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
+  );
+});
+
+/* --- Main Topbar Component --- */
+export const Topbar = () => {
+  const { logout, authState } = useAuth();
+  const { config } = useConfig();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Application state
+  const [displayText, setDisplayText] = useState("");
+  const [isTyping, setIsTyping] = useState(true);
+  const [textIndex, setTextIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [isNotificationsDialogOpen, setIsNotificationsDialogOpen] = useState(false);
+  
+  // Mock notification count - replace with real data
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  
+  // Refs to reduce re-renders
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Determine if we're in admin tools
+  const isAdminTools = location.pathname.startsWith('/admin-tools');
+  const isDarkMode = config.theme === 'dark';
+
+  const doLogout = useCallback(() => {
+    logout();
+    navigate("/auth/login");
+  }, [logout, navigate]);
+  
+  const toggleNotificationsDialog = useCallback(() => {
+    setIsNotificationsDialogOpen(prev => !prev);
+  }, []);
+  
+  // Dynamic text sequences based on current route - Memoized
+  const logoTexts = useMemo(() => {
+    const currentTitle = getPageTitle(location.pathname);
+    return [currentTitle, `SAM - ${currentTitle}`];
+  }, [location.pathname]);
+  
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        const width = window.innerWidth;
+        const safeWidth = width < 200 ? 1200 : width;
+        const newIsMobile = safeWidth < 768;
+        setIsMobile(newIsMobile);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Optimize animation timing to reduce constant updates
+  useEffect(() => {
+    const typingSpeed = 75;
+    const deletingSpeed = 50;
+    const pauseDuration = 4000;
+    
+    // Clear previous timer
+    if (animationTimerRef.current) {
+      clearTimeout(animationTimerRef.current);
+    }
+
+    const animate = () => {
+      if (isTyping) {
+        if (displayText.length < logoTexts[textIndex].length) {
+          setDisplayText(logoTexts[textIndex].substring(0, displayText.length + 1));
+          animationTimerRef.current = setTimeout(animate, typingSpeed);
+        } else {
+          animationTimerRef.current = setTimeout(() => {
+            setIsTyping(false);
+          }, pauseDuration);
+        }
+      } else {
+        if (displayText.length > 0) {
+          setDisplayText(displayText.substring(0, displayText.length - 1));
+          animationTimerRef.current = setTimeout(animate, deletingSpeed);
+        } else {
+          const nextIndex = (textIndex + 1) % logoTexts.length;
+          setTextIndex(nextIndex);
+          setIsTyping(true);
+          animationTimerRef.current = setTimeout(animate, typingSpeed);
+        }
+      }
+    };
+
+    animationTimerRef.current = setTimeout(animate, isTyping ? typingSpeed : deletingSpeed);
+
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
+  }, [displayText, isTyping, textIndex, logoTexts]);
+  
+  // Reset animation when app route changes
+  useEffect(() => {
+    setDisplayText("");
+    setIsTyping(true);
+    setTextIndex(0);
+  }, [location.pathname]);
+
+  return (
+    <>
+      <div className="w-full bg-base-100 z-40 shadow-sm">
+        <div className="container mx-auto px-8 h-16 flex justify-between items-center">
+          <div className="flex items-center">
+            {/* App Logo */}
+            <Link to="/" className="flex-shrink-0">
+              <div className="flex items-center bg-base-200 rounded-md px-1 h-[36px] inline-flex">
+                <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
+                  <img src="/images/SAM.ico" alt="SAM Logo" className="h-6 w-6" />
+                </div>
+                <span className="ml-2 text-lg font-semibold text-base-content whitespace-nowrap">
+                  {location.pathname === '/admin-tools' ? 'SAM - Admin Tools' : displayText}
+                  {location.pathname !== '/admin-tools' && (
+                    <span className={cn(
+                      "border-r-2 ml-0.5",
+                      (isTyping && displayText.length < logoTexts[textIndex].length) || (!isTyping && displayText.length > 0)
+                        ? "border-base-content animate-[blink_1s_step-end_infinite]"
+                        : "border-transparent"
+                    )}>
+                      &nbsp;
+                    </span>
+                  )}
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Right side controls */}
+          <div className="flex items-center gap-3">
+            {/* Company Dropdown */}
+            <CompanyDropdown isMobile={isMobile} />
+
+            {/* Grouped Toggle buttons for Dashboard/Admin Tools - only show on dashboard page and first admin tools page */}
+            {!isMobile && (location.pathname.startsWith('/dashboard') || location.pathname === '/admin-tools') && (
+              <div className="bg-base-200 rounded-xl p-1 flex items-center gap-1 shadow-sm border border-base-300">
+                <Link
+                  to="/dashboard"
+                  className={`btn btn-circle btn-ghost btn-sm relative overflow-hidden transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer group ${
+                    !isAdminTools 
+                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm' 
+                      : 'hover:bg-primary/10'
+                  }`}
+                  title="Dashboard"
+                >
+                  <span className={`iconify lucide--monitor-dot w-5 h-5 transition-all duration-200 ${
+                    !isAdminTools 
+                      ? 'text-primary-content' 
+                      : 'text-base-content group-hover:text-primary'
+                  }`} />
+                </Link>
+                <Link
+                  to="/admin-tools"
+                  className={`btn btn-circle btn-ghost btn-sm relative overflow-hidden transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer group ${
+                    isAdminTools 
+                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm' 
+                      : 'hover:bg-primary/10'
+                  }`}
+                  title="Admin Tools"
+                >
+                  <span className={`iconify lucide--settings w-5 h-5 transition-all duration-200 ${
+                    isAdminTools 
+                      ? 'text-primary-content' 
+                      : 'text-base-content group-hover:text-primary'
+                  }`} />
+                </Link>
+              </div>
+            )}
+
+            {/* Theme toggle button */}
+            <ThemeToggleDropdown 
+              triggerClass="btn btn-circle btn-ghost btn-sm relative overflow-hidden hover:bg-base-300 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-base-300 cursor-pointer"
+              iconClass="text-base-content group-hover:text-base-content/70 transition-all duration-200 group-hover:rotate-6"
+            />
+
+            {/* Notifications Button */}
+            <NotificationButton 
+              onClick={toggleNotificationsDialog}
+              count={notificationCount}
+              loading={notificationsLoading}
+            />
+
+            <AccountDropdown
+              username={authState.user?.username || authState.user?.userName || ""}
+              userEmail={authState.user?.userCode}
+              onLogout={doLogout}
+              isMobile={isMobile}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications Dialog */}
+      <NotificationsDialog
+        isOpen={isNotificationsDialogOpen}
+        onClose={toggleNotificationsDialog}
+      />
+    </>
+  );
 };

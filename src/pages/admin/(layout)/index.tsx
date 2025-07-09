@@ -1,27 +1,43 @@
-import { type ReactNode } from "react";
+import React from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Topbar } from './components/Topbar';
+import { Sidebar } from './components/Sidebar';
 
-import { useConfig } from "@/contexts/config";
+interface AdminLayoutProps {
+  children?: React.ReactNode;
+}
 
-import { Rightbar } from "./components/Rightbar";
-import { Sidebar } from "./components/Sidebar";
-import { Topbar } from "./components/Topbar";
-import { adminToolsMenuItems, dashboardMenuItems } from "./helpers";
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const location = useLocation();
+  const isAdminTools = location.pathname.startsWith('/admin-tools');
 
-const AdminLayout = ({ children }: { children: ReactNode }) => {
-    const { config } = useConfig();
-
-    return (
-        <div className="size-full" id="layout-main">
-            <div className="flex">
-                <Sidebar menuItems={config.dashboard ? dashboardMenuItems : adminToolsMenuItems} />
-                <div className="flex h-screen min-w-0 grow flex-col overflow-auto">
-                    <Topbar />
-                    <div id="layout-content">{children}</div>
-                </div>
+  return (
+    <div className="min-h-screen app-background">
+      {/* Topbar */}
+      <div className="relative z-30">
+        <Topbar />
+      </div>
+      
+      {/* Main content area */}
+      <div className="relative dashboard-layout">
+        {/* Floating Sidebar - only show when not in admin tools */}
+        {!isAdminTools && (
+          <div className="fixed left-10 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
+            <div className="pointer-events-auto">
+              <Sidebar />
             </div>
-            <Rightbar />
+          </div>
+        )}
+        
+        {/* Page content with same container structure as topbar */}
+        <div className="dashboard-content pt-4">
+          <div className="container mx-auto px-8">
+            {children || <Outlet />}
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default AdminLayout;

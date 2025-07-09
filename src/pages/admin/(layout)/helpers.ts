@@ -9,31 +9,31 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
     },
     {
         id: "dashboard-budget-BOQs",
-        icon: "lucide--hard-drive",
+        icon: "lucide--calculator",
         label: "Budget BOQs",
         url: "/dashboard/budget-BOQs",
     },
     {
         id: "dashboard-subcontractors-BOQs",
-        icon: "lucide--hard-drive",
+        icon: "lucide--hard-hat",
         label: "Subcontractors BOQs",
         url: "/dashboard/subcontractors-BOQs",
     },
     {
         id: "dashboard-contracts-database",
-        icon: "lucide--archive",
+        icon: "lucide--file-signature",
         label: "Contracts Database",
         url: "/dashboard/contracts-database",
     },
     {
         id: "dashboard-deductions-database",
-        icon: "lucide--truck",
+        icon: "lucide--minus-circle",
         label: "Deductions Database",
         url: "/dashboard/deductions-database",
     },
     {
         id: "dashboard-IPCs-database",
-        icon: "lucide--database",
+        icon: "lucide--file-bar-chart",
         label: "IPCs Database",
         url: "/dashboard/IPCs-database",
     },
@@ -48,73 +48,9 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
 export const adminToolsMenuItems: ISidebarMenuItem[] = [
     {
         id: "admin-tools",
+        icon: "lucide--settings",
         label: "Admin Tools",
-        isTitle: true,
-    },
-    {
-        id: "admin-tools-connection",
-        icon: "lucide--server",
-        label: "Connection",
-        url: "/admin-tools/connection",
-    },
-    {
-        id: "admin-tools-currencies",
-        icon: "lucide--dollar-sign",
-        label: "Currencies",
-        url: "/admin-tools/currencies",
-    },
-    {
-        id: "admin-tools-units",
-        icon: "lucide--pencil-ruler",
-        label: "Units",
-        url: "/admin-tools/units",
-    },
-    {
-        id: "admin-tools-users",
-        icon: "lucide--users",
-        label: "Users",
-        url: "/admin-tools/users",
-    },
-    {
-        id: "admin-tools-trades",
-        icon: "lucide--list",
-        label: "Trades",
-        url: "/admin-tools/trades",
-    },
-    {
-        id: "admin-tools-cost-codes",
-        icon: "lucide--cloud-rain",
-        label: "Cost Codes",
-        url: "/admin-tools/cost-codes",
-    },
-    {
-        id: "admin-tools-templates",
-        label: "Templates",
-        isTitle: true,
-    },
-    {
-        id: "admin-tools-templates-contract",
-        icon: "lucide--file-pen",
-        label: "Contract",
-        url: "/admin-tools/templates/contract",
-    },
-    {
-        id: "admin-tools-templates-vo",
-        icon: "lucide--file-plus",
-        label: "VO",
-        url: "/admin-tools/templates/VO",
-    },
-    {
-        id: "admin-tools-templates-terminate",
-        icon: "lucide--file-x",
-        label: "Terminate",
-        url: "/admin-tools/templates/terminate",
-    },
-    {
-        id: "admin-tools-templates-decharge",
-        icon: "lucide--file-minus",
-        label: "Decharge",
-        url: "/admin-tools/templates/decharge",
+        url: "/admin-tools",
     },
 ];
 

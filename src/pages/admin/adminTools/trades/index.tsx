@@ -1,24 +1,38 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { MetaData } from "@/components/MetaData";
-import { PageTitle } from "@/components/PageTitle";
 import SAMTable from "@/components/Table";
 
 import useTrades from "./use-trades";
 
 const Trades = () => {
     const { columns, tableData, inputFields, getTrades } = useTrades();
+    const navigate = useNavigate();
 
     useEffect(() => {
         getTrades();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleBackToAdminTools = () => {
+        navigate('/admin-tools');
+    };
+
     return (
         <div>
-            <MetaData title={"Trades"} />
+            {/* Header with Back Button */}
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleBackToAdminTools}
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                    >
+                        <span className="iconify lucide--arrow-left size-4"></span>
+                        <span>Back</span>
+                    </button>
+                </div>
+            </div>
 
-            <PageTitle title={"Trades"} centerItem={"Admin tools"} />
             <div>
                 <SAMTable
                     columns={columns}

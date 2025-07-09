@@ -1,25 +1,25 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router";
+import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 
 import { AuthConfigProvider } from "@/contexts/auth";
-// ensure this is from react-router-dom
 import { ConfigProvider } from "@/contexts/config";
-// update path as necessary
 import { Router } from "@/router";
 
 import "./styles/app.css";
 
-createRoot(document.getElementById("root")!).render(
+const root = createRoot(document.getElementById("root")!);
+
+root.render(
     <StrictMode>
         <BrowserRouter>
-            <AuthConfigProvider>
-                <ConfigProvider>
+            <ConfigProvider>
+                <AuthConfigProvider>
                     <Router />
                     <Toaster richColors />
-                </ConfigProvider>
-            </AuthConfigProvider>
+                </AuthConfigProvider>
+            </ConfigProvider>
         </BrowserRouter>
     </StrictMode>,
 );

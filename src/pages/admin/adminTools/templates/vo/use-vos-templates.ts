@@ -13,8 +13,9 @@ const useVOsTemplates = () => {
 
     const columns = {
         code: "Code",
-        name: "Template Name",
+        templateName: "Template Name",
         type: "Type",
+        contractType: "Contract Type",
         language: "Language",
     };
 
@@ -26,7 +27,7 @@ const useVOsTemplates = () => {
             required: true,
         },
         {
-            name: "name",
+            name: "templateName",
             label: "Template Name",
             type: "text",
             required: true,
@@ -34,6 +35,13 @@ const useVOsTemplates = () => {
         {
             name: "type",
             label: "Type",
+            type: "select",
+            required: true,
+            options: ["Addition", "Deduction"],
+        },
+        {
+            name: "contractType",
+            label: "Contract Type",
             type: "text",
             required: true,
         },
@@ -52,14 +60,14 @@ const useVOsTemplates = () => {
         },
     ];
 
-    const getVOContractTemplates = async () => {
+    const getVOTemplates = async () => {
         setLoading(true);
 
         try {
-            const data = await apiRequest({
-                endpoint: "Templates/GetVOContracts?type=VO",
-                method: "GET",
-                token: token ?? "",
+            const data = await apiRequest({ 
+                endpoint: "Templates/GetVOContracts", 
+                method: "GET", 
+                token: token ?? "" 
             });
             if (data) {
                 setTableData(data);
@@ -77,8 +85,8 @@ const useVOsTemplates = () => {
         columns,
         tableData,
         inputFields,
-        getVOContractTemplates,
         loading,
+        getVOTemplates,
     };
 };
 

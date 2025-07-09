@@ -4,14 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 
-import useCurrencies from "./use-currencies";
+import useSubcontractors from "./use-subcontractors";
 
-const Currencies = () => {
-    const { columns, tableData, inputFields, loading, getCurrencies } = useCurrencies();
+const Subcontractors = () => {
+    const { columns, tableData, inputFields, loading, getSubcontractors } = useSubcontractors();
     const navigate = useNavigate();
 
     useEffect(() => {
-        getCurrencies();
+        getSubcontractors();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -45,13 +45,13 @@ const Currencies = () => {
                         actions
                         editAction
                         deleteAction
-                        title={"Currency"}
+                        title={"Subcontractor"}
                         loading={false}
                         addBtn
-                        editEndPoint="Currencie/UpdateCurrencie"
-                        createEndPoint="Currencie/AddCurrencie"
-                        deleteEndPoint="Currencie/DeleteCurrencie"
-                        onSuccess={getCurrencies}
+                        editEndPoint="Subcontractors/UpdateSubcontractor"
+                        createEndPoint="Subcontractors/CreateSubcontractor"
+                        deleteEndPoint="Subcontractors/DeleteSubcontractor"
+                        onSuccess={getSubcontractors}
                     />
                 )}
             </div>
@@ -59,4 +59,4 @@ const Currencies = () => {
     );
 };
 
-export default Currencies;
+export default Subcontractors; 

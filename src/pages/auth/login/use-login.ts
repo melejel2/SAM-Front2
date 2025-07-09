@@ -41,6 +41,7 @@ const useLogin = () => {
                 method: "POST",
                 body: loginData,
             });
+            
             if (response.isSuccess === true) {
                 toaster.success("Login successful...");
                 setLoggedInUser(response.value);
@@ -50,7 +51,7 @@ const useLogin = () => {
                     toaster.error("Invalid username or password");
                     setError("Invalid username or password");
                 } else {
-                    toaster.error(response.message);
+                    toaster.error(response.message || "Login failed");
                 }
             }
         } catch (error) {
@@ -64,14 +65,37 @@ const useLogin = () => {
 
     const getDatabases = async () => {
         setIsLoading(true);
+        
         try {
             const response = await apiRequest({
                 endpoint: "Auth/GetDataBases",
                 method: "GET",
             });
-            setDatabases(["Select Database", ...response]);
+            
+            // Check if response is successful
+            if (response && typeof response === 'object') {
+                if ('success' in response && response.success === true && 'databases' in response && Array.isArray(response.databases)) {
+                    // Handle successful response with databases array
+                    setDatabases(["Select Database", ...response.databases]);
+                } else if ('success' in response && response.success === false) {
+                    // Handle API error response
+                    console.error("API Error:", response.message);
+                    toaster.error(response.message || "Failed to fetch databases");
+                    setDatabases(["Select Database"]);
+                } else if (Array.isArray(response)) {
+                    // Handle direct array response (fallback for different API format)
+                    setDatabases(["Select Database", ...response]);
+                } else {
+                    // Handle unexpected response format
+                    console.error("Unexpected response format:", response);
+                    setDatabases(["Select Database"]);
+                }
+            } else {
+                setDatabases(["Select Database"]);
+            }
         } catch (error) {
             console.error("error on get databases", error);
+            setDatabases(["Select Database"]);
         } finally {
             setIsLoading(false);
         }

@@ -13,3 +13,94 @@
 
 /* Plugin: for iconify */
 @plugin "./custom/iconify.js";
+
+/* Custom styles for the new layout */
+.app-background {
+  background: hsl(var(--b2)) !important;
+}
+
+/* Global theme background rules - applies light gray background with proper theme transitions */
+html, 
+body, 
+#root, 
+.main-wrapper, 
+.app-background {
+  @apply bg-base-200 transition-colors duration-300;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.dashboard-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-content-wrapper {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-content-wrapper {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1200px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Ensure content doesn't overlap with floating sidebar */
+@media (min-width: 768px) {
+  .dashboard-content .container {
+    margin-left: 6rem; /* Add left margin to account for floating sidebar */
+  }
+}
+
+/* Custom scrollbar for better UX */
+.dashboard-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard-content::-webkit-scrollbar-track {
+  background: hsl(var(--b2));
+}
+
+.dashboard-content::-webkit-scrollbar-thumb {
+  background: hsl(var(--bc) / 0.3);
+  border-radius: 4px;
+}
+
+.dashboard-content::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--bc) / 0.5);
+}
+
+/* Animation for the typing effect */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Ensure proper z-index stacking */
+.dashboard-layout .z-30 {
+  z-index: 30;
+}
+
+.dashboard-layout .z-40 {
+  z-index: 40;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .dashboard-content .container {
+    margin-left: 0;
+  }
+}

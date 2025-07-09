@@ -1,4 +1,15 @@
+import { useState } from "react";
+
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
+
 const useContractsDatabase = () => {
+    const [contractsData, setContractsData] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const { getToken } = useAuth();
+    const token = getToken();
+
     const contractsColumns = {
         contractNb: "Contract Number",
         project: "Project",
@@ -33,45 +44,56 @@ const useContractsDatabase = () => {
         status: "Status",
     };
 
-    const contractsData = [
-        {
-            id: "1",
-            contractNb: "C-001",
-            project: "Project A",
-            subcontractor: "SubCo Ltd",
-            trade: "Plumbing",
-            dateOfSignature: "2024-01-15",
-            endDate: "2024-12-15",
-            contractAmount: "$100,000",
-            totalAmount: "$120,000",
-            status: "Active",
-        },
-        {
-            id: "2",
-            contractNb: "C-002",
-            project: "Project B",
-            subcontractor: "BuildPro Inc",
-            trade: "Electrical",
-            dateOfSignature: "2024-03-10",
-            endDate: "2025-03-10",
-            contractAmount: "$150,000",
-            totalAmount: "$170,000",
-            status: "Active",
-        },
-        {
-            id: "3",
-            contractNb: "C-003",
-            project: "Project C",
-            subcontractor: "Alpha Constructions",
-            trade: "Masonry",
-            dateOfSignature: "2023-11-01",
-            endDate: "2024-10-31",
-            contractAmount: "$90,000",
-            totalAmount: "$95,000",
-            status: "Active",
-        },
-    ];
+    const getContractsDatasets = async () => {
+        setLoading(true);
 
+        try {
+            const data = await apiRequest({
+                endpoint: "ContractsDatasets/GetContractsDatasetsList",
+                method: "GET",
+                token: token ?? "",
+            });
+            if (data) {
+                setContractsData(data);
+            } else {
+                setContractsData([]);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const previewContract = async (contractId: string) => {
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/PreviewContract/${contractId}`,
+                method: "GET",
+                token: token ?? "",
+                responseType: "blob",
+            });
+
+            if (response instanceof Blob) {
+                const url = window.URL.createObjectURL(response);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `contract-${contractId}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
+    };
+
+    // For now, using mock data for VOs and terminated contracts
+    // These would need their own endpoints from the backend
     const vosData = [
         {
             id: "1",
@@ -118,7 +140,7 @@ const useContractsDatabase = () => {
             dateOfSignature: "2023-06-10",
             endDate: "2023-12-10",
             contractAmount: "$50,000",
-            status: "Active",
+            status: "Terminated",
         },
         {
             id: "2",
@@ -129,7 +151,7 @@ const useContractsDatabase = () => {
             dateOfSignature: "2022-08-20",
             endDate: "2023-08-20",
             contractAmount: "$80,000",
-            status: "Active",
+            status: "Terminated",
         },
         {
             id: "3",
@@ -140,7 +162,7 @@ const useContractsDatabase = () => {
             dateOfSignature: "2023-01-01",
             endDate: "2023-09-01",
             contractAmount: "$70,000",
-            status: "Active",
+            status: "Terminated",
         },
     ];
 
@@ -151,6 +173,9 @@ const useContractsDatabase = () => {
         contractsData,
         vosData,
         terminatedData,
+        loading,
+        getContractsDatasets,
+        previewContract,
     };
 };
 

@@ -4,14 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 
-import useCurrencies from "./use-currencies";
+import useSheets from "./use-sheets";
 
-const Currencies = () => {
-    const { columns, tableData, inputFields, loading, getCurrencies } = useCurrencies();
+const Sheets = () => {
+    const { columns, tableData, inputFields, loading, getSheets } = useSheets();
     const navigate = useNavigate();
 
     useEffect(() => {
-        getCurrencies();
+        getSheets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -45,13 +45,13 @@ const Currencies = () => {
                         actions
                         editAction
                         deleteAction
-                        title={"Currency"}
+                        title={"Sheet"}
                         loading={false}
                         addBtn
-                        editEndPoint="Currencie/UpdateCurrencie"
-                        createEndPoint="Currencie/AddCurrencie"
-                        deleteEndPoint="Currencie/DeleteCurrencie"
-                        onSuccess={getCurrencies}
+                        editEndPoint="Sheets/UpdateSheet"
+                        createEndPoint="Sheets/AddSheet"
+                        deleteEndPoint="Sheets/DeleteSheet"
+                        onSuccess={getSheets}
                     />
                 )}
             </div>
@@ -59,4 +59,4 @@ const Currencies = () => {
     );
 };
 
-export default Currencies;
+export default Sheets; 

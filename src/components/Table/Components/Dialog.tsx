@@ -347,11 +347,25 @@ const DialogComponent: React.FC<DialogProps> = ({
                                               {option.code} - {option.en} / {option.fr}
                                           </SelectOption>
                                       ))
-                                    : (options ?? []).map((option) => (
-                                          <SelectOption key={option} value={option} className="bg-base-100">
-                                              {option}
-                                          </SelectOption>
-                                      ))}
+                                    : (options ?? []).map((option, index) => {
+                                          // Handle both string options and object options
+                                          if (typeof option === 'object' && option !== null) {
+                                              return (
+                                                  <SelectOption 
+                                                      key={option.value || option.id || index} 
+                                                      value={option.value || option.id} 
+                                                      className="bg-base-100">
+                                                      {option.label || option.name || option.value}
+                                                  </SelectOption>
+                                              );
+                                          } else {
+                                              return (
+                                                  <SelectOption key={option || index} value={option} className="bg-base-100">
+                                                      {option}
+                                                  </SelectOption>
+                                              );
+                                          }
+                                      })}
                             </>
                         </Select>
                     </label>

@@ -10,8 +10,6 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
                 <Logo />
                 <ThemeToggleDropdown
                     triggerClass="btn btn-sm btn-circle btn-ghost"
-                    dropdownClass="dropdown-center"
-                    dropdownContentClass="mt-2"
                     iconClass="size-6"
                 />
             </div>
