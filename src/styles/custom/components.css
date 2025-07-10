@@ -151,6 +151,31 @@
     @apply bg-cyan-50 text-cyan-700 border border-cyan-200;
 }
 
+/* Contract status badges */
+.badge-contract-active {
+    @apply bg-green-50 text-green-700 border border-green-200;
+}
+
+.badge-contract-terminated {
+    @apply bg-red-50 text-red-700 border border-red-200;
+}
+
+.badge-contract-editable {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+}
+
+.badge-contract-completed {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+.badge-contract-pending {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.badge-contract-suspended {
+    @apply bg-gray-50 text-gray-700 border border-gray-200;
+}
+
 /* Dark mode variants */
 .dark .badge-status-editable {
     @apply bg-blue-900/30 text-blue-300 border-blue-700/50;
@@ -178,6 +203,30 @@
 
 .dark .badge-type-avance {
     @apply bg-cyan-900/30 text-cyan-300 border-cyan-700/50;
+}
+
+.dark .badge-contract-active {
+    @apply bg-green-900/30 text-green-300 border-green-700/50;
+}
+
+.dark .badge-contract-terminated {
+    @apply bg-red-900/30 text-red-300 border-red-700/50;
+}
+
+.dark .badge-contract-editable {
+    @apply bg-blue-900/30 text-blue-300 border-blue-700/50;
+}
+
+.dark .badge-contract-completed {
+    @apply bg-emerald-900/30 text-emerald-300 border-emerald-700/50;
+}
+
+.dark .badge-contract-pending {
+    @apply bg-amber-900/30 text-amber-300 border-amber-700/50;
+}
+
+.dark .badge-contract-suspended {
+    @apply bg-gray-900/30 text-gray-300 border-gray-700/50;
 }
 
 .timeline:not(.timeline-vertical) > li > hr {

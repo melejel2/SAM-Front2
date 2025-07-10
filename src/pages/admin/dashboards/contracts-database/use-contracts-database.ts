@@ -35,6 +35,37 @@ const useContractsDatabase = () => {
         }
     };
 
+    const formatStatusBadge = (status: string) => {
+        const statusLower = status?.toLowerCase() || '';
+        let badgeClass = '';
+        let displayText = status;
+
+        if (statusLower.includes('active')) {
+            badgeClass = 'badge-contract-active';
+            displayText = 'Active';
+        } else if (statusLower.includes('terminated')) {
+            badgeClass = 'badge-contract-terminated';
+            displayText = 'Terminated';
+        } else if (statusLower.includes('editable')) {
+            badgeClass = 'badge-contract-editable';
+            displayText = 'Editable';
+        } else if (statusLower.includes('completed')) {
+            badgeClass = 'badge-contract-completed';
+            displayText = 'Completed';
+        } else if (statusLower.includes('pending')) {
+            badgeClass = 'badge-contract-pending';
+            displayText = 'Pending';
+        } else if (statusLower.includes('suspended')) {
+            badgeClass = 'badge-contract-suspended';
+            displayText = 'Suspended';
+        } else {
+            badgeClass = 'badge-contract-active';
+            displayText = status || 'Active';
+        }
+
+        return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
+    };
+
 
 
     const contractsColumns = {
@@ -117,6 +148,7 @@ const useContractsDatabase = () => {
                 contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
                 completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
                 amount: contract.amount ? formatCurrency(contract.amount) : '-',
+                status: formatStatusBadge(contract.status),
             }));
             
             // Reverse the order to show newest first
@@ -150,10 +182,16 @@ const useContractsDatabase = () => {
         }
     };
 
-    // Filter data based on status for different tabs
+    // Filter data based on original status (before badge formatting) for different tabs
     const vosData: any[] = []; // Keep VOs empty for now
-    const terminatedData = contractsData.filter(contract => contract.status === "Terminated");
-    const activeContractsData = contractsData.filter(contract => contract.status === "Active");
+    const terminatedData = contractsData.filter(contract => {
+        const originalStatus = contract.status || '';
+        return originalStatus.toLowerCase().includes('terminated');
+    });
+    const activeContractsData = contractsData.filter(contract => {
+        const originalStatus = contract.status || '';
+        return originalStatus.toLowerCase().includes('active') || (!originalStatus.toLowerCase().includes('terminated') && originalStatus);
+    });
     
     // If no active contracts, show all contracts in the first tab for now
     const contractsTabData = activeContractsData.length > 0 ? activeContractsData : contractsData;
