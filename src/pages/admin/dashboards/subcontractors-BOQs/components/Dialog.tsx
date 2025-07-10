@@ -145,7 +145,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                         <Button
                             type="button"
                             color="ghost"
-                            className="btn-circle"
+                            className="btn-circle btn-back"
                             disabled={
                                 currentStep === 0 ||
                                 (currentStep === 1 && selectedProject) ||

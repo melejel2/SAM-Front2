@@ -58,12 +58,6 @@ body,
   }
 }
 
-/* Ensure content doesn't overlap with floating sidebar */
-@media (min-width: 768px) {
-  .dashboard-content .container {
-    margin-left: 6rem; /* Add left margin to account for floating sidebar */
-  }
-}
 
 /* Custom scrollbar for better UX */
 .dashboard-content::-webkit-scrollbar {

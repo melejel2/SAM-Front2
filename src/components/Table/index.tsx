@@ -19,7 +19,7 @@ interface SAMTableProps {
     onSuccess: () => void;
 
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void | Promise<void>;
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
@@ -125,6 +125,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             editAction={editAction}
                             previewColumns={previewColumns}
                             addBtn={addBtn}
+                            dynamicDialog={dynamicDialog}
+                            openStaticDialog={openStaticDialog}
                             // If needed, forward the select prop to the accordion as well
                             select={select}
                         />

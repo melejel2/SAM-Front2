@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -6,171 +6,163 @@ import { useAuth } from "@/contexts/auth";
 const useContractsDatabase = () => {
     const [contractsData, setContractsData] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const isApiCallInProgress = useRef(false);
 
     const { getToken } = useAuth();
     const token = getToken();
 
+    const formatCurrency = (amount: number) => {
+        if (!amount || isNaN(amount)) return '-';
+        return new Intl.NumberFormat('en-US', {
+            style: 'decimal',
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '-';
+        try {
+            // Handle ISO datetime format like "2020-01-27T00:00:00"
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return '-';
+        }
+    };
+
+
+
     const contractsColumns = {
-        contractNb: "Contract Number",
-        project: "Project",
-        subcontractor: "Subcontractor",
-        trade: "Trade",
-        dateOfSignature: "Date of Signature",
-        endDate: "End Date",
-        contractAmount: "Contract Amount",
-        totalAmount: "Total Amount",
+        contractNumber: "Contract Number",
+        projectName: "Project",
+        subcontractorName: "Subcontractor",
+        tradeName: "Trade",
+        contractType: "Contract Type",
+        contractDate: "Date of Signature", 
+        completionDate: "End Date",
+        amount: "Contract Amount",
         status: "Status",
     };
 
     const vosColumns = {
-        contractNb: "Contract Number",
-        voNumber: "VO Number",
-        subcontractor: "Subcontractor",
-        trade: "Trade",
-        type: "Type",
-        date: "Date",
-        totalAmount: "Total Amount",
+        contractNumber: "Contract Number",
+        projectName: "Project",
+        subcontractorName: "Subcontractor",
+        tradeName: "Trade",
+        contractType: "Contract Type",
+        contractDate: "Date of Signature",
+        completionDate: "End Date",
+        amount: "Contract Amount",
         status: "Status",
     };
 
     const terminatedColumns = {
-        contractNb: "Contract Number",
-        project: "Project",
-        subcontractor: "Subcontractor",
-        trade: "Trade",
-        dateOfSignature: "Date of Signature",
-        endDate: "End Date",
-        contractAmount: "Contract Amount",
+        contractNumber: "Contract Number",
+        projectName: "Project",
+        subcontractorName: "Subcontractor",
+        tradeName: "Trade",
+        contractType: "Contract Type",
+        contractDate: "Date of Signature",
+        completionDate: "End Date",
+        amount: "Contract Amount",
         status: "Status",
     };
 
     const getContractsDatasets = async () => {
+        if (isApiCallInProgress.current) {
+            return;
+        }
+        
+        isApiCallInProgress.current = true;
         setLoading(true);
-
         try {
             const data = await apiRequest({
                 endpoint: "ContractsDatasets/GetContractsDatasetsList",
                 method: "GET",
                 token: token ?? "",
             });
-            if (data) {
-                setContractsData(data);
+            
+            // Handle different response structures
+            let contractsArray = [];
+            
+            if (Array.isArray(data)) {
+                contractsArray = data;
+            } else if (data && typeof data === 'object') {
+                // Check common response wrapper patterns
+                if (data.data && Array.isArray(data.data)) {
+                    contractsArray = data.data;
+                } else if (data.result && Array.isArray(data.result)) {
+                    contractsArray = data.result;
+                } else if (data.items && Array.isArray(data.items)) {
+                    contractsArray = data.items;
+                } else {
+                    contractsArray = [data];
+                }
+            } else if (data) {
+                contractsArray = [data];
             } else {
-                setContractsData([]);
+                contractsArray = [];
             }
+            
+            
+            // Process the data to format currency and dates
+            const processedData = contractsArray.map((contract: any) => ({
+                ...contract,
+                tradeName: contract.tradeName || '-',
+                contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
+                completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
+                amount: contract.amount ? formatCurrency(contract.amount) : '-',
+            }));
+            
+            // Reverse the order to show newest first
+            setContractsData(processedData.reverse());
         } catch (error) {
-            console.error(error);
+            console.error("API Error:", error);
+            setContractsData([]);
         } finally {
             setLoading(false);
+            isApiCallInProgress.current = false;
         }
     };
 
     const previewContract = async (contractId: string) => {
         try {
+            // Use the PDF export endpoint for preview since PreviewContract doesn't exist
             const response = await apiRequest({
-                endpoint: `ContractsDatasets/PreviewContract/${contractId}`,
+                endpoint: `ContractsDatasets/ExportContractPdf/${contractId}`,
                 method: "GET",
                 token: token ?? "",
                 responseType: "blob",
             });
 
             if (response instanceof Blob) {
-                const url = window.URL.createObjectURL(response);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `contract-${contractId}.docx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                return true;
+                return { success: true, blob: response };
             }
-            return false;
+            return { success: false, blob: null };
         } catch (error) {
             console.error(error);
-            return false;
+            return { success: false, blob: null };
         }
     };
 
-    // For now, using mock data for VOs and terminated contracts
-    // These would need their own endpoints from the backend
-    const vosData = [
-        {
-            id: "1",
-            contractNb: "C-001",
-            voNumber: "VO-101",
-            subcontractor: "SubCo Ltd",
-            trade: "Plumbing",
-            type: "Addition",
-            date: "2024-04-01",
-            totalAmount: "$5,000",
-            status: "Active",
-        },
-        {
-            id: "2",
-            contractNb: "C-002",
-            voNumber: "VO-102",
-            subcontractor: "BuildPro Inc",
-            trade: "Electrical",
-            type: "Deduction",
-            date: "2024-06-20",
-            totalAmount: "-$3,000",
-            status: "Active",
-        },
-        {
-            id: "3",
-            contractNb: "C-003",
-            voNumber: "VO-103",
-            subcontractor: "Alpha Constructions",
-            trade: "Masonry",
-            type: "Addition",
-            date: "2024-02-15",
-            totalAmount: "$2,500",
-            status: "Active",
-        },
-    ];
-
-    const terminatedData = [
-        {
-            id: "1",
-            contractNb: "C-004",
-            project: "Project D",
-            subcontractor: "Omega Builders",
-            trade: "Painting",
-            dateOfSignature: "2023-06-10",
-            endDate: "2023-12-10",
-            contractAmount: "$50,000",
-            status: "Terminated",
-        },
-        {
-            id: "2",
-            contractNb: "C-005",
-            project: "Project E",
-            subcontractor: "Skyline Works",
-            trade: "Roofing",
-            dateOfSignature: "2022-08-20",
-            endDate: "2023-08-20",
-            contractAmount: "$80,000",
-            status: "Terminated",
-        },
-        {
-            id: "3",
-            contractNb: "C-006",
-            project: "Project F",
-            subcontractor: "Prime Co",
-            trade: "HVAC",
-            dateOfSignature: "2023-01-01",
-            endDate: "2023-09-01",
-            contractAmount: "$70,000",
-            status: "Terminated",
-        },
-    ];
+    // Filter data based on status for different tabs
+    const vosData: any[] = []; // Keep VOs empty for now
+    const terminatedData = contractsData.filter(contract => contract.status === "Terminated");
+    const activeContractsData = contractsData.filter(contract => contract.status === "Active");
+    
+    // If no active contracts, show all contracts in the first tab for now
+    const contractsTabData = activeContractsData.length > 0 ? activeContractsData : contractsData;
 
     return {
         contractsColumns,
         vosColumns,
         terminatedColumns,
-        contractsData,
+        contractsData: contractsTabData,
         vosData,
         terminatedData,
         loading,

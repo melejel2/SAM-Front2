@@ -40,7 +40,7 @@
         }
 
         .sidebar-menu-item {
-            @apply rounded-box flex h-8 items-center gap-2 px-3 text-sm;
+            @apply rounded-md flex h-8 items-center gap-2 px-3 text-sm;
         }
 
         .collapse {
@@ -49,7 +49,7 @@
             }
 
             .collapse-title {
-                @apply peer-hover:bg-base-200 rounded-box flex min-h-8 items-center gap-2 px-3 py-1.5 text-sm;
+                @apply peer-hover:bg-base-200 rounded-md flex min-h-8 items-center gap-2 px-3 py-1.5 text-sm;
 
                 .arrow-icon {
                     @apply opacity-60 transition-all;
@@ -127,11 +127,11 @@ html:not([data-theme="material"]) {
 html[data-theme="material"] {
     #layout-sidebar {
         max-height: calc(100vh - 32px);
-        @apply rounded-box top-4 bottom-4 ms-4;
+        @apply rounded-md top-4 bottom-4 ms-4;
     }
 
     #layout-topbar {
-        @apply rounded-box static mx-5 mt-4;
+        @apply rounded-md static mx-5 mt-4;
     }
 }
 

@@ -23,14 +23,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {/* Floating Sidebar - only show when not in admin tools */}
         {!isAdminTools && (
           <div className="fixed left-10 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
-            <div className="pointer-events-auto">
+            <div className="pointer-events-auto admin-sidebar-text">
               <Sidebar />
             </div>
           </div>
         )}
         
         {/* Page content with same container structure as topbar */}
-        <div className="dashboard-content pt-4">
+        <div className="dashboard-content pt-4 admin-body-text">
           <div className="container mx-auto px-8">
             {children || <Outlet />}
           </div>

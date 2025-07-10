@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 
-import { Button, Card, CardBody, Input, Pagination, useDialog } from "@/components/daisyui";
+import { Button, Card, CardBody, Pagination, useDialog, Checkbox } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
+import SearchInput from "@/components/SearchInput";
 
 import DialogComponent from "./Dialog";
 
@@ -33,7 +34,7 @@ interface TableProps {
 
     addBtn?: boolean;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;
@@ -82,10 +83,14 @@ const TableComponent: React.FC<TableProps> = ({
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    // const [rowsPerPage] = useState(7);
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [selectedRow, setSelectedRow] = useState<any>();
     const [activeSheetId, setActiveSheetId] = useState<number>(sheets[0]?.id ?? 0);
+    const [previewLoadingRowId, setPreviewLoadingRowId] = useState<string | null>(null);
+    
+    // Column filter states
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
+    const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null);
 
     const handleRowClick = (row: any) => {
         if (onRowSelect) {
@@ -94,17 +99,78 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
-    // Filter the data by search
+    // Get unique values for a specific column
+    const getUniqueColumnValues = (columnKey: string) => {
+        const values = tableData.map(row => row[columnKey]).filter(value => value !== null && value !== undefined);
+        const uniqueValues = [...new Set(values)].sort();
+        return uniqueValues.map(value => String(value));
+    };
+
+    // Handle column filter changes
+    const handleColumnFilterChange = (columnKey: string, value: string, checked: boolean) => {
+        setColumnFilters(prev => {
+            const currentFilters = prev[columnKey] || [];
+            if (checked) {
+                return {
+                    ...prev,
+                    [columnKey]: [...currentFilters, value]
+                };
+            } else {
+                return {
+                    ...prev,
+                    [columnKey]: currentFilters.filter(v => v !== value)
+                };
+            }
+        });
+        setCurrentPage(1); // Reset to first page when filters change
+    };
+
+    // Clear all filters for a column
+    const clearColumnFilter = (columnKey: string) => {
+        setColumnFilters(prev => {
+            const newFilters = { ...prev };
+            delete newFilters[columnKey];
+            return newFilters;
+        });
+        setCurrentPage(1);
+    };
+
+    // Select all values for a column filter
+    const selectAllColumnValues = (columnKey: string) => {
+        const allValues = getUniqueColumnValues(columnKey);
+        setColumnFilters(prev => ({
+            ...prev,
+            [columnKey]: allValues
+        }));
+        setCurrentPage(1);
+    };
+
+    // Filter the data by search and column filters
     const filteredData = useMemo(() => {
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return tableData.length > 0
-            ? tableData.filter((d) =>
-                  Object.values(d).some(
-                      (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
-                  ),
-              )
-            : [];
-    }, [searchQuery, tableData]);
+        let data = tableData.length > 0 ? tableData : [];
+
+        // Apply search filter
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            data = data.filter((d) =>
+                Object.values(d).some(
+                    (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
+                ),
+            );
+        }
+
+        // Apply column filters
+        Object.entries(columnFilters).forEach(([columnKey, filterValues]) => {
+            if (filterValues.length > 0) {
+                data = data.filter(row => {
+                    const cellValue = String(row[columnKey] || '');
+                    return filterValues.includes(cellValue);
+                });
+            }
+        });
+
+        return data;
+    }, [searchQuery, tableData, columnFilters]);
 
     // Sort the data by the chosen column
     const sortedData = useMemo(() => {
@@ -142,9 +208,9 @@ const TableComponent: React.FC<TableProps> = ({
         setSortColumn(column);
     };
 
-    // Search behavior
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(event.target.value);
+    // Search behavior - reset to first page when search changes
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value);
         setCurrentPage(1);
     };
 
@@ -181,11 +247,23 @@ const TableComponent: React.FC<TableProps> = ({
     const openPreviewDialog = async (row: any) => {
         setDialogType("Preview");
         setCurrentRow(row);
+        
+        // Set loading state for this specific row
+        const rowId = row.id || row.contractId || row.projectId || String(row);
+        setPreviewLoadingRowId(rowId);
+        
         if (dynamicDialog) {
             handleShow();
+            // Clear loading state after dialog opens
+            setPreviewLoadingRowId(null);
         } else {
             if (openStaticDialog) {
-                openStaticDialog("Preview", row);
+                try {
+                    await openStaticDialog("Preview", row);
+                } finally {
+                    // Clear loading state after preview is handled
+                    setPreviewLoadingRowId(null);
+                }
             }
         }
     };
@@ -202,19 +280,113 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
+    // Column Filter Dropdown Component
+    const ColumnFilterDropdown = ({ columnKey, columnLabel }: { columnKey: string; columnLabel: string }) => {
+        const uniqueValues = getUniqueColumnValues(columnKey);
+        const selectedValues = columnFilters[columnKey] || [];
+        const isOpen = openFilterDropdown === columnKey;
+
+        return (
+            <div className="relative">
+                <button
+                    type="button"
+                    className={cn(
+                        "ml-2 p-1 rounded hover:bg-base-300 transition-colors",
+                        selectedValues.length > 0 ? "text-primary" : "text-base-content/50"
+                    )}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenFilterDropdown(isOpen ? null : columnKey);
+                    }}
+                >
+                    <span className="iconify lucide--filter size-3"></span>
+                </button>
+                
+                {isOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setOpenFilterDropdown(null)}
+                        />
+                        
+                        {/* Dropdown */}
+                        <div className="absolute top-full left-0 mt-1 bg-base-100 border border-base-300 rounded-md shadow-lg z-20 min-w-48 max-h-64 overflow-hidden">
+                            <div className="p-3 border-b border-base-300">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium">Filter {columnLabel}</span>
+                                    <button
+                                        type="button"
+                                        className="text-xs text-base-content/60 hover:text-base-content"
+                                        onClick={() => setOpenFilterDropdown(null)}
+                                    >
+                                        <span className="iconify lucide--x size-4"></span>
+                                    </button>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        className="text-xs text-primary hover:text-primary/80"
+                                        onClick={() => selectAllColumnValues(columnKey)}
+                                    >
+                                        Select All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="text-xs text-base-content/60 hover:text-base-content"
+                                        onClick={() => clearColumnFilter(columnKey)}
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="max-h-48 overflow-y-auto">
+                                {uniqueValues.length > 0 ? (
+                                    uniqueValues.map((value) => (
+                                        <label
+                                            key={value}
+                                            className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 cursor-pointer"
+                                        >
+                                            <Checkbox
+                                                size="sm"
+                                                checked={selectedValues.includes(value)}
+                                                onChange={(e) => 
+                                                    handleColumnFilterChange(columnKey, value, e.target.checked)
+                                                }
+                                            />
+                                            <span className="text-sm truncate" title={value}>
+                                                {value || "(Empty)"}
+                                            </span>
+                                        </label>
+                                    ))
+                                ) : (
+                                    <div className="px-3 py-2 text-sm text-base-content/60">
+                                        No values found
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    };
+
     return (
         <>
-            <Card className="bg-base-100 border-base-200 mt-4 border shadow">
+            <Card className="bg-base-100 border-base-200 mt-4 mb-6 border shadow rounded-lg">
                 <CardBody className="p-0">
-                    <div className="flex flex-col items-start justify-start space-y-4 px-5 pt-5 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div className="flex flex-col items-start justify-start space-y-4 px-5 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         {/* Left side with "New" button and (conditionally) the toggle */}
                         <div className="flex items-center space-x-2">
                             {addBtn ? (
                                 <Button
                                     onClick={openCreateDialog}
-                                    className="btn btn-ghost btn-xs border-base-content/20 h-8 border">
+                                    className="btn btn-primary btn-sm rounded-xl table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
                                     <span className="iconify lucide--plus size-4"></span>
-                                    New {title}
+                                    <span className="text-xs">New {title}</span>
                                 </Button>
                             ) : (
                                 <span className="hidden lg:block"></span>
@@ -222,25 +394,21 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
 
                         {/* Right side with search */}
-                        <div className="form-control rounded-box bg-base-100 dark:border-base-content/60 text-base-content/60 flex flex-row items-center border px-2">
-                            <span className="iconify lucide--search size-4"></span>
-
-                            <Input
-                                size="sm"
-                                placeholder="Search data"
-                                borderOffset={false}
-                                className="bg-base-100 w-full border-none focus:border-transparent focus:outline-0"
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                            />
-                        </div>
+                        <SearchInput
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            placeholder="Search data"
+                            showResultsCount={true}
+                            resultsCount={filteredData.length}
+                            size="md"
+                        />
                     </div>
                     <div className="overflow-auto">
                         <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="hover:bg-base-200/40">
+                            <thead className="bg-base-200/30">
+                                <tr className="hover:bg-base-200/50">
                                     {select && (
-                                        <th className="border-base-content/5 border-b px-2 py-3 pl-6 text-left text-sm font-normal">
+                                        <th className="border-base-content/10 border-b-2 px-2 py-4 pl-6 text-left text-sm font-semibold text-base-content/80">
                                             Select
                                         </th>
                                     )}
@@ -248,25 +416,28 @@ const TableComponent: React.FC<TableProps> = ({
                                         <th
                                             key={columnKey}
                                             className={cn(
-                                                "border-base-content/5 border-b px-2 py-3 pl-6 text-left text-sm font-normal",
+                                                "border-base-content/10 border-b-2 px-2 py-4 pl-6 text-left text-sm font-semibold text-base-content/80",
                                                 { "pl-6": index === 0 },
                                             )}>
-                                            <div
-                                                className="flex cursor-pointer items-center justify-start"
-                                                onClick={() => handleSort(columnKey)}>
-                                                <span>{columnLabel}</span>
-                                                {sortColumn === columnKey && (
-                                                    <span
-                                                        className={cn("iconify text-base-content/70 ml-1 size-4", {
-                                                            "lucide--chevron-up": sortOrder === "asc",
-                                                            "lucide--chevron-down": sortOrder !== "asc",
-                                                        })}></span>
-                                                )}
+                                            <div className="flex items-center justify-between">
+                                                <div
+                                                    className="flex cursor-pointer items-center justify-start"
+                                                    onClick={() => handleSort(columnKey)}>
+                                                    <span>{columnLabel}</span>
+                                                    {sortColumn === columnKey && (
+                                                        <span
+                                                            className={cn("iconify text-base-content/70 ml-1 size-4", {
+                                                                "lucide--chevron-up": sortOrder === "asc",
+                                                                "lucide--chevron-down": sortOrder !== "asc",
+                                                            })}></span>
+                                                    )}
+                                                </div>
+                                                <ColumnFilterDropdown columnKey={columnKey} columnLabel={columnLabel} />
                                             </div>
                                         </th>
                                     ))}
                                     {actions && (
-                                        <th className="border-base-content/5 border-b py-3 pr-6 pl-2 text-right text-sm font-normal">
+                                        <th className="border-base-content/10 border-b-2 py-4 pr-6 pl-2 text-right text-sm font-semibold text-base-content/80">
                                             Actions
                                         </th>
                                     )}
@@ -305,7 +476,11 @@ const TableComponent: React.FC<TableProps> = ({
                                                     <td
                                                         key={columnKey}
                                                         className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
-                                                        {row[columnKey] ?? "-"}
+                                                        {(columnKey === 'status' || columnKey === 'type') && typeof row[columnKey] === 'string' && row[columnKey].includes('<span') ? (
+                                                            <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
+                                                        ) : (
+                                                            row[columnKey] ?? "-"
+                                                        )}
                                                     </td>
                                                 ))}
 
@@ -320,11 +495,16 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     className="tooltip"
                                                                     aria-label="Preview Row"
                                                                     data-tip="Preview"
+                                                                    disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         openPreviewDialog(row);
                                                                     }}>
-                                                                    <span className="iconify lucide--eye text-base-content/70 size-4"></span>
+                                                                    {previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? (
+                                                                        <span className="loading loading-spinner loading-xs"></span>
+                                                                    ) : (
+                                                                        <span className="iconify lucide--eye text-base-content/70 size-4"></span>
+                                                                    )}
                                                                 </Button>
                                                             )}
                                                             {(rowAction?.editAction || editAction) && (

@@ -71,7 +71,7 @@ const useIPCsDatabase = () => {
             label: "Type",
             type: "select",
             required: true,
-            options: ["Provisoire / Interim", "Final / Final", "Rg / Retention"],
+            options: ["Provisoire / Interim", "Final / Final", "Rg / Retention", "Avance / Advance Payment"],
         },
     ];
 
@@ -81,6 +81,51 @@ const useIPCsDatabase = () => {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         }).format(amount);
+    };
+
+    const formatStatusBadge = (status: string) => {
+        const statusLower = status?.toLowerCase() || '';
+        let badgeClass = '';
+        let displayText = status;
+
+        if (statusLower.includes('editable')) {
+            badgeClass = 'badge-status-editable';
+            displayText = 'Editable';
+        } else if (statusLower.includes('issued')) {
+            badgeClass = 'badge-status-issued';
+            displayText = 'Issued';
+        } else if (statusLower.includes('pending')) {
+            badgeClass = 'badge-status-pending';
+            displayText = 'Pending Approval';
+        } else {
+            badgeClass = 'badge-status-editable';
+        }
+
+        return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
+    };
+
+    const formatTypeBadge = (type: string) => {
+        const typeLower = type?.toLowerCase() || '';
+        let badgeClass = '';
+        let displayText = type;
+
+        if (typeLower.includes('provisoire') || typeLower.includes('interim')) {
+            badgeClass = 'badge-type-provisoire';
+            displayText = 'Provisoire';
+        } else if (typeLower.includes('final')) {
+            badgeClass = 'badge-type-final';
+            displayText = 'Final';
+        } else if (typeLower.includes('rg') || typeLower.includes('retention')) {
+            badgeClass = 'badge-type-rg';
+            displayText = 'Retention';
+        } else if (typeLower.includes('avance') || typeLower.includes('advance')) {
+            badgeClass = 'badge-type-avance';
+            displayText = 'Avance';
+        } else {
+            badgeClass = 'badge-type-provisoire';
+        }
+
+        return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
     };
 
     const getIPCs = async () => {
@@ -99,7 +144,8 @@ const useIPCsDatabase = () => {
                     totalAmount: formatCurrency(ipc.totalAmount),
                     totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)),
                     retention: formatCurrency(ipc.retention),
-                    type: ipc.type?.split(' / ')[0] || ipc.type,
+                    status: formatStatusBadge(ipc.status),
+                    type: formatTypeBadge(ipc.type),
                 }));
                 // Reverse the order to show newest first (inverse order from backend)
                 setTableData(formattedData.reverse());

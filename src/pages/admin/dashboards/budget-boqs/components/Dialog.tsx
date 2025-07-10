@@ -20,8 +20,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
 
     const { toaster } = useToast();
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         setIsLoading(true);
 
         setIsLoading(false);
@@ -40,7 +39,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
         <>
             <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
                 <div className="modal-box relative h-[85%] max-w-[85%]">
-                    <form onSubmit={handleSubmit} className="h-full">
+                    <div className="h-full">
                         <div className="flex h-full flex-col space-y-4">
                             <div>
                                 <span className="font-semibold">Budget BOQ</span>
@@ -53,14 +52,15 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ handleHide, dialogRef
                                 <Button
                                     className="w-full"
                                     size="sm"
-                                    type="submit"
+                                    type="button"
                                     disabled={isLoading}
-                                    loading={isLoading}>
+                                    loading={isLoading}
+                                    onClick={handleSubmit}>
                                     Save
                                 </Button>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </dialog>
         </>

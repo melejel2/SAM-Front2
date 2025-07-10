@@ -28,10 +28,10 @@
     --color-base-300: #2c3034;
     --color-base-content: #f0f4f8;
 
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --rounded-box: 0.25rem;
-    --radius-selector: 0.25rem;
+    --radius-field: 0.125rem;
+    --radius-box: 0.125rem;
+    --rounded-box: 0.125rem;
+    --radius-selector: 0.125rem;
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
     --border: 1px;
@@ -72,10 +72,10 @@
     --color-base-300: #dcdee0;
     --color-base-content: #1e2328;
 
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --rounded-box: 0.25rem;
-    --radius-selector: 0.25rem;
+    --radius-field: 0.125rem;
+    --radius-box: 0.125rem;
+    --rounded-box: 0.125rem;
+    --radius-selector: 0.125rem;
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
     --border: 1px;
@@ -115,10 +115,10 @@
     --color-base-300: #e0e2f8;
     --color-base-content: #191e28;
 
-    --radius-field: 20px;
-    --radius-box: 20px;
-    --rounded-box: 20px;
-    --radius-selector: 20px;
+    --radius-field: 10px;
+    --radius-box: 10px;
+    --rounded-box: 10px;
+    --radius-selector: 10px;
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
     --border: 1px;
@@ -157,10 +157,10 @@
     --color-base-300: #dcdee0;
     --color-base-content: #1e2328;
 
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --rounded-box: 0.25rem;
-    --radius-selector: 0.25rem;
+    --radius-field: 0.125rem;
+    --radius-box: 0.125rem;
+    --rounded-box: 0.125rem;
+    --radius-selector: 0.125rem;
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
     --border: 1px;
@@ -200,10 +200,10 @@
     --color-base-300: #3c404a;
     --color-base-content: #f0f4f8;
 
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --rounded-box: 0.25rem;
-    --radius-selector: 0.25rem;
+    --radius-field: 0.125rem;
+    --radius-box: 0.125rem;
+    --rounded-box: 0.125rem;
+    --radius-selector: 0.125rem;
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
     --border: 1px;

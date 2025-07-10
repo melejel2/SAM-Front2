@@ -3,10 +3,31 @@
 /* == Components == */
 
 .btn {
-    @apply font-medium;
+    @apply font-medium rounded-md;
+}
+
+/* Keep topbar buttons fully circular */
+.btn-circle {
+    @apply rounded-full;
+}
+
+/* Make back buttons medium size with minimal rounded corners */
+.btn-back {
+    @apply h-10 rounded-md;
+}
+
+/* Make table "New" buttons and search inputs medium size with less rounded corners */
+.table-new-btn {
+    @apply h-9 rounded-lg;
+}
+
+.table-search-input {
+    @apply h-9 rounded-lg;
 }
 
 .card {
+    @apply rounded-lg;
+    
     .card-title {
         @apply text-base font-medium;
     }
@@ -16,6 +37,60 @@
     }
 }
 
+/* Form Elements */
+.input {
+    @apply rounded-md;
+}
+
+.select {
+    @apply rounded-md;
+}
+
+.textarea {
+    @apply rounded-md;
+}
+
+.modal-box {
+    @apply rounded-lg;
+}
+
+.dropdown-content {
+    @apply rounded-lg;
+}
+
+.alert {
+    @apply rounded-lg;
+}
+
+.badge {
+    @apply rounded-md;
+}
+
+.progress {
+    @apply rounded-md;
+}
+
+.kbd {
+    @apply rounded-md;
+}
+
+.tooltip {
+    @apply rounded-md;
+}
+
+.toast {
+    @apply rounded-lg;
+}
+
+.menu {
+    @apply rounded-lg;
+}
+
+/* Remove rounded corners from pagination elements */
+.join > * {
+    @apply rounded-none;
+}
+
 .table {
     th {
         @apply font-medium;
@@ -23,9 +98,86 @@
 }
 
 .menu {
-    .menu-title {
-        @apply text-base-content/70 font-medium;
+    li {
+        a {
+            @apply rounded-md;
+        }
     }
+}
+
+/* Custom border radius utilities for half the default values */
+.rounded-2xl-half {
+    @apply rounded-lg;
+}
+
+.rounded-full-half {
+    @apply rounded-xl;
+}
+
+.rounded-lg-half {
+    @apply rounded-md;
+}
+
+.rounded-xl-half {
+    @apply rounded-lg;
+}
+
+/* Professional pastel badges for status and type */
+.badge-status-editable {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+}
+
+.badge-status-issued {
+    @apply bg-green-50 text-green-700 border border-green-200;
+}
+
+.badge-status-pending {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.badge-type-provisoire {
+    @apply bg-purple-50 text-purple-700 border border-purple-200;
+}
+
+.badge-type-final {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+.badge-type-rg {
+    @apply bg-orange-50 text-orange-700 border border-orange-200;
+}
+
+.badge-type-avance {
+    @apply bg-cyan-50 text-cyan-700 border border-cyan-200;
+}
+
+/* Dark mode variants */
+.dark .badge-status-editable {
+    @apply bg-blue-900/30 text-blue-300 border-blue-700/50;
+}
+
+.dark .badge-status-issued {
+    @apply bg-green-900/30 text-green-300 border-green-700/50;
+}
+
+.dark .badge-status-pending {
+    @apply bg-amber-900/30 text-amber-300 border-amber-700/50;
+}
+
+.dark .badge-type-provisoire {
+    @apply bg-purple-900/30 text-purple-300 border-purple-700/50;
+}
+
+.dark .badge-type-final {
+    @apply bg-emerald-900/30 text-emerald-300 border-emerald-700/50;
+}
+
+.dark .badge-type-rg {
+    @apply bg-orange-900/30 text-orange-300 border-orange-700/50;
+}
+
+.dark .badge-type-avance {
+    @apply bg-cyan-900/30 text-cyan-300 border-cyan-700/50;
 }
 
 .timeline:not(.timeline-vertical) > li > hr {
@@ -34,6 +186,141 @@
 
 .timeline.timeline-vertical > li > hr {
     width: 2px;
+}
+
+/* == Admin App Body Text Sizing == */
+
+/* Make admin body text smaller (exclude topbar and login) */
+.admin-body-text {
+    /* Table content - override existing table styles */
+    .table th {
+        font-size: 12px !important;
+        font-weight: 500;
+    }
+    .table td {
+        font-size: 12px !important;
+    }
+    
+    /* Form elements */
+    .label {
+        font-size: 12px !important;
+    }
+    
+    /* Modal and dialog text */
+    .modal-box {
+        @apply text-xs;
+    }
+    
+    /* Button text (except back buttons) */
+    .btn:not(.btn-back) {
+        font-size: 12px !important;
+    }
+    
+    /* Badge text */
+    .badge {
+        font-size: 12px !important;
+    }
+    
+    /* Menu items */
+    .menu li > * {
+        @apply text-xs;
+    }
+    
+    /* Dropdown content */
+    .dropdown-content {
+        @apply text-xs;
+    }
+    
+    /* Alert text */
+    .alert {
+        @apply text-xs;
+    }
+    
+    /* Toast text */
+    .toast {
+        @apply text-xs;
+    }
+    
+    /* Select and input text */
+    .select, .input, .textarea {
+        font-size: 12px !important;
+    }
+    
+    /* Fieldset text */
+    .fieldset-legend {
+        font-size: 12px !important;
+    }
+    
+    /* Exclude ALL cards from text size changes - keep original sizes */
+    .card,
+    .card-body,
+    .admin-tools-card {
+        /* Restore original text sizes for all card content */
+        h1, h2, h3, h4, h5, h6 {
+            font-size: revert !important;
+        }
+        
+        p {
+            font-size: revert !important;
+        }
+        
+        span:not(.iconify) {
+            font-size: revert !important;
+        }
+        
+        .btn {
+            font-size: revert !important;
+        }
+        
+        div, label, input, select, textarea {
+            font-size: revert !important;
+        }
+        
+        /* Keep icons normal size */
+        .iconify {
+            font-size: revert !important;
+        }
+    }
+    
+    /* Keep page titles normal size */
+    h1 {
+        font-size: 1.875rem !important;
+    }
+}
+
+/* Make sidebar text smaller - ONLY text, NOT icons */
+.admin-sidebar-text {
+    /* Sidebar menu items text only */
+    .sidebar-menu-item {
+        font-size: 12px !important;
+    }
+    
+    /* Sidebar menu titles text only */
+    .sidebar-menu-title {
+        font-size: 12px !important;
+    }
+    
+    /* Collapse titles text only */
+    .collapse-title {
+        font-size: 12px !important;
+    }
+}
+
+/* Sidebar icons must stay normal size - override any text size changes */
+.admin-sidebar-text .iconify,
+.admin-sidebar-text span.iconify,
+.admin-sidebar-text [class*="iconify"],
+.admin-sidebar-text .text-2xl {
+    font-size: 1.5rem !important;
+}
+
+/* Sidebar text labels only - be very specific */
+.admin-sidebar-text span.text-base {
+    font-size: 12px !important;
+}
+
+.admin-sidebar-text span.font-medium {
+    font-size: 12px !important;
 }
 
 /* == Forms == */

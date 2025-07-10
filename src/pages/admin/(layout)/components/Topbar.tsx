@@ -5,6 +5,7 @@ import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
 import { useAuth } from "@/contexts/auth";
 import { useConfig } from "@/contexts/config";
 import { cn } from "@/helpers/utils/cn";
+import apiRequest from "@/api/api";
 
 /* --- Helper Functions --- */
 // Format name to show only first name
@@ -131,13 +132,11 @@ interface Notification {
   beneficiaryName?: string;
 }
 
-// Types for company data
-interface Company {
+// Types for database/company data
+interface Database {
   id: string;
   name: string;
-  code: string;
-  logo?: string;
-  connectionId: string;
+  displayName: string;
 }
 
 interface NotificationCardProps {
@@ -290,36 +289,36 @@ const NotificationCard: React.FC<NotificationCardProps> = React.memo(({
   );
 });
 
-// Company Switch Confirmation Dialog
-const CompanySwitchDialog: React.FC<{
+// Database Switch Confirmation Dialog
+const DatabaseSwitchDialog: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  targetCompany: Company | null;
-}> = ({ isOpen, onClose, onConfirm, targetCompany }) => {
-  if (!isOpen || !targetCompany) return null;
+  targetDatabase: Database | null;
+}> = ({ isOpen, onClose, onConfirm, targetDatabase }) => {
+  if (!isOpen || !targetDatabase) return null;
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
-            <span className="iconify lucide--building-2 w-6 h-6 text-warning" />
+            <span className="iconify lucide--database w-6 h-6 text-warning" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-base-content">Switch Company</h3>
-            <p className="text-sm text-base-content/60">Confirm company change</p>
+            <h3 className="text-lg font-semibold text-base-content">Switch Database</h3>
+            <p className="text-sm text-base-content/60">Confirm database change</p>
           </div>
         </div>
 
         <div className="mb-6">
           <p className="text-base-content/80 mb-3">
-            Are you sure you want to switch to <strong>{targetCompany.name}</strong>?
+            Are you sure you want to switch to <strong>{targetDatabase.displayName}</strong>?
           </p>
           <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
             <p className="text-sm text-warning-content">
               <span className="iconify lucide--alert-triangle w-4 h-4 inline mr-1" />
-              This action will change your active company context. You may need to log in again to access company-specific data.
+              This action will change your active database context. You may need to log in again to access database-specific data.
             </p>
           </div>
         </div>
@@ -335,7 +334,7 @@ const CompanySwitchDialog: React.FC<{
             onClick={onConfirm}
             className="btn btn-warning btn-sm px-6"
           >
-            Switch Company
+            Switch Database
           </button>
         </div>
       </div>
@@ -343,87 +342,104 @@ const CompanySwitchDialog: React.FC<{
   );
 };
 
-// Company Dropdown Component
-const CompanyDropdown: React.FC<{
+// Database Dropdown Component
+const DatabaseDropdown: React.FC<{
   isMobile?: boolean;
 }> = ({ isMobile = false }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [databases, setDatabases] = useState<Database[]>([]);
+  const [selectedDatabase, setSelectedDatabase] = useState<Database | null>(null);
   const [loading, setLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [targetCompany, setTargetCompany] = useState<Company | null>(null);
+  const [targetDatabase, setTargetDatabase] = useState<Database | null>(null);
   const { config } = useConfig();
 
-  // Load companies from login database connections
+  // Load databases from the same API used in login
   useEffect(() => {
-    const loadCompanies = async () => {
+    const loadDatabases = async () => {
       setLoading(true);
       try {
-        // Mock API call - replace with actual implementation
-        const mockCompanies: Company[] = [
-          {
-            id: '1',
-            name: 'Main Construction Ltd',
-            code: 'MAIN',
-            connectionId: 'conn_main_001'
-          },
-          {
-            id: '2',
-            name: 'BuildRight Corp',
-            code: 'BUILD',
-            connectionId: 'conn_build_002'
-          },
-          {
-            id: '3',
-            name: 'Metro Infrastructure',
-            code: 'METRO',
-            connectionId: 'conn_metro_003'
-          }
-        ];
+        const response = await apiRequest({
+          endpoint: "Auth/GetDataBases",
+          method: "GET",
+        });
         
-        setCompanies(mockCompanies);
-        setSelectedCompany(mockCompanies[0]); // Default to first company
+        // Check if response is successful
+        if (response && typeof response === 'object') {
+          let databaseNames: string[] = [];
+          
+          if ('success' in response && response.success === true && 'databases' in response && Array.isArray(response.databases)) {
+            // Handle successful response with databases array
+            databaseNames = response.databases;
+          } else if ('success' in response && response.success === false) {
+            // Handle API error response
+            console.error("API Error:", response.message);
+            databaseNames = [];
+          } else if (Array.isArray(response)) {
+            // Handle direct array response (fallback for different API format)
+            databaseNames = response;
+          } else {
+            // Handle unexpected response format
+            console.error("Unexpected response format:", response);
+            databaseNames = [];
+          }
+          
+          // Convert string array to Database objects
+          const databaseList: Database[] = databaseNames.map((name, index) => ({
+            id: `db_${index}`,
+            name: name,
+            displayName: name
+          }));
+          
+          setDatabases(databaseList);
+          if (databaseList.length > 0) {
+            setSelectedDatabase(databaseList[0]); // Default to first database
+          }
+        } else {
+          setDatabases([]);
+        }
       } catch (error) {
-        console.error('Failed to load companies:', error);
+        console.error('Failed to load databases:', error);
+        setDatabases([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadCompanies();
+    loadDatabases();
   }, []);
 
-  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleDatabaseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = e.target.value;
     
     if (selectedValue === 'clear') {
-      setSelectedCompany(null);
+      setSelectedDatabase(null);
       return;
     }
 
-    const company = companies.find(c => c.id === selectedValue);
-    if (company && company.id !== selectedCompany?.id) {
-      setTargetCompany(company);
+    const database = databases.find(d => d.id === selectedValue);
+    if (database && database.id !== selectedDatabase?.id) {
+      setTargetDatabase(database);
       setShowConfirmDialog(true);
     }
   };
 
   const handleConfirmSwitch = async () => {
-    if (!targetCompany) return;
+    if (!targetDatabase) return;
 
     try {
       setLoading(true);
-      // Mock API call to switch company context
+      // In a real implementation, you would make an API call to switch database context
+      // For now, we'll just simulate the switch
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setSelectedCompany(targetCompany);
+      setSelectedDatabase(targetDatabase);
       setShowConfirmDialog(false);
-      setTargetCompany(null);
+      setTargetDatabase(null);
       
       // You might want to refresh the page or update auth context here
       // window.location.reload();
     } catch (error) {
-      console.error('Failed to switch company:', error);
+      console.error('Failed to switch database:', error);
     } finally {
       setLoading(false);
     }
@@ -431,21 +447,21 @@ const CompanyDropdown: React.FC<{
 
   const handleCancelSwitch = () => {
     setShowConfirmDialog(false);
-    setTargetCompany(null);
+    setTargetDatabase(null);
   };
 
-  // If there's only one company, show it as text without dropdown
-  if (companies.length === 1) {
-    // Auto-select the only company if not already selected
-    if (!selectedCompany || selectedCompany.id !== companies[0].id) {
+  // If there's only one database, show it as text without dropdown
+  if (databases.length === 1) {
+    // Auto-select the only database if not already selected
+    if (!selectedDatabase || selectedDatabase.id !== databases[0].id) {
       setTimeout(() => {
-        setSelectedCompany(companies[0]);
+        setSelectedDatabase(databases[0]);
       }, 0);
     }
     
     return (
       <div className="bg-base-200 rounded-md px-2 h-[32px] flex items-center min-w-[100px] max-w-[160px]">
-        <span className="font-medium text-base-content truncate">{companies[0].code}</span>
+        <span className="font-medium text-base-content truncate">{databases[0].displayName}</span>
       </div>
     );
   }
@@ -453,34 +469,34 @@ const CompanyDropdown: React.FC<{
   const renderOptions = () => {
     const options: React.ReactElement[] = [];
     
-    // Add default option if no company is selected
-    if (!selectedCompany) {
+    // Add default option if no database is selected
+    if (!selectedDatabase) {
       options.push(
         <SelectOption 
           key="default" 
           value="" 
           className={`${config.theme === "dark" ? "bg-neutral text-neutral-content" : "bg-base-100"}`}
         >
-          Select Company
+          Select Database
         </SelectOption>
       );
     }
     
-    // Add all companies
-    companies.forEach((company) => {
+    // Add all databases
+    databases.forEach((database) => {
       options.push(
         <SelectOption 
-          key={company.id} 
-          value={company.id} 
+          key={database.id} 
+          value={database.id} 
           className={`${config.theme === "dark" ? "bg-neutral text-neutral-content" : "bg-base-100"}`}
         >
-          {company.name}
+          {database.displayName}
         </SelectOption>
       );
     });
     
-    // Add clear option if a company is selected
-    if (selectedCompany) {
+    // Add clear option if a database is selected
+    if (selectedDatabase) {
       options.unshift(
         <SelectOption 
           key="clear" 
@@ -500,8 +516,8 @@ const CompanyDropdown: React.FC<{
       <div className="bg-base-200 rounded-md px-2 h-[32px] flex items-center min-w-[100px] max-w-[160px]">
         <Select
           className="border-none focus:outline-none focus:ring-0 bg-transparent w-full font-medium"
-          value={selectedCompany?.id || ""}
-          onChange={handleCompanyChange}
+          value={selectedDatabase?.id || ""}
+          onChange={handleDatabaseChange}
           disabled={loading}
           onTouchStart={(e) => e.touches.length > 1 && e.preventDefault()}
         >
@@ -509,11 +525,11 @@ const CompanyDropdown: React.FC<{
         </Select>
       </div>
 
-      <CompanySwitchDialog
+      <DatabaseSwitchDialog
         isOpen={showConfirmDialog}
         onClose={handleCancelSwitch}
         onConfirm={handleConfirmSwitch}
-        targetCompany={targetCompany}
+        targetDatabase={targetDatabase}
       />
     </>
   );
@@ -1088,8 +1104,8 @@ export const Topbar = () => {
 
           {/* Right side controls */}
           <div className="flex items-center gap-3">
-            {/* Company Dropdown */}
-            <CompanyDropdown isMobile={isMobile} />
+            {/* Database Dropdown */}
+            <DatabaseDropdown isMobile={isMobile} />
 
             {/* Grouped Toggle buttons for Dashboard/Admin Tools - only show on dashboard page and first admin tools page */}
             {!isMobile && (location.pathname.startsWith('/dashboard') || location.pathname === '/admin-tools') && (

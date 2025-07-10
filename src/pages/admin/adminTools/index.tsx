@@ -58,7 +58,7 @@ const AdminToolCard: React.FC<AdminToolCardProps> = ({
   return (
     <div
       className={`bg-base-100 rounded-lg border-2 transition-all duration-200
-        cursor-pointer ${isDisabled ? 'opacity-80' : ''}
+        cursor-pointer admin-tools-card ${isDisabled ? 'opacity-80' : ''}
         ${isHovered
           ? 'shadow-lg border-gray-400 dark:border-gray-600'
           : 'shadow-sm border-base-200'

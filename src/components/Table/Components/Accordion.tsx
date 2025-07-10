@@ -16,6 +16,7 @@ interface AccordionProps {
     onDelete?: (id: number) => void;
     onShow?: (data: any) => void;
     title: string;
+    previewLoadingRowId?: string | null;
     // Added property for selectable mode
     select?: boolean;
 }
@@ -36,6 +37,8 @@ interface AccordionsProps {
     }>;
     title: string;
     addBtn?: boolean;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void | Promise<void>;
+    dynamicDialog?: boolean;
     // Added property for selectable mode
     select?: boolean;
 }
@@ -50,6 +53,7 @@ const Accordion: React.FC<AccordionProps> = ({
     previewAction,
     deleteAction,
     editAction,
+    previewLoadingRowId,
     select, // now destructured and used
 }) => {
     const handleDelete = () => {
@@ -89,10 +93,15 @@ const Accordion: React.FC<AccordionProps> = ({
                                 size="sm"
                                 shape={"square"}
                                 aria-label="Preview"
+                                disabled={previewLoadingRowId === ((rowData as any).id || (rowData as any).contractId || (rowData as any).projectId || String(rowData))}
                                 onClick={() => {
                                     if (onShow) onShow(rowData);
                                 }}>
-                                <Icon icon={"eye"} className="text-base-content/70" fontSize={4} />
+                                {previewLoadingRowId === ((rowData as any).id || (rowData as any).contractId || (rowData as any).projectId || String(rowData)) ? (
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                ) : (
+                                    <Icon icon={"eye"} className="text-base-content/70" fontSize={4} />
+                                )}
                             </Button>
                         )}
                         {editAction && (
@@ -127,11 +136,14 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     deleteAction,
     editAction,
     addBtn,
+    openStaticDialog,
+    dynamicDialog = true,
     select, // destructured here as well
 }) => {
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
+    const [previewLoadingRowId, setPreviewLoadingRowId] = useState<string | null>(null);
 
     const openCreateDialog = () => {
         setDialogType("Add");
@@ -145,10 +157,28 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
         handleShow();
     };
 
-    const openPreviewDialog = (data: any) => {
+    const openPreviewDialog = async (data: any) => {
         setDialogType("Preview");
         setCurrentRow(data);
-        handleShow();
+        
+        // Set loading state for this specific row
+        const rowId = data.id || data.contractId || data.projectId || String(data);
+        setPreviewLoadingRowId(rowId);
+        
+        if (dynamicDialog) {
+            handleShow();
+            // Clear loading state after dialog opens
+            setPreviewLoadingRowId(null);
+        } else {
+            if (openStaticDialog) {
+                try {
+                    await openStaticDialog("Preview", data);
+                } finally {
+                    // Clear loading state after preview is handled
+                    setPreviewLoadingRowId(null);
+                }
+            }
+        }
     };
 
     const handleDelete = (id: number) => {
@@ -184,6 +214,7 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                             previewAction={previewAction}
                             editAction={editAction}
                             deleteAction={deleteAction}
+                            previewLoadingRowId={previewLoadingRowId}
                             select={select} // pass the prop to each Accordion
                         />
                     ))}

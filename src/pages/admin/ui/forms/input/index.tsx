@@ -1,7 +1,11 @@
 import { MetaData } from "@/components/MetaData";
 import { PageTitle } from "@/components/PageTitle";
+import SearchInput from "@/components/SearchInput";
+import { useState } from "react";
 
 const FormInputPage = () => {
+    const [searchValue, setSearchValue] = useState("");
+    
     return (
         <>
             <MetaData title="Input - Forms" />
@@ -73,11 +77,23 @@ const FormInputPage = () => {
                         <div className="card-body">
                             <div className="card-title">Label inside</div>
                             <div className="mt-4 flex flex-col gap-3">
+                                <div className="flex items-center justify-center gap-4">
+                                    <SearchInput
+                                        value={searchValue}
+                                        onChange={setSearchValue}
+                                        placeholder="Search (Modern Design)"
+                                        showResultsCount={true}
+                                        resultsCount={searchValue ? 5 : 0}
+                                        size="md"
+                                    />
+                                    <div className="flex gap-1">
+                                        <kbd className="kbd kbd-sm">⌘</kbd>
+                                        <kbd className="kbd kbd-sm">K</kbd>
+                                    </div>
+                                </div>
                                 <label className="input">
                                     <span className="iconify lucide--search text-base-content/60 size-5"></span>
-                                    <input className="grow" placeholder="Search" type="search" />
-                                    <kbd className="kbd kbd-sm">⌘</kbd>
-                                    <kbd className="kbd kbd-sm">K</kbd>
+                                    <input className="grow" placeholder="Search (Legacy Design)" type="search" />
                                 </label>
                                 <label className="input">
                                     <span className="iconify lucide--file text-base-content/60 size-5"></span>

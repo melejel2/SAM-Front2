@@ -15,14 +15,30 @@ export const TopbarSearchButton = () => {
             </button>
             <dialog id="topbar-search-modal" className="modal p-0">
                 <div className="modal-box p-0">
-                    <div className="input border-base-300 w-full rounded-none border-0 border-b focus:!outline-0 active:!outline-0">
-                        <span className="iconify lucide--search text-base-content/60 size-4.5" />
-                        <input type="search" className="grow" placeholder="Search" aria-label="Search" />
-                        <form method="dialog">
-                            <button className="btn btn-sm btn-circle btn-ghost" aria-label="Close">
-                                <span className="iconify lucide--x text-base-content/80 size-4" />
-                            </button>
-                        </form>
+                    <div className="p-4 border-b border-base-300">
+                        <div className="flex justify-center">
+                            <div className="relative group max-w-md w-full">
+                                {/* Search Icon */}
+                                <div className="absolute inset-y-0 left-0 flex items-center justify-center pl-4 pointer-events-none z-10">
+                                    <span className="iconify lucide--search h-5 w-5 text-base-content/50" />
+                                </div>
+                                
+                                {/* Search Input - Integrated Design */}
+                                <input
+                                    type="search"
+                                    className="input w-full pl-12 pr-13 bg-base-200 text-base-content border border-base-300 focus:border-base-300 focus:bg-base-200 transition-all duration-200 rounded-full placeholder:text-base-content/50 hover:border-primary/50 text-sm focus:outline-none"
+                                    placeholder="Search"
+                                    aria-label="Search"
+                                />
+                                
+                                {/* Close Button */}
+                                <form method="dialog" className="absolute inset-y-0 right-0 flex items-center justify-center pr-3 z-10">
+                                    <button className="btn btn-sm btn-circle btn-ghost text-base-content/40 hover:text-error transition-colors duration-200" aria-label="Close">
+                                        <span className="iconify lucide--x h-4 w-4" />
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                     <ul className="menu w-full pt-0">
                         <li className="menu-title">Actions</li>

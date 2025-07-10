@@ -40,7 +40,7 @@ const LoginPage = () => {
                         <fieldset className="fieldset">
                             <legend className="fieldset-legend">Database</legend>
                             <label className="input w-full focus:outline-0">
-                                <Icon icon={"server"} fontSize={5} className="text-base-content/40" />
+                                <Icon icon={"database"} fontSize={5} className="text-base-content/40" />
                                 <Select
                                     className="w-full border-none bg-transparent focus:ring-0 focus:outline-none"
                                     value={selectedDb}
