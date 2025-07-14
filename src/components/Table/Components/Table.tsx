@@ -1,10 +1,69 @@
 import React, { useMemo, useState } from "react";
 
-import { Button, Card, CardBody, Pagination, useDialog, Checkbox } from "@/components/daisyui";
+import { Button, Pagination, useDialog, Checkbox } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
 import SearchInput from "@/components/SearchInput";
+import { PageScrollTracker } from "@/utils/pageScrollTracker";
 
 import DialogComponent from "./Dialog";
+
+// Badge component for status and type rendering
+const StatusBadge = ({ value, type }: { value: string; type: 'status' | 'type' }) => {
+    const getBadgeClasses = (val: string, badgeType: 'status' | 'type') => {
+        const baseClasses = "inline-flex px-2 py-1 text-xs font-semibold rounded-full";
+        
+        if (badgeType === 'status') {
+            switch (val.toLowerCase()) {
+                case 'editable':
+                    return `${baseClasses} bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/50`;
+                case 'issued':
+                    return `${baseClasses} bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700/50`;
+                case 'pending':
+                    return `${baseClasses} bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50`;
+                case 'active':
+                    return `${baseClasses} bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700/50`;
+                case 'terminated':
+                    return `${baseClasses} bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50`;
+                case 'completed':
+                    return `${baseClasses} bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/50`;
+                case 'suspended':
+                    return `${baseClasses} bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700/50`;
+                default:
+                    return `${baseClasses} bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700/50`;
+            }
+        } else {
+            switch (val.toLowerCase()) {
+                case 'provisoire':
+                    return `${baseClasses} bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700/50`;
+                case 'final':
+                    return `${baseClasses} bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/50`;
+                case 'rg':
+                    return `${baseClasses} bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700/50`;
+                case 'avance':
+                    return `${baseClasses} bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700/50`;
+                default:
+                    return `${baseClasses} bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700/50`;
+            }
+        }
+    };
+
+    return (
+        <span className={getBadgeClasses(value, type)}>
+            {value}
+        </span>
+    );
+};
+
+// Helper function to extract text content from HTML strings
+const getTextContent = (value: any): string => {
+    if (typeof value === 'string' && value.includes('<')) {
+        // Extract text content from HTML
+        const div = document.createElement('div');
+        div.innerHTML = value;
+        return div.textContent || div.innerText || '';
+    }
+    return String(value || '');
+};
 
 interface TableProps {
     tableData: any[];
@@ -91,6 +150,17 @@ const TableComponent: React.FC<TableProps> = ({
     // Column filter states
     const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
     const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null);
+    const [filterSearchTerms, setFilterSearchTerms] = useState<Record<string, string>>({});
+    const [filterDropdownPosition, setFilterDropdownPosition] = useState<{top: number, left: number} | null>(null);
+    
+    // Scroll indicator states
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    const [showScrollHint, setShowScrollHint] = useState(false);
+    const [isMouseDown, setIsMouseDown] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+    const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
     const handleRowClick = (row: any) => {
         if (onRowSelect) {
@@ -99,11 +169,86 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
+    // Check scroll capabilities
+    const checkScrollCapability = React.useCallback(() => {
+        const container = tableContainerRef.current;
+        if (container) {
+            const { scrollLeft, scrollWidth, clientWidth } = container;
+            setCanScrollLeft(scrollLeft > 0);
+            setCanScrollRight(scrollLeft < scrollWidth - clientWidth);
+            
+            // Show scroll hint if can scroll right and not shown yet for this page
+            const pageKey = PageScrollTracker.generatePageKey();
+            if (scrollLeft === 0 && scrollWidth > clientWidth && 
+                !showScrollHint && !PageScrollTracker.hasShownScrollHint(pageKey)) {
+                setShowScrollHint(true);
+                PageScrollTracker.markScrollHintShown(pageKey);
+                
+                // Smoother scroll movement with better timing
+                setTimeout(() => {
+                    if (container && container.scrollLeft === 0) {
+                        container.scrollTo({ left: 25, behavior: 'smooth' });
+                        setTimeout(() => {
+                            if (container) {
+                                container.scrollTo({ left: 0, behavior: 'smooth' });
+                            }
+                        }, 600);
+                    }
+                }, 300);
+                // Hide hint after animation
+                setTimeout(() => setShowScrollHint(false), 2200);
+            }
+        }
+    }, [showScrollHint]);
+
+    // Mouse drag scrolling handlers
+    const handleMouseDown = (e: React.MouseEvent) => {
+        // Only start drag if not clicking on interactive elements
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || target.closest('input')) {
+            return;
+        }
+        
+        setIsMouseDown(true);
+        setStartX(e.pageX - (tableContainerRef.current?.offsetLeft || 0));
+        setScrollLeft(tableContainerRef.current?.scrollLeft || 0);
+        
+        // Prevent text selection while dragging
+        e.preventDefault();
+    };
+
+    const handleMouseLeave = () => {
+        setIsMouseDown(false);
+    };
+
+    const handleMouseUp = () => {
+        setIsMouseDown(false);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isMouseDown || !tableContainerRef.current) return;
+        
+        e.preventDefault();
+        const x = e.pageX - (tableContainerRef.current.offsetLeft || 0);
+        const walk = (x - startX) * 1.5; // Scroll speed multiplier
+        tableContainerRef.current.scrollLeft = scrollLeft - walk;
+    };
+
+    // Cleanup mouse events
+    React.useEffect(() => {
+        const handleGlobalMouseUp = () => setIsMouseDown(false);
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
+
     // Get unique values for a specific column
     const getUniqueColumnValues = (columnKey: string) => {
-        const values = tableData.map(row => row[columnKey]).filter(value => value !== null && value !== undefined);
+        const values = tableData.map(row => {
+            const value = row[columnKey];
+            return getTextContent(value);
+        }).filter(value => value !== null && value !== undefined && value !== '');
         const uniqueValues = [...new Set(values)].sort();
-        return uniqueValues.map(value => String(value));
+        return uniqueValues;
     };
 
     // Handle column filter changes
@@ -153,9 +298,10 @@ const TableComponent: React.FC<TableProps> = ({
         if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
             data = data.filter((d) =>
-                Object.values(d).some(
-                    (value) => typeof value === "string" && value.toLowerCase().includes(lowercasedQuery),
-                ),
+                Object.values(d).some((value) => {
+                    const textContent = getTextContent(value);
+                    return textContent.toLowerCase().includes(lowercasedQuery);
+                }),
             );
         }
 
@@ -163,7 +309,7 @@ const TableComponent: React.FC<TableProps> = ({
         Object.entries(columnFilters).forEach(([columnKey, filterValues]) => {
             if (filterValues.length > 0) {
                 data = data.filter(row => {
-                    const cellValue = String(row[columnKey] || '');
+                    const cellValue = getTextContent(row[columnKey]);
                     return filterValues.includes(cellValue);
                 });
             }
@@ -201,6 +347,30 @@ const TableComponent: React.FC<TableProps> = ({
     }, [sortedData, currentPage, rowsPerPage]);
 
     const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+
+    // Effects for scroll detection
+    React.useEffect(() => {
+        const container = tableContainerRef.current;
+        if (container) {
+            checkScrollCapability();
+            
+            const handleScroll = () => {
+                checkScrollCapability();
+            };
+            
+            const handleResize = () => {
+                checkScrollCapability();
+            };
+            
+            container.addEventListener('scroll', handleScroll);
+            window.addEventListener('resize', handleResize);
+            
+            return () => {
+                container.removeEventListener('scroll', handleScroll);
+                window.removeEventListener('resize', handleResize);
+            };
+        }
+    }, [paginatedData, showScrollHint, checkScrollCapability]);
 
     // Sorting behavior
     const handleSort = (column: string) => {
@@ -285,6 +455,59 @@ const TableComponent: React.FC<TableProps> = ({
         const uniqueValues = getUniqueColumnValues(columnKey);
         const selectedValues = columnFilters[columnKey] || [];
         const isOpen = openFilterDropdown === columnKey;
+        const searchTerm = filterSearchTerms[columnKey] || '';
+
+        // Filter unique values based on search term
+        const filteredValues = uniqueValues.filter(value => 
+            value.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        const handleSearchChange = (value: string) => {
+            setFilterSearchTerms(prev => ({
+                ...prev,
+                [columnKey]: value
+            }));
+        };
+
+        const handleFilterChange = (value: string, checked: boolean) => {
+            handleColumnFilterChange(columnKey, value, checked);
+            // Close dropdown if unchecking the last item or if this is the first item being checked
+            if (!checked && selectedValues.length === 1) {
+                setOpenFilterDropdown(null);
+            }
+        };
+
+        const handleSelectAll = () => {
+            selectAllColumnValues(columnKey);
+            setOpenFilterDropdown(null);
+        };
+
+        const handleClear = () => {
+            clearColumnFilter(columnKey);
+            setOpenFilterDropdown(null);
+        };
+
+        const handleDropdownToggle = (event?: React.MouseEvent<HTMLButtonElement>) => {
+            if (isOpen) {
+                // Clear search when closing
+                setFilterSearchTerms(prev => ({
+                    ...prev,
+                    [columnKey]: ''
+                }));
+                setOpenFilterDropdown(null);
+                setFilterDropdownPosition(null);
+            } else {
+                // Calculate position for dropdown
+                if (event) {
+                    const buttonRect = event.currentTarget.getBoundingClientRect();
+                    setFilterDropdownPosition({
+                        top: buttonRect.bottom + 4,
+                        left: buttonRect.left
+                    });
+                }
+                setOpenFilterDropdown(columnKey);
+            }
+        };
 
         return (
             <div className="relative">
@@ -296,7 +519,7 @@ const TableComponent: React.FC<TableProps> = ({
                     )}
                     onClick={(e) => {
                         e.stopPropagation();
-                        setOpenFilterDropdown(isOpen ? null : columnKey);
+                        handleDropdownToggle(e);
                     }}
                 >
                     <span className="iconify lucide--filter size-3"></span>
@@ -311,7 +534,11 @@ const TableComponent: React.FC<TableProps> = ({
                         />
                         
                         {/* Dropdown */}
-                        <div className="absolute top-full left-0 mt-1 bg-base-100 border border-base-300 rounded-md shadow-lg z-20 min-w-48 max-h-64 overflow-hidden">
+                        <div className="fixed bg-base-100 border border-base-300 rounded-md shadow-lg z-50 min-w-48 max-h-80 overflow-hidden"
+                             style={{
+                                 top: filterDropdownPosition?.top ? `${filterDropdownPosition.top}px` : '0px',
+                                 left: filterDropdownPosition?.left ? `${filterDropdownPosition.left}px` : '0px'
+                             }}>
                             <div className="p-3 border-b border-base-300">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium">Filter {columnLabel}</span>
@@ -324,18 +551,30 @@ const TableComponent: React.FC<TableProps> = ({
                                     </button>
                                 </div>
                                 
+                                {/* Search input */}
+                                <div className="mb-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Search options..."
+                                        value={searchTerm}
+                                        onChange={(e) => handleSearchChange(e.target.value)}
+                                        className="input input-xs w-full bg-base-200 border-base-300 focus:border-primary focus:outline-none"
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                                
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         className="text-xs text-primary hover:text-primary/80"
-                                        onClick={() => selectAllColumnValues(columnKey)}
+                                        onClick={handleSelectAll}
                                     >
                                         Select All
                                     </button>
                                     <button
                                         type="button"
                                         className="text-xs text-base-content/60 hover:text-base-content"
-                                        onClick={() => clearColumnFilter(columnKey)}
+                                        onClick={handleClear}
                                     >
                                         Clear
                                     </button>
@@ -343,27 +582,29 @@ const TableComponent: React.FC<TableProps> = ({
                             </div>
                             
                             <div className="max-h-48 overflow-y-auto">
-                                {uniqueValues.length > 0 ? (
-                                    uniqueValues.map((value) => (
+                                {filteredValues.length > 0 ? (
+                                    filteredValues.map((value) => (
                                         <label
                                             key={value}
                                             className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 cursor-pointer"
+                                            onClick={(e) => e.stopPropagation()}
                                         >
                                             <Checkbox
                                                 size="sm"
                                                 checked={selectedValues.includes(value)}
-                                                onChange={(e) => 
-                                                    handleColumnFilterChange(columnKey, value, e.target.checked)
-                                                }
+                                                onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    handleFilterChange(value, e.target.checked);
+                                                }}
                                             />
-                                            <span className="text-sm truncate" title={value}>
+                                            <span className="text-sm truncate flex-1" title={value}>
                                                 {value || "(Empty)"}
                                             </span>
                                         </label>
                                     ))
                                 ) : (
                                     <div className="px-3 py-2 text-sm text-base-content/60">
-                                        No values found
+                                        {searchTerm ? 'No matching options' : 'No values found'}
                                     </div>
                                 )}
                             </div>
@@ -376,9 +617,9 @@ const TableComponent: React.FC<TableProps> = ({
 
     return (
         <>
-            <Card className="bg-base-100 border-base-200 mt-4 mb-6 border shadow rounded-lg">
-                <CardBody className="p-0">
-                    <div className="flex flex-col items-start justify-start space-y-4 px-5 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col max-h-[85vh]">
+                <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
+                    <div className="flex flex-col items-start justify-start space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         {/* Left side with "New" button and (conditionally) the toggle */}
                         <div className="flex items-center space-x-2">
                             {addBtn ? (
@@ -403,12 +644,55 @@ const TableComponent: React.FC<TableProps> = ({
                             size="md"
                         />
                     </div>
-                    <div className="overflow-auto">
-                        <table className="w-full border-collapse">
-                            <thead className="bg-base-200/30">
-                                <tr className="hover:bg-base-200/50">
+                </div>
+                <div 
+                    ref={tableContainerRef}
+                    className={cn(
+                        "overflow-x-auto overflow-y-auto flex-1 min-h-0 relative",
+                        "scroll-smooth",
+                        isMouseDown ? "cursor-grabbing select-none" : "cursor-auto"
+                    )}
+                    onMouseDown={handleMouseDown}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
+                    }}
+                >
+                    {/* Left scroll indicator - no background shadow */}
+                    {canScrollLeft && (
+                        <div className="absolute left-0 top-0 bottom-0 z-10 w-4 pointer-events-none flex items-center justify-center">
+                            <div className="w-0.5 h-8 bg-base-content/40 rounded-full animate-fade-in"></div>
+                        </div>
+                    )}
+                    
+                    {/* Right scroll indicator - no background shadow */}
+                    {canScrollRight && (
+                        <div className="absolute right-0 top-0 bottom-0 z-10 w-4 pointer-events-none flex items-center justify-center">
+                            <div className={cn(
+                                "w-0.5 h-8 rounded-full transition-all duration-200",
+                                showScrollHint ? "bg-blue-400 animate-smooth-pulse" : "bg-base-content/40 animate-fade-in"
+                            )}></div>
+                        </div>
+                    )}
+                    
+                    {/* Scroll hint overlay - shows "Scroll →" text */}
+                    {showScrollHint && canScrollRight && (
+                        <div className="absolute top-2 right-8 z-20 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-medium pointer-events-none animate-fade-in">
+                            Scroll →
+                        </div>
+                    )}
+                    
+                    <table className="w-full table-auto"
+                        style={{
+                            userSelect: isMouseDown ? 'none' : 'auto'
+                        }}>
+                        <thead className="bg-base-200">
+                            <tr>
                                     {select && (
-                                        <th className="border-base-content/10 border-b-2 px-2 py-4 pl-6 text-left text-sm font-semibold text-base-content/80">
+                                        <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
                                             Select
                                         </th>
                                     )}
@@ -416,8 +700,12 @@ const TableComponent: React.FC<TableProps> = ({
                                         <th
                                             key={columnKey}
                                             className={cn(
-                                                "border-base-content/10 border-b-2 px-2 py-4 pl-6 text-left text-sm font-semibold text-base-content/80",
+                                                "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider",
                                                 { "pl-6": index === 0 },
+                                                // Add responsive width classes
+                                                columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
+                                                columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
+                                                columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
                                             )}>
                                             <div className="flex items-center justify-between">
                                                 <div
@@ -437,18 +725,18 @@ const TableComponent: React.FC<TableProps> = ({
                                         </th>
                                     ))}
                                     {actions && (
-                                        <th className="border-base-content/10 border-b-2 py-4 pr-6 pl-2 text-right text-sm font-semibold text-base-content/80">
+                                        <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
                                             Actions
                                         </th>
                                     )}
                                 </tr>
                             </thead>
-                            <tbody>
+                        <tbody className="divide-y divide-base-300">
                                 {loading ? (
                                     <tr>
                                         <td
                                             colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
-                                            className="p-2 text-center">
+                                            className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 text-xs sm:text-sm">
                                             Loading...
                                         </td>
                                     </tr>
@@ -459,12 +747,12 @@ const TableComponent: React.FC<TableProps> = ({
                                         return (
                                             <tr
                                                 key={index}
-                                                className={cn("hover:bg-base-200/40 cursor-pointer", {
+                                                className={cn("hover:bg-base-200 cursor-pointer", {
                                                     "bg-base-300": selectedRow?.id === row.id,
                                                 })}
                                                 onClick={() => handleRowClick(row)}>
                                                 {select && (
-                                                    <td className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
+                                                    <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-16">
                                                         <input
                                                             type="checkbox"
                                                             className="checkbox-xs checkbox checkbox-info ml-2"
@@ -475,17 +763,27 @@ const TableComponent: React.FC<TableProps> = ({
                                                 {Object.keys(columns).map((columnKey) => (
                                                     <td
                                                         key={columnKey}
-                                                        className="border-base-content/5 border-y px-2 py-3 pl-6 text-sm font-medium">
-                                                        {(columnKey === 'status' || columnKey === 'type') && typeof row[columnKey] === 'string' && row[columnKey].includes('<span') ? (
-                                                            <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
+                                                        className={cn(
+                                                            "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content break-words min-w-0",
+                                                            columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
+                                                            columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
+                                                            columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
+                                                        )}>
+                                                        {(columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
+                                                            <StatusBadge 
+                                                                value={getTextContent(row[columnKey])} 
+                                                                type={columnKey as 'status' | 'type'} 
+                                                            />
                                                         ) : (
-                                                            row[columnKey] ?? "-"
+                                                            <div className="break-words overflow-wrap-anywhere">
+                                                                {row[columnKey] ?? "-"}
+                                                            </div>
                                                         )}
                                                     </td>
                                                 ))}
 
                                                 {actions && (
-                                                    <td className="border-base-content/5 border-y px-2 py-3 pr-6 text-right text-sm font-medium">
+                                                    <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28">
                                                         <div className="inline-flex w-fit">
                                                             {previewAction && (
                                                                 <Button
@@ -574,19 +872,19 @@ const TableComponent: React.FC<TableProps> = ({
                                         );
                                     })
                                 ) : (
-                                    <tr className="hover:bg-base-200/40 cursor-pointer">
+                                    <tr className="hover:bg-base-200 cursor-pointer">
                                         <td
                                             colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
-                                            className="p-2 text-center">
+                                            className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 italic text-xs sm:text-sm">
                                             No data available
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
-                        </table>
-                    </div>
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-end px-5 pt-3 pb-5">
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-end px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
                             <Pagination>
                                 <Button
                                     type="button"
@@ -658,28 +956,27 @@ const TableComponent: React.FC<TableProps> = ({
                                     <span className="iconify lucide--chevron-right text-base-content/70 size-4"></span>
                                 </Button>
                             </Pagination>
-                        </div>
-                    )}
-                    {/* Sheets */}
-                    {hasSheets && (
-                        <div className="bg-base-100 flex w-full overflow-x-auto">
-                            {sheets.map((sheet) => (
-                                <span
-                                    key={sheet.id}
-                                    className={cn(
-                                        "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
-                                        sheet.id === activeSheetId
-                                            ? "bg-base-300 border-base-300 text-base-content"
-                                            : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
-                                    )}
-                                    onClick={() => setActiveSheetId(sheet.id)}>
-                                    {sheet.name}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </CardBody>
-            </Card>
+                    </div>
+                )}
+                {/* Sheets */}
+                {hasSheets && (
+                    <div className="bg-base-100 flex w-full overflow-x-auto border-t border-base-300 flex-shrink-0">
+                        {sheets.map((sheet) => (
+                            <span
+                                key={sheet.id}
+                                className={cn(
+                                    "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
+                                    sheet.id === activeSheetId
+                                        ? "bg-base-300 border-base-300 text-base-content"
+                                        : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
+                                )}
+                                onClick={() => setActiveSheetId(sheet.id)}>
+                                {sheet.name}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {(addBtn || actions) && (
                 <DialogComponent

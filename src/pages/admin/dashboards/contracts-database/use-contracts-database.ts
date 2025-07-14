@@ -148,6 +148,7 @@ const useContractsDatabase = () => {
                 contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
                 completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
                 amount: contract.amount ? formatCurrency(contract.amount) : '-',
+                originalStatus: contract.status || '', // Preserve original status for filtering
                 status: formatStatusBadge(contract.status),
             }));
             
@@ -185,16 +186,16 @@ const useContractsDatabase = () => {
     // Filter data based on original status (before badge formatting) for different tabs
     const vosData: any[] = []; // Keep VOs empty for now
     const terminatedData = contractsData.filter(contract => {
-        const originalStatus = contract.status || '';
-        return originalStatus.toLowerCase().includes('terminated');
+        const originalStatus = contract.originalStatus?.toLowerCase() || '';
+        return originalStatus.includes('terminated');
     });
     const activeContractsData = contractsData.filter(contract => {
-        const originalStatus = contract.status || '';
-        return originalStatus.toLowerCase().includes('active') || (!originalStatus.toLowerCase().includes('terminated') && originalStatus);
+        const originalStatus = contract.originalStatus?.toLowerCase() || '';
+        return originalStatus.includes('active');
     });
     
-    // If no active contracts, show all contracts in the first tab for now
-    const contractsTabData = activeContractsData.length > 0 ? activeContractsData : contractsData;
+    // Use activeContractsData for the contracts tab to show only active contracts
+    const contractsTabData = activeContractsData;
 
     return {
         contractsColumns,

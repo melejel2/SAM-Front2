@@ -7,51 +7,52 @@ const TablePage = () => {
             <MetaData title="Table" />
             <PageTitle title="Table" items={[{ label: "Components" }, { label: "Table", active: true }]} />
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="card card-border bg-base-100">
-                    <div className="card-body">
-                        <div className="card-title">Default</div>
-                        <div className="mt-3">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th />
-                                        <th>Name</th>
-                                        <th>Job</th>
-                                        <th>Favorite Color</th>
-                                    </tr>
-                                </thead>
+                <div className="bg-base-100 rounded-xl border border-base-300 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-base-300">
+                        <h3 className="text-lg font-semibold text-base-content">Default</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-base-200">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase tracking-wider">#</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase tracking-wider">Job</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase tracking-wider">Favorite Color</th>
+                                </tr>
+                            </thead>
 
-                                <tbody>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>Cy Ganderton</td>
-                                        <td>Quality Control Specialist</td>
-                                        <td>Blue</td>
-                                    </tr>
+                            <tbody className="divide-y divide-base-300">
+                                <tr className="hover:bg-base-200">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">1</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Cy Ganderton</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Quality Control Specialist</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Blue</td>
+                                </tr>
 
-                                    <tr>
-                                        <td>2</td>
-                                        <td>Hart Hagerty</td>
-                                        <td>Desktop Support Technician</td>
-                                        <td>Purple</td>
-                                    </tr>
+                                <tr className="hover:bg-base-200">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">2</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Hart Hagerty</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Desktop Support Technician</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Purple</td>
+                                </tr>
 
-                                    <tr>
-                                        <td>3</td>
-                                        <td>Brice Swyre</td>
-                                        <td>Tax Accountant</td>
-                                        <td>Red</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                <tr className="hover:bg-base-200">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">3</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Brice Swyre</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Tax Accountant</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-base-content">Red</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div className="card card-border bg-base-100">
-                    <div className="card-body">
-                        <div className="card-title">Active Row</div>
-                        <div className="mt-3">
-                            <table className="table">
+                <div className="bg-base-100 rounded-xl border border-base-300 overflow-hidden">
+                    <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-base-300">
+                        <h3 className="text-lg font-semibold text-base-content">Active Row</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-max">
                                 <thead>
                                     <tr>
                                         <th />
@@ -84,7 +85,6 @@ const TablePage = () => {
                                     </tr>
                                 </tbody>
                             </table>
-                        </div>
                     </div>
                 </div>
                 <div className="card card-border bg-base-100">

@@ -1,27 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
+import useToast from "@/hooks/use-toast";
 
 import BudgetBOQDialog from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-boqs";
 
 const BudgetBOQs = () => {
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
+    const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
 
-    const { columns, tableData, inputFields } = useBudgetBOQs();
+    const { 
+        columns, 
+        tableData, 
+        inputFields, 
+        loading,
+        getProjectsList,
+        createProject,
+        updateProject,
+        deleteProject,
+        setSelectedProject: setSelectedProjectInHook
+    } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
+    const { toaster } = useToast();
 
-    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select") => {
+    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", data?: any) => {
         setDialogType(type);
+        if (data) {
+            setSelectedProject(data);
+            setSelectedProjectInHook(data);
+        } else {
+            setSelectedProject(null);
+            setSelectedProjectInHook(null);
+        }
         handleShow();
     };
 
     const handleBackToDashboard = () => {
         navigate('/dashboard');
     };
+
+    const handleSuccess = async () => {
+        await getProjectsList();
+        handleHide();
+        toaster.success("Operation completed successfully!");
+    };
+
+    const handleCreate = async (formData: any) => {
+        const result = await createProject(formData);
+        if (result.success) {
+            handleSuccess();
+        } else {
+            toaster.error(result.message || "Failed to create project");
+        }
+    };
+
+    const handleUpdate = async (formData: any) => {
+        const result = await updateProject({ ...formData, id: selectedProject.id });
+        if (result.success) {
+            handleSuccess();
+        } else {
+            toaster.error(result.message || "Failed to update project");
+        }
+    };
+
+    const handleDelete = async () => {
+        if (selectedProject) {
+            const result = await deleteProject(selectedProject.id);
+            if (result.success) {
+                handleSuccess();
+            } else {
+                toaster.error(result.message || "Failed to delete project");
+            }
+        }
+    };
+
+    useEffect(() => {
+        getProjectsList();
+    }, []);
 
     return (
         <div>
@@ -47,9 +106,9 @@ const BudgetBOQs = () => {
                     editAction
                     deleteAction
                     title={"Budget BOQs"}
-                    loading={false}
+                    loading={loading}
                     addBtn
-                    onSuccess={() => {}}
+                    onSuccess={handleSuccess}
                     dynamicDialog={false}
                     openStaticDialog={openCreateDialog}
                 />
@@ -59,7 +118,8 @@ const BudgetBOQs = () => {
                 handleHide={handleHide}
                 dialogRef={dialogRef}
                 dialogType={dialogType}
-                onSuccess={() => {}}
+                selectedProject={selectedProject}
+                onSuccess={handleSuccess}
             />
         </div>
     );

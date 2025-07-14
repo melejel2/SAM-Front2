@@ -200,7 +200,7 @@ const IPCsDatabase = () => {
                             dynamicDialog={false}
                             openStaticDialog={(type, data) => {
                                 if (type === "Preview" && data) {
-                                    handlePreviewIpc(data);
+                                    return handlePreviewIpc(data);
                                 }
                             }}
                         />
