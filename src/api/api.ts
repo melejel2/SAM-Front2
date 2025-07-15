@@ -1,6 +1,6 @@
-export const ACTIVE_URL = "https://samback.karamentreprises.com/";
+//export const ACTIVE_URL = "https://samback.karamentreprises.com/";
 //export const ACTIVE_URL = "https://localhost:7055/";
-//export const ACTIVE_URL = "http://localhost:5280/";
+export const ACTIVE_URL = "http://localhost:5280/";
 export const ACTIVE_API_URL = `${ACTIVE_URL}api/`;
 
 type ApiRequestParams = {
@@ -94,7 +94,29 @@ const apiRequest = async <T = any>({
             return {} as T;
         }
 
-        return (await response.json()) as T;
+        // Check if response has content before parsing JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const responseText = await response.text();
+            if (responseText.trim() === '') {
+                return {} as T;
+            }
+            try {
+                return JSON.parse(responseText) as T;
+            } catch (error) {
+                console.error('JSON parsing error:', error, 'Response text:', responseText);
+                return {
+                    success: false,
+                    message: 'Invalid JSON response from server'
+                } as T;
+            }
+        }
+
+        // For non-JSON responses, return success with empty result
+        return {
+            isSuccess: true,
+            message: 'Request completed successfully'
+        } as T;
     } catch (error) {
         console.error("API Request Failed:", error);
         return {

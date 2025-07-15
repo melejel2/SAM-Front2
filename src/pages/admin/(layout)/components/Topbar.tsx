@@ -79,17 +79,8 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes('/admin-tools/subcontractors')) {
     return "Subcontractors";
   }
-  if (pathname.includes('/admin-tools/templates/contracts')) {
-    return "Contract Templates";
-  }
-  if (pathname.includes('/admin-tools/templates/vo')) {
-    return "VO Templates";
-  }
-  if (pathname.includes('/admin-tools/templates/decharge')) {
-    return "Decharge Templates";
-  }
-  if (pathname.includes('/admin-tools/templates/terminate')) {
-    return "Terminate Templates";
+  if (pathname.includes('/admin-tools/templates')) {
+    return "Templates";
   }
 
   // Auth routes

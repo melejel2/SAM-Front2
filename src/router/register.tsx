@@ -70,20 +70,8 @@ const adminToolsRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/adminTools/cost-codes"))),
     },
     {
-        path: "/admin-tools/templates/contract",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/templates/contracts"))),
-    },
-    {
-        path: "/admin-tools/templates/VO",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/templates/vo"))),
-    },
-    {
-        path: "/admin-tools/templates/terminate",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/templates/terminate"))),
-    },
-    {
-        path: "/admin-tools/templates/decharge",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/templates/decharge"))),
+        path: "/admin-tools/templates",
+        element: cw(lazy(() => import("@/pages/admin/adminTools/templates"))),
     },
     {
         path: "/admin-tools/sheets",

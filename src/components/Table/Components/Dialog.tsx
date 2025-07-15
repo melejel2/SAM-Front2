@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import apiRequest from "@/api/api";
 import CloseBtn from "@/components/CloseBtn";
 import { Button, Select, SelectOption } from "@/components/daisyui";
+import { FileUploader } from "@/components/FileUploader";
 import { useAuth } from "@/contexts/auth";
 import { cn } from "@/helpers/utils/cn";
 import useToast from "@/hooks/use-toast";
@@ -62,7 +63,7 @@ const DialogComponent: React.FC<DialogProps> = ({
             if (dialogType === "Edit" && current && current[field.name] !== undefined) {
                 initialData[field.name] = current[field.name];
             } else {
-                initialData[field.name] = field.value || "";
+                initialData[field.name] = field.value !== undefined ? field.value : "";
             }
         });
         return initialData;
@@ -72,6 +73,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     const [showRejectionNote, setShowRejectionNote] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [costCodes, setCostCodes] = useState<any[]>([]);
+    const [files, setFiles] = useState<Record<string, File | null>>({});
 
     const { toaster } = useToast();
     const { getToken } = useAuth();
@@ -103,20 +105,59 @@ const DialogComponent: React.FC<DialogProps> = ({
                 return;
             }
 
+            // Check if we have files to upload
+            const hasFiles = Object.values(files).some(file => file !== null);
+            let requestBody: any = formData;
+            
+            if (hasFiles) {
+                // Create FormData for file uploads
+                const formDataBody = new FormData();
+                
+                // Add all text fields
+                Object.entries(formData).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        formDataBody.append(key, value.toString());
+                    }
+                });
+                
+                // Add files
+                Object.entries(files).forEach(([key, file]) => {
+                    if (file) {
+                        formDataBody.append(key, file);
+                    }
+                });
+                
+                // Debug logging
+                console.log('FormData being sent:', {
+                    textFields: Object.fromEntries(
+                        Object.entries(formData).filter(([_, v]) => v !== null && v !== undefined)
+                    ),
+                    fileFields: Object.fromEntries(
+                        Object.entries(files).filter(([_, v]) => v !== null)
+                    ),
+                    endpoint: createEndPoint
+                });
+                
+                requestBody = formDataBody;
+            }
+
             if (dialogType === "Edit" && current) {
                 try {
                     const response = await apiRequest({
                         endpoint: editEndPoint ?? "",
                         method: "PUT",
                         token: token ?? "",
-                        body: formData,
+                        body: requestBody,
                     });
                     if (response.isSuccess) {
                         toaster.success("Updated successfully.");
                         onSuccess();
+                    } else {
+                        toaster.error(response.message || "Failed to update record");
                     }
-                } catch (error) {
-                    console.error(error);
+                } catch (error: any) {
+                    console.error("Update error:", error);
+                    toaster.error(error.message || "Failed to update record");
                 } finally {
                     setIsLoading(false);
                 }
@@ -126,14 +167,18 @@ const DialogComponent: React.FC<DialogProps> = ({
                         endpoint: createEndPoint ?? "",
                         method: "POST",
                         token: token ?? "",
-                        body: formData,
+                        body: requestBody,
                     });
                     if (response.isSuccess) {
                         toaster.success("Created successfully.");
                         onSuccess();
+                    } else {
+                        console.error('Create failed:', response);
+                        toaster.error(response.message || "Failed to create record");
                     }
-                } catch (error) {
-                    console.error(error);
+                } catch (error: any) {
+                    console.error("Create error:", error);
+                    toaster.error(error.message || "Failed to create record");
                 } finally {
                     setIsLoading(false);
                 }
@@ -248,7 +293,18 @@ const DialogComponent: React.FC<DialogProps> = ({
                 toaster.error("Token is missing, unable to save.");
                 return;
             }
-            const deleteEndPointWithId = deleteEndPoint ? `${deleteEndPoint}?id=${current?.id}` : "";
+            // For templates, we need to add isVo parameter
+            let deleteEndPointWithId = "";
+            if (deleteEndPoint) {
+                if (deleteEndPoint.includes("Templates/DeleteTemplate")) {
+                    // Check if it's a contract template (title contains "Contract")
+                    const isContractTemplate = title.includes("Contract Template");
+                    const isVoParam = isContractTemplate ? "false" : "true";
+                    deleteEndPointWithId = `${deleteEndPoint}?id=${current?.id}&isVo=${isVoParam}`;
+                } else {
+                    deleteEndPointWithId = `${deleteEndPoint}?id=${current?.id}`;
+                }
+            }
             const response = await apiRequest({
                 endpoint: deleteEndPointWithId,
                 method: "DELETE",
@@ -258,6 +314,9 @@ const DialogComponent: React.FC<DialogProps> = ({
                 toaster.success("Deleted successfully.");
                 onSuccess();
                 handleClose();
+            } else {
+                console.error('Delete failed:', response);
+                toaster.error(response.message || "Failed to delete record");
             }
         } catch (error) {
             console.error(error);
@@ -372,13 +431,32 @@ const DialogComponent: React.FC<DialogProps> = ({
                 );
             } else if (type === "file") {
                 return (
+                    <div className="w-full space-y-3">
+                        <label className="text-sm font-medium text-base-content/80">{label}</label>
+                        <div className="w-full">
+                            <FileUploader
+                                allowMultiple={false}
+                                maxFiles={1}
+                                acceptedFileTypes={[".doc", ".docx", ".pdf"]}
+                                labelIdle='Drag & Drop your template file or <span class="filepond--label-action">Browse</span>'
+                                onupdatefiles={(files) => {
+                                    const file = files[0]?.file as File || null;
+                                    setFiles(prev => ({ ...prev, [name]: file }));
+                                }}
+                                required={required}
+                                allowProcess={false}
+                                instantUpload={false}
+                            />
+                        </div>
+                    </div>
+                );
+            } else if (type === "hidden") {
+                return (
                     <input
+                        key={name}
+                        type="hidden"
                         name={name}
                         value={formData[name]}
-                        required={required}
-                        onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
-                        type="file"
-                        className="file-input input-sm input-bordered w-full grow"
                     />
                 );
             } else {

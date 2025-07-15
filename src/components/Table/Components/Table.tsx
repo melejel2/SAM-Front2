@@ -92,6 +92,7 @@ interface TableProps {
     onSuccess: () => void;
 
     addBtn?: boolean;
+    addBtnText?: string;
     dynamicDialog?: boolean;
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
@@ -105,6 +106,7 @@ interface TableProps {
     hasSheets?: boolean;
     sheets?: any[];
     rowsPerPage?: number;
+    previewLoadingRowId?: string | null;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -121,6 +123,7 @@ const TableComponent: React.FC<TableProps> = ({
     inputFields,
     title,
     addBtn,
+    addBtnText,
     dynamicDialog = true,
     openStaticDialog,
     onRowSelect,
@@ -135,6 +138,7 @@ const TableComponent: React.FC<TableProps> = ({
     hasSheets = false,
     sheets = [],
     rowsPerPage = 10,
+    previewLoadingRowId: externalPreviewLoadingRowId,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -145,7 +149,8 @@ const TableComponent: React.FC<TableProps> = ({
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [selectedRow, setSelectedRow] = useState<any>();
     const [activeSheetId, setActiveSheetId] = useState<number>(sheets[0]?.id ?? 0);
-    const [previewLoadingRowId, setPreviewLoadingRowId] = useState<string | null>(null);
+    const [internalPreviewLoadingRowId, setInternalPreviewLoadingRowId] = useState<string | null>(null);
+    const previewLoadingRowId = externalPreviewLoadingRowId ?? internalPreviewLoadingRowId;
     
     // Column filter states
     const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
@@ -393,13 +398,8 @@ const TableComponent: React.FC<TableProps> = ({
     const openCreateDialog = async () => {
         setDialogType("Add");
         setCurrentRow(null);
-        if (dynamicDialog) {
-            handleShow();
-        } else {
-            if (openStaticDialog) {
-                openStaticDialog("Add");
-            }
-        }
+        // Always use dynamic dialog for Add actions (needed for file uploads)
+        handleShow();
     };
 
     const openEditDialog = (row: any) => {
@@ -420,19 +420,19 @@ const TableComponent: React.FC<TableProps> = ({
         
         // Set loading state for this specific row
         const rowId = row.id || row.contractId || row.projectId || String(row);
-        setPreviewLoadingRowId(rowId);
+        setInternalPreviewLoadingRowId(rowId);
         
         if (dynamicDialog) {
             handleShow();
             // Clear loading state after dialog opens
-            setPreviewLoadingRowId(null);
+            setInternalPreviewLoadingRowId(null);
         } else {
             if (openStaticDialog) {
                 try {
                     await openStaticDialog("Preview", row);
                 } finally {
                     // Clear loading state after preview is handled
-                    setPreviewLoadingRowId(null);
+                    setInternalPreviewLoadingRowId(null);
                 }
             }
         }
@@ -626,8 +626,8 @@ const TableComponent: React.FC<TableProps> = ({
                                 <Button
                                     onClick={openCreateDialog}
                                     className="btn btn-primary btn-sm rounded-xl table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
-                                    <span className="iconify lucide--plus size-4"></span>
-                                    <span className="text-xs">New {title}</span>
+                                    <span className={`iconify ${addBtnText?.toLowerCase().includes('upload') ? 'lucide--upload' : 'lucide--plus'} size-4`}></span>
+                                    <span className="text-xs">{addBtnText || `New ${title}`}</span>
                                 </Button>
                             ) : (
                                 <span className="hidden lg:block"></span>
@@ -769,7 +769,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                             columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                             columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
                                                         )}>
-                                                        {(columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
+                                                        {typeof row[columnKey] === 'string' && row[columnKey]?.includes('<span class="badge') ? (
+                                                            <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
+                                                        ) : (columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
                                                             <StatusBadge 
                                                                 value={getTextContent(row[columnKey])} 
                                                                 type={columnKey as 'status' | 'type'} 

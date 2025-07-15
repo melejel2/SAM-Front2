@@ -33,6 +33,7 @@ interface SAMTableProps {
     };
 
     addBtn?: boolean;
+    addBtnText?: string;
     onRowSelect?: (selectedRow: any) => void;
 
     showAvailableOnly?: boolean;
@@ -46,6 +47,7 @@ interface SAMTableProps {
     hasSheets?: boolean;
     sheets?: any[];
     rowsPerPage?: number;
+    previewLoadingRowId?: string | null;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -64,6 +66,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     loading,
     onSuccess,
     addBtn,
+    addBtnText,
     dynamicDialog,
     openStaticDialog,
     onRowSelect,
@@ -74,6 +77,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     hasSheets = false,
     sheets = [],
     rowsPerPage,
+    previewLoadingRowId,
 }) => {
     return (
         <div className="mt-5">
@@ -93,6 +97,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             editAction={editAction}
                             previewColumns={previewColumns}
                             addBtn={addBtn}
+                            addBtnText={addBtnText}
                             dynamicDialog={dynamicDialog}
                             openStaticDialog={openStaticDialog}
                             onRowSelect={onRowSelect}
@@ -109,6 +114,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             exportAction={exportAction}
                             generateAction={generateAction}
                             rowActions={rowActions}
+                            previewLoadingRowId={previewLoadingRowId}
                         />
                     </div>
 
@@ -125,10 +131,12 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             editAction={editAction}
                             previewColumns={previewColumns}
                             addBtn={addBtn}
+                            addBtnText={addBtnText}
                             dynamicDialog={dynamicDialog}
                             openStaticDialog={openStaticDialog}
                             // If needed, forward the select prop to the accordion as well
                             select={select}
+                            previewLoadingRowId={previewLoadingRowId}
                         />
                     </div>
                 </>

@@ -97,10 +97,12 @@ interface AccordionsProps {
     }>;
     title: string;
     addBtn?: boolean;
+    addBtnText?: string;
     openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void | Promise<void>;
     dynamicDialog?: boolean;
     // Added property for selectable mode
     select?: boolean;
+    previewLoadingRowId?: string | null;
 }
 
 const Accordion: React.FC<AccordionProps> = ({
@@ -289,7 +291,9 @@ const Accordion: React.FC<AccordionProps> = ({
                     <div key={index} className="flex justify-between items-center py-2 border-b border-base-300 last:border-b-0 min-w-max">
                         <span className="text-xs sm:text-xs font-medium text-base-content/70 uppercase tracking-wider whitespace-nowrap mr-4">{key}</span>
                         <span className="text-xs sm:text-sm font-medium text-base-content whitespace-nowrap">
-                            {(key === 'status' || key === 'type') && value ? (
+                            {typeof value === 'string' && value?.includes('<span class="badge') ? (
+                                <div dangerouslySetInnerHTML={{ __html: value }} />
+                            ) : (key === 'status' || key === 'type') && value ? (
                                 <StatusBadge 
                                     value={getTextContent(value)} 
                                     type={key as 'status' | 'type'} 
@@ -351,14 +355,17 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     deleteAction,
     editAction,
     addBtn,
+    addBtnText,
     openStaticDialog,
     dynamicDialog = true,
     select, // destructured here as well
+    previewLoadingRowId: externalPreviewLoadingRowId,
 }) => {
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Preview">("Add");
     const [currentRow, setCurrentRow] = useState<any | null>(null);
-    const [previewLoadingRowId, setPreviewLoadingRowId] = useState<string | null>(null);
+    const [internalPreviewLoadingRowId, setInternalPreviewLoadingRowId] = useState<string | null>(null);
+    const previewLoadingRowId = externalPreviewLoadingRowId ?? internalPreviewLoadingRowId;
 
     const openCreateDialog = () => {
         setDialogType("Add");
@@ -378,19 +385,19 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
         
         // Set loading state for this specific row
         const rowId = data.id || data.contractId || data.projectId || String(data);
-        setPreviewLoadingRowId(rowId);
+        setInternalPreviewLoadingRowId(rowId);
         
         if (dynamicDialog) {
             handleShow();
             // Clear loading state after dialog opens
-            setPreviewLoadingRowId(null);
+            setInternalPreviewLoadingRowId(null);
         } else {
             if (openStaticDialog) {
                 try {
                     await openStaticDialog("Preview", data);
                 } finally {
                     // Clear loading state after preview is handled
-                    setPreviewLoadingRowId(null);
+                    setInternalPreviewLoadingRowId(null);
                 }
             }
         }
@@ -411,8 +418,8 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                 <Button
                     onClick={openCreateDialog}
                     className="btn btn-primary btn-sm rounded-xl table-new-btn px-4 text-sm transition-all duration-200 text-primary-content mb-4">
-                    <Icon icon={"plus"} fontSize={4} />
-                    <span className="text-xs">New {title}</span>
+                    <Icon icon={addBtnText?.toLowerCase().includes('upload') ? "upload" : "plus"} fontSize={4} />
+                    <span className="text-xs">{addBtnText || `New ${title}`}</span>
                 </Button>
             )}
             <div className="w-full space-y-3">
