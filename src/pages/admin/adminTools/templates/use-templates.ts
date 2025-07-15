@@ -187,11 +187,7 @@ const useTemplates = () => {
             label: "Template Type",
             type: "select",
             required: true,
-            options: [
-                { value: "1", label: "RG (Discharge)" },
-                { value: "2", label: "Terminate" },
-                { value: "3", label: "Final (Discharge)" }
-            ],
+            options: ["RG (Discharge)", "Terminate", "Final (Discharge)"],
         },
         {
             name: "language",
