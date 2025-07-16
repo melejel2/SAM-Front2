@@ -44,7 +44,12 @@ const useLogin = () => {
             
             if (response.isSuccess === true) {
                 toaster.success("Login successful...");
-                setLoggedInUser(response.value);
+                // Add database info to user object
+                const userWithDatabase = {
+                    ...response.value,
+                    database: data.db
+                };
+                setLoggedInUser(userWithDatabase);
                 navigate("/dashboard");
             } else if (!response.success) {
                 if (response.status === 404 || response.status === 400) {

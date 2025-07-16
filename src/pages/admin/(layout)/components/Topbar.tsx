@@ -343,6 +343,7 @@ const DatabaseDropdown: React.FC<{
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [targetDatabase, setTargetDatabase] = useState<Database | null>(null);
   const { config } = useConfig();
+  const { authState } = useAuth();
 
   // Load databases from the same API used in login
   useEffect(() => {
@@ -383,7 +384,12 @@ const DatabaseDropdown: React.FC<{
           
           setDatabases(databaseList);
           if (databaseList.length > 0) {
-            setSelectedDatabase(databaseList[0]); // Default to first database
+            // Use stored database from auth context, fallback to first database
+            const storedDatabase = authState.user?.database;
+            const defaultDatabase = storedDatabase 
+              ? databaseList.find(db => db.name === storedDatabase) || databaseList[0]
+              : databaseList[0];
+            setSelectedDatabase(defaultDatabase);
           }
         } else {
           setDatabases([]);
@@ -397,7 +403,7 @@ const DatabaseDropdown: React.FC<{
     };
 
     loadDatabases();
-  }, []);
+  }, [authState.user?.database]);
 
   const handleDatabaseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = e.target.value;
@@ -1148,8 +1154,8 @@ export const Topbar = () => {
             />
 
             <AccountDropdown
-              username={authState.user?.username || authState.user?.userName || ""}
-              userEmail={authState.user?.userCode}
+              username={authState.user?.name || authState.user?.username || authState.user?.userName || ""}
+              userEmail={authState.user?.email || authState.user?.userCode}
               onLogout={doLogout}
               isMobile={isMobile}
             />

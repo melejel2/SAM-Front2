@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useSubcontractors from "./use-subcontractors";
 
 const Subcontractors = () => {
     const { columns, tableData, inputFields, loading, getSubcontractors } = useSubcontractors();
+    const { canAddEditSubcontractors, canDeleteSubcontractors } = usePermissions();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -42,12 +44,12 @@ const Subcontractors = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions
-                        editAction
-                        deleteAction
+                        actions={true}
+                        editAction={canAddEditSubcontractors}
+                        deleteAction={canDeleteSubcontractors}
                         title={"Subcontractor"}
                         loading={false}
-                        addBtn
+                        addBtn={canAddEditSubcontractors}
                         editEndPoint="Subcontractors/UpdateSubcontractor"
                         createEndPoint="Subcontractors/CreateSubcontractor"
                         deleteEndPoint="Subcontractors/DeleteSubcontractor/{id}"

@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useUnits from "./use-units";
 
 const Units = () => {
     const { columns, tableData, inputFields, loading, getUnits } = useUnits();
     const navigate = useNavigate();
+    const { canManageUnits } = usePermissions();
 
     useEffect(() => {
         getUnits();
@@ -42,12 +44,12 @@ const Units = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions
-                        editAction
-                        deleteAction
+                        actions={true}
+                        editAction={canManageUnits}
+                        deleteAction={canManageUnits}
                         title={"Unit"}
                         loading={false}
-                        addBtn
+                        addBtn={canManageUnits}
                         editEndPoint="Unit/UpdateUnit"
                         createEndPoint="Unit/AddUnit"
                         deleteEndPoint="Unit/DeleteUnit"

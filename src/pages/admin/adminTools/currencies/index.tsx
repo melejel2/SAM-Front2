@@ -5,6 +5,7 @@ import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import { Button, useDialog } from "@/components/daisyui";
 import CloseBtn from "@/components/CloseBtn";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useCurrencies from "./use-currencies";
 
@@ -27,6 +28,7 @@ const Currencies = () => {
     
     const navigate = useNavigate();
     const { dialogRef, handleShow, handleHide } = useDialog();
+    const { canAddDeleteCurrencies, canEditCurrencyRates } = usePermissions();
 
     // State for managing which rates to apply
     const [selectedRates, setSelectedRates] = useState<any[]>([]);
@@ -146,17 +148,19 @@ const Currencies = () => {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <Button
-                        size="sm"
-                        color="info"
-                        onClick={handleSyncClick}
-                        loading={syncLoading}
-                        disabled={syncLoading || loading}
-                        className="flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--refresh-cw size-4"></span>
-                        <span>Sync Currencies</span>
-                    </Button>
+                    {canEditCurrencyRates && (
+                        <Button
+                            size="sm"
+                            color="info"
+                            onClick={handleSyncClick}
+                            loading={syncLoading}
+                            disabled={syncLoading || loading}
+                            className="flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--refresh-cw size-4"></span>
+                            <span>Sync Currencies</span>
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -168,12 +172,12 @@ const Currencies = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions
-                        editAction
-                        deleteAction
+                        actions={true}
+                        editAction={canEditCurrencyRates}
+                        deleteAction={canAddDeleteCurrencies}
                         title={"Currency"}
                         loading={false}
-                        addBtn
+                        addBtn={canAddDeleteCurrencies}
                         editEndPoint="Currencie/UpdateCurrencie"
                         createEndPoint="Currencie/AddCurrencie"
                         deleteEndPoint="Currencie/DeleteCurrencie"

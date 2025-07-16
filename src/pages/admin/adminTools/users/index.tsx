@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useUsers from "./use-users";
 
 const Users = () => {
     const { columns, tableData, inputFields, getUsers, loading } = useUsers();
+    const { canManageUsers } = usePermissions();
     const navigate = useNavigate();
+    
 
     useEffect(() => {
         getUsers();
@@ -42,12 +45,12 @@ const Users = () => {
                         columns={columns}
                         tableData={tableData}
                         inputFields={inputFields}
-                        actions
-                        editAction
-                        deleteAction
+                        actions={true}
+                        editAction={canManageUsers}
+                        deleteAction={canManageUsers}
                         title={"Users"}
                         loading={false}
-                        addBtn
+                        addBtn={canManageUsers}
                         editEndPoint="Users/UpdateUser"
                         createEndPoint="Users/AddUser"
                         deleteEndPoint="Users/DeleteUser"

@@ -7,6 +7,7 @@ import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useTemplates from "./use-templates";
 
@@ -147,6 +148,7 @@ const Templates = () => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
+    const { canManageTemplates, canViewTemplates } = usePermissions();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -413,13 +415,13 @@ const Templates = () => {
                                         columns={contractColumns}
                                         tableData={contractData}
                                         inputFields={contractInputFields}
-                                        actions
+                                        actions={true}
                                         editAction={false}
-                                        deleteAction
-                                        previewAction
+                                        deleteAction={canManageTemplates}
+                                        previewAction={true}
                                         title={"Contract Template"}
                                         loading={false}
-                                        addBtn
+                                        addBtn={canManageTemplates}
                                         addBtnText="Upload Template"
                                         createEndPoint="Templates/AddContractTemplate"
                                         deleteEndPoint="Templates/DeleteTemplate"
@@ -443,13 +445,13 @@ const Templates = () => {
                                         columns={voColumns}
                                         tableData={voData}
                                         inputFields={voInputFields}
-                                        actions
+                                        actions={true}
                                         editAction={false}
-                                        deleteAction
-                                        previewAction
+                                        deleteAction={canManageTemplates}
+                                        previewAction={true}
                                         title={"VO Template"}
                                         loading={false}
-                                        addBtn
+                                        addBtn={canManageTemplates}
                                         addBtnText="Upload Template"
                                         createEndPoint="Templates/AddVOContractTemplate"
                                         deleteEndPoint="Templates/DeleteTemplate"
@@ -473,13 +475,13 @@ const Templates = () => {
                                         columns={otherColumns}
                                         tableData={otherTemplatesData}
                                         inputFields={otherInputFields}
-                                        actions
+                                        actions={true}
                                         editAction={false}
-                                        deleteAction
-                                        previewAction
+                                        deleteAction={canManageTemplates}
+                                        previewAction={true}
                                         title={"Other Templates"}
                                         loading={false}
-                                        addBtn
+                                        addBtn={canManageTemplates}
                                         addBtnText="Upload Template"
                                         createEndPoint="Templates/AddVOContractTemplate"
                                         deleteEndPoint="Templates/DeleteTemplate"

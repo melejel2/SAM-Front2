@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import useTrades from "./use-trades";
 
 const Trades = () => {
     const { columns, tableData, inputFields, getTrades } = useTrades();
     const navigate = useNavigate();
+    const { canManageTrades } = usePermissions();
 
     useEffect(() => {
         getTrades();
@@ -38,12 +40,12 @@ const Trades = () => {
                     columns={columns}
                     tableData={tableData}
                     inputFields={inputFields}
-                    actions
-                    editAction
-                    deleteAction
+                    actions={true}
+                    editAction={canManageTrades}
+                    deleteAction={canManageTrades}
                     title={"Trades"}
                     loading={false}
-                    addBtn
+                    addBtn={canManageTrades}
                     editEndPoint="Sheets/UpdateSheet"
                     createEndPoint="Sheets/AddSheet"
                     deleteEndPoint="Sheets/DeleteSheet"

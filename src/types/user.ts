@@ -74,14 +74,18 @@ export type UserTableColumns = {
   [K in keyof Omit<User, 'id' | 'password'>]: string;
 };
 
-// Auth context user type
+// Auth context user type - matches backend LoginResponse
 export interface AuthUser {
   token: string;
-  roleid: number;
+  userName: string;
+  email: string;
+  name: string;
+  roleType: number; // Backend sends UserType enum as number
+  database?: string; // Store selected database
+  // Legacy support fields
+  roleid?: number; 
   username?: string;
-  userName?: string;
   userCode?: string;
-  // Add other auth-related user properties as needed
 }
 
 export interface AuthState {
