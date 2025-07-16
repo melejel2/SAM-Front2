@@ -91,7 +91,7 @@ const LoginPage = () => {
                                     {showPassword ? <Icon icon={"eye-off"} /> : <Icon icon={"eye"} />}
                                 </button>
                             </label>
-                            {error && <div className="text-error">{error}</div>}
+                            {error && <div className="text-error">{String(error)}</div>}
 
                             <div className="text-end">
                                 <Link className="label-text text-base-content/80 text-xs" to="/auth/forgot-password">
