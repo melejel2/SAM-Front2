@@ -2,26 +2,28 @@ import { useState } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+import { Subcontractor, SubcontractorFormField, SubcontractorTableColumns } from "@/types/subcontractor";
 
 const useSubcontractors = () => {
-    const [tableData, setTableData] = useState<any[]>([]);
+    const [tableData, setTableData] = useState<Subcontractor[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
     const { getToken } = useAuth();
 
     const token = getToken();
 
-    const columns = {
+    const columns: SubcontractorTableColumns = {
         name: "Name",
-        code: "Code",
-        contactPerson: "Contact Person",
-        email: "Email",
-        phone: "Phone",
-        address: "Address",
-        status: "Status",
+        siegeSocial: "Company Headquarters",
+        commerceRegistrar: "Commerce Registrar",
+        commerceNumber: "Commerce Number",
+        taxNumber: "Tax Number",
+        representedBy: "Represented By",
+        qualityRepresentive: "Quality Representative",
+        subcontractorTel: "Phone",
     };
 
-    const inputFields = [
+    const inputFields: SubcontractorFormField[] = [
         {
             name: "name",
             label: "Name",
@@ -29,41 +31,46 @@ const useSubcontractors = () => {
             required: true,
         },
         {
-            name: "code",
-            label: "Code",
+            name: "siegeSocial",
+            label: "Company Headquarters",
             type: "text",
-            required: true,
+            required: false,
         },
         {
-            name: "contactPerson",
-            label: "Contact Person",
+            name: "commerceRegistrar",
+            label: "Commerce Registrar",
             type: "text",
-            required: true,
+            required: false,
         },
         {
-            name: "email",
-            label: "Email",
-            type: "email",
-            required: true,
+            name: "commerceNumber",
+            label: "Commerce Number",
+            type: "text",
+            required: false,
         },
         {
-            name: "phone",
+            name: "taxNumber",
+            label: "Tax Number",
+            type: "text",
+            required: false,
+        },
+        {
+            name: "representedBy",
+            label: "Represented By",
+            type: "text",
+            required: false,
+        },
+        {
+            name: "qualityRepresentive",
+            label: "Quality Representative",
+            type: "text",
+            required: false,
+        },
+        {
+            name: "subcontractorTel",
             label: "Phone",
             type: "text",
-            required: true,
-        },
-        {
-            name: "address",
-            label: "Address",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "status",
-            label: "Status",
-            type: "select",
-            required: true,
-            options: ["Active", "Inactive", "Blacklisted"],
+            required: false,
         },
     ];
 

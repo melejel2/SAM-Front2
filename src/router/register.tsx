@@ -73,18 +73,18 @@ const adminToolsRoutes: IRoutesProps[] = [
         path: "/admin-tools/templates",
         element: cw(lazy(() => import("@/pages/admin/adminTools/templates"))),
     },
-    {
-        path: "/admin-tools/sheets",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/sheets"))),
-    },
+    // {
+    //     path: "/admin-tools/sheets",
+    //     element: cw(lazy(() => import("@/pages/admin/adminTools/sheets"))),
+    // },
     {
         path: "/admin-tools/projects",
         element: cw(lazy(() => import("@/pages/admin/adminTools/projects"))),
     },
-    {
-        path: "/admin-tools/buildings",
-        element: cw(lazy(() => import("@/pages/admin/adminTools/buildings"))),
-    },
+    // {
+    //     path: "/admin-tools/buildings",
+    //     element: cw(lazy(() => import("@/pages/admin/adminTools/buildings"))),
+    // },
     {
         path: "/admin-tools/subcontractors",
         element: cw(lazy(() => import("@/pages/admin/adminTools/subcontractors"))),

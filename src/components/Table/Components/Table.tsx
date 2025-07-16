@@ -56,13 +56,38 @@ const StatusBadge = ({ value, type }: { value: string; type: 'status' | 'type' }
 
 // Helper function to extract text content from HTML strings
 const getTextContent = (value: any): string => {
-    if (typeof value === 'string' && value.includes('<')) {
-        // Extract text content from HTML
-        const div = document.createElement('div');
-        div.innerHTML = value;
-        return div.textContent || div.innerText || '';
+    try {
+        // Handle null, undefined, or empty values
+        if (value === null || value === undefined) {
+            return '';
+        }
+        
+        // Handle objects by converting to JSON string (for display purposes)
+        if (typeof value === 'object' && value !== null) {
+            // For arrays, join them
+            if (Array.isArray(value)) {
+                return value.join(', ');
+            }
+            // For objects, try to get a meaningful string representation
+            if (value.toString && value.toString !== Object.prototype.toString) {
+                return value.toString();
+            }
+            return JSON.stringify(value);
+        }
+        
+        // Handle HTML strings
+        if (typeof value === 'string' && value.includes('<')) {
+            const div = document.createElement('div');
+            div.innerHTML = value;
+            return div.textContent || div.innerText || '';
+        }
+        
+        // Handle all other types
+        return String(value);
+    } catch (error) {
+        console.error('Error in getTextContent:', error, 'Value:', value);
+        return String(value || '');
     }
-    return String(value || '');
 };
 
 interface TableProps {
@@ -248,12 +273,25 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Get unique values for a specific column
     const getUniqueColumnValues = (columnKey: string) => {
-        const values = tableData.map(row => {
-            const value = row[columnKey];
-            return getTextContent(value);
-        }).filter(value => value !== null && value !== undefined && value !== '');
-        const uniqueValues = [...new Set(values)].sort();
-        return uniqueValues;
+        try {
+            if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
+                return [];
+            }
+            
+            const values = tableData.map(row => {
+                if (!row || typeof row !== 'object') {
+                    return '';
+                }
+                const value = row[columnKey];
+                return getTextContent(value);
+            }).filter(value => value !== null && value !== undefined && value !== '');
+            
+            const uniqueValues = [...new Set(values)].sort();
+            return uniqueValues;
+        } catch (error) {
+            console.error(`Error getting unique values for column ${columnKey}:`, error);
+            return [];
+        }
     };
 
     // Handle column filter changes
@@ -452,10 +490,11 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Column Filter Dropdown Component
     const ColumnFilterDropdown = ({ columnKey, columnLabel }: { columnKey: string; columnLabel: string }) => {
-        const uniqueValues = getUniqueColumnValues(columnKey);
-        const selectedValues = columnFilters[columnKey] || [];
-        const isOpen = openFilterDropdown === columnKey;
-        const searchTerm = filterSearchTerms[columnKey] || '';
+        try {
+            const uniqueValues = getUniqueColumnValues(columnKey);
+            const selectedValues = columnFilters[columnKey] || [];
+            const isOpen = openFilterDropdown === columnKey;
+            const searchTerm = filterSearchTerms[columnKey] || '';
 
         // Filter unique values based on search term
         const filteredValues = uniqueValues.filter(value => 
@@ -613,6 +652,21 @@ const TableComponent: React.FC<TableProps> = ({
                 )}
             </div>
         );
+        } catch (error) {
+            console.error(`Error in ColumnFilterDropdown for column ${columnKey}:`, error);
+            return (
+                <div className="relative">
+                    <button
+                        type="button"
+                        className="ml-2 p-1 rounded hover:bg-base-300 transition-colors text-base-content/50"
+                        disabled
+                        title="Filter temporarily unavailable"
+                    >
+                        <span className="iconify lucide--filter-x size-3"></span>
+                    </button>
+                </div>
+            );
+        }
     };
 
     return (

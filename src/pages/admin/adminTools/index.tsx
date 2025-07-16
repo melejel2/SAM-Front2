@@ -20,6 +20,12 @@ interface IconContainerProps {
   title: string;
 }
 
+interface AdminToolCategory {
+  title: string;
+  description: string;
+  tools: Omit<AdminToolCardProps, 'isHovered' | 'onMouseEnter' | 'onMouseLeave'>[];
+}
+
 const IconContainer: React.FC<IconContainerProps> = ({
   icon,
   title,
@@ -113,107 +119,109 @@ AdminToolCard.displayName = 'AdminToolCard';
 const AdminToolsPage = () => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const adminTools = [
+  const adminToolCategories: AdminToolCategory[] = [
     {
-      title: 'Currencies',
-      icon: 'lucide--dollar-sign',
-      description: 'Manage currency settings and exchange rates',
-      path: '/admin-tools/currencies',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
+      title: 'System Settings',
+      description: '',
+      tools: [
+        {
+          title: 'Currencies',
+          icon: 'lucide--dollar-sign',
+          description: 'Manage currencies and exchange rates',
+          path: '/admin-tools/currencies',
+          status: 'active' as const,
+          colorClass: 'bg-emerald-600',
+        },
+        {
+          title: 'Units',
+          icon: 'lucide--pencil-ruler',
+          description: 'Configure measurement units',
+          path: '/admin-tools/units',
+          status: 'active' as const,
+          colorClass: 'bg-emerald-600',
+        }
+      ]
     },
     {
-      title: 'Units',
-      icon: 'lucide--pencil-ruler',
-      description: 'Configure measurement units and conversions',
-      path: '/admin-tools/units',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
+      title: 'Personnel',
+      description: '',
+      tools: [
+        {
+          title: 'Users',
+          icon: 'lucide--users',
+          description: 'Manage user accounts and permissions',
+          path: '/admin-tools/users',
+          status: 'active' as const,
+          colorClass: 'bg-blue-600',
+        },
+        {
+          title: 'Subcontractors',
+          icon: 'lucide--hard-hat',
+          description: 'Manage subcontractor contacts',
+          path: '/admin-tools/subcontractors',
+          status: 'active' as const,
+          colorClass: 'bg-blue-600',
+        }
+      ]
     },
     {
-      title: 'Users',
-      icon: 'lucide--users',
-      description: 'Manage user accounts and permissions',
-      path: '/admin-tools/users',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Trades',
-      icon: 'lucide--list',
-      description: 'Define and manage trade categories',
-      path: '/admin-tools/trades',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Cost Codes',
-      icon: 'lucide--cloud-rain',
-      description: 'Set up cost codes for project tracking',
-      path: '/admin-tools/cost-codes',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Sheets',
-      icon: 'lucide--file-spreadsheet',
-      description: 'Manage spreadsheet templates and configurations',
-      path: '/admin-tools/sheets',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Projects',
-      icon: 'lucide--folder',
-      description: 'Configure project settings and parameters',
-      path: '/admin-tools/projects',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Buildings',
-      icon: 'lucide--building',
-      description: 'Manage building information and structures',
-      path: '/admin-tools/buildings',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Subcontractors',
-      icon: 'lucide--hard-hat',
-      description: 'Manage subcontractor information and contacts',
-      path: '/admin-tools/subcontractors',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
-    },
-    {
-      title: 'Templates',
-      icon: 'lucide--file-text',
-      description: 'Manage all document templates (Contract, VO, and Other)',
-      path: '/admin-tools/templates',
-      status: 'active' as const,
-      colorClass: 'bg-blue-600',
+      title: 'Project Setup',
+      description: '',
+      tools: [
+        {
+          title: 'Templates',
+          icon: 'lucide--file-text',
+          description: 'Manage document templates',
+          path: '/admin-tools/templates',
+          status: 'active' as const,
+          colorClass: 'bg-purple-600',
+        },
+        {
+          title: 'Cost Codes',
+          icon: 'lucide--cloud-rain',
+          description: 'Set up cost codes for tracking',
+          path: '/admin-tools/cost-codes',
+          status: 'active' as const,
+          colorClass: 'bg-purple-600',
+        },
+        {
+          title: 'Trades',
+          icon: 'lucide--list',
+          description: 'Define trade categories',
+          path: '/admin-tools/trades',
+          status: 'active' as const,
+          colorClass: 'bg-purple-600',
+        }
+      ]
     }
   ];
 
   return (
     <div className="overflow-x-hidden relative">
-      <div className="relative flex justify-between items-center mb-6 px-0">
+      <div className="relative flex justify-between items-center mb-8 px-0">
         <h1 className="text-3xl font-bold text-base-content">Admin Tools</h1>
       </div>
 
-      <div className="relative mb-6 px-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {adminTools.map((tool) => (
-            <AdminToolCard
-              key={tool.title}
-              {...tool}
-              isHovered={hoveredCard === tool.title}
-              onMouseEnter={() => setHoveredCard(tool.title)}
-              onMouseLeave={() => setHoveredCard(null)}
-            />
-          ))}
-        </div>
+      <div className="space-y-8">
+        {adminToolCategories.map((category) => (
+          <div key={category.title} className="space-y-4">
+            <div className="border-l-4 border-primary pl-4">
+              <h2 className="text-xl font-semibold text-base-content">{category.title}</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {category.tools.map((tool) => (
+                <AdminToolCard
+                  key={tool.title}
+                  {...tool}
+                  isHovered={hoveredCard === tool.title}
+                  onMouseEnter={() => setHoveredCard(tool.title)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

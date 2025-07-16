@@ -34,7 +34,7 @@ const CostCodes = () => {
 
     return (
         <div>
-            {/* Header with Back Button */}
+            {/* Header with Back Button and Upload Button */}
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
                     <button
@@ -45,25 +45,24 @@ const CostCodes = () => {
                         <span>Back</span>
                     </button>
                 </div>
-            </div>
-
-            <div className="mb-4 flex justify-end">
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                />
-                <Button
-                    color="primary"
-                    size="sm"
-                    onClick={triggerFileInput}
-                    disabled={uploadLoading}
-                    loading={uploadLoading}
-                >
-                    {uploadLoading ? "Uploading..." : "Upload Excel"}
-                </Button>
+                <div className="flex items-center gap-3">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
+                    <Button
+                        color="primary"
+                        size="sm"
+                        onClick={triggerFileInput}
+                        disabled={uploadLoading}
+                        loading={uploadLoading}
+                    >
+                        {uploadLoading ? "Uploading..." : "Upload Excel"}
+                    </Button>
+                </div>
             </div>
             <div>
                 {loading ? (

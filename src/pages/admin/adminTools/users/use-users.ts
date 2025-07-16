@@ -2,16 +2,17 @@ import { useState } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+import { User, UserFormField, UserTableColumns, UserRole } from "@/types/user";
 
 const useUsers = () => {
-    const [tableData, setTableData] = useState<any[]>([]);
+    const [tableData, setTableData] = useState<User[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
     const { getToken } = useAuth();
 
     const token = getToken();
 
-    const columns = {
+    const columns: UserTableColumns = {
         firstName: "First Name",
         lastName: "Last Name",
         phone: "Phone",
@@ -21,7 +22,7 @@ const useUsers = () => {
         userRole: "Role",
     };
 
-    const inputFields = [
+    const inputFields: UserFormField[] = [
         {
             name: "firstName",
             label: "First Name",
@@ -58,17 +59,17 @@ const useUsers = () => {
             type: "password",
             required: true,
         },
-
         {
             name: "userRole",
             label: "Role",
             type: "select",
             required: true,
             options: [
-                "RegionalOperationsManager",
                 "GeneralManager",
+                "RegionalOperationsManager",
                 "OperationsManager",
                 "ContractsManager",
+                "QuantitySurveyor",
                 "Accountant",
                 "Admin",
             ],
@@ -79,14 +80,23 @@ const useUsers = () => {
         setLoading(true);
 
         try {
-            const data = await apiRequest({ endpoint: "Users/GetUsers", method: "GET", token: token ?? "" });
-            if (data) {
+            const data = await apiRequest<User[]>({ endpoint: "Users/GetUsers", method: "GET", token: token ?? "" });
+            
+            // Check if response is an error object
+            if (data && typeof data === 'object' && 'isSuccess' in data && !data.isSuccess) {
+                console.error("API returned error:", data);
+                setTableData([]);
+                return;
+            }
+            
+            if (data && Array.isArray(data)) {
                 setTableData(data);
             } else {
                 setTableData([]);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Error fetching users:", error);
+            setTableData([]);
         } finally {
             setLoading(false);
         }

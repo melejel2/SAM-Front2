@@ -13,19 +13,13 @@ const useUnits = () => {
 
     const columns = {
         name: "Name",
-        symbol: "Symbol",
+        created: "Created Date",
     };
 
     const inputFields = [
         {
             name: "name",
             label: "Name",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "symbol",
-            label: "Symbol",
             type: "text",
             required: true,
         },
@@ -41,7 +35,16 @@ const useUnits = () => {
                 token: token ?? "",
             });
             if (data) {
-                setTableData(data);
+                // Format the created date for each unit
+                const formattedData = data.map((unit: any) => ({
+                    ...unit,
+                    created: unit.created ? new Date(unit.created).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    }) : ''
+                }));
+                setTableData(formattedData);
             } else {
                 setTableData([]);
             }

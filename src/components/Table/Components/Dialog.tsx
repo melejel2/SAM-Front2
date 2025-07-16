@@ -301,7 +301,11 @@ const DialogComponent: React.FC<DialogProps> = ({
                     const isContractTemplate = title.includes("Contract Template");
                     const isVoParam = isContractTemplate ? "false" : "true";
                     deleteEndPointWithId = `${deleteEndPoint}?id=${current?.id}&isVo=${isVoParam}`;
+                } else if (deleteEndPoint.includes("{id}")) {
+                    // Handle path parameter format
+                    deleteEndPointWithId = deleteEndPoint.replace("{id}", current?.id);
                 } else {
+                    // Handle query parameter format
                     deleteEndPointWithId = `${deleteEndPoint}?id=${current?.id}`;
                 }
             }
@@ -461,20 +465,23 @@ const DialogComponent: React.FC<DialogProps> = ({
                 );
             } else {
                 return (
-                    <label
-                        className="input input-sm input-bordered flex w-full flex-col items-center gap-2 sm:flex-row"
-                        key={name}>
-                        <span className="min-w-16 text-sm font-normal opacity-45 md:min-w-28">
-                            {label.charAt(0).toUpperCase() + label.slice(1)}
-                        </span>
+                    <div className="form-control w-full" key={name}>
+                        <label className="label">
+                            <span className="label-text text-sm font-normal opacity-70">
+                                {label.charAt(0).toUpperCase() + label.slice(1)}
+                                {required && <span className="text-error ml-1">*</span>}
+                            </span>
+                        </label>
                         <input
                             type={type}
                             name={name}
                             value={formData[name]}
+                            placeholder={`Enter ${label.toLowerCase()}`}
                             required={required}
                             onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
+                            className="input input-sm input-bordered w-full focus:input-primary"
                         />
-                    </label>
+                    </div>
                 );
             }
         }

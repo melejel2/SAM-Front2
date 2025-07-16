@@ -1,10 +1,9 @@
 import { ReactNode, createContext, useCallback, useContext } from "react";
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { AuthState, AuthUser } from "@/types/user";
 
-type IAuthState = {
-    user?: any;
-};
+type IAuthState = AuthState;
 
 const useHook = () => {
     const [authState, setState] = useLocalStorage<IAuthState>("__SAM_ADMIN_AUTH__", {
@@ -20,7 +19,7 @@ const useHook = () => {
         }));
     };
 
-    const setLoggedInUser = (user: any) => {
+    const setLoggedInUser = (user: AuthUser) => {
         accessToken = user.token;
         updateState({ user });
     };

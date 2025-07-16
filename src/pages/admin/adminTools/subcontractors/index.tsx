@@ -50,7 +50,7 @@ const Subcontractors = () => {
                         addBtn
                         editEndPoint="Subcontractors/UpdateSubcontractor"
                         createEndPoint="Subcontractors/CreateSubcontractor"
-                        deleteEndPoint="Subcontractors/DeleteSubcontractor"
+                        deleteEndPoint="Subcontractors/DeleteSubcontractor/{id}"
                         onSuccess={getSubcontractors}
                     />
                 )}

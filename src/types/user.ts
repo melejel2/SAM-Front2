@@ -1,0 +1,89 @@
+// User Types matching the backend API
+
+export type UserRole = 
+  | 'GeneralManager'
+  | 'RegionalOperationsManager'
+  | 'OperationsManager'
+  | 'ContractsManager'
+  | 'QuantitySurveyor'
+  | 'Accountant'
+  | 'Admin';
+
+export interface User {
+  id: number;
+  userName: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  userRole: UserRole;
+}
+
+export interface UserFormData {
+  userName: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  userRole: UserRole;
+}
+
+export type UserCreateRequest = UserFormData;
+
+export interface UserUpdateRequest extends UserFormData {
+  id: number;
+}
+
+export interface UserApiResponse {
+  isSuccess: boolean;
+  success?: boolean; // For backward compatibility
+  message?: string;
+  data?: User;
+  status?: number;
+}
+
+export interface UserApiError {
+  isSuccess: false;
+  success: false;
+  message: string;
+  status?: number;
+}
+
+// Generic API response type that matches the backend API structure
+export interface ApiResponse<T = any> {
+  isSuccess: boolean;
+  success?: boolean; // For backward compatibility
+  message?: string;
+  data?: T;
+  status?: number;
+}
+
+// Form field configuration for the user form
+export interface UserFormField {
+  name: keyof UserFormData;
+  label: string;
+  type: 'text' | 'email' | 'password' | 'select';
+  required: boolean;
+  options?: UserRole[];
+}
+
+// Display columns for the user table
+export type UserTableColumns = {
+  [K in keyof Omit<User, 'id' | 'password'>]: string;
+};
+
+// Auth context user type
+export interface AuthUser {
+  token: string;
+  roleid: number;
+  username?: string;
+  userName?: string;
+  userCode?: string;
+  // Add other auth-related user properties as needed
+}
+
+export interface AuthState {
+  user?: AuthUser;
+}
