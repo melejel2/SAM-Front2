@@ -11,7 +11,7 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isTermsAgreed, setIsTermsAgreed] = useState<boolean>(false);
 
-    const { onSubmit, databases, isLoading, error } = useLogin();
+    const { onSubmit, databases, isLoading, isMicrosoftLoading, error, onMicrosoftLogin } = useLogin();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [selectedDb, setSelectedDb] = useState(databases[0] ?? "");
@@ -122,13 +122,24 @@ const LoginPage = () => {
                         <Button
                             color="ghost"
                             className="btn-wide border-base-300 max-w-full gap-3"
-                            disabled={!isTermsAgreed || isLoading || !selectedDb}>
-                            <img
-                                src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
-                                className="size-4.5"
-                                alt="Microsoft Logo"
-                            />
-                            Sign in with Microsoft
+                            type="button"
+                            disabled={!isTermsAgreed || isLoading || isMicrosoftLoading || !selectedDb || selectedDb === "Select Database"}
+                            onClick={() => onMicrosoftLogin(selectedDb)}>
+                            {isMicrosoftLoading ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    <span>Signing in...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <img
+                                        src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
+                                        className="size-4.5"
+                                        alt="Microsoft Logo"
+                                    />
+                                    <span>Sign in with Microsoft</span>
+                                </>
+                            )}
                         </Button>
                         <p className="text-base-content/80 mt-4 text-center text-sm md:mt-6">
                             Haven&apos;t account

@@ -28,7 +28,8 @@ export const ROLE_PERMISSIONS = {
 
 export const checkPermission = (userRole: UserRole | undefined, permission: keyof typeof ROLE_PERMISSIONS): boolean => {
   if (!userRole) return false;
-  return ROLE_PERMISSIONS[permission].includes(userRole);
+  const allowedRoles = ROLE_PERMISSIONS[permission] as readonly UserRole[];
+  return allowedRoles.includes(userRole);
 };
 
 export const isAdmin = (userRole: UserRole | undefined): boolean => {
