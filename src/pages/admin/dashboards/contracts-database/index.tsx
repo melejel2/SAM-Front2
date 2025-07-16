@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -105,11 +105,12 @@ const ContractsDatabase = () => {
     const [exportingWord, setExportingWord] = useState(false);
     const [exportingZip, setExportingZip] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         getContractsDatasets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [location.pathname]);
 
 
 

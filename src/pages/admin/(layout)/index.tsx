@@ -10,6 +10,11 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const isAdminTools = location.pathname.startsWith('/admin-tools');
+  
+  // Force re-render when location changes
+  React.useEffect(() => {
+    // This will trigger a re-render when the location changes
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen app-background">

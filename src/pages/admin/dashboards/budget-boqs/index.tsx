@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
@@ -12,6 +12,7 @@ const BudgetBOQs = () => {
     const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const { 
         columns, 
@@ -79,11 +80,14 @@ const BudgetBOQs = () => {
     };
 
     useEffect(() => {
-        getProjectsList();
-    }, []);
+        // Only fetch data if we're actually on the budget-boqs page
+        if (location.pathname === '/dashboard/budget-BOQs') {
+            getProjectsList();
+        }
+    }, [location.pathname]);
 
     return (
-        <div>
+        <div key={location.pathname}>
             {/* Header with Back Button */}
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">

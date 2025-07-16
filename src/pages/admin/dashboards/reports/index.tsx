@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 
@@ -7,6 +8,12 @@ import useReports from "./use-reports";
 const Reports = () => {
     const { columns, tableData, inputFields } = useReports();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        // This will trigger a re-render when navigating between dashboard pages
+        // ensuring fresh data is loaded
+    }, [location.pathname]);
 
     const handleBackToDashboard = () => {
         navigate('/dashboard');

@@ -178,11 +178,12 @@ const useBudgetBOQs = () => {
         }
     };
 
-    useEffect(() => {
-        if (token) {
-            getProjectsList();
-        }
-    }, [token]);
+    // Remove automatic token-based fetch to prevent conflicts with location-based fetch
+    // useEffect(() => {
+    //     if (token) {
+    //         getProjectsList();
+    //     }
+    // }, [token]);
 
     return {
         columns,

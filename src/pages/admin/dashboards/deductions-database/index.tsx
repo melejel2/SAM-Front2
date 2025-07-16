@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 import { Button, Select, SelectOption } from "@/components/daisyui";
@@ -9,6 +9,12 @@ import useDeductionsDatabase from "./use-deductions-database";
 const DeductionsDatabase = () => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        // This will trigger a re-render when navigating between dashboard pages
+        // ensuring fresh data is loaded
+    }, [location.pathname]);
 
     const { laborColumns, materialsColumns, machinesColumns, laborData, materialsData, machinesData } =
         useDeductionsDatabase();

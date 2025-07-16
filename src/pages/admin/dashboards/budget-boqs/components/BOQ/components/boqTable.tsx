@@ -49,7 +49,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
         } else {
             setTableData([]);
         }
-    }, [selectedBuilding, projectData, selectedTrade, processBoqData]);
+    }, [selectedBuilding, projectData, selectedTrade]);
 
     const handleSheetSelect = (sheetId: number) => {
         const sheet = sheets.find((s: any) => s.id === sheetId);

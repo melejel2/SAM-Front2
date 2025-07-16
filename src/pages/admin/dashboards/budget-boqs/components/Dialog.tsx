@@ -112,7 +112,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
             setBuildings([]);
             setSelectedTrade(null);
         }
-    }, [selectedProject, dialogType, getBuildingsList, openProject, setProjectData, setBuildings, setSelectedTrade, toaster]);
+    }, [selectedProject, dialogType]);
 
     return (
         <>

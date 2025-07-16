@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -85,6 +85,7 @@ const ExportDropdown = ({
 
 const SubcontractorsBOQs = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { toaster } = useToast();
     const { getToken } = useAuth();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
@@ -105,7 +106,7 @@ const SubcontractorsBOQs = () => {
     useEffect(() => {
         getContractsDatasets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [location.pathname]);
 
     const handlePreviewContract = async (row: any) => {
         const result = await previewContract(row.id);

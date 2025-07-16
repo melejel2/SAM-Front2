@@ -413,74 +413,42 @@
     font-size: 12px !important;
 }
 
-/* == Table Scroll Animations == */
+/* == Minimal Table Scroll Indicators == */
 
-@keyframes scroll-hint {
-    0% { transform: translateX(0); }
-    30% { transform: translateX(20px); }
-    60% { transform: translateX(20px); }
-    100% { transform: translateX(0); }
+/* Hide scrollbar for cleaner look while maintaining functionality */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
 }
 
-@keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
 }
 
-@keyframes scroll-indicator-pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.9; }
+/* Optional: Thin scrollbar variant */
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
 }
 
-@keyframes smooth-pulse {
-    0%, 100% { 
-        opacity: 0.8;
-        transform: scale(1);
-    }
-    50% { 
-        opacity: 1;
-        transform: scale(1.2);
-    }
-}
-
-@keyframes subtle-glow {
-    0%, 100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
-    50% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
-}
-
-.animate-scroll-hint {
-    animation: scroll-hint 2s ease-in-out;
-}
-
-.animate-fade-in {
-    animation: fade-in 0.3s ease-in;
-}
-
-.animate-scroll-indicator {
-    animation: scroll-indicator-pulse 1.5s ease-in-out infinite;
-}
-
-.animate-smooth-pulse {
-    animation: smooth-pulse 1s ease-in-out infinite;
-}
-
-/* Custom scrollbar styling */
-.overflow-x-auto::-webkit-scrollbar {
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
     height: 6px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-track {
+.scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.5);
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
     border-radius: 3px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.7);
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(156 163 175);
 }
+
 
 /* == FilePond Styling == */
 

@@ -3,7 +3,6 @@ import React, { useMemo, useState } from "react";
 import { Button, Pagination, useDialog, Checkbox } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
 import SearchInput from "@/components/SearchInput";
-import { PageScrollTracker } from "@/utils/pageScrollTracker";
 
 import DialogComponent from "./Dialog";
 
@@ -186,7 +185,9 @@ const TableComponent: React.FC<TableProps> = ({
     // Scroll indicator states
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
-    const [showScrollHint, setShowScrollHint] = useState(false);
+    const [scrollPercentage, setScrollPercentage] = useState(0);
+    const [showInitialHint, setShowInitialHint] = useState(false);
+    const [hintShownOnce, setHintShownOnce] = useState(false);
     const [isMouseDown, setIsMouseDown] = useState(false);
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
@@ -204,32 +205,25 @@ const TableComponent: React.FC<TableProps> = ({
         const container = tableContainerRef.current;
         if (container) {
             const { scrollLeft, scrollWidth, clientWidth } = container;
-            setCanScrollLeft(scrollLeft > 0);
-            setCanScrollRight(scrollLeft < scrollWidth - clientWidth);
+            const maxScroll = scrollWidth - clientWidth;
             
-            // Show scroll hint if can scroll right and not shown yet for this page
-            const pageKey = PageScrollTracker.generatePageKey();
-            if (scrollLeft === 0 && scrollWidth > clientWidth && 
-                !showScrollHint && !PageScrollTracker.hasShownScrollHint(pageKey)) {
-                setShowScrollHint(true);
-                PageScrollTracker.markScrollHintShown(pageKey);
-                
-                // Smoother scroll movement with better timing
-                setTimeout(() => {
-                    if (container && container.scrollLeft === 0) {
-                        container.scrollTo({ left: 25, behavior: 'smooth' });
-                        setTimeout(() => {
-                            if (container) {
-                                container.scrollTo({ left: 0, behavior: 'smooth' });
-                            }
-                        }, 600);
-                    }
-                }, 300);
-                // Hide hint after animation
-                setTimeout(() => setShowScrollHint(false), 2200);
+            setCanScrollLeft(scrollLeft > 0);
+            setCanScrollRight(scrollLeft < maxScroll);
+            
+            // Calculate scroll percentage for gradient opacity
+            if (maxScroll > 0) {
+                setScrollPercentage(scrollLeft / maxScroll);
+            }
+            
+            // Show initial hint only once when table becomes scrollable
+            if (!hintShownOnce && maxScroll > 0) {
+                setHintShownOnce(true);
+                setShowInitialHint(true);
+                // Hide hint after 3 seconds
+                setTimeout(() => setShowInitialHint(false), 3000);
             }
         }
-    }, [showScrollHint]);
+    }, [hintShownOnce]);
 
     // Mouse drag scrolling handlers
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -413,7 +407,7 @@ const TableComponent: React.FC<TableProps> = ({
                 window.removeEventListener('resize', handleResize);
             };
         }
-    }, [paginatedData, showScrollHint, checkScrollCapability]);
+    }, [paginatedData]);
 
     // Sorting behavior
     const handleSort = (column: string) => {
@@ -702,7 +696,7 @@ const TableComponent: React.FC<TableProps> = ({
                 <div 
                     ref={tableContainerRef}
                     className={cn(
-                        "overflow-x-auto overflow-y-auto flex-1 min-h-0 relative",
+                        "overflow-x-auto overflow-y-auto flex-1 min-h-0 relative scrollbar-thin",
                         "scroll-smooth",
                         isMouseDown ? "cursor-grabbing select-none" : "cursor-auto"
                     )}
@@ -715,27 +709,31 @@ const TableComponent: React.FC<TableProps> = ({
                         scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
                     }}
                 >
-                    {/* Left scroll indicator - no background shadow */}
-                    {canScrollLeft && (
-                        <div className="absolute left-0 top-0 bottom-0 z-10 w-4 pointer-events-none flex items-center justify-center">
-                            <div className="w-0.5 h-8 bg-base-content/40 rounded-full animate-fade-in"></div>
-                        </div>
-                    )}
+                    {/* Minimal gradient scroll indicators */}
+                    <div 
+                        className={cn(
+                            "absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-base-100 to-transparent pointer-events-none z-10 transition-opacity duration-300",
+                            canScrollLeft ? "opacity-100" : "opacity-0"
+                        )}
+                    />
+                    <div 
+                        className={cn(
+                            "absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-base-100 to-transparent pointer-events-none z-10 transition-opacity duration-300",
+                            canScrollRight ? "opacity-100" : "opacity-0"
+                        )}
+                    />
                     
-                    {/* Right scroll indicator - no background shadow */}
-                    {canScrollRight && (
-                        <div className="absolute right-0 top-0 bottom-0 z-10 w-4 pointer-events-none flex items-center justify-center">
-                            <div className={cn(
-                                "w-0.5 h-8 rounded-full transition-all duration-200",
-                                showScrollHint ? "bg-blue-400 animate-smooth-pulse" : "bg-base-content/40 animate-fade-in"
-                            )}></div>
-                        </div>
-                    )}
-                    
-                    {/* Scroll hint overlay - shows "Scroll →" text */}
-                    {showScrollHint && canScrollRight && (
-                        <div className="absolute top-2 right-8 z-20 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-medium pointer-events-none animate-fade-in">
-                            Scroll →
+                    {/* Minimal one-time scroll hint */}
+                    {showInitialHint && canScrollRight && (
+                        <div className={cn(
+                            "absolute top-1/2 right-4 -translate-y-1/2 z-20",
+                            "bg-base-content/10 backdrop-blur-sm rounded-full p-2",
+                            "transition-all duration-500",
+                            showInitialHint ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
+                        )}>
+                            <svg className="w-5 h-5 text-base-content/60 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
                         </div>
                     )}
                     

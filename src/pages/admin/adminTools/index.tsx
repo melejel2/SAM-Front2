@@ -198,9 +198,7 @@ const AdminToolsPage = () => {
 
   return (
     <div className="overflow-x-hidden relative">
-      <div className="relative flex justify-between items-center mb-8 px-0">
-        <h1 className="text-3xl font-bold text-base-content">Admin Tools</h1>
-      </div>
+
 
       <div className="space-y-8">
         {adminToolCategories.map((category) => (
