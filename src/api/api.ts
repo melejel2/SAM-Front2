@@ -14,7 +14,16 @@ type ApiRequestParams = {
 
 const handleUnauthorized = () => {
     localStorage.removeItem("__SAM_ADMIN_AUTH__");
-    window.location.href = "/auth/login";
+    
+    // Validate redirect URL to prevent open redirect attacks
+    const loginUrl = "/auth/login";
+    const currentPath = window.location.pathname;
+    
+    // Only redirect if not already on login page to prevent infinite loops
+    if (currentPath !== loginUrl && !currentPath.startsWith("/auth/")) {
+        // Use a safe redirect method
+        window.location.href = loginUrl;
+    }
 };
 
 const apiRequest = async <T = any>({

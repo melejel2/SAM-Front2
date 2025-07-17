@@ -709,19 +709,6 @@ const TableComponent: React.FC<TableProps> = ({
                         scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
                     }}
                 >
-                    {/* Minimal gradient scroll indicators */}
-                    <div 
-                        className={cn(
-                            "absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-base-100 to-transparent pointer-events-none z-10 transition-opacity duration-300",
-                            canScrollLeft ? "opacity-100" : "opacity-0"
-                        )}
-                    />
-                    <div 
-                        className={cn(
-                            "absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-base-100 to-transparent pointer-events-none z-10 transition-opacity duration-300",
-                            canScrollRight ? "opacity-100" : "opacity-0"
-                        )}
-                    />
                     
                     {/* Minimal one-time scroll hint */}
                     {showInitialHint && canScrollRight && (

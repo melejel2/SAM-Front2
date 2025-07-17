@@ -46,7 +46,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                     </div>
                     <button 
                         className="btn btn-primary"
-                        onClick={() => window.location.reload()}
+                        onClick={() => {
+                            // Safe page reload with confirmation
+                            if (window.confirm("Are you sure you want to reload the page? Any unsaved changes will be lost.")) {
+                                window.location.reload();
+                            }
+                        }}
                     >
                         Reload Page
                     </button>

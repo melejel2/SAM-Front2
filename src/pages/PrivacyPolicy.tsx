@@ -14,7 +14,7 @@ const PrivacyPolicy = () => {
                     <section>
                         <h2 className="text-xl font-semibold">1. Introduction</h2>
                         <p>
-                            Welcome to Purchasing Administrative Management (SAM). This Privacy Policy explains how we
+                            Welcome to Subcontracts Administrative Management (SAM). This Privacy Policy explains how we
                             collect, use, and share information when you use our app ("App"). We are committed to
                             protecting your privacy and ensuring that your personal information is handled responsibly.
                         </p>
@@ -28,8 +28,8 @@ const PrivacyPolicy = () => {
                                 an account or interact with our support team.
                             </li>
                             <li>
-                                <strong>Account Information:</strong> Details related to your account, including order
-                                history, procurement details, site data, and preferences.
+                                <strong>Account Information:</strong> Details related to your account, including contract
+                                history, subcontractor details, project data, and preferences.
                             </li>
                             <li>
                                 <strong>Device Information:</strong> Data about the device you use to access the App,
@@ -37,8 +37,8 @@ const PrivacyPolicy = () => {
                             </li>
                             <li>
                                 <strong>Usage Data:</strong> We may collect information about your interactions with the
-                                App, including requisitions, purchase orders, deliveries, and stock management
-                                activities.
+                                App, including subcontractor management, contract processing, project tracking, and
+                                administrative activities.
                             </li>
                             <li>
                                 <strong>Support Chat Data:</strong> Content from your interactions with our support team
@@ -50,15 +50,15 @@ const PrivacyPolicy = () => {
                         <h2 className="text-xl font-semibold">3. How We Use Your Information</h2>
                         <ul className="ml-4 list-inside list-disc space-y-2">
                             <li>
-                                To provide, maintain, and improve the App’s core functionality, including requisition
-                                processing, stock management, and purchase orders.
+                                To provide, maintain, and improve the App’s core functionality, including subcontractor
+                                management, contract processing, and project administration.
                             </li>
                             <li>
                                 To customize your experience by showing relevant features and options based on your
                                 activity.
                             </li>
                             <li>
-                                To communicate with you about orders, delivery statuses, and procurement-related
+                                To communicate with you about contracts, project statuses, and subcontractor-related
                                 activities.
                             </li>
                             <li>

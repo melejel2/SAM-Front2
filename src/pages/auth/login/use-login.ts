@@ -6,6 +6,7 @@ import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import { loginRequest } from "@/config/msal";
+import { sanitizeInput, isValidEmail, isValidDatabaseName } from "@/utils/security";
 
 const useLogin = () => {
     const navigate = useNavigate();
@@ -32,12 +33,31 @@ const useLogin = () => {
 
     const onSubmit = async (data: LoginSchemaType) => {
         setIsLoading(true);
-        const loginData = {
-            userName: data.username,
-            password: data.password,
-            dataBaseName: data.db,
-        };
         setError(null);
+
+        // Validate and sanitize input
+        const sanitizedUsername = sanitizeInput(data.username);
+        const sanitizedDb = sanitizeInput(data.db);
+
+        // Validate email format
+        if (!isValidEmail(sanitizedUsername)) {
+            setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
+
+        // Validate database name
+        if (!isValidDatabaseName(sanitizedDb)) {
+            setError("Invalid database selection");
+            setIsLoading(false);
+            return;
+        }
+
+        const loginData = {
+            userName: sanitizedUsername,
+            password: data.password, // Don't sanitize password as it may contain special characters
+            dataBaseName: sanitizedDb,
+        };
 
         try {
             const response: any = await apiRequest({
@@ -89,6 +109,11 @@ const useLogin = () => {
             
             if (!email) {
                 throw new Error("Email not found in Microsoft account.");
+            }
+
+            // Validate email format
+            if (!isValidEmail(email as string)) {
+                throw new Error("Invalid email format from Microsoft account.");
             }
 
             // Step 3: Send email and database to your backend for authentication
