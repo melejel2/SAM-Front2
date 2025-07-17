@@ -129,6 +129,9 @@ interface TableProps {
     deleteEndPoint?: string;
     hasSheets?: boolean;
     sheets?: any[];
+    activeSheetId?: number;
+    onSheetSelect?: (sheetId: number) => void;
+    customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
 }
@@ -161,6 +164,9 @@ const TableComponent: React.FC<TableProps> = ({
     onSuccess,
     hasSheets = false,
     sheets = [],
+    activeSheetId: externalActiveSheetId,
+    onSheetSelect,
+    customHeaderContent,
     rowsPerPage = 10,
     previewLoadingRowId: externalPreviewLoadingRowId,
 }) => {
@@ -172,7 +178,7 @@ const TableComponent: React.FC<TableProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const { dialogRef, handleShow, handleHide } = useDialog();
     const [selectedRow, setSelectedRow] = useState<any>();
-    const [activeSheetId, setActiveSheetId] = useState<number>(sheets[0]?.id ?? 0);
+    const [activeSheetId, setActiveSheetId] = useState<number>(externalActiveSheetId ?? sheets[0]?.id ?? 0);
     const [internalPreviewLoadingRowId, setInternalPreviewLoadingRowId] = useState<string | null>(null);
     const previewLoadingRowId = externalPreviewLoadingRowId ?? internalPreviewLoadingRowId;
     
@@ -668,7 +674,7 @@ const TableComponent: React.FC<TableProps> = ({
             <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col max-h-[85vh]">
                 <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
                     <div className="flex flex-col items-start justify-start space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                        {/* Left side with "New" button and (conditionally) the toggle */}
+                        {/* Left side with "New" button and custom content */}
                         <div className="flex items-center space-x-2">
                             {addBtn ? (
                                 <Button
@@ -680,17 +686,20 @@ const TableComponent: React.FC<TableProps> = ({
                             ) : (
                                 <span className="hidden lg:block"></span>
                             )}
+                            {customHeaderContent}
                         </div>
 
                         {/* Right side with search */}
-                        <SearchInput
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            placeholder="Search data"
-                            showResultsCount={true}
-                            resultsCount={filteredData.length}
-                            size="md"
-                        />
+                        <div className="flex items-center gap-4">
+                            <SearchInput
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                placeholder="Search data"
+                                showResultsCount={true}
+                                resultsCount={filteredData.length}
+                                size="md"
+                            />
+                        </div>
                     </div>
                 </div>
                 <div 
@@ -779,8 +788,9 @@ const TableComponent: React.FC<TableProps> = ({
                                             Loading...
                                         </td>
                                     </tr>
-                                ) : paginatedData.length > 0 ? (
-                                    paginatedData.map((row, index) => {
+                                ) : (
+                                    <>
+                                        {paginatedData.map((row, index) => {
                                         const rowAction = rowActions?.(row);
 
                                         return (
@@ -911,15 +921,47 @@ const TableComponent: React.FC<TableProps> = ({
                                                 )}
                                             </tr>
                                         );
-                                    })
-                                ) : (
-                                    <tr className="hover:bg-base-200 cursor-pointer">
-                                        <td
-                                            colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
-                                            className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 italic text-xs sm:text-sm">
-                                            No data available
-                                        </td>
-                                    </tr>
+                                        })}
+                                    
+                                        {/* Fill remaining rows to always show 6 rows */}
+                                        {Array.from({ length: Math.max(0, 6 - paginatedData.length) }).map((_, index) => (
+                                        <tr key={`empty-${index}`} className="hover:bg-base-200">
+                                            {select && (
+                                                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-16">
+                                                    &nbsp;
+                                                </td>
+                                            )}
+                                            {Object.keys(columns).map((columnKey) => (
+                                                <td
+                                                    key={columnKey}
+                                                    className={cn(
+                                                        "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content break-words min-w-0",
+                                                        columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
+                                                        columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
+                                                        columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
+                                                    )}>
+                                                    &nbsp;
+                                                </td>
+                                            ))}
+                                            {actions && (
+                                                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28">
+                                                    &nbsp;
+                                                </td>
+                                            )}
+                                        </tr>
+                                        ))}
+                                    
+                                        {/* Show "No data available" message only if there are no rows at all */}
+                                        {paginatedData.length === 0 && (
+                                            <tr className="hover:bg-base-200">
+                                                <td
+                                                    colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                                    className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 italic text-xs sm:text-sm">
+                                                    No data available
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </>
                                 )}
                             </tbody>
                     </table>
@@ -1006,13 +1048,25 @@ const TableComponent: React.FC<TableProps> = ({
                             <span
                                 key={sheet.id}
                                 className={cn(
-                                    "min-w-max cursor-pointer px-3 py-1 text-center text-sm transition-colors duration-150",
+                                    "min-w-max cursor-pointer px-3 py-2 text-center text-sm transition-all duration-200 relative border-b-2",
                                     sheet.id === activeSheetId
-                                        ? "bg-base-300 border-base-300 text-base-content"
-                                        : "bg-base-200 text-base-content/50 border-base-content/20 hover:bg-base-300",
+                                        ? sheet.hasData
+                                            ? "text-primary border-primary bg-primary/5"
+                                            : "text-base-content border-base-content/20 bg-base-200"
+                                        : sheet.hasData
+                                            ? "text-base-content hover:text-primary border-transparent hover:border-primary/30"
+                                            : "text-base-content/50 border-transparent hover:text-base-content/70",
                                 )}
-                                onClick={() => setActiveSheetId(sheet.id)}>
+                                onClick={() => {
+                                    setActiveSheetId(sheet.id);
+                                    onSheetSelect?.(sheet.id);
+                                }}>
                                 {sheet.name}
+                                {sheet.itemCount > 0 && (
+                                    <span className="ml-1 text-xs opacity-60">
+                                        ({sheet.itemCount})
+                                    </span>
+                                )}
                             </span>
                         ))}
                     </div>

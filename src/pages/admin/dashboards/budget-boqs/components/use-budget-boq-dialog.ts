@@ -211,18 +211,29 @@ const useBudgetBOQsDialog = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount)) return '0.00';
+        if (!amount || isNaN(amount)) return '0.0';
+        return new Intl.NumberFormat('en-US', {
+            style: 'decimal',
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        }).format(amount);
+    };
+
+    const formatQuantity = (quantity: number) => {
+        if (!quantity || isNaN(quantity)) return '0.00';
         return new Intl.NumberFormat('en-US', {
             style: 'decimal',
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(amount);
+        }).format(quantity);
     };
 
     const processBoqData = (boqItems: BOQItem[]) => {
         return boqItems.map(item => ({
             ...item,
-            total_price: calculateTotal(item)
+            qte: formatQuantity(item.qte),
+            pu: formatCurrency(item.pu),
+            total_price: formatCurrency(calculateTotal(item))
         }));
     };
 
@@ -315,6 +326,7 @@ const useBudgetBOQsDialog = () => {
         clearBoq,
         calculateTotal,
         formatCurrency,
+        formatQuantity,
         processBoqData,
         getBuildingsList,
         openProject,

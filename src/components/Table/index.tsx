@@ -46,6 +46,9 @@ interface SAMTableProps {
     deleteEndPoint?: string;
     hasSheets?: boolean;
     sheets?: any[];
+    activeSheetId?: number;
+    onSheetSelect?: (sheetId: number) => void;
+    customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
 }
@@ -76,6 +79,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
     deleteEndPoint,
     hasSheets = false,
     sheets = [],
+    activeSheetId,
+    onSheetSelect,
+    customHeaderContent,
     rowsPerPage,
     previewLoadingRowId,
 }) => {
@@ -110,6 +116,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onSuccess={onSuccess}
                             hasSheets={hasSheets}
                             sheets={sheets}
+                            activeSheetId={activeSheetId}
+                            onSheetSelect={onSheetSelect}
+                            customHeaderContent={customHeaderContent}
                             rowsPerPage={rowsPerPage}
                             exportAction={exportAction}
                             generateAction={generateAction}

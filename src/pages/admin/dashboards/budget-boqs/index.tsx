@@ -37,6 +37,13 @@ const BudgetBOQs = () => {
             setSelectedProject(null);
             setSelectedProjectInHook(null);
         }
+        
+        // Navigate to edit page for Edit action
+        if (type === "Edit" && data) {
+            navigate(`/dashboard/budget-BOQs/edit/${data.id}`);
+            return;
+        }
+        
         handleShow();
     };
 
