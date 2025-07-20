@@ -11,20 +11,20 @@ const useSubcontractorsBOQs = () => {
     const token = getToken();
 
     const columns = {
-        contractNumber: "Contract Number",
+        contractNumber: "Number",
         projectName: "Project",
         subcontractorName: "Subcontractor",
         tradeName: "Trade",
         contractDate: "Date of Signature",
         completionDate: "End Date",
-        amount: "Contract Amount",
+        amount: "Amount",
         status: "Status",
     };
 
     const inputFields = [
         {
             name: "contractNb",
-            label: "Contract Number",
+            label: "Number",
             type: "text",
             required: true,
         },
@@ -42,7 +42,7 @@ const useSubcontractorsBOQs = () => {
         },
         {
             name: "contractAmount",
-            label: "Contract Amount",
+            label: "Amount",
             type: "text",
             required: true,
         },
@@ -68,20 +68,21 @@ const useSubcontractorsBOQs = () => {
             // Handle ISO datetime format like "2020-01-27T00:00:00"
             const date = new Date(dateString);
             if (isNaN(date.getTime())) return '-';
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear().toString().slice(-2);
+            return `${day}/${month}/${year}`;
         } catch (error) {
             return '-';
         }
     };
 
-    const formatStatusBadge = (status: string) => {
-        const statusLower = status?.toLowerCase() || '';
+    const formatStatusBadge = (status: any) => {
+        // Convert status to string and handle different types
+        const statusStr = status?.toString() || '';
+        const statusLower = statusStr.toLowerCase();
         let badgeClass = '';
-        let displayText = status;
+        let displayText = statusStr;
 
         if (statusLower.includes('active')) {
             badgeClass = 'badge-contract-active';
@@ -103,7 +104,7 @@ const useSubcontractorsBOQs = () => {
             displayText = 'Suspended';
         } else {
             badgeClass = 'badge-contract-active';
-            displayText = status || 'Active';
+            displayText = statusStr || 'Active';
         }
 
         return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
@@ -114,19 +115,14 @@ const useSubcontractorsBOQs = () => {
 
         try {
             const data = await apiRequest({
-                endpoint: "ContractsDatasets/GetContractsDatasetsList",
+                endpoint: "ContractsDatasets/GetContractsDatasetsList/0", // Status 0 = Editable contracts for BOQs
                 method: "GET",
                 token: token ?? "",
             });
-            if (data) {
-                // Try both status values to see what works
-                let editableData = data.filter((contract: any) => contract.status === "1");
-                if (editableData.length === 0) {
-                    editableData = data.filter((contract: any) => contract.status === "Editable");
-                }
-                if (editableData.length === 0) {
-                    editableData = data; // Show all if no filtering works
-                }
+            
+            if (data && Array.isArray(data)) {
+                // Data is already filtered by status from the API
+                const editableData = data;
                 
                 // Process the data to format currency and dates
                 const processedData = editableData.map((contract: any) => ({
@@ -148,7 +144,8 @@ const useSubcontractorsBOQs = () => {
                 setTableData([]);
             }
         } catch (error) {
-            console.error(error);
+            console.error("API Error:", error);
+            setTableData([]);
         } finally {
             setLoading(false);
         }

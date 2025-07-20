@@ -95,7 +95,7 @@ const useParticularConditions = () => {
         },
         {
             name: "contractNumber",
-            label: "Contract Number",
+            label: "Number",
             type: "text",
             prefix: "CS-RIV-",
         },

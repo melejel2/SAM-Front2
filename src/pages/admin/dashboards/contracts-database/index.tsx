@@ -93,6 +93,8 @@ const ContractsDatabase = () => {
         terminatedData,
         loading,
         getContractsDatasets,
+        getActiveContracts,
+        getTerminatedContracts,
         previewContract
     } = useContractsDatabase();
     
@@ -108,9 +110,13 @@ const ContractsDatabase = () => {
     const location = useLocation();
 
     useEffect(() => {
-        getContractsDatasets();
+        // Load both active and terminated contracts when page loads to show correct counts
+        getActiveContracts();
+        getTerminatedContracts();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
+
+    // No need to reload data on tab changes - data is already loaded
 
 
 

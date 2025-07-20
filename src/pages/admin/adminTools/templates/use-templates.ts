@@ -73,8 +73,8 @@ const useTemplates = () => {
     const contractColumns = {
         code: "Code",
         templateName: "Template Name",
-        type: "Type",
-        contractType: "Contract Type",
+        type: "Category",
+        contractType: "Type",
         language: "Language",
     };
 
@@ -107,14 +107,14 @@ const useTemplates = () => {
         },
         {
             name: "type",
-            label: "Type",
+            label: "Category",
             type: "select",
             required: true,
             options: ["Supply Apply", "Apply"],
         },
         {
             name: "contractType",
-            label: "Contract Type",
+            label: "Type",
             type: "select",
             required: true,
             options: ["Remeasured", "Lump Sum", "Cost Plus"],

@@ -11,7 +11,7 @@ const useIPCsDatabase = () => {
     const token = getToken();
 
     const columns = {
-        projectName: "Contract",
+        contract: "Contract",
         number: "IPC Ref",
         subcontractorName: "Subcontractor",
         tradeName: "Trade",
@@ -76,11 +76,11 @@ const useIPCsDatabase = () => {
     ];
 
     const formatCurrency = (amount: number) => {
-        if (amount == null || isNaN(amount)) return "-";
+        if (amount == null || isNaN(amount) || amount === 0) return "-";
         return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount);
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(Math.round(amount));
     };
 
     const formatStatusBadge = (status: string) => {
@@ -141,6 +141,12 @@ const useIPCsDatabase = () => {
                 const VAT_RATE = 0.18; // 18% VAT rate, adjust as needed
                 const formattedData = data.map((ipc: any) => ({
                     ...ipc,
+                    // Handle empty contract field - use contractsDatasetId as fallback for now
+                    contract: (ipc.contract && ipc.contract.trim() !== "") 
+                        ? ipc.contract 
+                        : ipc.contractsDatasetId 
+                            ? `Contract-${ipc.contractsDatasetId}` 
+                            : "-",
                     totalAmount: formatCurrency(ipc.totalAmount),
                     totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)),
                     retention: formatCurrency(ipc.retention),

@@ -236,13 +236,13 @@ const Accordion: React.FC<AccordionProps> = ({
 
     return (
         <div className="bg-base-100 rounded-xl border border-base-300 overflow-hidden max-h-[80vh] flex flex-col">
-            <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
+            <div className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-base-content">{title}</h3>
             </div>
             <div 
                 ref={accordionContentRef}
                 className={cn(
-                    "px-3 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-3 overflow-y-auto overflow-x-auto flex-1 relative",
+                    "px-2 sm:px-3 lg:px-4 py-3 sm:py-4 space-y-3 overflow-y-auto overflow-x-auto flex-1 relative",
                     "scroll-smooth",
                     isMouseDown ? "cursor-grabbing select-none" : "cursor-auto"
                 )}

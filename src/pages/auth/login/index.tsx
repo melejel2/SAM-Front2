@@ -58,13 +58,13 @@ const LoginPage = () => {
                                 </Select>
                             </label>
 
-                            <legend className="fieldset-legend">Email</legend>
+                            <legend className="fieldset-legend">Username</legend>
                             <label className="input w-full focus:outline-0">
                                 <Icon icon={"user-2"} fontSize={5} className="text-base-content/40" />
                                 <input
                                     disabled={!selectedDb || selectedDb === databases[0]}
                                     className="grow focus:outline-0"
-                                    placeholder="Email Address"
+                                    placeholder="Username"
                                     type="text"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}

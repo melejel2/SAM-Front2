@@ -86,7 +86,7 @@ const IPCsDatabase = () => {
     const handlePreviewIpc = async (row: any) => {
         const result = await previewIpc(row.id);
         if (result.success && result.blob) {
-            const fileName = `ipc-${row.id}-${row.projectName || 'document'}.pdf`;
+            const fileName = `ipc-${row.id}-${row.contract || 'document'}.pdf`;
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
             setViewMode('preview');
         } else {
@@ -152,7 +152,7 @@ const IPCsDatabase = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `ipc-${previewData.id}-${previewData.rowData.projectName || 'document'}.xlsx`;
+                a.download = `ipc-${previewData.id}-${previewData.rowData.contract || 'document'}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);

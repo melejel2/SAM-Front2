@@ -70,23 +70,44 @@ const apiRequest = async <T = any>({
         if (!response.ok) {
             const errorText = await response.text();
             let errorMessage = `HTTP error! status: ${response.status}`;
+            let errorData: any = null;
 
             try {
-                const errorData = JSON.parse(errorText);
+                errorData = JSON.parse(errorText);
                 errorMessage = errorData.message || errorMessage;
             } catch {
-                errorMessage = errorText || errorMessage;
+                // If JSON parsing fails, use the raw error text if available
+                if (errorText && errorText.trim()) {
+                    errorMessage = errorText;
+                }
             }
 
-            // Explicit 401 Handling
-            if (response.status === 401) {
+            // Provide more user-friendly error messages based on status codes
+            if (response.status === 400) {
+                errorMessage = errorData?.message || "Invalid request. Please check your input and try again.";
+            } else if (response.status === 401) {
                 handleUnauthorized();
                 return {
                     isSuccess: false,
                     success: false,
-                    message: "Unauthorized. Please log in again.",
+                    message: "Your session has expired. Please log in again.",
                     status: 401,
                 };
+            } else if (response.status === 403) {
+                errorMessage = errorData?.message || "Access denied. You don't have permission to perform this action.";
+            } else if (response.status === 404) {
+                errorMessage = errorData?.message || "The requested resource was not found.";
+            } else if (response.status === 409) {
+                errorMessage = errorData?.message || "A conflict occurred. The resource may already exist or be in use.";
+            } else if (response.status === 422) {
+                errorMessage = errorData?.message || "Invalid data provided. Please check your input.";
+            } else if (response.status === 429) {
+                errorMessage = "Too many requests. Please wait a moment and try again.";
+            } else if (response.status >= 500) {
+                errorMessage = "Server error occurred. Please try again later or contact support.";
+            } else if (!errorData?.message) {
+                // Fallback for any other status codes without specific messages
+                errorMessage = `Request failed with status ${response.status}. Please try again.`;
             }
 
             return {

@@ -72,3 +72,44 @@ export const isValidDatabaseName = (dbName: string): boolean => {
     const dbNameRegex = /^[a-zA-Z0-9_-]+$/;
     return dbNameRegex.test(dbName) && dbName.length <= 64;
 };
+
+/**
+ * Validates username or email format for login
+ * @param usernameOrEmail - The username or email to validate
+ * @returns boolean indicating if the input is a valid username or email
+ */
+export const isValidUsernameOrEmail = (usernameOrEmail: string): boolean => {
+    if (typeof usernameOrEmail !== 'string' || usernameOrEmail.trim().length === 0) {
+        return false;
+    }
+
+    const trimmed = usernameOrEmail.trim();
+    
+    // Check if it's a valid email
+    if (trimmed.includes('@')) {
+        return isValidEmail(trimmed);
+    }
+    
+    // Validate as username: allow alphanumeric, dots, underscores, hyphens
+    // Minimum 2 characters, maximum 50 characters
+    const usernameRegex = /^[a-zA-Z0-9._-]{2,50}$/;
+    return usernameRegex.test(trimmed);
+};
+
+/**
+ * Validates username format for login (no email)
+ * @param username - The username to validate
+ * @returns boolean indicating if the input is a valid username
+ */
+export const isValidUsername = (username: string): boolean => {
+    if (typeof username !== 'string' || username.trim().length === 0) {
+        return false;
+    }
+
+    const trimmed = username.trim();
+    
+    // Validate as username: allow alphanumeric, dots, underscores, hyphens
+    // Minimum 2 characters, maximum 50 characters
+    const usernameRegex = /^[a-zA-Z0-9._-]{2,50}$/;
+    return usernameRegex.test(trimmed);
+};

@@ -30,34 +30,34 @@ const useBudgetBOQs = () => {
     const token = getToken();
 
     const columns = {
-        code: "Project Code",
-        name: "Project Name",
-        acronym: "Project Acronym",
-        city: "Project City",
+        code: "Code",
+        name: "Name",
+        acronym: "Acronym",
+        city: "City",
     };
 
     const inputFields = [
         {
             name: "code",
-            label: "Project Code",
+            label: "Code",
             type: "text",
             required: true,
         },
         {
             name: "name",
-            label: "Project Name",
+            label: "Name",
             type: "text",
             required: true,
         },
         {
             name: "acronym",
-            label: "Project Acronym",
+            label: "Acronym",
             type: "text",
             required: true,
         },
         {
             name: "city",
-            label: "Project City",
+            label: "City",
             type: "text",
             required: true,
         },

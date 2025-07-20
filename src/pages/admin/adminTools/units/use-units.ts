@@ -38,11 +38,13 @@ const useUnits = () => {
                 // Format the created date for each unit
                 const formattedData = data.map((unit: any) => ({
                     ...unit,
-                    created: unit.created ? new Date(unit.created).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    }) : ''
+                    created: unit.created ? (() => {
+                        const date = new Date(unit.created);
+                        const day = date.getDate().toString().padStart(2, '0');
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const year = date.getFullYear().toString().slice(-2);
+                        return `${day}/${month}/${year}`;
+                    })() : ''
                 }));
                 setTableData(formattedData);
             } else {

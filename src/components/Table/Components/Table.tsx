@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 
 import { Button, Pagination, useDialog, Checkbox } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
@@ -199,12 +199,12 @@ const TableComponent: React.FC<TableProps> = ({
     const [scrollLeft, setScrollLeft] = useState(0);
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
-    const handleRowClick = (row: any) => {
+    const handleRowClick = useCallback((row: any) => {
         if (onRowSelect) {
             setSelectedRow(row);
             onRowSelect(row);
         }
-    };
+    }, [onRowSelect]);
 
     // Check scroll capabilities
     const checkScrollCapability = React.useCallback(() => {
@@ -272,7 +272,7 @@ const TableComponent: React.FC<TableProps> = ({
     }, []);
 
     // Get unique values for a specific column
-    const getUniqueColumnValues = (columnKey: string) => {
+    const getUniqueColumnValues = useCallback((columnKey: string) => {
         try {
             if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
                 return [];
@@ -292,10 +292,10 @@ const TableComponent: React.FC<TableProps> = ({
             console.error(`Error getting unique values for column ${columnKey}:`, error);
             return [];
         }
-    };
+    }, [tableData]);
 
     // Handle column filter changes
-    const handleColumnFilterChange = (columnKey: string, value: string, checked: boolean) => {
+    const handleColumnFilterChange = useCallback((columnKey: string, value: string, checked: boolean) => {
         setColumnFilters(prev => {
             const currentFilters = prev[columnKey] || [];
             if (checked) {
@@ -311,27 +311,27 @@ const TableComponent: React.FC<TableProps> = ({
             }
         });
         setCurrentPage(1); // Reset to first page when filters change
-    };
+    }, []);
 
     // Clear all filters for a column
-    const clearColumnFilter = (columnKey: string) => {
+    const clearColumnFilter = useCallback((columnKey: string) => {
         setColumnFilters(prev => {
             const newFilters = { ...prev };
             delete newFilters[columnKey];
             return newFilters;
         });
         setCurrentPage(1);
-    };
+    }, []);
 
     // Select all values for a column filter
-    const selectAllColumnValues = (columnKey: string) => {
+    const selectAllColumnValues = useCallback((columnKey: string) => {
         const allValues = getUniqueColumnValues(columnKey);
         setColumnFilters(prev => ({
             ...prev,
             [columnKey]: allValues
         }));
         setCurrentPage(1);
-    };
+    }, [getUniqueColumnValues]);
 
     // Filter the data by search and column filters
     const filteredData = useMemo(() => {
@@ -416,21 +416,21 @@ const TableComponent: React.FC<TableProps> = ({
     }, [paginatedData]);
 
     // Sorting behavior
-    const handleSort = (column: string) => {
+    const handleSort = useCallback((column: string) => {
         setSortOrder((prevOrder) => (sortColumn === column && prevOrder === "asc" ? "desc" : "asc"));
         setSortColumn(column);
-    };
+    }, [sortColumn]);
 
     // Search behavior - reset to first page when search changes
-    const handleSearchChange = (value: string) => {
+    const handleSearchChange = useCallback((value: string) => {
         setSearchQuery(value);
         setCurrentPage(1);
-    };
+    }, []);
 
     // Pagination controls
-    const handlePageChange = (page: number) => {
+    const handlePageChange = useCallback((page: number) => {
         setCurrentPage(page);
-    };
+    }, []);
 
     // Opening the Add/Edit/Preview dialogs
     const openCreateDialog = async () => {
@@ -489,44 +489,80 @@ const TableComponent: React.FC<TableProps> = ({
     };
 
     // Column Filter Dropdown Component
-    const ColumnFilterDropdown = ({ columnKey, columnLabel }: { columnKey: string; columnLabel: string }) => {
-        try {
-            const uniqueValues = getUniqueColumnValues(columnKey);
-            const selectedValues = columnFilters[columnKey] || [];
-            const isOpen = openFilterDropdown === columnKey;
-            const searchTerm = filterSearchTerms[columnKey] || '';
+    const ColumnFilterDropdown = React.memo(({ columnKey, columnLabel }: { columnKey: string; columnLabel: string }) => {
+        const inputRef = useRef<HTMLInputElement>(null);
+        
+        const uniqueValues = getUniqueColumnValues(columnKey);
+        const selectedValues = columnFilters[columnKey] || [];
+        const isOpen = openFilterDropdown === columnKey;
+        const searchTerm = filterSearchTerms[columnKey] || '';
 
         // Filter unique values based on search term
-        const filteredValues = uniqueValues.filter(value => 
-            value.toLowerCase().includes(searchTerm.toLowerCase())
+        const filteredValues = useMemo(() => 
+            uniqueValues.filter(value => 
+                value.toLowerCase().includes(searchTerm.toLowerCase())
+            ), [uniqueValues, searchTerm]
         );
 
-        const handleSearchChange = (value: string) => {
+        const handleSearchChange = useCallback((value: string) => {
             setFilterSearchTerms(prev => ({
                 ...prev,
                 [columnKey]: value
             }));
-        };
+        }, [columnKey]);
 
-        const handleFilterChange = (value: string, checked: boolean) => {
+        const handleFilterChange = useCallback((value: string, checked: boolean) => {
             handleColumnFilterChange(columnKey, value, checked);
             // Close dropdown if unchecking the last item or if this is the first item being checked
             if (!checked && selectedValues.length === 1) {
                 setOpenFilterDropdown(null);
             }
-        };
+        }, [columnKey, selectedValues.length]);
 
-        const handleSelectAll = () => {
-            selectAllColumnValues(columnKey);
+        const selectedValuesSet = useMemo(() => new Set(selectedValues), [selectedValues]);
+        
+        const allFilteredSelected = useMemo(() => {
+            return filteredValues.length > 0 && filteredValues.every(value => selectedValuesSet.has(value));
+        }, [filteredValues, selectedValuesSet]);
+
+        const handleSelectAll = useCallback(() => {
+            // Select all currently filtered values (visible in dropdown)
+            if (filteredValues.length === 0) {
+                return;
+            }
+            
+            if (allFilteredSelected) {
+                // If all are selected, deselect them
+                setColumnFilters(prev => {
+                    const currentFilters = prev[columnKey] || [];
+                    const newFilters = {
+                        ...prev,
+                        [columnKey]: currentFilters.filter(value => !filteredValues.includes(value))
+                    };
+                    return newFilters;
+                });
+            } else {
+                // If not all are selected, select all
+                setColumnFilters(prev => {
+                    const currentFilters = prev[columnKey] || [];
+                    const newFilters = {
+                        ...prev,
+                        [columnKey]: [...new Set([...currentFilters, ...filteredValues])]
+                    };
+                    return newFilters;
+                });
+            }
+            
+            setCurrentPage(1);
             setOpenFilterDropdown(null);
-        };
+        }, [columnKey, filteredValues, allFilteredSelected]);
 
-        const handleClear = () => {
+        const handleClear = useCallback(() => {
             clearColumnFilter(columnKey);
             setOpenFilterDropdown(null);
-        };
+        }, [columnKey]);
 
-        const handleDropdownToggle = (event?: React.MouseEvent<HTMLButtonElement>) => {
+        const handleDropdownToggle = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
             if (isOpen) {
                 // Clear search when closing
                 setFilterSearchTerms(prev => ({
@@ -545,31 +581,83 @@ const TableComponent: React.FC<TableProps> = ({
                     });
                 }
                 setOpenFilterDropdown(columnKey);
+                // Focus the search input after opening
+                setTimeout(() => {
+                    inputRef.current?.focus();
+                }, 0);
             }
-        };
+        }, [isOpen, columnKey]);
+
+        // Auto-focus when dropdown opens
+        React.useEffect(() => {
+            if (isOpen && inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, [isOpen]);
+
+        // Handle escape key and click outside to close dropdown
+        React.useEffect(() => {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape' && isOpen) {
+                    setOpenFilterDropdown(null);
+                    setFilterDropdownPosition(null);
+                }
+            };
+
+            const handleClickOutside = (e: MouseEvent) => {
+                if (isOpen) {
+                    const target = e.target as HTMLElement;
+                    // Check if click is outside the dropdown and filter button
+                    const dropdownElement = document.querySelector(`[data-filter-dropdown="${columnKey}"]`);
+                    const buttonElement = document.querySelector(`[data-filter-button="${columnKey}"]`);
+                    
+                    if (dropdownElement && buttonElement) {
+                        if (!dropdownElement.contains(target) && !buttonElement.contains(target)) {
+                            setOpenFilterDropdown(null);
+                            setFilterDropdownPosition(null);
+                        }
+                    }
+                }
+            };
+            
+            if (isOpen) {
+                document.addEventListener('keydown', handleKeyDown);
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => {
+                    document.removeEventListener('keydown', handleKeyDown);
+                    document.removeEventListener('mousedown', handleClickOutside);
+                };
+            }
+        }, [isOpen, columnKey]);
+
+        try {
 
         return (
             <div className="relative">
                 <button
                     type="button"
                     className={cn(
-                        "ml-2 p-1 rounded hover:bg-base-300 transition-colors",
+                        "ml-2 p-1 rounded hover:bg-base-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20",
                         selectedValues.length > 0 ? "text-primary" : "text-base-content/50"
                     )}
                     onClick={(e) => {
                         e.stopPropagation();
                         handleDropdownToggle(e);
                     }}
+                    data-filter-button={columnKey}
                 >
                     <span className="iconify lucide--filter size-3"></span>
                 </button>
                 
                 {isOpen && (
                     <>
-                        {/* Backdrop */}
+                        {/* Backdrop - Invisible overlay to catch clicks outside */}
                         <div 
-                            className="fixed inset-0 z-10" 
-                            onClick={() => setOpenFilterDropdown(null)}
+                            className="fixed inset-0 z-40 bg-transparent" 
+                            onClick={() => {
+                                setOpenFilterDropdown(null);
+                                setFilterDropdownPosition(null);
+                            }}
                         />
                         
                         {/* Dropdown */}
@@ -577,14 +665,16 @@ const TableComponent: React.FC<TableProps> = ({
                              style={{
                                  top: filterDropdownPosition?.top ? `${filterDropdownPosition.top}px` : '0px',
                                  left: filterDropdownPosition?.left ? `${filterDropdownPosition.left}px` : '0px'
-                             }}>
+                             }}
+                             data-filter-dropdown={columnKey}>
                             <div className="p-3 border-b border-base-300">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium">Filter {columnLabel}</span>
                                     <button
                                         type="button"
-                                        className="text-xs text-base-content/60 hover:text-base-content"
+                                        className="text-xs text-base-content/60 hover:text-base-content focus:outline-none focus:ring-1 focus:ring-base-content/30 rounded p-1"
                                         onClick={() => setOpenFilterDropdown(null)}
+                                        aria-label="Close filter"
                                     >
                                         <span className="iconify lucide--x size-4"></span>
                                     </button>
@@ -593,26 +683,42 @@ const TableComponent: React.FC<TableProps> = ({
                                 {/* Search input */}
                                 <div className="mb-2">
                                     <input
+                                        ref={inputRef}
                                         type="text"
                                         placeholder="Search options..."
                                         value={searchTerm}
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                         className="input input-xs w-full bg-base-200 border-base-300 focus:border-primary focus:outline-none"
                                         onClick={(e) => e.stopPropagation()}
+                                        onFocus={(e) => e.stopPropagation()}
+                                        autoComplete="off"
                                     />
                                 </div>
                                 
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
-                                        className="text-xs text-primary hover:text-primary/80"
+                                        className={cn(
+                                            "text-xs focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-1",
+                                            filteredValues.length > 0 
+                                                ? "text-primary hover:text-primary/80" 
+                                                : "text-base-content/30 cursor-not-allowed"
+                                        )}
                                         onClick={handleSelectAll}
+                                        disabled={filteredValues.length === 0}
+                                        title={
+                                            filteredValues.length === 0 
+                                                ? 'No items to select'
+                                                : allFilteredSelected 
+                                                    ? `Deselect all ${filteredValues.length} visible items`
+                                                    : `Select all ${filteredValues.length} visible items`
+                                        }
                                     >
-                                        Select All
+                                        {allFilteredSelected ? 'Deselect All' : 'Select All'} {filteredValues.length > 0 && `(${filteredValues.length})`}
                                     </button>
                                     <button
                                         type="button"
-                                        className="text-xs text-base-content/60 hover:text-base-content"
+                                        className="text-xs text-base-content/60 hover:text-base-content focus:outline-none focus:ring-1 focus:ring-base-content/30 rounded px-1"
                                         onClick={handleClear}
                                     >
                                         Clear
@@ -625,7 +731,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     filteredValues.map((value) => (
                                         <label
                                             key={value}
-                                            className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 cursor-pointer"
+                                            className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 cursor-pointer focus-within:bg-base-200 transition-colors"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <Checkbox
@@ -635,6 +741,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     e.stopPropagation();
                                                     handleFilterChange(value, e.target.checked);
                                                 }}
+                                                className="focus:ring-2 focus:ring-primary/20"
                                             />
                                             <span className="text-sm truncate flex-1" title={value}>
                                                 {value || "(Empty)"}
@@ -667,12 +774,14 @@ const TableComponent: React.FC<TableProps> = ({
                 </div>
             );
         }
-    };
+    });
+    
+    ColumnFilterDropdown.displayName = 'ColumnFilterDropdown';
 
     return (
         <>
             <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col max-h-[85vh]">
-                <div className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
+                <div className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
                     <div className="flex flex-col items-start justify-start space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         {/* Left side with "New" button and custom content */}
                         <div className="flex items-center space-x-2">
@@ -740,7 +849,7 @@ const TableComponent: React.FC<TableProps> = ({
                         <thead className="bg-base-200">
                             <tr>
                                     {select && (
-                                        <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
+                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
                                             Select
                                         </th>
                                     )}
@@ -748,16 +857,17 @@ const TableComponent: React.FC<TableProps> = ({
                                         <th
                                             key={columnKey}
                                             className={cn(
-                                                "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider",
-                                                { "pl-6": index === 0 },
+                                                "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider",
+                                                { "pl-4": index === 0 },
                                                 // Add responsive width classes
                                                 columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
                                                 columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                 columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
                                             )}>
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex-1"></div>
                                                 <div
-                                                    className="flex cursor-pointer items-center justify-start"
+                                                    className="flex cursor-pointer items-center justify-center flex-1"
                                                     onClick={() => handleSort(columnKey)}>
                                                     <span>{columnLabel}</span>
                                                     {sortColumn === columnKey && (
@@ -768,12 +878,14 @@ const TableComponent: React.FC<TableProps> = ({
                                                             })}></span>
                                                     )}
                                                 </div>
-                                                <ColumnFilterDropdown columnKey={columnKey} columnLabel={columnLabel} />
+                                                <div className="flex-1 flex justify-end">
+                                                    <ColumnFilterDropdown columnKey={columnKey} columnLabel={columnLabel} />
+                                                </div>
                                             </div>
                                         </th>
                                     ))}
                                     {actions && (
-                                        <th className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
+                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
                                             Actions
                                         </th>
                                     )}
@@ -784,7 +896,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     <tr>
                                         <td
                                             colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
-                                            className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 text-xs sm:text-sm">
+                                            className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 text-xs sm:text-sm">
                                             Loading...
                                         </td>
                                     </tr>
@@ -801,7 +913,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 })}
                                                 onClick={() => handleRowClick(row)}>
                                                 {select && (
-                                                    <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-16">
+                                                    <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
                                                         <input
                                                             type="checkbox"
                                                             className="checkbox-xs checkbox checkbox-info ml-2"
@@ -813,7 +925,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     <td
                                                         key={columnKey}
                                                         className={cn(
-                                                            "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content break-words min-w-0",
+                                                            "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
                                                             columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
                                                             columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                             columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
@@ -834,7 +946,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 ))}
 
                                                 {actions && (
-                                                    <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28">
+                                                    <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                         <div className="inline-flex w-fit">
                                                             {previewAction && (
                                                                 <Button
@@ -927,7 +1039,7 @@ const TableComponent: React.FC<TableProps> = ({
                                         {Array.from({ length: Math.max(0, 6 - paginatedData.length) }).map((_, index) => (
                                         <tr key={`empty-${index}`} className="hover:bg-base-200">
                                             {select && (
-                                                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-16">
+                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
                                                     &nbsp;
                                                 </td>
                                             )}
@@ -935,7 +1047,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 <td
                                                     key={columnKey}
                                                     className={cn(
-                                                        "px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content break-words min-w-0",
+                                                        "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
                                                         columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
                                                         columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                         columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
@@ -944,7 +1056,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 </td>
                                             ))}
                                             {actions && (
-                                                <td className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28">
+                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                     &nbsp;
                                                 </td>
                                             )}
@@ -956,7 +1068,7 @@ const TableComponent: React.FC<TableProps> = ({
                                             <tr className="hover:bg-base-200">
                                                 <td
                                                     colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
-                                                    className="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 text-center text-base-content/60 italic text-xs sm:text-sm">
+                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 italic text-xs sm:text-sm">
                                                     No data available
                                                 </td>
                                             </tr>
@@ -967,7 +1079,7 @@ const TableComponent: React.FC<TableProps> = ({
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-end px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
+                    <div className="flex items-center justify-end px-2 sm:px-3 lg:px-4 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
                             <Pagination>
                                 <Button
                                     type="button"

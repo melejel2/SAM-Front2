@@ -6,7 +6,82 @@ import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import { loginRequest } from "@/config/msal";
-import { sanitizeInput, isValidEmail, isValidDatabaseName } from "@/utils/security";
+import { sanitizeInput, isValidEmail, isValidUsername, isValidDatabaseName } from "@/utils/security";
+
+// Helper function to map API errors to user-friendly messages
+const getErrorMessage = (response: any, isMetricLogin = false) => {
+    const status = response?.status;
+    const message = response?.message?.toLowerCase() || "";
+
+    // Microsoft login specific errors
+    if (isMetricLogin) {
+        if (status === 404) {
+            return "Email not registered. Please contact support to get access to the system.";
+        }
+        if (status === 400) {
+            return "Invalid request. Please try again or contact support.";
+        }
+        if (status === 403) {
+            return "Access denied. Your account may be inactive. Please contact support.";
+        }
+        if (message.includes("user not found") || message.includes("email not found")) {
+            return "Email not registered. Please contact support to get access to the system.";
+        }
+        if (message.includes("inactive") || message.includes("disabled")) {
+            return "Your account is inactive. Please contact support to reactivate your account.";
+        }
+        if (message.includes("database") || message.includes("db")) {
+            return "Database access issue. Please contact support.";
+        }
+        return "Microsoft sign-in failed. Please contact support if the issue persists.";
+    }
+
+    // Regular login errors
+    if (status === 404) {
+        return "Username not found. Please check your username or contact support.";
+    }
+    if (status === 400) {
+        if (message.includes("password") || message.includes("credential")) {
+            return "Incorrect password. Please check your password and try again.";
+        }
+        if (message.includes("email") || message.includes("username")) {
+            return "Username not found. Please check your username.";
+        }
+        return "Invalid username or password. Please check your credentials.";
+    }
+    if (status === 401) {
+        return "Invalid username or password. Please check your credentials.";
+    }
+    if (status === 403) {
+        return "Account access denied. Your account may be inactive. Please contact support.";
+    }
+    if (status === 429) {
+        return "Too many login attempts. Please wait a few minutes and try again.";
+    }
+    if (status === 500) {
+        return "Server error occurred. Please try again later or contact support.";
+    }
+    if (status === 503) {
+        return "Service temporarily unavailable. Please try again later.";
+    }
+
+    // Check for specific error messages
+    if (message.includes("user not found") || message.includes("email not found")) {
+        return "Username not found. Please check your username or contact support.";
+    }
+    if (message.includes("password")) {
+        return "Incorrect password. Please check your password and try again.";
+    }
+    if (message.includes("inactive") || message.includes("disabled")) {
+        return "Your account is inactive. Please contact support to reactivate your account.";
+    }
+    if (message.includes("database") || message.includes("db")) {
+        return "Database access issue. Please contact support.";
+    }
+
+    // Fallback to original message if available, otherwise generic error
+    return response?.message || "Login failed. Please try again or contact support.";
+};
 
 const useLogin = () => {
     const navigate = useNavigate();
@@ -39,16 +114,16 @@ const useLogin = () => {
         const sanitizedUsername = sanitizeInput(data.username);
         const sanitizedDb = sanitizeInput(data.db);
 
-        // Validate email format
-        if (!isValidEmail(sanitizedUsername)) {
-            setError("Please enter a valid email address");
+        // Validate username format
+        if (!isValidUsername(sanitizedUsername)) {
+            setError("Please enter a valid username");
             setIsLoading(false);
             return;
         }
 
-        // Validate database name
-        if (!isValidDatabaseName(sanitizedDb)) {
-            setError("Invalid database selection");
+        // Validate database selection (skip validation for placeholder and trust API-provided database names)
+        if (!sanitizedDb || sanitizedDb === "Select Database" || sanitizedDb.trim().length === 0) {
+            setError("Please select a database");
             setIsLoading(false);
             return;
         }
@@ -67,7 +142,7 @@ const useLogin = () => {
             });
             
             if (response.isSuccess === true) {
-                toaster.success("Login successful...");
+                toaster.success("Login successful!");
                 // Add database info to user object
                 const userWithDatabase = {
                     ...response.value,
@@ -76,15 +151,14 @@ const useLogin = () => {
                 setLoggedInUser(userWithDatabase);
                 navigate("/dashboard");
             } else if (!response.success) {
-                if (response.status === 404 || response.status === 400) {
-                    toaster.error("Invalid username or password");
-                    setError("Invalid username or password");
-                } else {
-                    toaster.error(response.message || "Login failed");
-                }
+                const errorMessage = getErrorMessage(response, false);
+                toaster.error(errorMessage);
+                setError(errorMessage);
             }
         } catch (error) {
-            console.error("error", error);
+            console.error("Login error:", error);
+            toaster.error("Network error. Please check your connection and try again.");
+            setError("Network error. Please check your connection and try again.");
         } finally {
             setIsLoading(false);
         }
@@ -111,7 +185,7 @@ const useLogin = () => {
                 throw new Error("Email not found in Microsoft account.");
             }
 
-            // Validate email format
+            // Validate email format (Microsoft should always provide valid email)
             if (!isValidEmail(email as string)) {
                 throw new Error("Invalid email format from Microsoft account.");
             }
@@ -127,7 +201,7 @@ const useLogin = () => {
             });
 
             if (backendResponse.isSuccess === true) {
-                toaster.success("Microsoft login successful!");
+                toaster.success("Microsoft sign-in successful!");
                 
                 // Step 4: Add database info to user object
                 const userWithDatabase = {
@@ -139,8 +213,9 @@ const useLogin = () => {
                 setLoggedInUser(userWithDatabase);
                 navigate("/dashboard");
             } else {
-                toaster.error(backendResponse.message || "Microsoft login failed. User may not exist in the system.");
-                setError(backendResponse.message || "Microsoft login failed");
+                const errorMessage = getErrorMessage(backendResponse, true);
+                toaster.error(errorMessage);
+                setError(errorMessage);
             }
             
         } catch (error: any) {
@@ -148,14 +223,26 @@ const useLogin = () => {
             
             // Handle specific MSAL errors
             if (error.name === "BrowserAuthError" || error.name === "InteractionRequiredAuthError") {
-                toaster.error("Microsoft login was cancelled or failed. Please try again.");
+                const errorMessage = "Microsoft sign-in was cancelled. Please try again.";
+                toaster.error(errorMessage);
+                setError(errorMessage);
+            } else if (error.name === "ServerError") {
+                const errorMessage = "Microsoft authentication server error. Please try again later.";
+                toaster.error(errorMessage);
+                setError(errorMessage);
             } else if (error.message?.includes("Email not found")) {
-                toaster.error("Unable to retrieve email from Microsoft account. Please try again.");
+                const errorMessage = "Unable to retrieve email from Microsoft account. Please try again.";
+                toaster.error(errorMessage);
+                setError(errorMessage);
+            } else if (error.message?.includes("Invalid email format")) {
+                const errorMessage = "Invalid email format from Microsoft account. Please contact support.";
+                toaster.error(errorMessage);
+                setError(errorMessage);
             } else {
-                toaster.error("Microsoft login failed. Please try again.");
+                const errorMessage = "Microsoft sign-in failed. Please try again or contact support.";
+                toaster.error(errorMessage);
+                setError(errorMessage);
             }
-            
-            setError("Microsoft login failed. Please try again.");
         } finally {
             setIsMicrosoftLoading(false);
         }
