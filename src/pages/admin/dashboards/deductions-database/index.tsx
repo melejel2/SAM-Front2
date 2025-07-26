@@ -70,7 +70,7 @@ const DeductionsDatabase = () => {
                         onClick={() => setActiveView("Labor")}
                     >
                         <span className="iconify lucide--users size-4" />
-                        <span>Labor</span>
+                        <span>Labor ({laborData.length})</span>
                     </button>
                     
                     <button
@@ -82,7 +82,7 @@ const DeductionsDatabase = () => {
                         onClick={() => setActiveView("Materials")}
                     >
                         <span className="iconify lucide--package size-4" />
-                        <span>Materials</span>
+                        <span>Materials ({materialsData.length})</span>
                     </button>
                     
                     <button
@@ -94,7 +94,7 @@ const DeductionsDatabase = () => {
                         onClick={() => setActiveView("Machines")}
                     >
                         <span className="iconify lucide--cog size-4" />
-                        <span>Machines</span>
+                        <span>Machines ({machinesData.length})</span>
                     </button>
                 </div>
             </div>

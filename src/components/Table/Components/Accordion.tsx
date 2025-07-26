@@ -423,6 +423,12 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                 </Button>
             )}
             <div className="w-full space-y-3">
+                {/* Row count display for mobile */}
+                {accordionData.length > 0 && (
+                    <div className="text-sm text-base-content/60 px-2 mb-2">
+                        Showing {accordionData.length} {accordionData.length === 1 ? 'entry' : 'entries'}
+                    </div>
+                )}
                 {accordionData.length > 0 &&
                     accordionData.map((data, index) => (
                         <Accordion

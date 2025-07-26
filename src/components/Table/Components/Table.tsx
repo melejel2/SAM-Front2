@@ -1078,9 +1078,25 @@ const TableComponent: React.FC<TableProps> = ({
                             </tbody>
                     </table>
                 </div>
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-end px-2 sm:px-3 lg:px-4 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
-                            <Pagination>
+                {/* Footer with row count and pagination */}
+                {(sortedData.length > 0 || searchQuery || Object.keys(columnFilters).length > 0) && (
+                    <div className="flex items-center justify-between px-2 sm:px-3 lg:px-4 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
+                        {/* Row count display */}
+                        <div className="text-sm text-base-content/60">
+                            {sortedData.length > 0 ? (
+                                <>
+                                    Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, sortedData.length)} of {sortedData.length} entries
+                                    {(searchQuery || Object.keys(columnFilters).length > 0) && ` (filtered from ${tableData.length} total entries)`}
+                                </>
+                            ) : (
+                                (searchQuery || Object.keys(columnFilters).length > 0) ? `No entries found (filtered from ${tableData.length} total entries)` : 'No entries'
+                            )}
+                        </div>
+                        
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center">
+                                <Pagination>
                                 <Button
                                     type="button"
                                     size="sm"
@@ -1151,7 +1167,9 @@ const TableComponent: React.FC<TableProps> = ({
                                     <span className="iconify lucide--chevron-right text-base-content/70 size-4"></span>
                                 </Button>
                             </Pagination>
-                    </div>
+                        </div>
+                    )}
+                </div>
                 )}
                 {/* Sheets */}
                 {hasSheets && (
