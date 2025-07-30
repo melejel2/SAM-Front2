@@ -19,7 +19,7 @@ interface SAMTableProps {
     onSuccess: () => void;
 
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", Data?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Select" | "Terminate", Data?: any) => void | Promise<void>;
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
@@ -30,6 +30,7 @@ interface SAMTableProps {
         generateAction?: boolean;
         editAction?: boolean;
         deleteAction?: boolean;
+        terminateAction?: boolean;
     };
 
     addBtn?: boolean;

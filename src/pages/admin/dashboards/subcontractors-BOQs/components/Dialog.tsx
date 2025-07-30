@@ -30,6 +30,9 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const [contractDetails, setContractDetails] = useState<any>({});
+    const [boqItems, setBoqItems] = useState<any[]>([]);
+    
     const {
         setSelectedProject,
         selectedProject,
@@ -69,6 +72,34 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         setCurrentStep((prev) => prev + 1);
     };
 
+    // Validation functions
+    const hasContractDetails = () => {
+        return Object.keys(contractDetails).length > 0;
+    };
+
+    const hasBOQItems = () => {
+        return boqItems.length > 0;
+    };
+
+    const canProceedToNextStep = () => {
+        switch (currentStep) {
+            case 0: // Project
+                return selectedProject !== null;
+            case 1: // Trade
+                return selectedTrade !== null;
+            case 2: // Building
+                return selectedBuilding !== null;
+            case 3: // Subcontractor
+                return selectedSubcontractor !== null;
+            case 4: // Particular Conditions (Contract Details)
+                return hasContractDetails();
+            case 5: // BOQ
+                return hasBOQItems();
+            default:
+                return true;
+        }
+    };
+
     const steps = [
         {
             label: "Project",
@@ -98,13 +129,13 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
             label: "Particular Conditions",
             value: "",
             symbol: "",
-            content: <ParticularConditionsStep />,
+            content: <ParticularConditionsStep onContractDetailsChange={setContractDetails} />,
         },
         {
             label: "BOQ",
             value: "",
             symbol: "",
-            content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} />,
+            content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} onBoqItemsChange={setBoqItems} />,
         },
         { label: "Preview", value: "", symbol: "", content: <PreviewStep /> },
     ];
@@ -125,6 +156,8 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         setSelectedTrade(null);
         setSelectedBuilding(null);
         setSelectedSubcontractor(null);
+        setContractDetails({});
+        setBoqItems([]);
         handleHide();
         setCurrentStep(0);
     };
@@ -177,10 +210,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
                             className="btn-circle"
                             disabled={
                                 currentStep === steps.length - 1 ||
-                                !selectedProject ||
-                                (currentStep === 1 && !selectedTrade) ||
-                                (currentStep === 2 && !selectedBuilding) ||
-                                (currentStep === 3 && !selectedSubcontractor)
+                                !canProceedToNextStep()
                             }
                             onClick={handleNext}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">

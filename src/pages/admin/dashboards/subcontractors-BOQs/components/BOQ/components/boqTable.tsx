@@ -5,26 +5,54 @@ import useTrades from "@/pages/admin/adminTools/trades/use-trades";
 
 import useBOQ from "../use-boq";
 
-const BOQTable = () => {
+interface BOQTableProps {
+    onBoqItemsChange?: (items: any[]) => void;
+}
+
+const BOQTable: React.FC<BOQTableProps> = ({ onBoqItemsChange }) => {
     const { getTrades, sheets } = useTrades();
-    const { columns, tableData } = useBOQ();
+    const { columns, tableData, calculateTotal, formatCurrency } = useBOQ();
 
     useEffect(() => {
         getTrades();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Call the callback when BOQ items change
+    useEffect(() => {
+        if (onBoqItemsChange) {
+            onBoqItemsChange(tableData);
+        }
+    }, [tableData, onBoqItemsChange]);
+
+    // Add totals row to table data
+    const tableDataWithTotal = [
+        ...tableData,
+        {
+            id: 'total',
+            order: '',
+            nb: '',
+            item: '',
+            unit: '',
+            cost_code: '',
+            qty: '',
+            unit_price: '',
+            total_price: formatCurrency(calculateTotal()),
+            isTotal: true
+        }
+    ];
+
     return (
-        <div className="">
+        <div className="bg-base-100">
             <SAMTable
                 columns={columns}
-                tableData={tableData}
+                tableData={tableDataWithTotal}
                 title={"Subcontractor BOQ"}
                 loading={false}
                 onSuccess={() => {}}
                 hasSheets={true}
                 sheets={sheets}
-                rowsPerPage={7}
+                rowsPerPage={15}
             />
         </div>
     );

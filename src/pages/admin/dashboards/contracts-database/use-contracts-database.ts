@@ -197,6 +197,27 @@ const useContractsDatabase = () => {
         }
     };
 
+    const terminateContract = async (contractId: string) => {
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/TerminateContract/${contractId}`,
+                method: "POST",
+                token: token ?? "",
+            });
+
+            if (response && response.success !== false) {
+                // Refresh the active and terminated contracts
+                await getActiveContracts();
+                await getTerminatedContracts();
+                return { success: true };
+            }
+            return { success: false, error: response?.error || "Failed to terminate contract" };
+        } catch (error) {
+            console.error("Error terminating contract:", error);
+            return { success: false, error: "An error occurred while terminating the contract" };
+        }
+    };
+
     // Each tab has its own data state
     const vosData: any[] = []; // Keep VOs empty for now
     const terminatedData = terminatedContractsData; // Terminated contracts data
@@ -307,6 +328,7 @@ const useContractsDatabase = () => {
         getActiveContracts,
         getTerminatedContracts,
         previewContract,
+        terminateContract,
     };
 };
 

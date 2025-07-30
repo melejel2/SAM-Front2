@@ -104,6 +104,7 @@ interface TableProps {
         generateAction?: boolean;
         editAction?: boolean;
         deleteAction?: boolean;
+        terminateAction?: boolean;
     };
 
     title: string;
@@ -118,7 +119,7 @@ interface TableProps {
     addBtn?: boolean;
     addBtnText?: string;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview", Data?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate", Data?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;
@@ -842,7 +843,7 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
                     )}
                     
-                    <table className="w-full table-auto"
+                    <table className="w-full table-auto bg-base-100"
                         style={{
                             userSelect: isMouseDown ? 'none' : 'auto'
                         }}>
@@ -904,131 +905,186 @@ const TableComponent: React.FC<TableProps> = ({
                                     <>
                                         {paginatedData.map((row, index) => {
                                         const rowAction = rowActions?.(row);
+                                        const isTotal = row.isTotal === true;
 
                                         return (
                                             <tr
                                                 key={index}
-                                                className={cn("hover:bg-base-200 cursor-pointer", {
-                                                    "bg-base-300": selectedRow?.id === row.id,
-                                                })}
-                                                onClick={() => handleRowClick(row)}>
+                                                className={cn(
+                                                    isTotal 
+                                                        ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content" 
+                                                        : "bg-base-100 hover:bg-base-200 cursor-pointer",
+                                                    {
+                                                        "!bg-base-300": !isTotal && selectedRow?.id === row.id,
+                                                    }
+                                                )}
+                                                onClick={() => !isTotal && handleRowClick(row)}>
                                                 {select && (
                                                     <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="checkbox-xs checkbox checkbox-info ml-2"
-                                                        />
+                                                        {!isTotal && (
+                                                            <input
+                                                                type="checkbox"
+                                                                className="checkbox-xs checkbox checkbox-info ml-2"
+                                                            />
+                                                        )}
                                                     </td>
                                                 )}
 
-                                                {Object.keys(columns).map((columnKey) => (
-                                                    <td
-                                                        key={columnKey}
-                                                        className={cn(
-                                                            "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
-                                                            columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
-                                                            columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
-                                                            columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
-                                                        )}>
-                                                        {typeof row[columnKey] === 'string' && row[columnKey]?.includes('<span class="badge') ? (
-                                                            <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
-                                                        ) : (columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
-                                                            <StatusBadge 
-                                                                value={getTextContent(row[columnKey])} 
-                                                                type={columnKey as 'status' | 'type'} 
-                                                            />
-                                                        ) : (
-                                                            <div className="break-words overflow-wrap-anywhere">
-                                                                {row[columnKey] ?? "-"}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                ))}
+                                                {Object.keys(columns).map((columnKey, colIndex) => {
+                                                    // For total row, handle special cases
+                                                    if (isTotal) {
+                                                        // Show "Total" in the first column and merge all except the last column
+                                                        if (colIndex === 0) {
+                                                            return (
+                                                                <td
+                                                                    key={columnKey}
+                                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center"
+                                                                    colSpan={Object.keys(columns).length - 1}>
+                                                                    Total
+                                                                </td>
+                                                            );
+                                                        } else if (colIndex === Object.keys(columns).length - 1) {
+                                                            // Show the total amount in the last column
+                                                            return (
+                                                                <td
+                                                                    key={columnKey}
+                                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
+                                                                    {row[columnKey] ?? "-"}
+                                                                </td>
+                                                            );
+                                                        } else {
+                                                            // Skip other columns as they are merged
+                                                            return null;
+                                                        }
+                                                    }
+                                                    
+                                                    // Regular row handling
+                                                    return (
+                                                        <td
+                                                            key={columnKey}
+                                                            className={cn(
+                                                                "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content break-words min-w-0 text-center font-medium",
+                                                                columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
+                                                                columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
+                                                                columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
+                                                            )}>
+                                                            {typeof row[columnKey] === 'string' && row[columnKey]?.includes('<span class="badge') ? (
+                                                                <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
+                                                            ) : (columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
+                                                                <StatusBadge 
+                                                                    value={getTextContent(row[columnKey])} 
+                                                                    type={columnKey as 'status' | 'type'} 
+                                                                />
+                                                            ) : (
+                                                                <div className="break-words overflow-wrap-anywhere">
+                                                                    {row[columnKey] ?? "-"}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
 
                                                 {actions && (
                                                     <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
-                                                        <div className="inline-flex w-fit">
-                                                            {previewAction && (
-                                                                <Button
-                                                                    color="ghost"
-                                                                    size="sm"
-                                                                    shape="square"
-                                                                    className="tooltip"
-                                                                    aria-label="Preview Row"
-                                                                    data-tip="Preview"
-                                                                    disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openPreviewDialog(row);
-                                                                    }}>
-                                                                    {previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? (
-                                                                        <span className="loading loading-spinner loading-xs"></span>
-                                                                    ) : (
-                                                                        <span className="iconify lucide--eye text-base-content/70 size-4"></span>
-                                                                    )}
-                                                                </Button>
-                                                            )}
-                                                            {(rowAction?.editAction || editAction) && (
-                                                                <Button
-                                                                    color="ghost"
-                                                                    size="sm"
-                                                                    shape="square"
-                                                                    className="tooltip"
-                                                                    aria-label="Edit Row"
-                                                                    data-tip="Edit"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openEditDialog(row);
-                                                                    }}>
-                                                                    <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
-                                                                </Button>
-                                                            )}
-                                                            {exportAction && (
-                                                                <Button
-                                                                    color="ghost"
-                                                                    size="sm"
-                                                                    shape="square"
-                                                                    className="tooltip"
-                                                                    aria-label="Export"
-                                                                    data-tip="Export"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openEditDialog(row);
-                                                                    }}>
-                                                                    <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
-                                                                </Button>
-                                                            )}
-                                                            {(rowAction?.generateAction || generateAction) && (
-                                                                <Button
-                                                                    color="ghost"
-                                                                    size="sm"
-                                                                    shape="square"
-                                                                    className="tooltip"
-                                                                    aria-label="Generate"
-                                                                    data-tip="Generate"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openEditDialog(row);
-                                                                    }}>
-                                                                    <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
-                                                                </Button>
-                                                            )}
-                                                            {(rowAction?.deleteAction || deleteAction) && (
-                                                                <Button
-                                                                    color="ghost"
-                                                                    className="text-error/70 hover:bg-error/20 tooltip"
-                                                                    size="sm"
-                                                                    shape="square"
-                                                                    aria-label="Delete Row"
-                                                                    data-tip="Delete"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openDeleteDialog(row);
-                                                                    }}>
-                                                                    <span className="iconify lucide--trash size-4"></span>
-                                                                </Button>
-                                                            )}
-                                                        </div>
+                                                        {!isTotal && (
+                                                            <div className="inline-flex w-fit">
+                                                                {previewAction && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        className="tooltip"
+                                                                        aria-label="Preview Row"
+                                                                        data-tip="Preview"
+                                                                        disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openPreviewDialog(row);
+                                                                        }}>
+                                                                        {previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? (
+                                                                            <span className="loading loading-spinner loading-xs"></span>
+                                                                        ) : (
+                                                                            <span className="iconify lucide--eye text-base-content/70 size-4"></span>
+                                                                        )}
+                                                                    </Button>
+                                                                )}
+                                                                {(rowAction?.editAction || editAction) && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        className="tooltip"
+                                                                        aria-label="Edit Row"
+                                                                        data-tip="Edit"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openEditDialog(row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
+                                                                    </Button>
+                                                                )}
+                                                                {exportAction && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        className="tooltip"
+                                                                        aria-label="Export"
+                                                                        data-tip="Export"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openEditDialog(row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
+                                                                    </Button>
+                                                                )}
+                                                                {(rowAction?.generateAction || generateAction) && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        className="tooltip"
+                                                                        aria-label="Generate"
+                                                                        data-tip="Generate"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openEditDialog(row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
+                                                                    </Button>
+                                                                )}
+                                                                {(rowAction?.deleteAction || deleteAction) && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        aria-label="Delete Row"
+                                                                        data-tip="Delete"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openDeleteDialog(row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--trash size-4"></span>
+                                                                    </Button>
+                                                                )}
+                                                                {rowAction?.terminateAction && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        aria-label="Terminate Contract"
+                                                                        data-tip="Terminate"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openStaticDialog?.("Terminate", row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--x-circle size-4"></span>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 )}
                                             </tr>

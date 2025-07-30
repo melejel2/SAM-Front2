@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Select, SelectOption } from "@/components/daisyui";
 
@@ -14,7 +14,11 @@ interface InputField {
     prefix?: string;
 }
 
-const ParticularConditionsStep = () => {
+interface ParticularConditionsStepProps {
+    onContractDetailsChange?: (details: Record<string, any>) => void;
+}
+
+const ParticularConditionsStep: React.FC<ParticularConditionsStepProps> = ({ onContractDetailsChange }) => {
     const { inputFields } = useParticularConditions();
 
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -24,6 +28,13 @@ const ParticularConditionsStep = () => {
         });
         return initialData;
     });
+
+    // Call the callback when form data changes
+    useEffect(() => {
+        if (onContractDetailsChange) {
+            onContractDetailsChange(formData);
+        }
+    }, [formData, onContractDetailsChange]);
 
     const renderInput = (field: InputField) => {
         const { name, type, required, options, label, prefix } = field;

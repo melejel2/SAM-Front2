@@ -31,6 +31,14 @@ const dashboardRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs"))),
     },
     {
+        path: "/dashboard/subcontractors-boqs/new",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/new"))),
+    },
+    {
+        path: "/dashboard/subcontractors-boqs/edit/:id",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/edit"))),
+    },
+    {
         path: "/dashboard/contracts-database",
         element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database"))),
     },

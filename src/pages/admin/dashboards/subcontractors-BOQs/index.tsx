@@ -253,6 +253,16 @@ const SubcontractorsBOQs = () => {
                                 <span>Back</span>
                             </button>
                         </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <button
+                                className="btn btn-sm btn-primary text-white flex items-center gap-2"
+                                onClick={() => navigate('/dashboard/subcontractors-boqs/new')}
+                            >
+                                <span className="iconify lucide--plus size-4"></span>
+                                <span>New Subcontract</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div>

@@ -95,7 +95,8 @@ const ContractsDatabase = () => {
         getContractsDatasets,
         getActiveContracts,
         getTerminatedContracts,
-        previewContract
+        previewContract,
+        terminateContract
     } = useContractsDatabase();
     
     const { toaster } = useToast();
@@ -106,6 +107,9 @@ const ContractsDatabase = () => {
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingWord, setExportingWord] = useState(false);
     const [exportingZip, setExportingZip] = useState(false);
+    const [terminatingId, setTerminatingId] = useState<string | null>(null);
+    const [showTerminateModal, setShowTerminateModal] = useState(false);
+    const [contractToTerminate, setContractToTerminate] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -249,6 +253,27 @@ const ContractsDatabase = () => {
         }
     };
 
+    const handleTerminateContract = async () => {
+        if (!contractToTerminate) return;
+        
+        setTerminatingId(contractToTerminate.id);
+        try {
+            const result = await terminateContract(contractToTerminate.id);
+            
+            if (result.success) {
+                toaster.success(`Contract ${contractToTerminate.contractNumber} has been terminated successfully`);
+                setShowTerminateModal(false);
+                setContractToTerminate(null);
+            } else {
+                toaster.error(result.error || "Failed to terminate contract");
+            }
+        } catch (error) {
+            toaster.error("An error occurred while terminating the contract");
+        } finally {
+            setTerminatingId(null);
+        }
+    };
+
     return (
         <div>
             {viewMode === 'table' ? (
@@ -324,9 +349,15 @@ const ContractsDatabase = () => {
                                         openStaticDialog={(type, data) => {
                                             if (type === "Preview" && data) {
                                                 return handlePreviewContract(data);
+                                            } else if (type === "Terminate" && data) {
+                                                setContractToTerminate(data);
+                                                setShowTerminateModal(true);
                                             }
                                         }}
                                         dynamicDialog={false}
+                                        rowActions={(row) => ({
+                                            terminateAction: row.originalStatus?.toLowerCase() === 'active',
+                                        })}
                                     />
                                 )}
 
@@ -421,6 +452,51 @@ const ContractsDatabase = () => {
                                     />
                                 )}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Terminate Contract Confirmation Modal */}
+            {showTerminateModal && contractToTerminate && (
+                <div className="modal modal-open">
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg text-error">Terminate Contract</h3>
+                        <p className="py-4">
+                            Are you sure you want to terminate contract <strong>{contractToTerminate.contractNumber}</strong> 
+                            {contractToTerminate.projectName && <> for project <strong>{contractToTerminate.projectName}</strong></>}?
+                        </p>
+                        <p className="text-sm text-base-content/70">
+                            This action cannot be undone. The contract will be moved to the terminated contracts list.
+                        </p>
+                        <div className="modal-action">
+                            <button 
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setShowTerminateModal(false);
+                                    setContractToTerminate(null);
+                                }}
+                                disabled={terminatingId !== null}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="btn btn-error text-white"
+                                onClick={handleTerminateContract}
+                                disabled={terminatingId !== null}
+                            >
+                                {terminatingId !== null ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Terminating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--x-circle size-4"></span>
+                                        <span>Terminate Contract</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

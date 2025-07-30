@@ -41,7 +41,10 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes('/budget-BOQs')) {
     return "Budget BOQs";
   }
-  if (pathname.includes('/subcontractors-BOQs')) {
+  if (pathname.includes('/subcontractors-boqs/new') || pathname.includes('/subcontractors-BOQs/new')) {
+    return "New Subcontract";
+  }
+  if (pathname.includes('/subcontractors-boqs') || pathname.includes('/subcontractors-BOQs')) {
     return "Subcontractors BOQs";
   }
   if (pathname.includes('/IPCs-database')) {
