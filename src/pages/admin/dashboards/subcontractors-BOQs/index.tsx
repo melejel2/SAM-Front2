@@ -116,7 +116,8 @@ const SubcontractorsBOQs = () => {
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
             setViewMode('preview');
         } else {
-            toaster.error("Failed to load contract preview");
+            toaster.error(result.error!.message!)
+            //toaster.error("Failed to load contract preview");
         }
     };
 

@@ -162,12 +162,12 @@ const useSubcontractorsBOQs = () => {
             });
 
             if (response instanceof Blob) {
-                return { success: true, blob: response };
+                return { success: true, blob: response, error: null };
             }
-            return { success: false, blob: null };
+            return { success: false, blob: null, error: response};
         } catch (error) {
             console.error(error);
-            return { success: false, blob: null };
+            return { success: false, blob: null, error: error };
         }
     };
 
