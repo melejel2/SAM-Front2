@@ -10,7 +10,7 @@ import useBudgetBOQsDialog from "./use-budget-boq-dialog";
 interface BudgetBOQDialogProps {
     handleHide: () => void;
     dialogRef: React.RefObject<HTMLDialogElement | null>;
-    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select";
+    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
     selectedProject: any;
     onSuccess: () => void;
 }

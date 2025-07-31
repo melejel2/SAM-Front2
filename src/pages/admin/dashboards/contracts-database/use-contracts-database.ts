@@ -218,6 +218,26 @@ const useContractsDatabase = () => {
         }
     };
 
+    const generateFinalContract = async (contractId: string) => {
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/GenerateFinalContract/${contractId}`,
+                method: "POST",
+                token: token ?? "",
+            });
+
+            if (response && response.success !== false) {
+                // Refresh terminated contracts to update status
+                await getTerminatedContracts();
+                return { success: true };
+            }
+            return { success: false, error: response?.error || "Failed to generate final discharge document" };
+        } catch (error) {
+            console.error("Error generating final contract:", error);
+            return { success: false, error: "An error occurred while generating the final discharge document" };
+        }
+    };
+
     // Each tab has its own data state
     const vosData: any[] = []; // Keep VOs empty for now
     const terminatedData = terminatedContractsData; // Terminated contracts data
@@ -329,6 +349,7 @@ const useContractsDatabase = () => {
         getTerminatedContracts,
         previewContract,
         terminateContract,
+        generateFinalContract,
     };
 };
 

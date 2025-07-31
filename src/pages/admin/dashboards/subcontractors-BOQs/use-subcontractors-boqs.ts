@@ -110,6 +110,26 @@ const useSubcontractorsBOQs = () => {
         return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
     };
 
+    const generateContract = async (contractId: string) => {
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/GenerateContract/${contractId}`,
+                method: "POST",
+                token: token ?? "",
+            });
+            
+            if (response && response.success !== false) {
+                // Refresh the data after generating contract
+                await getContractsDatasets();
+                return { success: true };
+            }
+            return { success: false, error: response?.error || "Failed to generate contract" };
+        } catch (error) {
+            console.error("Error generating contract:", error);
+            return { success: false, error: "An error occurred while generating the contract" };
+        }
+    };
+
     const getContractsDatasets = async () => {
         setLoading(true);
 
@@ -153,9 +173,39 @@ const useSubcontractorsBOQs = () => {
 
     const previewContract = async (contractId: string) => {
         try {
-            // Use the PDF export endpoint for preview since PreviewContract doesn't exist
+            // First try to get the contract data for editable contracts
+            const contractResponse = await apiRequest({
+                endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
+                method: "GET",
+                token: token ?? "",
+            });
+
+            if (contractResponse && contractResponse.success !== false) {
+                // For editable contracts, LivePreview returns a ZIP file with both PDF and Word
+                // We need to extract the PDF from the ZIP or use a different approach
+                // For now, let's try to get the contract data and make a more specific call
+                
+                // Use the new LivePreviewPdf endpoint for editable contracts
+                try {
+                    const livePreviewResponse = await apiRequest({
+                        endpoint: "ContractsDatasets/LivePreviewPdf",
+                        method: "POST",
+                        token: token ?? "",
+                        body: contractResponse,
+                        responseType: "blob",
+                    });
+
+                    if (livePreviewResponse instanceof Blob) {
+                        return { success: true, blob: livePreviewResponse, error: null };
+                    }
+                } catch (livePreviewError) {
+                    console.warn("LivePreview failed, trying fallback:", livePreviewError);
+                }
+            }
+
+            // Fallback to standard PDF export for saved contracts
             const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportContractPdf/${contractId}`,
+                endpoint: `ContractsDatasets/ExportSubcontractorPdf/${contractId}`,
                 method: "GET",
                 token: token ?? "",
                 responseType: "blob",
@@ -178,6 +228,7 @@ const useSubcontractorsBOQs = () => {
         loading,
         getContractsDatasets,
         previewContract,
+        generateContract,
     };
 };
 

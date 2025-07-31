@@ -12,6 +12,9 @@ import buildingIcon from "@iconify/icons-lucide/building";
 import userIcon from "@iconify/icons-lucide/user";
 import fileTextIcon from "@iconify/icons-lucide/file-text";
 import checkCircleIcon from "@iconify/icons-lucide/check-circle";
+import useBOQUnits from "../hooks/use-units";
+import DescriptionModal from "../components/DescriptionModal";
+import PreviewStep from "../components/Preview";
 
 interface Project {
     id: number;
@@ -109,6 +112,20 @@ const NewSubcontractWizard = () => {
     const navigate = useNavigate();
     const { getToken } = useAuth();
     const { toaster } = useToast();
+    const { units, loading: unitsLoading, getUnitById, matchUnit } = useBOQUnits();
+
+    // Utility function to format numbers with proper decimal handling
+    const formatNumber = (value: number) => {
+        if (!value || isNaN(value) || value === 0) return '-';
+        
+        // Check if the number has meaningful decimal places
+        const hasDecimals = value % 1 !== 0;
+        
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: 2
+        }).format(value);
+    };
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(true); // Start with loading true
     const [projects, setProjects] = useState<Project[]>([]);
@@ -126,6 +143,10 @@ const NewSubcontractWizard = () => {
     const [selectedBuildingForBOQ, setSelectedBuildingForBOQ] = useState<string>('');
     const [isImportingBOQ, setIsImportingBOQ] = useState<boolean>(false);
     const [focusTarget, setFocusTarget] = useState<{ itemId: number | undefined, field: string } | null>(null);
+    
+    // Description modal state
+    const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+    const [selectedDescription, setSelectedDescription] = useState<{ itemNo: string; description: string }>({ itemNo: '', description: '' });
     
     const [formData, setFormData] = useState<WizardFormData>({
         projectId: null,
@@ -393,6 +414,9 @@ const NewSubcontractWizard = () => {
             case 5:
                 // Check if at least one building has BOQ items
                 return formData.boqData.some(buildingBOQ => buildingBOQ.items.length > 0);
+            case 6:
+                // Review step - no validation needed, just proceed to preview
+                return true;
             default:
                 return true;
         }
@@ -558,7 +582,8 @@ const NewSubcontractWizard = () => {
             { number: 3, title: "Subcontractor", icon: userIcon },
             { number: 4, title: "Contract Details", icon: fileTextIcon },
             { number: 5, title: "BOQ Items", icon: fileTextIcon },
-            { number: 6, title: "Review", icon: checkCircleIcon }
+            { number: 6, title: "Review", icon: checkCircleIcon },
+            { number: 7, title: "Preview", icon: checkCircleIcon }
         ];
 
         // Get step color classes based on current progress
@@ -614,7 +639,7 @@ const NewSubcontractWizard = () => {
         );
     };
 
-    if (loading && currentStep === 1) {
+    if ((loading && currentStep === 1) || unitsLoading) {
         return <Loader />;
     }
 
@@ -732,6 +757,15 @@ const NewSubcontractWizard = () => {
                         >
                             <span>Next</span>
                             <span className="iconify lucide--arrow-right size-4"></span>
+                        </button>
+                    ) : currentStep === 6 ? (
+                        <button
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                            onClick={handleNext}
+                            disabled={!canProceedToNextStep()}
+                        >
+                            <span>Preview</span>
+                            <span className="iconify lucide--eye size-4"></span>
                         </button>
                     ) : (
                         <button
@@ -1230,7 +1264,7 @@ const NewSubcontractWizard = () => {
                                                     }
                                                     
                                                     return displayItems.map((item, index) => {
-                                                        const isEmptyRow = item.no === '' && item.key === '' && item.costCode === '' && item.unite === '' && item.qte === 0 && item.pu === 0;
+                                                        const isEmptyRow = item.no === '' && item.key === '' && (!item.costCode || item.costCode === '') && (!item.unite || item.unite === '') && item.qte === 0 && item.pu === 0;
                                                         
                                                         return (
                                                             <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
@@ -1248,7 +1282,7 @@ const NewSubcontractWizard = () => {
                                                                                 updateBOQItem(index, 'no', e.target.value);
                                                                             }
                                                                         }}
-                                                                        placeholder={isEmptyRow ? "Item no..." : ""}
+                                                                        placeholder=""
                                                                     />
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
@@ -1264,7 +1298,16 @@ const NewSubcontractWizard = () => {
                                                                                 updateBOQItem(index, 'key', e.target.value);
                                                                             }
                                                                         }}
-                                                                        placeholder={isEmptyRow ? "Description..." : ""}
+                                                                        onDoubleClick={() => {
+                                                                            if (item.key) {
+                                                                                setSelectedDescription({
+                                                                                    itemNo: item.no || `Item ${index + 1}`,
+                                                                                    description: item.key
+                                                                                });
+                                                                                setShowDescriptionModal(true);
+                                                                            }
+                                                                        }}
+                                                                        placeholder=""
                                                                     />
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
@@ -1280,32 +1323,40 @@ const NewSubcontractWizard = () => {
                                                                                 updateBOQItem(index, 'costCode', e.target.value);
                                                                             }
                                                                         }}
-                                                                        placeholder={isEmptyRow ? "Cost code..." : ""}
+                                                                        placeholder=""
                                                                     />
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                                    <input
+                                                                    <select
                                                                         id={`boq-input-${item.id}-unite`}
-                                                                        type="text"
-                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                        value={item.unite}
+                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 border-0"
+                                                                        value={item.unite || ''}
                                                                         onChange={(e) => {
-                                                                            if (isEmptyRow && e.target.value) {
-                                                                                addNewBOQItem({ unite: e.target.value }, 'unite');
+                                                                            const selectedUnit = units.find(unit => unit.name === e.target.value);
+                                                                            const unitName = selectedUnit?.name || e.target.value;
+                                                                            if (isEmptyRow && unitName) {
+                                                                                addNewBOQItem({ unite: unitName }, 'unite');
                                                                             } else if (!isEmptyRow) {
-                                                                                updateBOQItem(index, 'unite', e.target.value);
+                                                                                updateBOQItem(index, 'unite', unitName);
                                                                             }
                                                                         }}
-                                                                        placeholder={isEmptyRow ? "Unit..." : ""}
-                                                                    />
+                                                                    >
+                                                                        <option value=""></option>
+                                                                        {units.map(unit => (
+                                                                            <option key={unit.id} value={unit.name}>
+                                                                                {unit.name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
                                                                     <input
                                                                         id={`boq-input-${item.id}-qte`}
                                                                         type="number"
-                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                        className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unite && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                         value={item.qte || ''}
                                                                         onChange={(e) => {
+                                                                            if (!item.unite && !isEmptyRow) return; // Prevent editing if no unit
                                                                             const value = parseFloat(e.target.value) || 0;
                                                                             if (isEmptyRow && value > 0) {
                                                                                 addNewBOQItem({ qte: value }, 'qte');
@@ -1313,30 +1364,56 @@ const NewSubcontractWizard = () => {
                                                                                 updateBOQItem(index, 'qte', value);
                                                                             }
                                                                         }}
-                                                                        placeholder={isEmptyRow ? "0" : ""}
+                                                                        placeholder=""
                                                                         step="0.01"
+                                                                        disabled={!item.unite && !isEmptyRow}
                                                                     />
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                                    <input
-                                                                        id={`boq-input-${item.id}-pu`}
-                                                                        type="number"
-                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                        value={item.pu || ''}
-                                                                        onChange={(e) => {
-                                                                            const value = parseFloat(e.target.value) || 0;
-                                                                            if (isEmptyRow && value > 0) {
-                                                                                addNewBOQItem({ pu: value }, 'pu');
-                                                                            } else if (!isEmptyRow) {
-                                                                                updateBOQItem(index, 'pu', value);
-                                                                            }
-                                                                        }}
-                                                                        placeholder={isEmptyRow ? "0.00" : ""}
-                                                                        step="0.01"
-                                                                    />
+                                                                    {isEmptyRow ? (
+                                                                        <input
+                                                                            id={`boq-input-${item.id}-pu`}
+                                                                            type="number"
+                                                                            className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                            value={item.pu || ''}
+                                                                            onChange={(e) => {
+                                                                                const value = parseFloat(e.target.value) || 0;
+                                                                                if (value > 0) {
+                                                                                    addNewBOQItem({ pu: value }, 'pu');
+                                                                                }
+                                                                            }}
+                                                                            placeholder=""
+                                                                            step="0.01"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                id={`boq-input-${item.id}-pu`}
+                                                                                type="number"
+                                                                                className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 opacity-0 absolute inset-0 ${!item.unite ? 'cursor-not-allowed' : ''}`}
+                                                                                value={item.pu || ''}
+                                                                                onChange={(e) => {
+                                                                                    const value = parseFloat(e.target.value) || 0;
+                                                                                    updateBOQItem(index, 'pu', value);
+                                                                                }}
+                                                                                step="0.01"
+                                                                                disabled={!item.unite}
+                                                                            />
+                                                                            <div 
+                                                                                className={`text-center text-xs sm:text-sm ${!item.unite ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
+                                                                                onClick={() => {
+                                                                                    if (item.unite) {
+                                                                                        document.getElementById(`boq-input-${item.id}-pu`)?.focus();
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                {!item.unite ? '-' : formatNumber(item.pu || 0)}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content text-center">
-                                                                    {isEmptyRow ? '0.00' : (item.totalPrice || item.qte * item.pu).toFixed(2)}
+                                                                    {isEmptyRow || !item.unite ? '-' : formatNumber(item.totalPrice || item.qte * item.pu)}
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                                     {!isEmptyRow && (
@@ -1362,14 +1439,17 @@ const NewSubcontractWizard = () => {
                                                     const items = buildingBOQ?.items || [];
                                                     
                                                     if (items.length > 0) {
-                                                        const total = items.reduce((sum, item) => sum + (item.totalPrice || item.qte * item.pu), 0);
+                                                        const total = items.reduce((sum, item) => {
+                                                            if (!item.unite) return sum; // Skip items without unit
+                                                            return sum + (item.totalPrice || item.qte * item.pu);
+                                                        }, 0);
                                                         return (
                                                             <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
                                                                 <td colSpan={6} className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
                                                                     Total
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
-                                                                    {total.toFixed(2)}
+                                                                    {formatNumber(total)}
                                                                 </td>
                                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 w-24 sm:w-28"></td>
                                                             </tr>
@@ -1426,7 +1506,10 @@ const NewSubcontractWizard = () => {
                                 <div className="bg-base-200 p-3 rounded">
                                     <h3 className="font-semibold mb-2">BOQ Summary</h3>
                                     {formData.boqData.map(buildingBOQ => {
-                                        const buildingTotal = buildingBOQ.items.reduce((sum, item) => sum + (item.totalPrice || item.qte * item.pu), 0);
+                                        const buildingTotal = buildingBOQ.items.reduce((sum, item) => {
+                                            if (!item.unite) return sum; // Skip items without unit
+                                            return sum + (item.totalPrice || item.qte * item.pu);
+                                        }, 0);
                                         
                                         if (buildingBOQ.items.length === 0) return null;
                                         
@@ -1434,22 +1517,33 @@ const NewSubcontractWizard = () => {
                                             <div key={buildingBOQ.buildingId} className="mb-2">
                                                 <p className="font-medium">{buildingBOQ.buildingName}</p>
                                                 <p className="text-sm text-base-content/70">
-                                                    {buildingBOQ.items.length} items - Total: {buildingTotal.toFixed(2)}
+                                                    {buildingBOQ.items.length} items - Total: {formatNumber(buildingTotal)}
                                                 </p>
                                             </div>
                                         );
                                     })}
                                     <div className="border-t pt-2 mt-2">
                                         <p className="font-semibold">
-                                            Grand Total: {formData.boqData.reduce((sum, buildingBOQ) => 
-                                                sum + buildingBOQ.items.reduce((itemSum, item) => itemSum + (item.totalPrice || item.qte * item.pu), 0), 0
-                                            ).toFixed(2)}
+                                            Grand Total: {formatNumber(formData.boqData.reduce((sum, buildingBOQ) => 
+                                                sum + buildingBOQ.items.reduce((itemSum, item) => {
+                                                    if (!item.unite) return itemSum; // Skip items without unit
+                                                    return itemSum + (item.totalPrice || item.qte * item.pu);
+                                                }, 0), 0
+                                            ))}
                                         </p>
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
+                )}
+
+                {currentStep === 7 && (
+                    <PreviewStep
+                        formData={formData}
+                        selectedProject={selectedProject}
+                        selectedSubcontractor={selectedSubcontractor}
+                    />
                 )}
             </div>
 
@@ -1535,8 +1629,8 @@ const NewSubcontractWizard = () => {
                             </div>
 
                             <div className="bg-info/10 border border-info/20 rounded-lg p-3">
-                                <h4 className="font-semibold text-info-content mb-2">Expected Format:</h4>
-                                <ul className="text-sm text-info-content/80 space-y-1">
+                                <h4 className="font-semibold text-base-content mb-2">Expected Format:</h4>
+                                <ul className="text-sm text-base-content/80 space-y-1">
                                     <li>• Column A: Item No.</li>
                                     <li>• Column B: Description/Key</li>
                                     <li>• Column C: Unit</li>
@@ -1546,7 +1640,7 @@ const NewSubcontractWizard = () => {
                             </div>
 
                             <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
-                                <p className="text-sm text-warning-content">
+                                <p className="text-sm text-base-content">
                                     <span className="iconify lucide--alert-triangle w-4 h-4 inline mr-1" />
                                     Importing will replace existing BOQ items for this building.
                                 </p>
@@ -1574,6 +1668,15 @@ const NewSubcontractWizard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Description Modal */}
+            <DescriptionModal
+                isOpen={showDescriptionModal}
+                onClose={() => setShowDescriptionModal(false)}
+                title="Item Description"
+                description={selectedDescription.description}
+                itemNo={selectedDescription.itemNo}
+            />
         </div>
     );
 };

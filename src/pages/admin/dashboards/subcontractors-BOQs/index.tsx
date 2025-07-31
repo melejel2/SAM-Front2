@@ -93,6 +93,9 @@ const SubcontractorsBOQs = () => {
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingWord, setExportingWord] = useState(false);
     const [exportingZip, setExportingZip] = useState(false);
+    const [generatingId, setGeneratingId] = useState<string | null>(null);
+    const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [contractToGenerate, setContractToGenerate] = useState<any>(null);
 
     const { 
         columns, 
@@ -100,7 +103,8 @@ const SubcontractorsBOQs = () => {
         inputFields, 
         loading, 
         getContractsDatasets, 
-        previewContract 
+        previewContract,
+        generateContract 
     } = useSubcontractorsBOQs();
 
     useEffect(() => {
@@ -135,13 +139,37 @@ const SubcontractorsBOQs = () => {
         
         setExportingPdf(true);
         try {
-            // Call the PDF export endpoint
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportContractPdf/${previewData.id}`,
-                method: "GET",
-                responseType: "blob",
-                token: getToken() ?? ""
-            });
+            let response;
+            
+            // Try to get contract data first for editable contracts
+            try {
+                const contractResponse = await apiRequest({
+                    endpoint: `ContractsDatasets/GetSubcontractorData/${previewData.id}`,
+                    method: "GET",
+                    token: getToken() ?? ""
+                });
+
+                if (contractResponse && contractResponse.success !== false) {
+                    // Use LivePreviewPdf for editable contracts
+                    response = await apiRequest({
+                        endpoint: "ContractsDatasets/LivePreviewPdf",
+                        method: "POST",
+                        token: getToken() ?? "",
+                        body: contractResponse,
+                        responseType: "blob",
+                    });
+                } else {
+                    throw new Error("Contract data not found");
+                }
+            } catch {
+                // Fallback to standard PDF export
+                response = await apiRequest({
+                    endpoint: `ContractsDatasets/ExportSubcontractorPdf/${previewData.id}`,
+                    method: "GET",
+                    responseType: "blob",
+                    token: getToken() ?? ""
+                });
+            }
             
             if (response && 'success' in response && !response.success) {
                 toaster.error("Failed to download PDF file");
@@ -171,13 +199,37 @@ const SubcontractorsBOQs = () => {
         
         setExportingWord(true);
         try {
-            // Call the Word export endpoint
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportContractWord/${previewData.id}`,
-                method: "GET",
-                responseType: "blob",
-                token: getToken() ?? ""
-            });
+            // For editable contracts, we need to extract the Word file from LivePreview ZIP
+            let response;
+            
+            try {
+                const contractResponse = await apiRequest({
+                    endpoint: `ContractsDatasets/GetSubcontractorData/${previewData.id}`,
+                    method: "GET",
+                    token: getToken() ?? ""
+                });
+
+                if (contractResponse && contractResponse.success !== false) {
+                    // Use LivePreviewWord for editable contracts
+                    response = await apiRequest({
+                        endpoint: "ContractsDatasets/LivePreviewWord",
+                        method: "POST",
+                        token: getToken() ?? "",
+                        body: contractResponse,
+                        responseType: "blob",
+                    });
+                } else {
+                    throw new Error("Contract data not found");
+                }
+            } catch {
+                // Fallback to standard Word export
+                response = await apiRequest({
+                    endpoint: `ContractsDatasets/ExportSubcontractorWord/${previewData.id}`,
+                    method: "GET",
+                    responseType: "blob",
+                    token: getToken() ?? ""
+                });
+            }
             
             if (response && 'success' in response && !response.success) {
                 toaster.error("Failed to download Word file");
@@ -207,13 +259,37 @@ const SubcontractorsBOQs = () => {
         
         setExportingZip(true);
         try {
-            // Call the ZIP export endpoint (contains both PDF and Word)
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportContract/${previewData.id}`,
-                method: "GET",
-                responseType: "blob",
-                token: getToken() ?? ""
-            });
+            let response;
+            
+            // Try to get contract data first for editable contracts
+            try {
+                const contractResponse = await apiRequest({
+                    endpoint: `ContractsDatasets/GetSubcontractorData/${previewData.id}`,
+                    method: "GET",
+                    token: getToken() ?? ""
+                });
+
+                if (contractResponse && contractResponse.success !== false) {
+                    // Use LivePreview for editable contracts (returns ZIP with both formats)
+                    response = await apiRequest({
+                        endpoint: "ContractsDatasets/LivePreview",
+                        method: "POST",
+                        token: getToken() ?? "",
+                        body: contractResponse,
+                        responseType: "blob",
+                    });
+                } else {
+                    throw new Error("Contract data not found");
+                }
+            } catch {
+                // Fallback to standard ZIP export
+                response = await apiRequest({
+                    endpoint: `ContractsDatasets/ExportSubcontractor/${previewData.id}`,
+                    method: "GET",
+                    responseType: "blob",
+                    token: getToken() ?? ""
+                });
+            }
             
             if (response && 'success' in response && !response.success) {
                 toaster.error("Failed to download ZIP file");
@@ -235,6 +311,29 @@ const SubcontractorsBOQs = () => {
             toaster.error("Failed to download ZIP file");
         } finally {
             setExportingZip(false);
+        }
+    };
+
+    const handleGenerateContract = async () => {
+        if (!contractToGenerate) return;
+        
+        setGeneratingId(contractToGenerate.id);
+        try {
+            const result = await generateContract(contractToGenerate.id);
+            
+            if (result.success) {
+                toaster.success(`Contract ${contractToGenerate.contractNumber} has been generated successfully`);
+                setShowGenerateModal(false);
+                setContractToGenerate(null);
+                // Refresh the data to reflect status change
+                getContractsDatasets();
+            } else {
+                toaster.error(result.error || "Failed to generate contract");
+            }
+        } catch (error) {
+            toaster.error("An error occurred while generating the contract");
+        } finally {
+            setGeneratingId(null);
         }
     };
 
@@ -274,15 +373,24 @@ const SubcontractorsBOQs = () => {
                                 tableData={tableData}
                                 actions
                                 previewAction
+                                editAction
                                 title={"Subcontractor BOQ"}
                                 loading={false}
                                 onSuccess={getContractsDatasets}
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreviewContract(data);
+                                    } else if (type === "Edit" && data) {
+                                        navigate(`/dashboard/subcontractors-boqs/edit/${data.id}`);
+                                    } else if (type === "Generate" && data) {
+                                        setContractToGenerate(data);
+                                        setShowGenerateModal(true);
                                     }
                                 }}
                                 dynamicDialog={false}
+                                rowActions={(row) => ({
+                                    generateAction: row.status?.toLowerCase().includes('editable'),
+                                })}
                             />
                         )}
                     </div>
@@ -337,6 +445,51 @@ const SubcontractorsBOQs = () => {
                                     />
                                 )}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Generate Contract Confirmation Modal */}
+            {showGenerateModal && contractToGenerate && (
+                <div className="modal modal-open">
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg text-success">Generate Contract</h3>
+                        <p className="py-4">
+                            Are you sure you want to generate contract <strong>{contractToGenerate.contractNumber}</strong> 
+                            {contractToGenerate.projectName && <> for project <strong>{contractToGenerate.projectName}</strong></>}?
+                        </p>
+                        <p className="text-sm text-base-content/70">
+                            This action will finalize the contract and change its status to Active. The contract will no longer be editable.
+                        </p>
+                        <div className="modal-action">
+                            <button 
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setShowGenerateModal(false);
+                                    setContractToGenerate(null);
+                                }}
+                                disabled={generatingId !== null}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="btn btn-success text-white"
+                                onClick={handleGenerateContract}
+                                disabled={generatingId !== null}
+                            >
+                                {generatingId !== null ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Generating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--check-circle size-4"></span>
+                                        <span>Generate Contract</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

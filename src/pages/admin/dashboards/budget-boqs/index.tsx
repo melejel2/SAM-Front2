@@ -9,7 +9,7 @@ import BudgetBOQDialog from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-boqs";
 
 const BudgetBOQs = () => {
-    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Select">("Add");
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select">("Add");
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -28,7 +28,7 @@ const BudgetBOQs = () => {
     const { dialogRef, handleShow, handleHide } = useDialog();
     const { toaster } = useToast();
 
-    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Select", data?: any) => {
+    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select", data?: any) => {
         setDialogType(type);
         if (data) {
             setSelectedProject(data);

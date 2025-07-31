@@ -6,7 +6,7 @@ import BOQTable from "./components/boqTable";
 import useBudgetBOQsDialog from "../use-budget-boq-dialog";
 
 interface BOQStepProps {
-    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Select";
+    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
     buildings: any[];
     selectedProject: any;
     projectData: any;

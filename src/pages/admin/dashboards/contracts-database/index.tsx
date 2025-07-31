@@ -10,6 +10,109 @@ import apiRequest from "@/api/api";
 
 import useContractsDatabase from "./use-contracts-database";
 
+// Document Type Selection Modal Component
+const DocumentTypeModal = ({ 
+    isOpen, 
+    onClose, 
+    onSelectDocument, 
+    contractData, 
+    loading 
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelectDocument: (type: string) => void;
+    contractData: any;
+    loading: boolean;
+}) => {
+    if (!isOpen) return null;
+
+    const documentTypes = [
+        {
+            id: 'contract',
+            title: 'Contract',
+            description: 'Original contract document',
+            icon: 'lucide--file-text',
+            available: true
+        },
+        {
+            id: 'termination',
+            title: 'Termination Letter',
+            description: 'Contract termination document',
+            icon: 'lucide--file-x',
+            available: true // Will be available after termination
+        },
+        {
+            id: 'dischargeFinal',
+            title: 'Discharge Final',
+            description: 'Final discharge document',
+            icon: 'lucide--file-check',
+            available: true // This would depend on backend status
+        },
+        {
+            id: 'dischargeRG',
+            title: 'Discharge RG',
+            description: 'RG discharge document',
+            icon: 'lucide--file-check-2',
+            available: false // Not implemented yet
+        }
+    ];
+
+    return (
+        <div className="modal modal-open">
+            <div className="modal-box max-w-2xl">
+                <h3 className="font-bold text-lg mb-4">Select Document to Preview</h3>
+                <p className="text-sm text-base-content/70 mb-6">
+                    Contract: <strong>{contractData?.contractNumber}</strong>
+                    {contractData?.projectName && <> • Project: <strong>{contractData?.projectName}</strong></>}
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {documentTypes.map((docType) => (
+                        <button
+                            key={docType.id}
+                            onClick={() => docType.available ? onSelectDocument(docType.id) : null}
+                            disabled={!docType.available || loading}
+                            className={`
+                                card border-2 p-4 text-left transition-all duration-200
+                                ${docType.available 
+                                    ? 'border-base-300 hover:border-primary hover:shadow-md cursor-pointer' 
+                                    : 'border-base-200 bg-base-200 cursor-not-allowed opacity-50'
+                                }
+                                ${loading ? 'loading' : ''}
+                            `}
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                    <span className={`iconify ${docType.icon} size-6 ${
+                                        docType.available ? 'text-primary' : 'text-base-content/40'
+                                    }`}></span>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-semibold mb-1">{docType.title}</h4>
+                                    <p className="text-sm text-base-content/70">{docType.description}</p>
+                                    {!docType.available && (
+                                        <p className="text-xs text-warning mt-1">Not available</p>
+                                    )}
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="modal-action">
+                    <button 
+                        className="btn btn-ghost" 
+                        onClick={onClose}
+                        disabled={loading}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Export Dropdown Component
 const ExportDropdown = ({ 
     exportingPdf, 
@@ -96,7 +199,8 @@ const ContractsDatabase = () => {
         getActiveContracts,
         getTerminatedContracts,
         previewContract,
-        terminateContract
+        terminateContract,
+        generateFinalContract
     } = useContractsDatabase();
     
     const { toaster } = useToast();
@@ -110,6 +214,12 @@ const ContractsDatabase = () => {
     const [terminatingId, setTerminatingId] = useState<string | null>(null);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
     const [contractToTerminate, setContractToTerminate] = useState<any>(null);
+    const [showDocumentTypeModal, setShowDocumentTypeModal] = useState(false);
+    const [contractForDocumentSelection, setContractForDocumentSelection] = useState<any>(null);
+    const [documentTypeLoading, setDocumentTypeLoading] = useState(false);
+    const [generatingFinalId, setGeneratingFinalId] = useState<string | null>(null);
+    const [showGenerateFinalModal, setShowGenerateFinalModal] = useState(false);
+    const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -125,14 +235,104 @@ const ContractsDatabase = () => {
 
 
     const handlePreviewContract = async (row: any) => {
-        const result = await previewContract(row.id);
-        if (result.success && result.blob) {
-            // Use PDF extension for preview since we're using the PDF endpoint
-            const fileName = `contract-${row.id}-${row.projectName || 'document'}.pdf`;
-            setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
-            setViewMode('preview');
+        // Check if this is a terminated contract
+        if (row.originalStatus?.toLowerCase() === 'terminated') {
+            // Show document type selection modal for terminated contracts
+            setContractForDocumentSelection(row);
+            setShowDocumentTypeModal(true);
         } else {
-            toaster.error("Failed to load contract preview");
+            // Direct preview for active contracts
+            const result = await previewContract(row.id);
+            if (result.success && result.blob) {
+                // Use PDF extension for preview since we're using the PDF endpoint
+                const fileName = `contract-${row.id}-${row.projectName || 'document'}.pdf`;
+                setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
+                setViewMode('preview');
+            } else {
+                toaster.error("Failed to load contract preview");
+            }
+        }
+    };
+
+    const handleDocumentTypeSelect = async (documentType: string) => {
+        if (!contractForDocumentSelection) return;
+
+        setDocumentTypeLoading(true);
+        try {
+            let endpoint = '';
+            let fileName = '';
+            
+            switch (documentType) {
+                case 'contract':
+                    endpoint = `ContractsDatasets/ExportContractPdf/${contractForDocumentSelection.id}`;
+                    fileName = `contract-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    break;
+                case 'termination':
+                    // Note: This endpoint may not exist yet according to the documentation
+                    endpoint = `ContractsDatasets/ExportTerminateFile/${contractForDocumentSelection.id}`;
+                    fileName = `termination-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    break;
+                case 'dischargeFinal':
+                    // Note: This endpoint may not exist yet according to the documentation
+                    endpoint = `ContractsDatasets/ExportFinalFile/${contractForDocumentSelection.id}`;
+                    fileName = `discharge-final-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    break;
+                case 'dischargeRG':
+                    // Note: Not implemented according to the documentation
+                    toaster.error("Discharge RG is not yet implemented");
+                    setDocumentTypeLoading(false);
+                    return;
+                default:
+                    toaster.error("Unknown document type");
+                    setDocumentTypeLoading(false);
+                    return;
+            }
+
+            const response = await apiRequest({
+                endpoint,
+                method: "GET",
+                responseType: "blob",
+                token: getToken() ?? ""
+            });
+
+            if (response instanceof Blob) {
+                setPreviewData({ 
+                    blob: response, 
+                    id: contractForDocumentSelection.id, 
+                    fileName, 
+                    rowData: contractForDocumentSelection 
+                });
+                setViewMode('preview');
+                setShowDocumentTypeModal(false);
+                setContractForDocumentSelection(null);
+            } else {
+                toaster.error("Failed to load document preview");
+            }
+        } catch (error) {
+            toaster.error("Failed to load document preview");
+        } finally {
+            setDocumentTypeLoading(false);
+        }
+    };
+
+    const handleGenerateFinalContract = async () => {
+        if (!contractToGenerateFinal) return;
+        
+        setGeneratingFinalId(contractToGenerateFinal.id);
+        try {
+            const result = await generateFinalContract(contractToGenerateFinal.id);
+            
+            if (result.success) {
+                toaster.success(`Final discharge document for contract ${contractToGenerateFinal.contractNumber} has been generated successfully`);
+                setShowGenerateFinalModal(false);
+                setContractToGenerateFinal(null);
+            } else {
+                toaster.error(result.error || "Failed to generate final discharge document");
+            }
+        } catch (error) {
+            toaster.error("An error occurred while generating the final discharge document");
+        } finally {
+            setGeneratingFinalId(null);
         }
     };
 
@@ -393,9 +593,15 @@ const ContractsDatabase = () => {
                                         openStaticDialog={(type, data) => {
                                             if (type === "Preview" && data) {
                                                 return handlePreviewContract(data);
+                                            } else if (type === "GenerateFinal" && data) {
+                                                setContractToGenerateFinal(data);
+                                                setShowGenerateFinalModal(true);
                                             }
                                         }}
                                         dynamicDialog={false}
+                                        rowActions={(row) => ({
+                                            generateFinalAction: row.originalStatus?.toLowerCase() === 'terminated',
+                                        })}
                                     />
                                 )}
                             </div>
@@ -494,6 +700,63 @@ const ContractsDatabase = () => {
                                     <>
                                         <span className="iconify lucide--x-circle size-4"></span>
                                         <span>Terminate Contract</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Document Type Selection Modal */}
+            <DocumentTypeModal
+                isOpen={showDocumentTypeModal}
+                onClose={() => {
+                    setShowDocumentTypeModal(false);
+                    setContractForDocumentSelection(null);
+                }}
+                onSelectDocument={handleDocumentTypeSelect}
+                contractData={contractForDocumentSelection}
+                loading={documentTypeLoading}
+            />
+
+            {/* Generate Final Contract Confirmation Modal */}
+            {showGenerateFinalModal && contractToGenerateFinal && (
+                <div className="modal modal-open">
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg text-success">Generate Final Discharge</h3>
+                        <p className="py-4">
+                            Are you sure you want to generate the final discharge document for contract <strong>{contractToGenerateFinal.contractNumber}</strong> 
+                            {contractToGenerateFinal.projectName && <> for project <strong>{contractToGenerateFinal.projectName}</strong></>}?
+                        </p>
+                        <p className="text-sm text-base-content/70">
+                            This will generate the "Discharge Final" document for this terminated contract.
+                        </p>
+                        <div className="modal-action">
+                            <button 
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setShowGenerateFinalModal(false);
+                                    setContractToGenerateFinal(null);
+                                }}
+                                disabled={generatingFinalId !== null}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="btn btn-success text-white"
+                                onClick={handleGenerateFinalContract}
+                                disabled={generatingFinalId !== null}
+                            >
+                                {generatingFinalId !== null ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Generating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--file-check size-4"></span>
+                                        <span>Generate Final Discharge</span>
                                     </>
                                 )}
                             </button>

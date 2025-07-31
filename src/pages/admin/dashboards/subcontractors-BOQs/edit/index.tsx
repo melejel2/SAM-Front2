@@ -5,72 +5,225 @@ import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import { Loader } from "@/components/Loader";
 import { FileUploader } from "@/components/FileUploader";
+import SAMTable from "@/components/Table";
 import { FilePondFile } from "filepond";
+import { Icon } from "@iconify/react";
+import buildingIcon from "@iconify/icons-lucide/building";
+import userIcon from "@iconify/icons-lucide/user";
+import fileTextIcon from "@iconify/icons-lucide/file-text";
+import checkCircleIcon from "@iconify/icons-lucide/check-circle";
+import useBOQUnits from "../hooks/use-units";
+import DescriptionModal from "../components/DescriptionModal";
+import PreviewStep from "../components/Preview";
+import { findBestUnitMatch } from "../utils/unitMatcher";
+
+interface Project {
+    id: number;
+    code?: string;
+    name: string;
+    acronym?: string;
+    city?: string;
+}
+
+interface Building {
+    id: number;
+    name: string;
+    buildingName?: string;
+}
+
+interface Subcontractor {
+    id: number;
+    name: string | null;
+    siegeSocial?: string | null;
+    commerceRegistrar?: string | null;
+    commerceNumber?: string | null;
+    taxNumber?: string | null;
+    representedBy?: string | null;
+    qualityRepresentive?: string | null;
+    subcontractorTel?: string | null;
+}
+
+interface Contract {
+    id: number;
+    templateName: string;
+    type: string;
+    contractType?: string;
+}
+
+interface Currency {
+    id: number;
+    name: string;
+    currencies: string;
+}
 
 interface BOQItem {
     id?: number;
     no: string;
     key: string;
+    costCode?: string;
     unite: string;
     qte: number;
     pu: number;
-    costCode?: string;
     totalPrice?: number;
 }
 
-interface Building {
+interface WizardFormData {
     id: number;
-    buildingName: string;
-    sheetId?: number;
-    sheetName?: string;
-    replaceAllItems?: boolean;
-    boqsContract: BOQItem[];
-}
-
-interface SubcontractorBoqData {
-    id: number;
-    currencyId: number;
-    currencyName?: string;
-    projectId: number;
-    projectName?: string;
-    subContractorId: number;
-    subcontractorName?: string;
-    contractId: number;
-    contractType?: string;
-    contractDatasetStatus: string;
+    projectId: number | null;
+    buildingIds: number[];
+    subcontractorId: number | null;
+    contractId: number | null;
+    currencyId: number | null;
     contractDate: string;
     completionDate: string;
-    contractNumber: string;
-    buildings: Building[];
-    advancePayment?: number;
-    materialSupply?: number;
-    holdWarranty?: string;
-    latePenalties?: string;
-    paymentsTerm?: string;
+    advancePayment: number;
+    materialSupply: number;
+    purchaseIncrease: string;
+    latePenalties: string;
+    latePenalityCeiling: string;
+    holdWarranty: string;
+    mintenancePeriod: string;
+    workWarranty: string;
+    termination: string;
+    daysNumber: string;
+    progress: string;
+    holdBack: string;
+    subcontractorAdvancePayee: string;
+    recoverAdvance: string;
+    procurementConstruction: string;
+    prorataAccount: string;
+    managementFees: string;
+    plansExecution: string;
+    subTrade: string;
+    paymentsTerm: string;
+    remark: string;
+    remarkCP: string;
+    attachments: {
+        file: File;
+        type: string;
+    }[];
+    boqData: {
+        buildingId: number;
+        buildingName: string;
+        sheetName: string;
+        items: BOQItem[];
+    }[];
 }
 
-const EditSubcontractorBOQ = () => {
+const EditSubcontractWizard = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { getToken } = useAuth();
     const { toaster } = useToast();
+    const { units, loading: unitsLoading, getUnitById, matchUnit } = useBOQUnits();
+
+    // Utility function to format numbers with proper decimal handling
+    const formatNumber = (value: number) => {
+        if (!value || isNaN(value) || value === 0) return '-';
+        
+        // Check if the number has meaningful decimal places
+        const hasDecimals = value % 1 !== 0;
+        
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: 2
+        }).format(value);
+    };
+
+    const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [contractData, setContractData] = useState<SubcontractorBoqData | null>(null);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
+    const [contracts, setContracts] = useState<Contract[]>([]);
+    const [currencies, setCurrencies] = useState<Currency[]>([]);
+    const [selectedProjectBuildings, setSelectedProjectBuildings] = useState<Building[]>([]);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState<string>('');
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [selectedSubcontractor, setSelectedSubcontractor] = useState<Subcontractor | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+    const [showBackConfirmDialog, setShowBackConfirmDialog] = useState<boolean>(false);
+    
+    // BOQ-specific state
     const [selectedBuildingForBOQ, setSelectedBuildingForBOQ] = useState<string>('');
     const [isImportingBOQ, setIsImportingBOQ] = useState<boolean>(false);
     const [focusTarget, setFocusTarget] = useState<{ itemId: number | undefined, field: string } | null>(null);
+    
+    // Description modal state
+    const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+    const [selectedDescription, setSelectedDescription] = useState<{ itemNo: string; description: string }>({ itemNo: '', description: '' });
+    
+    const [formData, setFormData] = useState<WizardFormData>({
+        id: 0,
+        projectId: null,
+        buildingIds: [],
+        subcontractorId: null,
+        contractId: null,
+        currencyId: null,
+        contractDate: new Date().toISOString().split('T')[0],
+        completionDate: '',
+        advancePayment: 0,
+        materialSupply: 0,
+        purchaseIncrease: '',
+        latePenalties: '',
+        latePenalityCeiling: '',
+        holdWarranty: '',
+        mintenancePeriod: '',
+        workWarranty: '',
+        termination: '',
+        daysNumber: '',
+        progress: '',
+        holdBack: '',
+        subcontractorAdvancePayee: '',
+        recoverAdvance: '',
+        procurementConstruction: '',
+        prorataAccount: '',
+        managementFees: '',
+        plansExecution: '',
+        subTrade: '',
+        paymentsTerm: '',
+        remark: '',
+        remarkCP: '',
+        attachments: [],
+        boqData: []
+    });
 
     useEffect(() => {
-        loadContractData();
-    }, [id]);
+        loadInitialData();
+    }, []);
 
+    // Smart match units when both contract data and units are loaded
     useEffect(() => {
-        // Auto-select first building when contract data loads
-        if (contractData && contractData.buildings.length > 0 && !selectedBuildingForBOQ) {
-            setSelectedBuildingForBOQ(contractData.buildings[0].id.toString());
+        if (units.length > 0 && formData.boqData.length > 0) {
+            const updatedFormData = { ...formData };
+            let hasChanges = false;
+
+            updatedFormData.boqData = formData.boqData.map(buildingBOQ => ({
+                ...buildingBOQ,
+                items: buildingBOQ.items.map(item => {
+                    if (item.unite && !units.find(unit => unit.name === item.unite)) {
+                        // Try to smart match the unit
+                        const smartMatch = findBestUnitMatch(item.unite, units);
+                        if (smartMatch) {
+                            hasChanges = true;
+                            return { ...item, unite: smartMatch.name };
+                        }
+                    }
+                    return item;
+                })
+            }));
+
+            if (hasChanges) {
+                setFormData(updatedFormData);
+            }
         }
-    }, [contractData, selectedBuildingForBOQ]);
+    }, [units.length, formData.boqData.length]); // Trigger when units or BOQ data length changes
+
+    // Auto-select first building for BOQ when buildings are available
+    useEffect(() => {
+        if (formData.buildingIds.length > 0 && !selectedBuildingForBOQ) {
+            setSelectedBuildingForBOQ(formData.buildingIds[0].toString());
+        }
+    }, [formData.buildingIds, selectedBuildingForBOQ]);
 
     // Handle focus restoration after new item creation
     useEffect(() => {
@@ -83,30 +236,156 @@ const EditSubcontractorBOQ = () => {
                 setFocusTarget(null);
             }
         }
-    }, [focusTarget, contractData]);
+    }, [focusTarget, formData.boqData]);
 
-    const loadContractData = async () => {
+    const loadInitialData = async () => {
         setLoading(true);
+        const token = getToken() ?? "";
+        let convertedFormData: WizardFormData | null = null;
+        
         try {
-            const token = getToken() ?? "";
-            const data = await apiRequest<SubcontractorBoqData>({
+            // Load the existing contract data first
+            const contractData = await apiRequest({
                 endpoint: `ContractsDatasets/GetSubcontractorData/${id}`,
                 method: "GET",
                 token
             });
-            
-            if (data && 'id' in data) {
-                setContractData(data);
-            } else {
-                toaster.error("No data found for this contract");
-                navigate('/dashboard/subcontractors-boqs');
+
+            if (contractData && 'id' in contractData) {
+                // Convert the contract data to our wizard format
+                convertedFormData = {
+                    id: contractData.id,
+                    projectId: contractData.projectId,
+                    buildingIds: contractData.buildings?.map((b: any) => b.id) || [],
+                    subcontractorId: contractData.subContractorId,
+                    contractId: contractData.contractId,
+                    currencyId: contractData.currencyId,
+                    contractDate: contractData.contractDate ? contractData.contractDate.split('T')[0] : new Date().toISOString().split('T')[0],
+                    completionDate: contractData.completionDate ? contractData.completionDate.split('T')[0] : '',
+                    advancePayment: contractData.advancePayment || 0,
+                    materialSupply: contractData.materialSupply || 0,
+                    purchaseIncrease: contractData.purchaseIncrease || '',
+                    latePenalties: contractData.latePenalties || '',
+                    latePenalityCeiling: contractData.latePenaliteCeiling || '',
+                    holdWarranty: contractData.holdWarranty || '',
+                    mintenancePeriod: contractData.mintenancePeriod || '',
+                    workWarranty: contractData.workWarranty || '',
+                    termination: contractData.termination || '',
+                    daysNumber: contractData.daysNumber || '',
+                    progress: contractData.progress || '',
+                    holdBack: contractData.holdBack || '',
+                    subcontractorAdvancePayee: contractData.subcontractorAdvancePayee || '',
+                    recoverAdvance: contractData.recoverAdvance || '',
+                    procurementConstruction: contractData.procurementConstruction || '',
+                    prorataAccount: contractData.prorataAccount || '',
+                    managementFees: contractData.managementFees || '',
+                    plansExecution: contractData.plansExecution || '',
+                    subTrade: contractData.subTrade || '',
+                    paymentsTerm: contractData.paymentsTerm || '',
+                    remark: contractData.remark || '',
+                    remarkCP: contractData.remarkCP || '',
+                    attachments: [],
+                    boqData: contractData.buildings?.map((building: any) => ({
+                        buildingId: building.id,
+                        buildingName: building.buildingName,
+                        sheetName: building.sheetName || 'default',
+                        items: building.boqsContract?.map((item: any) => ({
+                            id: item.id,
+                            no: item.no,
+                            key: item.key,
+                            costCode: item.costCode || '',
+                            unite: item.unite,
+                            qte: item.qte,
+                            pu: item.pu,
+                            totalPrice: item.totalPrice || (item.qte * item.pu)
+                        })) || []
+                    })) || []
+                };
+
+                setFormData(convertedFormData);
+
+                // Create buildings array for building selection
+                const buildingsArray = contractData.buildings?.map((b: any) => ({
+                    id: b.id,
+                    name: b.buildingName,
+                    buildingName: b.buildingName
+                })) || [];
+                setSelectedProjectBuildings(buildingsArray);
             }
         } catch (error) {
             toaster.error("Failed to load contract data");
             navigate('/dashboard/subcontractors-boqs');
-        } finally {
-            setLoading(false);
+            return;
         }
+        
+        // Load projects
+        try {
+            const projectsData = await apiRequest({
+                endpoint: "Project/GetProjectsList",
+                method: "GET",
+                token
+            });
+            const projectsArray = Array.isArray(projectsData) ? projectsData : [];
+            setProjects(projectsArray);
+            
+            // Set selected project based on loaded data
+            if (convertedFormData && convertedFormData.projectId) {
+                const project = projectsArray.find((p: any) => p.id === convertedFormData.projectId);
+                if (project) {
+                    setSelectedProject(project);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading projects:', error);
+        }
+        
+        // Load subcontractors
+        try {
+            const subcontractorsData = await apiRequest({
+                endpoint: "Subcontractors/GetSubcontractors",
+                method: "GET",
+                token
+            });
+            
+            const subcontractorsArray = Array.isArray(subcontractorsData) ? subcontractorsData : [];
+            setSubcontractors(subcontractorsArray);
+            
+            // Set selected subcontractor based on loaded data
+            if (convertedFormData && convertedFormData.subcontractorId) {
+                const subcontractor = subcontractorsArray.find((s: any) => s.id === convertedFormData.subcontractorId);
+                if (subcontractor) {
+                    setSelectedSubcontractor(subcontractor);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading subcontractors:', error);
+        }
+        
+        // Load contracts
+        try {
+            const contractsData = await apiRequest({
+                endpoint: "Templates/GetContracts",
+                method: "GET",
+                token
+            });
+            setContracts(Array.isArray(contractsData) ? contractsData : []);
+        } catch (error) {
+            console.error('Error loading contracts:', error);
+        }
+        
+        // Load currencies
+        try {
+            const currenciesData = await apiRequest({
+                endpoint: "Currencie/GetCurrencies",
+                method: "GET",
+                token
+            });
+            setCurrencies(Array.isArray(currenciesData) ? currenciesData : []);
+        } catch (error) {
+            console.error('Error loading currencies:', error);
+        }
+        
+        setLoading(false);
     };
 
     // BOQ direct editing functions
@@ -122,12 +401,10 @@ const EditSubcontractorBOQ = () => {
     });
 
     const updateBOQItem = (itemIndex: number, field: keyof BOQItem, value: string | number) => {
-        if (!contractData) return;
-        
         const selectedBuildingId = parseInt(selectedBuildingForBOQ);
-        const newBuildings = contractData.buildings.map(building => {
-            if (building.id === selectedBuildingId) {
-                const updatedItems = [...(building.boqsContract || [])];
+        const newBOQData = formData.boqData.map(building => {
+            if (building.buildingId === selectedBuildingId) {
+                const updatedItems = [...building.items];
                 
                 let processedValue = value;
                 if (field === 'qte' || field === 'pu') {
@@ -144,117 +421,278 @@ const EditSubcontractorBOQ = () => {
                 
                 return {
                     ...building,
-                    boqsContract: updatedItems
+                    items: updatedItems
                 };
             }
             return building;
         });
         
-        setContractData({ ...contractData, buildings: newBuildings });
+        setFormData({ ...formData, boqData: newBOQData });
     };
 
     const addNewBOQItem = (itemData: Partial<BOQItem>, focusField: string) => {
-        if (!contractData) return;
-        
         const selectedBuildingId = parseInt(selectedBuildingForBOQ);
+        const building = selectedProjectBuildings.find(b => b.id === selectedBuildingId);
+        
         const newItem: BOQItem = {
             ...createEmptyBOQItem(),
             ...itemData,
             totalPrice: (itemData.qte || 0) * (itemData.pu || 0)
         };
 
-        const newBuildings = contractData.buildings.map(building => {
-            if (building.id === selectedBuildingId) {
-                return {
-                    ...building,
-                    boqsContract: [...(building.boqsContract || []), newItem]
-                };
-            }
-            return building;
-        });
+        const newBOQData = [...formData.boqData];
+        const buildingIndex = newBOQData.findIndex(b => b.buildingId === selectedBuildingId);
         
-        setContractData({ ...contractData, buildings: newBuildings });
+        if (buildingIndex === -1) {
+            newBOQData.push({
+                buildingId: selectedBuildingId,
+                buildingName: building?.name || building?.buildingName || '',
+                sheetName: 'default',
+                items: [newItem]
+            });
+        } else {
+            newBOQData[buildingIndex].items.push(newItem);
+        }
+        
+        setFormData({ ...formData, boqData: newBOQData });
         setFocusTarget({ itemId: newItem.id, field: focusField });
     };
 
     const deleteBOQItem = (itemIndex: number) => {
-        if (!contractData) return;
-        
         const selectedBuildingId = parseInt(selectedBuildingForBOQ);
-        const newBuildings = contractData.buildings.map(building => {
-            if (building.id === selectedBuildingId) {
+        const newBOQData = formData.boqData.map(building => {
+            if (building.buildingId === selectedBuildingId) {
                 return {
                     ...building,
-                    boqsContract: building.boqsContract.filter((_, i) => i !== itemIndex)
+                    items: building.items.filter((_, i) => i !== itemIndex)
                 };
             }
             return building;
         });
         
-        setContractData({ ...contractData, buildings: newBuildings });
+        setFormData({ ...formData, boqData: newBOQData });
     };
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const token = getToken() ?? "";
-            const response = await apiRequest({
-                endpoint: "ContractsDatasets/UpdateSubcontractorDataset",
-                method: "PUT",
-                data: contractData as any,
-                token
-            });
-            
-            if (response && response.success !== false) {
-                toaster.success("BOQ updated successfully");
-                navigate('/dashboard/subcontractors-boqs');
-            } else {
-                toaster.error(response?.error || "Failed to update BOQ");
-            }
-        } catch (error) {
-            toaster.error("An error occurred while saving");
-        } finally {
-            setSaving(false);
+    const canProceedToNextStep = () => {
+        switch (currentStep) {
+            case 1:
+                return selectedProject !== null;
+            case 2:
+                return formData.buildingIds.length > 0;
+            case 3:
+                return selectedSubcontractor !== null;
+            case 4:
+                return formData.contractId !== null && formData.currencyId !== null && formData.completionDate !== '';
+            case 5:
+                return formData.boqData.some(buildingBOQ => buildingBOQ.items.length > 0);
+            case 6:
+                // Review step - no validation needed, just proceed to preview
+                return true;
+            default:
+                return true;
         }
     };
 
-    const handleGenerateContract = async () => {
-        if (!contractData) return;
+    const handleNext = () => {
+        if (currentStep === 1 && !selectedProject) {
+            toaster.error("Please select a project");
+            return;
+        }
+        if (currentStep === 2 && formData.buildingIds.length === 0) {
+            toaster.error("Please select at least one building");
+            return;
+        }
+        if (currentStep === 3 && !selectedSubcontractor) {
+            toaster.error("Please select a subcontractor");
+            return;
+        }
+        if (currentStep === 4 && (!formData.contractId || !formData.currencyId || !formData.completionDate)) {
+            if (!formData.contractId) {
+                toaster.error("Please select a contract type");
+            } else if (!formData.currencyId) {
+                toaster.error("Please select a currency");
+            } else if (!formData.completionDate) {
+                toaster.error("Please enter a completion date");
+            }
+            return;
+        }
+        if (currentStep === 5 && !formData.boqData.some(buildingBOQ => buildingBOQ.items.length > 0)) {
+            toaster.error("Please add at least one BOQ item");
+            return;
+        }
         
-        const confirmed = window.confirm(
-            "Are you sure you want to generate the contract? This will finalize it and set its status to Active."
-        );
-        
-        if (!confirmed) return;
-        
+        setCurrentStep(currentStep + 1);
+    };
+
+    const handleBackButton = () => {
+        if (currentStep === 1) {
+            if (hasUnsavedChanges) {
+                setShowBackConfirmDialog(true);
+            } else {
+                navigate('/dashboard/subcontractors-boqs');
+            }
+        } else {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+
+    const handleConfirmBack = () => {
+        setShowBackConfirmDialog(false);
+        navigate('/dashboard/subcontractors-boqs');
+    };
+
+    const handleCancelBack = () => {
+        setShowBackConfirmDialog(false);
+    };
+
+    const handleSaveAndContinue = async () => {
         setLoading(true);
         try {
             const token = getToken() ?? "";
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/GenerateContract/${id}`,
+            
+            // Create the complete payload according to SubcontractorBoqVM structure
+            const payload = {
+                id: formData.id, // Use existing ID for update
+                currencyId: formData.currencyId,
+                projectId: formData.projectId,
+                subContractorId: formData.subcontractorId,
+                contractId: formData.contractId,
+                contractDatasetStatus: "Editable",
+                contractDate: new Date(formData.contractDate).toISOString(),
+                completionDate: formData.completionDate ? new Date(formData.completionDate).toISOString() : null,
+                purchaseIncrease: formData.purchaseIncrease || "",
+                latePenalties: formData.latePenalties || "",
+                latePenalityCeiling: formData.latePenalityCeiling || "",
+                holdWarranty: formData.holdWarranty || "",
+                mintenancePeriod: formData.mintenancePeriod || "",
+                workWarranty: formData.workWarranty || "",
+                termination: formData.termination || "",
+                daysNumber: formData.daysNumber || "",
+                progress: formData.progress || "",
+                holdBack: formData.holdBack || "",
+                subcontractorAdvancePayee: formData.subcontractorAdvancePayee || "",
+                recoverAdvance: formData.recoverAdvance || "",
+                procurementConstruction: formData.procurementConstruction || "",
+                prorataAccount: formData.prorataAccount || "",
+                managementFees: formData.managementFees || "",
+                contractNumber: "",
+                remark: formData.remark || "",
+                remarkCP: formData.remarkCP || "",
+                isGenerated: false,
+                advancePayment: formData.advancePayment || 0,
+                plansExecution: formData.plansExecution || "",
+                subTrade: formData.subTrade || "",
+                paymentsTerm: formData.paymentsTerm || "",
+                materialSupply: formData.materialSupply || 0,
+                wordFile: null,
+                buildings: formData.buildingIds.map(buildingId => {
+                    const building = selectedProjectBuildings.find(b => b.id === buildingId);
+                    const buildingBOQ = formData.boqData.find(b => b.buildingId === buildingId);
+                    
+                    return {
+                        id: building?.id || 0,
+                        buildingName: building?.name || building?.buildingName || '',
+                        sheetId: 0,
+                        sheetName: buildingBOQ?.sheetName || 'default',
+                        replaceAllItems: false,
+                        boqsContract: buildingBOQ?.items.map(item => ({
+                            id: item.id || 0,
+                            no: item.no,
+                            key: item.key,
+                            costCode: item.costCode,
+                            unite: item.unite,
+                            qte: item.qte,
+                            pu: item.pu,
+                            totalPrice: item.totalPrice || (item.qte * item.pu)
+                        })) || []
+                    };
+                })
+            };
+            
+            const response = await apiRequest<{ success: boolean; id?: number; contractNumber?: string; error?: string }>({
+                endpoint: "ContractsDatasets/SaveSubcontractorDataset",
                 method: "POST",
+                body: payload,
                 token
             });
             
             if (response && response.success !== false) {
-                toaster.success("Contract generated successfully");
-                navigate('/dashboard/contracts-database');
+                toaster.success("Contract updated successfully");
+                navigate('/dashboard/subcontractors-boqs');
             } else {
-                toaster.error(response?.message || "Failed to generate contract");
+                let errorMessage = "Failed to update contract - Unknown error";
+                if (response && 'error' in response && response.error) {
+                    errorMessage = response.error;
+                } else if (response && 'message' in response && response.message) {
+                    errorMessage = response.message;
+                }
+                toaster.error(errorMessage);
             }
         } catch (error) {
-            toaster.error("Failed to generate contract");
+            console.error("Contract update error:", error);
+            toaster.error("An error occurred while updating the contract");
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) {
-        return <Loader />;
-    }
+    const renderStepIndicator = () => {
+        const steps = [
+            { number: 1, title: "Project", icon: buildingIcon },
+            { number: 2, title: "Buildings", icon: buildingIcon },
+            { number: 3, title: "Subcontractor", icon: userIcon },
+            { number: 4, title: "Contract Details", icon: fileTextIcon },
+            { number: 5, title: "BOQ Items", icon: fileTextIcon },
+            { number: 6, title: "Review", icon: checkCircleIcon },
+            { number: 7, title: "Preview", icon: checkCircleIcon }
+        ];
 
-    if (!contractData) {
-        return <div>No data found</div>;
+        const getStepColorClass = (stepNumber: number) => {
+            if (currentStep === stepNumber) {
+                return "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300";
+            }
+            if (currentStep > stepNumber) {
+                return "bg-green-100 border-green-300 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300";
+            }
+            return "bg-gray-50 border-gray-200 text-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300";
+        };
+
+        const getConnectorColor = (stepNumber: number) => {
+            if (currentStep > stepNumber) {
+                return "bg-green-300 dark:bg-green-600";
+            }
+            return "bg-gray-200 dark:bg-gray-600";
+        };
+
+        return (
+            <div className="w-full">
+                <div className="flex items-center justify-center">
+                    {steps.map((step, idx) => (
+                        <div key={step.number} className="flex items-center">
+                            <div className="flex flex-col items-center" style={{ width: "90px" }}>
+                                <div className={`w-10 h-10 flex items-center justify-center rounded-full border-2 ${getStepColorClass(step.number)}`}>
+                                    <Icon icon={step.icon} width={20} height={20} />
+                                </div>
+                                <span className="text-xs font-medium text-center mt-1.5 text-base-content">
+                                    {step.title}
+                                </span>
+                            </div>
+                            {idx < steps.length - 1 && (
+                                <div className="flex-1 flex items-center" style={{ marginTop: "-16px", minWidth: "50px" }}>
+                                    <div className="h-1 w-full">
+                                        <div className={`h-1 w-full ${getConnectorColor(step.number)}`} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    if ((loading && currentStep === 1) || unitsLoading) {
+        return <Loader />;
     }
 
     return (
@@ -285,282 +723,861 @@ const EditSubcontractorBOQ = () => {
                     background-color: var(--fallback-b1, oklch(var(--b1)));
                     border-radius: var(--rounded-btn, 0.5rem);
                 }
+                
+                .filepond-wrapper .filepond--drip {
+                    background-color: var(--fallback-p, oklch(var(--p) / 0.1));
+                    border-color: var(--fallback-p, oklch(var(--p)));
+                }
+                
+                .filepond-wrapper .filepond--item {
+                    margin-bottom: 0.5rem;
+                }
+                
+                .filepond-wrapper .filepond--file-action-button {
+                    color: var(--fallback-bc, oklch(var(--bc)));
+                    background-color: var(--fallback-b3, oklch(var(--b3)));
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .filepond-wrapper .filepond--file-action-button:hover {
+                    background-color: var(--fallback-er, oklch(var(--er)));
+                    color: white;
+                }
+                
+                .filepond-wrapper .filepond--file-info {
+                    color: var(--fallback-bc, oklch(var(--bc) / 0.7));
+                    font-size: 0.75rem;
+                }
+                
+                .filepond-wrapper .filepond--file-status {
+                    color: var(--fallback-bc, oklch(var(--bc) / 0.6));
+                    font-size: 0.75rem;
+                }
+                
+                .filepond-wrapper .filepond--file-status-main {
+                    display: none !important;
+                }
+                
+                .filepond-wrapper .filepond--file-status-sub {
+                    display: none !important;
+                }
+                
+                .filepond-wrapper .filepond--load-indicator {
+                    display: none !important;
+                }
+                
+                .filepond-wrapper .filepond--progress-indicator {
+                    display: none !important;
+                }
+                
+                .filepond-wrapper .filepond--item {
+                    display: none !important;
+                }
+                
+                .filepond-wrapper .filepond--list-scroller {
+                    display: none !important;
+                }
             `}</style>
 
-            {/* Header */}
+            {/* Header with Back Button, Timeline, and Navigation */}
             <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold">Edit Subcontractor BOQ</h1>
-                    <p className="text-sm text-base-content/70">
-                        Contract #{contractData.contractNumber} - {contractData.contractDatasetStatus}
-                    </p>
-                </div>
                 <button
-                    onClick={() => navigate('/dashboard/subcontractors-boqs')}
-                    className="btn btn-sm btn-ghost"
+                    onClick={handleBackButton}
+                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                 >
-                    <span className="iconify lucide--x size-4"></span>
+                    <span className="iconify lucide--arrow-left size-4"></span>
+                    <span>Back</span>
                 </button>
-            </div>
-
-            {/* Contract Info Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="card bg-base-100 shadow-sm p-4">
-                    <h3 className="text-sm font-semibold text-base-content/70 mb-1">Project</h3>
-                    <p className="font-medium">{contractData.projectName || 'N/A'}</p>
-                </div>
-                <div className="card bg-base-100 shadow-sm p-4">
-                    <h3 className="text-sm font-semibold text-base-content/70 mb-1">Subcontractor</h3>
-                    <p className="font-medium">{contractData.subcontractorName || 'N/A'}</p>
-                </div>
-                <div className="card bg-base-100 shadow-sm p-4">
-                    <h3 className="text-sm font-semibold text-base-content/70 mb-1">Contract Type</h3>
-                    <p className="font-medium">{contractData.contractType || 'N/A'}</p>
-                </div>
-            </div>
-
-            {/* BOQ Section */}
-            <div className="card bg-base-100 shadow-sm p-6">
-                <h2 className="text-xl font-semibold mb-4">BOQ Items</h2>
                 
-                {/* Building Selection and Upload Button */}
-                <div className="mb-6 flex items-center justify-between gap-4">
-                    <select 
-                        className="select select-bordered w-auto max-w-xs"
-                        value={selectedBuildingForBOQ || ''}
-                        onChange={(e) => setSelectedBuildingForBOQ(e.target.value)}
-                    >
-                        {contractData.buildings.map(building => (
-                            <option key={building.id} value={building.id.toString()}>
-                                {building.buildingName}
-                            </option>
-                        ))}
-                    </select>
-                    
-                    <button
-                        onClick={() => setIsImportingBOQ(true)}
-                        className="btn btn-outline btn-sm"
-                    >
-                        <span className="iconify lucide--upload w-4 h-4"></span>
-                        Import BOQ
-                    </button>
+                {/* Timeline in the center */}
+                <div className="flex-1 flex justify-center">
+                    {renderStepIndicator()}
                 </div>
+                
+                {/* Navigation buttons */}
+                <div className="flex items-center gap-2">
+                    {currentStep < 6 ? (
+                        <button
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                            onClick={handleNext}
+                            disabled={!canProceedToNextStep()}
+                        >
+                            <span>Next</span>
+                            <span className="iconify lucide--arrow-right size-4"></span>
+                        </button>
+                    ) : currentStep === 6 ? (
+                        <button
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                            onClick={handleNext}
+                            disabled={!canProceedToNextStep()}
+                        >
+                            <span>Preview</span>
+                            <span className="iconify lucide--eye size-4"></span>
+                        </button>
+                    ) : (
+                        <button
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                            onClick={handleSaveAndContinue}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    Updating...
+                                </>
+                            ) : (
+                                <>
+                                    <span>Save Changes</span>
+                                    <span className="iconify lucide--check size-4"></span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
 
-                {selectedBuildingForBOQ && (
+            <div className="card bg-base-100 shadow-sm p-4">
+                {currentStep === 1 && (
                     <div>
-                        {/* BOQ Items Table */}
-                        <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col">
-                            <div className="overflow-x-auto">
-                                <table className="w-full table-auto bg-base-100">
-                                    <thead className="bg-base-200">
-                                        <tr>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">No.</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Description</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Cost Code</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Unit</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Quantity</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Unit Price</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Total Price</th>
-                                            <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-base-300">
-                                        {(() => {
-                                            const selectedBuilding = contractData.buildings.find(b => b.id === parseInt(selectedBuildingForBOQ));
-                                            const items = selectedBuilding?.boqsContract || [];
-                                            
-                                            // Always show at least one empty row for new entries
-                                            const displayItems = [...items];
-                                            if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== '') {
-                                                displayItems.push(createEmptyBOQItem());
-                                            }
-                                            
-                                            return displayItems.map((item, index) => {
-                                                const isEmptyRow = item.no === '' && item.key === '' && (!item.costCode || item.costCode === '') && item.unite === '' && item.qte === 0 && item.pu === 0;
-                                                
-                                                return (
-                                                    <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-no`}
-                                                                type="text"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.no}
-                                                                onChange={(e) => {
-                                                                    if (isEmptyRow && e.target.value) {
-                                                                        addNewBOQItem({ no: e.target.value }, 'no');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'no', e.target.value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "Item no..." : ""}
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-key`}
-                                                                type="text"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.key}
-                                                                onChange={(e) => {
-                                                                    if (isEmptyRow && e.target.value) {
-                                                                        addNewBOQItem({ key: e.target.value }, 'key');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'key', e.target.value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "Description..." : ""}
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-costCode`}
-                                                                type="text"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.costCode || ''}
-                                                                onChange={(e) => {
-                                                                    if (isEmptyRow && e.target.value) {
-                                                                        addNewBOQItem({ costCode: e.target.value }, 'costCode');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'costCode', e.target.value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "Cost code..." : ""}
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-unite`}
-                                                                type="text"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.unite}
-                                                                onChange={(e) => {
-                                                                    if (isEmptyRow && e.target.value) {
-                                                                        addNewBOQItem({ unite: e.target.value }, 'unite');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'unite', e.target.value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "Unit..." : ""}
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-qte`}
-                                                                type="number"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.qte || ''}
-                                                                onChange={(e) => {
-                                                                    const value = parseFloat(e.target.value) || 0;
-                                                                    if (isEmptyRow && value > 0) {
-                                                                        addNewBOQItem({ qte: value }, 'qte');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'qte', value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "0" : ""}
-                                                                step="0.01"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
-                                                            <input
-                                                                id={`boq-input-${item.id}-pu`}
-                                                                type="number"
-                                                                className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
-                                                                value={item.pu || ''}
-                                                                onChange={(e) => {
-                                                                    const value = parseFloat(e.target.value) || 0;
-                                                                    if (isEmptyRow && value > 0) {
-                                                                        addNewBOQItem({ pu: value }, 'pu');
-                                                                    } else if (!isEmptyRow) {
-                                                                        updateBOQItem(index, 'pu', value);
-                                                                    }
-                                                                }}
-                                                                placeholder={isEmptyRow ? "0.00" : ""}
-                                                                step="0.01"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content text-center">
-                                                            {isEmptyRow ? '0.00' : (item.totalPrice || item.qte * item.pu).toFixed(2)}
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
-                                                            {!isEmptyRow && (
-                                                                <div className="inline-flex">
-                                                                    <button
-                                                                        onClick={() => deleteBOQItem(index)}
-                                                                        className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
-                                                                        title="Delete item"
-                                                                    >
-                                                                        <span className="iconify lucide--trash size-4"></span>
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            });
-                                        })()}
-                                        
-                                        {/* Total Row */}
-                                        {(() => {
-                                            const selectedBuilding = contractData.buildings.find(b => b.id === parseInt(selectedBuildingForBOQ));
-                                            const items = selectedBuilding?.boqsContract || [];
-                                            
-                                            if (items.length > 0) {
-                                                const total = items.reduce((sum, item) => sum + (item.totalPrice || item.qte * item.pu), 0);
-                                                return (
-                                                    <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
-                                                        <td colSpan={6} className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
-                                                            Total
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
-                                                            {total.toFixed(2)}
-                                                        </td>
-                                                        <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 w-24 sm:w-28"></td>
-                                                    </tr>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div>
+                            <p className="text-sm text-base-content/70 mb-3">Current project:</p>
+                            {selectedProject && (
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="iconify lucide--check-circle w-5 h-5 text-green-600"></span>
+                                        <span className="font-medium text-green-800">Project: {selectedProject.name}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end mt-6 gap-4">
-                <button
-                    onClick={() => navigate('/dashboard/subcontractors-boqs')}
-                    className="btn btn-ghost"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleSave}
-                    className="btn btn-primary"
-                    disabled={saving}
-                >
-                    {saving ? (
-                        <>
-                            <span className="loading loading-spinner loading-sm"></span>
-                            Saving...
-                        </>
-                    ) : (
-                        'Save Changes'
-                    )}
-                </button>
-                {contractData.contractDatasetStatus === 'Editable' && (
-                    <button
-                        onClick={handleGenerateContract}
-                        className="btn btn-success"
-                    >
-                        Generate Contract
-                    </button>
+                {currentStep === 2 && (
+                    <div>
+                        {selectedProject ? (
+                            <div>
+                                <div className="bg-base-200 p-3 rounded-lg mb-3">
+                                    <h3 className="font-semibold mb-1">Project: {selectedProject.name}</h3>
+                                    <p className="text-sm text-base-content/70">Current buildings selected for this subcontract</p>
+                                </div>
+
+                                {selectedProjectBuildings.length > 0 ? (
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Buildings *</span>
+                                        </label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {selectedProjectBuildings.map(building => (
+                                                <div key={building.id} className="relative">
+                                                    <label className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                                        formData.buildingIds.includes(building.id)
+                                                            ? 'border-primary bg-primary/5 shadow-sm'
+                                                            : 'border-base-300 bg-base-100 hover:border-base-400'
+                                                    }`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            className="checkbox checkbox-primary"
+                                                            checked={formData.buildingIds.includes(building.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        buildingIds: [...formData.buildingIds, building.id]
+                                                                    });
+                                                                } else {
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        buildingIds: formData.buildingIds.filter(id => id !== building.id)
+                                                                    });
+                                                                }
+                                                                setHasUnsavedChanges(true);
+                                                            }}
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="iconify lucide--building w-5 h-5 text-base-content/70"></span>
+                                                                <span className="font-medium text-base-content">{building.name || building.buildingName}</span>
+                                                            </div>
+                                                        </div>
+                                                        {formData.buildingIds.includes(building.id) && (
+                                                            <span className="iconify lucide--check-circle w-5 h-5 text-primary"></span>
+                                                        )}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {formData.buildingIds.length > 0 && (
+                                            <div className="bg-green-50 border border-green-200 p-3 rounded-lg mt-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="iconify lucide--check-circle w-5 h-5 text-green-600"></span>
+                                                    <span className="font-medium text-green-800">
+                                                        {formData.buildingIds.length} building(s) selected
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm text-green-700 mt-1">
+                                                    {selectedProjectBuildings
+                                                        .filter(b => formData.buildingIds.includes(b.id))
+                                                        .map(b => b.name || b.buildingName)
+                                                        .join(', ')}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <span className="iconify lucide--building w-12 h-12 text-base-content/40 mx-auto mb-2"></span>
+                                        <p className="text-base-content/60">No buildings found for this project</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <p className="text-base-content/60">Please select a project first</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {currentStep === 3 && (
+                    <div>
+                        <div>
+                            <p className="text-sm text-base-content/70 mb-3">Current subcontractor:</p>
+                            {selectedSubcontractor && (
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg mt-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="iconify lucide--check-circle w-5 h-5 text-green-600"></span>
+                                        <span className="font-medium text-green-800">Selected: {selectedSubcontractor.name || 'Unnamed Subcontractor'}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 4 && (
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Contract Type *</span>
+                                </label>
+                                <select
+                                    className="select select-bordered w-full"
+                                    value={formData.contractId || ''}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, contractId: Number(e.target.value) });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                >
+                                    <option value="">Select contract type</option>
+                                    {contracts.map(contract => (
+                                        <option key={contract.id} value={contract.id}>
+                                            {contract.templateName} {contract.contractType && `- ${contract.contractType}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Currency *</span>
+                                </label>
+                                <select
+                                    className="select select-bordered w-full"
+                                    value={formData.currencyId || ''}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, currencyId: Number(e.target.value) });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                >
+                                    <option value="">Select currency</option>
+                                    {currencies.map(currency => (
+                                        <option key={currency.id} value={currency.id}>
+                                            {currency.name} ({currency.currencies})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Contract Date *</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    className="input input-bordered w-full"
+                                    value={formData.contractDate}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, contractDate: e.target.value });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Completion Date *</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    className="input input-bordered w-full"
+                                    value={formData.completionDate}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, completionDate: e.target.value });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Advance Payment</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    className="input input-bordered w-full"
+                                    value={formData.advancePayment}
+                                    onChange={(e) => setFormData({ ...formData, advancePayment: Number(e.target.value) })}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Material Supply</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    className="input input-bordered w-full"
+                                    value={formData.materialSupply}
+                                    onChange={(e) => setFormData({ ...formData, materialSupply: Number(e.target.value) })}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Retention %</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={formData.holdWarranty}
+                                    onChange={(e) => setFormData({ ...formData, holdWarranty: e.target.value })}
+                                    placeholder="e.g., 5%"
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Late Penalty</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={formData.latePenalties}
+                                    onChange={(e) => setFormData({ ...formData, latePenalties: e.target.value })}
+                                    placeholder="e.g., 1% per day"
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Payment Terms</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={formData.paymentsTerm}
+                                    onChange={(e) => setFormData({ ...formData, paymentsTerm: e.target.value })}
+                                    placeholder="e.g., Net 30 days"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="divider">Attachments</div>
+
+                        <div className="space-y-3">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Attachment Type</span>
+                                </label>
+                                <select 
+                                    className="select select-bordered w-full"
+                                    value=""
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            setSelectedAttachmentType(e.target.value);
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select attachment type to upload</option>
+                                    <option value="Plans">Plans - Architectural or construction plans</option>
+                                    <option value="PlansHSE">Plans HSE - Health, Safety, and Environment plans</option>
+                                    <option value="UnitePrice">Unit Price Documents</option>
+                                    <option value="BoqAtt">BOQ Attachment Documents</option>
+                                    <option value="PrescriptionTechniques">Technical Specifications</option>
+                                    <option value="DocumentsJuridiques">Legal Documents</option>
+                                    <option value="Other">Other Documents</option>
+                                </select>
+                            </div>
+
+                            {selectedAttachmentType && (
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Upload {selectedAttachmentType} Documents</span>
+                                    </label>
+                                    <div className="filepond-wrapper">
+                                        <FileUploader
+                                            allowMultiple={true}
+                                            maxFiles={10}
+                                            acceptedFileTypes={['.pdf', '.doc', '.docx', '.xls', '.xlsx']}
+                                            labelIdle='Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
+                                            credits={false}
+                                            stylePanelLayout="compact"
+                                            styleLoadIndicatorPosition="center bottom"
+                                            styleProgressIndicatorPosition="right bottom"
+                                            styleButtonRemoveItemPosition="left bottom"
+                                            allowProcess={false}
+                                            instantUpload={false}
+                                            onupdatefiles={(files: FilePondFile[]) => {
+                                                const newAttachments = files.map(fileItem => ({
+                                                    file: fileItem.file as File,
+                                                    type: selectedAttachmentType
+                                                }));
+                                                
+                                                const otherAttachments = formData.attachments.filter(
+                                                    att => att.type !== selectedAttachmentType
+                                                );
+                                                setFormData({
+                                                    ...formData,
+                                                    attachments: [...otherAttachments, ...newAttachments]
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {Object.entries(
+                                formData.attachments.reduce((acc, att) => {
+                                    if (!acc[att.type]) acc[att.type] = [];
+                                    acc[att.type].push(att);
+                                    return acc;
+                                }, {} as Record<string, typeof formData.attachments>)
+                            ).map(([type, attachments]) => (
+                                <div key={type} className="bg-base-200 p-4 rounded-lg">
+                                    <h4 className="font-semibold mb-2">{type}</h4>
+                                    <div className="space-y-2">
+                                        {attachments.map((attachment, index) => (
+                                            <div key={index} className="flex items-center justify-between p-2 bg-base-100 rounded">
+                                                <span className="text-sm">{attachment.file.name}</span>
+                                                <button
+                                                    className="btn btn-sm btn-ghost text-error"
+                                                    onClick={() => {
+                                                        const newAttachments = formData.attachments.filter(
+                                                            (att, i) => !(att.type === type && att.file.name === attachment.file.name)
+                                                        );
+                                                        setFormData({ ...formData, attachments: newAttachments });
+                                                    }}
+                                                >
+                                                    <span className="iconify lucide--x size-4"></span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 5 && (
+                    <div>
+                        {/* Building Selection and Upload Button in same row */}
+                        <div className="mb-6 flex items-center justify-between gap-4">
+                            <select 
+                                className="select select-bordered w-auto max-w-xs"
+                                value={selectedBuildingForBOQ || ''}
+                                onChange={(e) => setSelectedBuildingForBOQ(e.target.value)}
+                            >
+                                {formData.buildingIds.map(buildingId => {
+                                    const building = selectedProjectBuildings.find(b => b.id === buildingId);
+                                    return (
+                                        <option key={buildingId} value={buildingId.toString()}>
+                                            {building?.name || building?.buildingName}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            
+                            <button
+                                onClick={() => setIsImportingBOQ(true)}
+                                className="btn btn-outline btn-sm"
+                            >
+                                <span className="iconify lucide--upload w-4 h-4"></span>
+                                Import BOQ
+                            </button>
+                        </div>
+
+                        {selectedBuildingForBOQ && (
+                            <div>
+                                {/* BOQ Items Table - Custom implementation with SAMTable design language */}
+                                <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full table-auto bg-base-100">
+                                            <thead className="bg-base-200">
+                                                <tr>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">No.</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Description</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Cost Code</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Unit</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Quantity</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Unit Price</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Total Price</th>
+                                                    <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-base-300">
+                                                {(() => {
+                                                    const buildingBOQ = formData.boqData.find(b => b.buildingId === parseInt(selectedBuildingForBOQ));
+                                                    const items = buildingBOQ?.items || [];
+                                                    
+                                                    // Always show at least one empty row for new entries
+                                                    const displayItems = [...items];
+                                                    if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== '') {
+                                                        displayItems.push(createEmptyBOQItem());
+                                                    }
+                                                    
+                                                    return displayItems.map((item, index) => {
+                                                        const isEmptyRow = item.no === '' && item.key === '' && (!item.costCode || item.costCode === '') && (!item.unite || item.unite === '') && item.qte === 0 && item.pu === 0;
+                                                        
+                                                        return (
+                                                            <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    <input
+                                                                        id={`boq-input-${item.id}-no`}
+                                                                        type="text"
+                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                        value={item.no}
+                                                                        onChange={(e) => {
+                                                                            if (isEmptyRow && e.target.value) {
+                                                                                addNewBOQItem({ no: e.target.value }, 'no');
+                                                                            } else if (!isEmptyRow) {
+                                                                                updateBOQItem(index, 'no', e.target.value);
+                                                                            }
+                                                                        }}
+                                                                        placeholder=""
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    <input
+                                                                        id={`boq-input-${item.id}-key`}
+                                                                        type="text"
+                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                        value={item.key}
+                                                                        onChange={(e) => {
+                                                                            if (isEmptyRow && e.target.value) {
+                                                                                addNewBOQItem({ key: e.target.value }, 'key');
+                                                                            } else if (!isEmptyRow) {
+                                                                                updateBOQItem(index, 'key', e.target.value);
+                                                                            }
+                                                                        }}
+                                                                        onDoubleClick={() => {
+                                                                            if (item.key) {
+                                                                                setSelectedDescription({
+                                                                                    itemNo: item.no || `Item ${index + 1}`,
+                                                                                    description: item.key
+                                                                                });
+                                                                                setShowDescriptionModal(true);
+                                                                            }
+                                                                        }}
+                                                                        placeholder=""
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    <input
+                                                                        id={`boq-input-${item.id}-costCode`}
+                                                                        type="text"
+                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                        value={item.costCode || ''}
+                                                                        onChange={(e) => {
+                                                                            if (isEmptyRow && e.target.value) {
+                                                                                addNewBOQItem({ costCode: e.target.value }, 'costCode');
+                                                                            } else if (!isEmptyRow) {
+                                                                                updateBOQItem(index, 'costCode', e.target.value);
+                                                                            }
+                                                                        }}
+                                                                        placeholder=""
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    <select
+                                                                        id={`boq-input-${item.id}-unite`}
+                                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 border-0"
+                                                                        value={item.unite || ''}
+                                                                        onChange={(e) => {
+                                                                            const selectedUnit = units.find(unit => unit.name === e.target.value);
+                                                                            const unitName = selectedUnit?.name || e.target.value;
+                                                                            if (isEmptyRow && unitName) {
+                                                                                addNewBOQItem({ unite: unitName }, 'unite');
+                                                                            } else if (!isEmptyRow) {
+                                                                                updateBOQItem(index, 'unite', unitName);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <option value=""></option>
+                                                                        {units.map(unit => (
+                                                                            <option key={unit.id} value={unit.name}>
+                                                                                {unit.name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    <input
+                                                                        id={`boq-input-${item.id}-qte`}
+                                                                        type="number"
+                                                                        className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unite && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                        value={item.qte || ''}
+                                                                        onChange={(e) => {
+                                                                            if (!item.unite && !isEmptyRow) return; // Prevent editing if no unit
+                                                                            const value = parseFloat(e.target.value) || 0;
+                                                                            if (isEmptyRow && value > 0) {
+                                                                                addNewBOQItem({ qte: value }, 'qte');
+                                                                            } else if (!isEmptyRow) {
+                                                                                updateBOQItem(index, 'qte', value);
+                                                                            }
+                                                                        }}
+                                                                        placeholder=""
+                                                                        step="0.01"
+                                                                        disabled={!item.unite && !isEmptyRow}
+                                                                    />
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                                                                    {isEmptyRow ? (
+                                                                        <input
+                                                                            id={`boq-input-${item.id}-pu`}
+                                                                            type="number"
+                                                                            className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                                            value={item.pu || ''}
+                                                                            onChange={(e) => {
+                                                                                const value = parseFloat(e.target.value) || 0;
+                                                                                if (value > 0) {
+                                                                                    addNewBOQItem({ pu: value }, 'pu');
+                                                                                }
+                                                                            }}
+                                                                            placeholder=""
+                                                                            step="0.01"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                id={`boq-input-${item.id}-pu`}
+                                                                                type="number"
+                                                                                className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 opacity-0 absolute inset-0 ${!item.unite ? 'cursor-not-allowed' : ''}`}
+                                                                                value={item.pu || ''}
+                                                                                onChange={(e) => {
+                                                                                    const value = parseFloat(e.target.value) || 0;
+                                                                                    updateBOQItem(index, 'pu', value);
+                                                                                }}
+                                                                                step="0.01"
+                                                                                disabled={!item.unite}
+                                                                            />
+                                                                            <div 
+                                                                                className={`text-center text-xs sm:text-sm ${!item.unite ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
+                                                                                onClick={() => {
+                                                                                    if (item.unite) {
+                                                                                        document.getElementById(`boq-input-${item.id}-pu`)?.focus();
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                {!item.unite ? '-' : formatNumber(item.pu || 0)}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content text-center">
+                                                                    {isEmptyRow || !item.unite ? '-' : formatNumber(item.totalPrice || item.qte * item.pu)}
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
+                                                                    {!isEmptyRow && (
+                                                                        <div className="inline-flex">
+                                                                            <button
+                                                                                onClick={() => deleteBOQItem(index)}
+                                                                                className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
+                                                                                title="Delete item"
+                                                                            >
+                                                                                <span className="iconify lucide--trash size-4"></span>
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    });
+                                                })()}
+                                                
+                                                {/* Total Row */}
+                                                {(() => {
+                                                    const buildingBOQ = formData.boqData.find(b => b.buildingId === parseInt(selectedBuildingForBOQ));
+                                                    const items = buildingBOQ?.items || [];
+                                                    
+                                                    if (items.length > 0) {
+                                                        const total = items.reduce((sum, item) => {
+                                                            if (!item.unite) return sum; // Skip items without unit
+                                                            return sum + (item.totalPrice || item.qte * item.pu);
+                                                        }, 0);
+                                                        return (
+                                                            <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
+                                                                <td colSpan={6} className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
+                                                                    Total
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
+                                                                    {formatNumber(total)}
+                                                                </td>
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 w-24 sm:w-28"></td>
+                                                            </tr>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {currentStep === 6 && (
+                    <div>
+                        <div className="space-y-3">
+                            <div className="bg-base-200 p-3 rounded">
+                                <h3 className="font-semibold mb-2">Project Information</h3>
+                                <p>Project: {selectedProject?.name}</p>
+                                <p>Buildings: {formData.buildingIds.map(id => 
+                                    selectedProjectBuildings.find(b => b.id === id)?.name || selectedProjectBuildings.find(b => b.id === id)?.buildingName
+                                ).join(', ')}</p>
+                            </div>
+
+                            <div className="bg-base-200 p-3 rounded">
+                                <h3 className="font-semibold mb-2">Subcontractor</h3>
+                                <p>{selectedSubcontractor?.name || 'Not selected'}</p>
+                            </div>
+
+                            <div className="bg-base-200 p-3 rounded">
+                                <h3 className="font-semibold mb-2">Contract Details</h3>
+                                <p>Type: {contracts.find(c => c.id === formData.contractId)?.templateName}</p>
+                                <p>Currency: {currencies.find(c => c.id === formData.currencyId)?.name} ({currencies.find(c => c.id === formData.currencyId)?.currencies})</p>
+                                <p>Contract Date: {formData.contractDate}</p>
+                                <p>Completion Date: {formData.completionDate}</p>
+                                {formData.advancePayment > 0 && <p>Advance Payment: {formData.advancePayment}</p>}
+                                {formData.materialSupply > 0 && <p>Material Supply: {formData.materialSupply}</p>}
+                            </div>
+
+                            {formData.attachments.length > 0 && (
+                                <div className="bg-base-200 p-3 rounded">
+                                    <h3 className="font-semibold mb-2">Attachments</h3>
+                                    {formData.attachments.map((att, index) => (
+                                        <p key={index}>{att.file.name} ({att.type})</p>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* BOQ Summary */}
+                            {formData.boqData.length > 0 && (
+                                <div className="bg-base-200 p-3 rounded">
+                                    <h3 className="font-semibold mb-2">BOQ Summary</h3>
+                                    {formData.boqData.map(buildingBOQ => {
+                                        const buildingTotal = buildingBOQ.items.reduce((sum, item) => {
+                                            if (!item.unite) return sum; // Skip items without unit
+                                            return sum + (item.totalPrice || item.qte * item.pu);
+                                        }, 0);
+                                        
+                                        if (buildingBOQ.items.length === 0) return null;
+                                        
+                                        return (
+                                            <div key={buildingBOQ.buildingId} className="mb-2">
+                                                <p className="font-medium">{buildingBOQ.buildingName}</p>
+                                                <p className="text-sm text-base-content/70">
+                                                    {buildingBOQ.items.length} items - Total: {formatNumber(buildingTotal)}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="border-t pt-2 mt-2">
+                                        <p className="font-semibold">
+                                            Grand Total: {formatNumber(formData.boqData.reduce((sum, buildingBOQ) => 
+                                                sum + buildingBOQ.items.reduce((itemSum, item) => {
+                                                    if (!item.unite) return itemSum; // Skip items without unit
+                                                    return itemSum + (item.totalPrice || item.qte * item.pu);
+                                                }, 0), 0
+                                            ))}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 7 && (
+                    <PreviewStep
+                        formData={formData}
+                        selectedProject={selectedProject}
+                        selectedSubcontractor={selectedSubcontractor}
+                        contractId={formData.id}
+                    />
                 )}
             </div>
+
+            {/* Back Confirmation Dialog */}
+            {showBackConfirmDialog && (
+                <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                                <span className="iconify lucide--alert-triangle w-6 h-6 text-warning" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-base-content">Unsaved Changes</h3>
+                                <p className="text-sm text-base-content/60">Confirm navigation</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-base-content/80 mb-3">
+                                Are you sure you want to leave? Any unsaved changes will be lost.
+                            </p>
+                            <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+                                <p className="text-sm text-warning-content">
+                                    <span className="iconify lucide--info w-4 h-4 inline mr-1" />
+                                    Your progress in this wizard will not be saved.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={handleCancelBack}
+                                className="btn btn-ghost btn-sm px-6"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmBack}
+                                className="btn btn-warning btn-sm px-6"
+                            >
+                                Leave Without Saving
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Import BOQ Modal */}
             {isImportingBOQ && (
@@ -588,7 +1605,8 @@ const EditSubcontractorBOQ = () => {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                            toaster.info('BOQ import functionality will be implemented with backend integration');
+                                            console.log('Selected file:', file);
+                                            toaster.info('BOQ import functionality will be implemented soon');
                                         }
                                     }}
                                 />
@@ -598,14 +1616,21 @@ const EditSubcontractorBOQ = () => {
                             </div>
 
                             <div className="bg-info/10 border border-info/20 rounded-lg p-3">
-                                <h4 className="font-semibold text-info-content mb-2">Expected Format:</h4>
-                                <ul className="text-sm text-info-content/80 space-y-1">
+                                <h4 className="font-semibold text-base-content mb-2">Expected Format:</h4>
+                                <ul className="text-sm text-base-content/80 space-y-1">
                                     <li>• Column A: Item No.</li>
                                     <li>• Column B: Description/Key</li>
                                     <li>• Column C: Unit</li>
                                     <li>• Column D: Quantity</li>
                                     <li>• Column E: Unit Price</li>
                                 </ul>
+                            </div>
+
+                            <div className="bg-warning/10 border border-warning/20 rounded-lg p-3">
+                                <p className="text-sm text-base-content">
+                                    <span className="iconify lucide--alert-triangle w-4 h-4 inline mr-1" />
+                                    Importing will replace existing BOQ items for this building.
+                                </p>
                             </div>
                         </div>
 
@@ -618,7 +1643,7 @@ const EditSubcontractorBOQ = () => {
                             </button>
                             <button
                                 onClick={() => {
-                                    toaster.info('BOQ import functionality will be implemented with backend integration');
+                                    toaster.info('BOQ import functionality will be implemented soon');
                                     setIsImportingBOQ(false);
                                 }}
                                 className="btn btn-primary"
@@ -629,8 +1654,16 @@ const EditSubcontractorBOQ = () => {
                     </div>
                 </div>
             )}
+            {/* Description Modal */}
+            <DescriptionModal
+                isOpen={showDescriptionModal}
+                onClose={() => setShowDescriptionModal(false)}
+                title="Item Description"
+                description={selectedDescription.description}
+                itemNo={selectedDescription.itemNo}
+            />
         </div>
     );
 };
 
-export default EditSubcontractorBOQ;
+export default EditSubcontractWizard;
