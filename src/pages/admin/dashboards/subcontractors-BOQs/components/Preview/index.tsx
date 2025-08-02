@@ -349,6 +349,7 @@ function PreviewStep({
                         <h4 className="font-semibold text-base-content mb-2">Contract Details</h4>
                         <p className="text-sm text-base-content/70">Type: {contracts.find(c => c.id === formData.contractId)?.templateName}</p>
                         <p className="text-sm text-base-content/70">Currency: {currencies.find(c => c.id === formData.currencyId)?.name} ({currencies.find(c => c.id === formData.currencyId)?.currencies})</p>
+                        <p className="text-sm text-base-content/70">Contract Number: {formData.contractNumber}</p>
                         <p className="text-sm text-base-content/70">Contract Date: {formData.contractDate}</p>
                         <p className="text-sm text-base-content/70">Completion Date: {formData.completionDate}</p>
                     </div>

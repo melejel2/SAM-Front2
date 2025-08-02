@@ -18,6 +18,12 @@ const useParticularConditions = () => {
             options: ["Lump Sum", "Remeasured", "Cost Plus"],
         },
         {
+            name: "contractNumber",
+            label: "Contract Number",
+            type: "text",
+            required: true,
+        },
+        {
             name: "contractDate",
             label: "Contract Date (mm/dd/yyyy)",
             type: "date",

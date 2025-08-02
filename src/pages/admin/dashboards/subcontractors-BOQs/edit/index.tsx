@@ -74,6 +74,7 @@ interface WizardFormData {
     subcontractorId: number | null;
     contractId: number | null;
     currencyId: number | null;
+    contractNumber: string;
     contractDate: string;
     completionDate: string;
     advancePayment: number;
@@ -260,6 +261,7 @@ const EditSubcontractWizard = () => {
                     subcontractorId: contractData.subContractorId,
                     contractId: contractData.contractId,
                     currencyId: contractData.currencyId,
+                    contractNumber: contractData.contractNumber,
                     contractDate: contractData.contractDate ? contractData.contractDate.split('T')[0] : new Date().toISOString().split('T')[0],
                     completionDate: contractData.completionDate ? contractData.completionDate.split('T')[0] : '',
                     advancePayment: contractData.advancePayment || 0,
@@ -513,6 +515,8 @@ const EditSubcontractWizard = () => {
                 toaster.error("Please select a currency");
             } else if (!formData.completionDate) {
                 toaster.error("Please enter a completion date");
+            }else if (!formData.contractNumber) {
+                toaster.error("Please enter a contract number");
             }
             return;
         }
@@ -1020,6 +1024,21 @@ const EditSubcontractWizard = () => {
 
                             <div className="form-control">
                                 <label className="label">
+                                    <span className="label-text">Contract Number *</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={formData.contractNumber}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, contractNumber: e.target.value });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
                                     <span className="label-text">Completion Date *</span>
                                 </label>
                                 <input
@@ -1473,6 +1492,7 @@ const EditSubcontractWizard = () => {
                                 <h3 className="font-semibold mb-2">Contract Details</h3>
                                 <p>Type: {contracts.find(c => c.id === formData.contractId)?.templateName}</p>
                                 <p>Currency: {currencies.find(c => c.id === formData.currencyId)?.name} ({currencies.find(c => c.id === formData.currencyId)?.currencies})</p>
+                                <p>Contract Number: {formData.contractNumber}</p>
                                 <p>Contract Date: {formData.contractDate}</p>
                                 <p>Completion Date: {formData.completionDate}</p>
                                 {formData.advancePayment > 0 && <p>Advance Payment: {formData.advancePayment}</p>}

@@ -61,6 +61,7 @@ interface WizardFormData {
     subcontractorId: number | null;
     contractId: number | null;
     currencyId: number | null;
+    contractNumber: string;
     contractDate: string;
     completionDate: string;
     advancePayment: number;
@@ -1025,6 +1026,21 @@ const NewSubcontractWizard = () => {
                                 />
                             </div>
 
+                             <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Contract Number *</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={formData.contractNumber}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, contractNumber: e.target.value });
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                />
+                            </div>
+
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Completion Date *</span>
@@ -1486,6 +1502,7 @@ const NewSubcontractWizard = () => {
                                 <h3 className="font-semibold mb-2">Contract Details</h3>
                                 <p>Type: {contracts.find(c => c.id === formData.contractId)?.templateName}</p>
                                 <p>Currency: {currencies.find(c => c.id === formData.currencyId)?.name} ({currencies.find(c => c.id === formData.currencyId)?.currencies})</p>
+                                <p>Contract Number: {formData.contractNumber}</p>
                                 <p>Contract Date: {formData.contractDate}</p>
                                 <p>Completion Date: {formData.completionDate}</p>
                                 {formData.advancePayment > 0 && <p>Advance Payment: {formData.advancePayment}</p>}
