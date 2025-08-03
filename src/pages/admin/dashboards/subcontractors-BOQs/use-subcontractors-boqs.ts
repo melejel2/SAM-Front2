@@ -171,53 +171,23 @@ const useSubcontractorsBOQs = () => {
     };
 
     const previewContract = async (contractId: string) => {
-        try {
-            // First try to get the contract data for editable contracts
-            const contractResponse = await apiRequest({
-                endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
-                method: "GET",
-                token: token ?? "",
-            });
-
-            if (contractResponse && contractResponse.success !== false) {
-                // For editable contracts, LivePreview returns a ZIP file with both PDF and Word
-                // We need to extract the PDF from the ZIP or use a different approach
-                // For now, let's try to get the contract data and make a more specific call
-                
-                // Use the new LivePreviewPdf endpoint for editable contracts
-                try {
-                    const livePreviewResponse = await apiRequest({
-                        endpoint: "ContractsDatasets/LivePreviewPdf",
-                        method: "POST",
-                        token: token ?? "",
-                        body: contractResponse,
-                        responseType: "blob",
-                    });
-
-                    if (livePreviewResponse instanceof Blob) {
-                        return { success: true, blob: livePreviewResponse, error: null };
-                    }
-                } catch (livePreviewError) {
-                    console.warn("LivePreview failed, trying fallback:", livePreviewError);
-                }
-            }
-
-            // Fallback to standard PDF export for saved contracts
+            try {
+            // Use the PDF export endpoint for preview since PreviewContract doesn't exist
             const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportSubcontractorPdf/${contractId}`,
+                endpoint: `ContractsDatasets/ExportContractPdf/${contractId}`,
                 method: "GET",
                 token: token ?? "",
                 responseType: "blob",
             });
 
             if (response instanceof Blob) {
-                return { success: true, blob: response, error: null };
+                return { success: true, blob: response };
             }
-            return { success: false, blob: null, error: response};
+            return { success: false, blob: null };
         } catch (error) {
             console.error(error);
-            return { success: false, blob: null, error: error };
-        }
+            return { success: false, blob: null };
+        }            
     };
 
 const DeleteContract = async (contractId: number | string) => {
