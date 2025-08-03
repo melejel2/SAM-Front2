@@ -104,6 +104,7 @@ const SubcontractorsBOQs = () => {
         loading, 
         getContractsDatasets, 
         previewContract,
+        DeleteContract,
         generateContract 
     } = useSubcontractorsBOQs();
 
@@ -122,6 +123,15 @@ const SubcontractorsBOQs = () => {
         } else {
             toaster.error(result.error!.message!)
             //toaster.error("Failed to load contract preview");
+        }
+    };
+
+     const handleDeleteContract = async (id: number) => {
+        const result = await DeleteContract(id);
+        if (result.success) {
+            toaster.success("Contract deleted successfully!");
+        } else {
+            toaster.error(result.error!.message!)
         }
     };
 
@@ -374,6 +384,7 @@ const SubcontractorsBOQs = () => {
                                 actions
                                 previewAction
                                 editAction
+                                deleteAction
                                 title={"Subcontractor BOQ"}
                                 loading={false}
                                 onSuccess={getContractsDatasets}
@@ -382,6 +393,8 @@ const SubcontractorsBOQs = () => {
                                         return handlePreviewContract(data);
                                     } else if (type === "Edit" && data) {
                                         navigate(`/dashboard/subcontractors-boqs/edit/${data.id}`);
+                                    } else if (type === "Delete" && data) {
+                                        return handleDeleteContract(data.id);
                                     } else if (type === "Generate" && data) {
                                         setContractToGenerate(data);
                                         setShowGenerateModal(true);

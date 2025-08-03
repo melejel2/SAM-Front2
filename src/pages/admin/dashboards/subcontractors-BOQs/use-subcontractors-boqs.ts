@@ -132,7 +132,6 @@ const useSubcontractorsBOQs = () => {
 
     const getContractsDatasets = async () => {
         setLoading(true);
-
         try {
             const data = await apiRequest({
                 endpoint: "ContractsDatasets/GetContractsDatasetsList/0", // Status 0 = Editable contracts for BOQs
@@ -221,6 +220,26 @@ const useSubcontractorsBOQs = () => {
         }
     };
 
+const DeleteContract = async (contractId: number | string) => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/DeleteSubContractorBoq/${contractId}`,
+            method: "DELETE", 
+            token: token ?? "",
+        });
+
+        if (response && response.success !== false) {
+            setTableData(prevData => prevData.filter(contract => contract.id !== contractId));
+            return { success: true };
+        }
+
+        return { success: false, error: response?.error || "Failed to delete contract" };
+    } catch (error) {
+        console.error("Error deleting contract:", error);
+        return { success: false, error: "An error occurred while deleting the contract" };
+    }
+};
+
     return {
         columns,
         tableData,
@@ -228,6 +247,7 @@ const useSubcontractorsBOQs = () => {
         loading,
         getContractsDatasets,
         previewContract,
+        DeleteContract,
         generateContract,
     };
 };
