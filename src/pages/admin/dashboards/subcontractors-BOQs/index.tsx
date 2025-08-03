@@ -97,6 +97,9 @@ const SubcontractorsBOQs = () => {
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [contractToGenerate, setContractToGenerate] = useState<any>(null);
 
+    const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+    const [contractToDeleteId, setContractToDeleteId] = useState<number | null>(null);
+
     const { 
         columns, 
         tableData, 
@@ -126,14 +129,29 @@ const SubcontractorsBOQs = () => {
         }
     };
 
-     const handleDeleteContract = async (id: number) => {
-        const result = await DeleteContract(id);
+const handleDeleteContract = (id: number) => {
+    setContractToDeleteId(id);
+    setShowDeleteConfirmDialog(true);
+};
+
+const handleDeleteConfirm = async () => {
+    if (contractToDeleteId !== null) {
+        const result = await DeleteContract(contractToDeleteId);
         if (result.success) {
             toaster.success("Contract deleted successfully!");
+            getContractsDatasets(); // Refresh the table after deletion
         } else {
-            toaster.error(result.error!.message!)
+            toaster.error(result.error!.message!);
         }
-    };
+    }
+    setShowDeleteConfirmDialog(false);
+    setContractToDeleteId(null);
+};
+
+const handleDeleteCancel = () => {
+    setShowDeleteConfirmDialog(false);
+    setContractToDeleteId(null);
+};
 
     const handleBackToTable = () => {
         setViewMode('table');
@@ -393,8 +411,9 @@ const SubcontractorsBOQs = () => {
                                         return handlePreviewContract(data);
                                     } else if (type === "Edit" && data) {
                                         navigate(`/dashboard/subcontractors-boqs/edit/${data.id}`);
-                                    } else if (type === "Delete" && data) {
-                                        return handleDeleteContract(data.id);
+                                    } 
+                                    else if (type === "Delete" && data) {
+                                        handleDeleteContract(data.id); 
                                     } else if (type === "Generate" && data) {
                                         setContractToGenerate(data);
                                         setShowGenerateModal(true);
@@ -462,6 +481,51 @@ const SubcontractorsBOQs = () => {
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirmation Dialog */}
+{showDeleteConfirmDialog && (
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-error/10 rounded-full flex items-center justify-center">
+                    {}
+                    <span className="iconify lucide--trash-2 w-6 h-6 text-error" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold text-base-content">Confirm Deletion</h3>
+                    <p className="text-sm text-base-content/60">This action cannot be undone.</p>
+                </div>
+            </div>
+
+            <div className="mb-6">
+                <p className="text-base-content/80 mb-3">
+                    Are you sure you want to permanently delete this contract?
+                </p>
+                <div className="bg-error/30 border border-error/20 rounded-lg p-3">
+                    <p className="text-sm text-error-content">
+                        <span className="iconify lucide--info w-4 h-4 inline mr-1" />
+                        All associated data and files will also be deleted.
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+                <button
+                    onClick={handleDeleteCancel}
+                    className="btn btn-ghost btn-sm px-6"
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={handleDeleteConfirm}
+                    className="btn btn-error btn-sm px-6"
+                >
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+)}
 
             {/* Generate Contract Confirmation Modal */}
             {showGenerateModal && contractToGenerate && (
