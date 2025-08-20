@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import Icon from "@/components/Icon";
@@ -14,7 +14,13 @@ const LoginPage = () => {
     const { onSubmit, databases, isLoading, isMicrosoftLoading, error, onMicrosoftLogin } = useLogin();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [selectedDb, setSelectedDb] = useState(databases[0] ?? "");
+    const [selectedDb, setSelectedDb] = useState("");
+
+    useEffect(() => {
+        if (databases.length > 0 && !selectedDb) {
+            setSelectedDb(databases[0]);
+        }
+    }, [databases, selectedDb]);
 
     return (
         <>

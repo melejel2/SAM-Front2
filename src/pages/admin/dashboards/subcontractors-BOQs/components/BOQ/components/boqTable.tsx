@@ -15,8 +15,7 @@ const BOQTable: React.FC<BOQTableProps> = ({ onBoqItemsChange }) => {
 
     useEffect(() => {
         getTrades();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [getTrades]);
 
     // Call the callback when BOQ items change
     useEffect(() => {

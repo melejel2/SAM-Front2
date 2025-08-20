@@ -117,15 +117,14 @@ const SubcontractorsBOQs = () => {
     }, [location.pathname]);
 
     const handlePreviewContract = async (row: any) => {
-        const result = await previewContract(row.id);
+        const result = await previewContract(row);
         if (result.success && result.blob) {
             // Use PDF extension for preview since we're using the PDF endpoint
             const fileName = `contract-${row.id}-${row.projectName || 'document'}.pdf`;
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
             setViewMode('preview');
         } else {
-            toaster.error(result.error!.message!)
-            //toaster.error("Failed to load contract preview");
+            toaster.error("Failed to load contract preview");
         }
     };
 
@@ -414,7 +413,7 @@ const handleDeleteCancel = () => {
                                     } 
                                     else if (type === "Delete" && data) {
                                         handleDeleteContract(data.id); 
-                                    } else if (type === "Generate" && data) {
+                                    } else if ((type as any) === "Generate" && data) {
                                         setContractToGenerate(data);
                                         setShowGenerateModal(true);
                                     }

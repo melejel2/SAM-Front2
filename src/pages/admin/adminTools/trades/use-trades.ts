@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -40,7 +40,7 @@ const useTrades = () => {
         },
     ];
 
-    const getTrades = async () => {
+    const getTrades = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -57,7 +57,7 @@ const useTrades = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     return {
         columns,

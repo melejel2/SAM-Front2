@@ -170,13 +170,15 @@ const useSubcontractorsBOQs = () => {
         }
     };
 
-    const previewContract = async (contractId: string) => {
-            try {
-            // Use the PDF export endpoint for preview since PreviewContract doesn't exist
+    const previewContract = async (contractData: any) => {
+        try {
+            // For editable contracts (status 0), use live preview instead of export
+            // This generates a temporary preview without changing the contract status
             const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportContractPdf/${contractId}`,
-                method: "GET",
+                endpoint: `ContractsDatasets/LivePreviewPdf`,
+                method: "POST",
                 token: token ?? "",
+                body: contractData,
                 responseType: "blob",
             });
 
@@ -185,7 +187,7 @@ const useSubcontractorsBOQs = () => {
             }
             return { success: false, blob: null };
         } catch (error) {
-            console.error(error);
+            console.error("Live preview error:", error);
             return { success: false, blob: null };
         }            
     };
