@@ -5,7 +5,7 @@ import { Outlet } from 'react-router-dom';
 import { Topbar } from './components/Topbar';
 import { Sidebar } from './components/Sidebar';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {

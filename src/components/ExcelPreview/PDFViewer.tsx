@@ -83,7 +83,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileBlob, fileName }) => {
                         <div className="text-center">
                             <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/30 border-top-primary mx-auto mb-4"></div>
                             <p className="text-base-content font-medium">Loading PDF...</p>
-                            {console.log('PDFViewer waiting for pdfUrl, current pdfUrl:', pdfUrl)}
                         </div>
                     </div>
                 )}

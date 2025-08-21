@@ -23,7 +23,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
     const [exportingWord, setExportingWord] = useState(false);
     
     const { getToken } = useAuth();
-    const toaster = useToast();
+    const { toaster } = useToast();
 
     useEffect(() => {
         if (contractId) {
@@ -75,15 +75,15 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     console.log('PDF preview loaded successfully');
                 } else {
                     console.error('Invalid PDF response:', livePreviewResponse);
-                    toaster('Failed to generate PDF preview', 'error');
+                    toaster.error('Failed to generate PDF preview');
                 }
             } else {
                 console.error('Contract data not found or invalid:', contractResponse);
-                toaster('Contract data not found', 'error');
+                toaster.error('Contract data not found');
             }
         } catch (error) {
             console.error('Preview error:', error);
-            toaster('Failed to load contract preview', 'error');
+            toaster.error('Failed to load contract preview');
         } finally {
             setLoading(false);
         }
@@ -91,7 +91,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
 
     const downloadPDF = async () => {
         if (!contractId) {
-            toaster('No contract available for download', 'error');
+            toaster.error('No contract available for download');
             return;
         }
 
@@ -126,16 +126,16 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    toaster('PDF downloaded successfully', 'success');
+                    toaster.success('PDF downloaded successfully');
                 } else {
-                    toaster('Failed to download PDF', 'error');
+                    toaster.error('Failed to download PDF');
                 }
             } else {
-                toaster('Contract data not found', 'error');
+                toaster.error('Contract data not found');
             }
         } catch (error) {
             console.error('PDF download error:', error);
-            toaster('Failed to download PDF', 'error');
+            toaster.error('Failed to download PDF');
         } finally {
             setExportingPdf(false);
         }
@@ -143,7 +143,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
 
     const downloadWord = async () => {
         if (!contractId) {
-            toaster('No contract available for download', 'error');
+            toaster.error('No contract available for download');
             return;
         }
 
@@ -178,16 +178,16 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    toaster('Word document downloaded successfully', 'success');
+                    toaster.success('Word document downloaded successfully');
                 } else {
-                    toaster('Failed to download Word document', 'error');
+                    toaster.error('Failed to download Word document');
                 }
             } else {
-                toaster('Contract data not found', 'error');
+                toaster.error('Contract data not found');
             }
         } catch (error) {
             console.error('Word download error:', error);
-            toaster('Failed to download Word document', 'error');
+            toaster.error('Failed to download Word document');
         } finally {
             setExportingWord(false);
         }

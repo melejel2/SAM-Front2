@@ -205,7 +205,7 @@ const TableComponent: React.FC<TableProps> = ({
     const handleRowClick = useCallback((row: any) => {
         if (onRowSelect) {
             // Use functional update to prevent re-render loops
-            setSelectedRow(prevSelected => {
+            setSelectedRow((prevSelected: any) => {
                 // Only update if actually different
                 if (prevSelected?.id === row.id) {
                     return prevSelected;
@@ -221,7 +221,7 @@ const TableComponent: React.FC<TableProps> = ({
         if (selectedRowId !== undefined && selectedRowId !== null) {
             const matchingRow = tableData.find(row => row.id == selectedRowId);
             if (matchingRow) {
-                setSelectedRow(prevSelected => {
+                setSelectedRow((prevSelected: any) => {
                     // Only update if actually different to prevent re-renders
                     if (prevSelected?.id === matchingRow.id) {
                         return prevSelected;
@@ -230,7 +230,7 @@ const TableComponent: React.FC<TableProps> = ({
                 });
             }
         } else if (selectedRowId === null || selectedRowId === undefined) {
-            setSelectedRow(prevSelected => {
+            setSelectedRow((prevSelected: any) => {
                 // Only clear if not already null
                 return prevSelected ? null : prevSelected;
             });

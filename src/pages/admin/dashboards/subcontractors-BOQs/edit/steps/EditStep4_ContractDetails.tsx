@@ -280,8 +280,8 @@ export const EditStep4_ContractDetails: React.FC = () => {
             <AttachmentsDialog
                 isOpen={isAttachmentsDialogOpen}
                 onClose={() => setIsAttachmentsDialogOpen(false)}
-                attachments={formData.attachments || []}
-                onChange={(attachments) => handleFieldChange('attachments', attachments)}
+                attachments={(formData.attachments as any) || []}
+                onChange={(attachments) => handleFieldChange('attachments', attachments as any)}
             />
         </div>
     );

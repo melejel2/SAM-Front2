@@ -32,13 +32,13 @@ interface AttachmentsDialogProps {
 }
 
 const ATTACHMENT_CATEGORIES = [
-  { value: AttachmentsType.Plans, label: 'Technical Plans', annexe: 'Annexe F' },
-  { value: AttachmentsType.BoqAtt, label: 'BOQ Attachment', annexe: 'Annexe D' },
-  { value: AttachmentsType.PrescriptionTechniques, label: 'Technical Specifications', annexe: 'Annexe E' },
-  { value: AttachmentsType.PlansHSE, label: 'HSE Plans', annexe: 'Annexe H' },
-  { value: AttachmentsType.UnitePrice, label: 'Unit Price', annexe: 'Annexe I' },
-  { value: AttachmentsType.DocumentsJuridiques, label: 'Legal Documents', annexe: 'Annexe J' },
-  { value: AttachmentsType.Other, label: 'Other Documents', annexe: 'Annexe 1' }
+  { value: AttachmentsType.Plans, label: 'Technical Plans', annexe: 'Annexe F', required: true },
+  { value: AttachmentsType.BoqAtt, label: 'BOQ Attachment', annexe: 'Annexe D', required: true },
+  { value: AttachmentsType.PrescriptionTechniques, label: 'Technical Specifications', annexe: 'Annexe E', required: false },
+  { value: AttachmentsType.PlansHSE, label: 'HSE Plans', annexe: 'Annexe H', required: false },
+  { value: AttachmentsType.UnitePrice, label: 'Unit Price', annexe: 'Annexe I', required: false },
+  { value: AttachmentsType.DocumentsJuridiques, label: 'Legal Documents', annexe: 'Annexe J', required: false },
+  { value: AttachmentsType.Other, label: 'Other Documents', annexe: 'Annexe 1', required: false }
 ];
 
 export const AttachmentsDialog: React.FC<AttachmentsDialogProps> = ({ 

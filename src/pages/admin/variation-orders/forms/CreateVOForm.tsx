@@ -12,9 +12,9 @@ import { VoDatasetBoqDetailsVM } from "@/types/variation-order";
 const CreateVOForm = () => {
     const navigate = useNavigate();
     const { toaster } = useToast();
-    const { projects, getProjects } = useProjects();
+    const { tableData: projects, getProjects } = useProjects();
     const { buildings, getBuildingsByProject } = useBuildings();
-    const { subcontractors, getSubcontractors } = useSubcontractors();
+    const { tableData: subcontractors, getSubcontractors } = useSubcontractors();
     const { saveVoDataset, saveLoading } = useVariationOrders();
 
     const [currentStep, setCurrentStep] = useState(0);
@@ -263,7 +263,7 @@ const CreateVOForm = () => {
                                 onChange={(e) => handleInputChange('projectId', Number(e.target.value))}
                             >
                                 <option value="">Select a project</option>
-                                {projects.map((project) => (
+                                {projects.map((project: any) => (
                                     <option key={project.id} value={project.id}>
                                         {project.name}
                                     </option>
@@ -310,7 +310,7 @@ const CreateVOForm = () => {
                                 onChange={(e) => handleInputChange('subcontractorId', Number(e.target.value))}
                             >
                                 <option value="">Select a subcontractor</option>
-                                {subcontractors.map((sub) => (
+                                {subcontractors.map((sub: any) => (
                                     <option key={sub.id} value={sub.id}>
                                         {sub.name}
                                     </option>
@@ -321,9 +321,9 @@ const CreateVOForm = () => {
                 );
                 
             case 3:
-                const selectedProject = projects.find(p => p.id === formData.projectId);
+                const selectedProject = projects.find((p: any) => p.id === formData.projectId);
                 const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
-                const selectedSubcontractor = subcontractors.find(s => s.id === formData.subcontractorId);
+                const selectedSubcontractor = subcontractors.find((s: any) => s.id === formData.subcontractorId);
                 
                 return (
                     <div className="space-y-6">

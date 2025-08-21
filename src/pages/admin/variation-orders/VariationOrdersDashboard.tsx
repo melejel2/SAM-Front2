@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import useToast from "@/hooks/use-toast";
-import useVariationOrders from "../use-variation-orders";
+import useVariationOrders from "./use-variation-orders";
 import { ContractDatasetStatus } from "@/types/variation-order";
 
 import VOUploadModal from "./modals/VOUploadModal";

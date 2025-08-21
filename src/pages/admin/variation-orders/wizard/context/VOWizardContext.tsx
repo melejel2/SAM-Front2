@@ -77,8 +77,8 @@ interface VOWizardProviderProps {
 
 // Provider Component (simplified version following subcontractor patterns)
 export const VOWizardProvider: React.FC<VOWizardProviderProps> = ({ children }) => {
-    const { token } = useAuth();
-    const { showToast } = useToast();
+    const { getToken } = useAuth();
+    const { toaster } = useToast();
     const { uploadVo, saveVo } = useVariationOrders();
     const { saveVoDataset } = useVoDatasets();
     
@@ -148,38 +148,35 @@ export const VOWizardProvider: React.FC<VOWizardProviderProps> = ({ children }) 
             if (formData.uploadFile) {
                 // Handle file upload
                 const uploadResult = await uploadVo({
-                    file: formData.uploadFile,
-                    projectId: formData.projectId!,
-                    buildingId: formData.buildingId,
-                    sheetName: formData.sheetName,
-                    level: formData.level
+                    excelFile: formData.uploadFile,
+                    projectId: formData.projectId || 0,
+                    buildingId: formData.buildingId || 0,
+                    sheetId: 0, // Use default sheet ID
+                    voLevel: formData.level === 'Project' ? 0 : formData.level === 'Building' ? 1 : 2,
                 });
                 
                 if (!uploadResult.success) {
-                    throw new Error(uploadResult.message || "Failed to upload VO file");
+                    throw new Error("Failed to upload VO file");
                 }
             }
             
-            // Save VO data
-            const saveResult = await saveVo({
-                title: formData.title,
-                description: formData.description,
-                level: formData.level,
-                projectId: formData.projectId!,
-                buildingId: formData.buildingId,
-                sheetName: formData.sheetName,
-                items: formData.voItems
-            });
+            // Save VO data - VoVM expects array format  
+            const voData: any = [{
+                buildingId: formData.buildingId || 0,
+                voLevel: formData.level === 'Project' ? 0 : formData.level === 'Building' ? 1 : 2,
+                voSheets: formData.voItems || []
+            }];
+            const saveResult = await saveVo(voData);
             
-            if (saveResult.success) {
-                showToast("Variation Order created successfully!", "success");
+            if (saveResult.isSuccess) {
+                toaster.success("Variation Order created successfully!");
                 setHasUnsavedChanges(false);
             } else {
-                throw new Error(saveResult.message || "Failed to create VO");
+                throw new Error("Failed to create VO");
             }
         } catch (error) {
             console.error("Error submitting VO:", error);
-            showToast("Failed to create Variation Order", "error");
+            toaster.error("Failed to create Variation Order");
         } finally {
             setLoading(false);
         }

@@ -233,7 +233,7 @@ const useVariationOrders = () => {
         endpoint: "Vo/SaveVo",
         method: "POST",
         token: token ?? "",
-        body: vos,
+        body: JSON.stringify(vos),
       });
 
       if (response && typeof response === 'object') {
@@ -270,7 +270,7 @@ const useVariationOrders = () => {
         endpoint: "Vo/ClearVo",
         method: "POST",
         token: token ?? "",
-        body: request,
+        body: JSON.stringify(request),
       });
 
       if (response && typeof response === 'object') {
@@ -336,7 +336,7 @@ const useVariationOrders = () => {
           } else {
             // Only cast if it's a valid VO object
             if ('id' in data && 'contractNumber' in data) {
-              voArray = [data as VoDatasetVM];
+              voArray = [data as unknown as VoDatasetVM];
             } else {
               voArray = [];
             }
@@ -387,7 +387,7 @@ const useVariationOrders = () => {
           toaster.error(errorResponse.message || "Failed to load VO dataset details");
           return null;
         }
-        return data;
+        return data as VoDatasetBoqDetailsVM;
       } else {
         toaster.error("Invalid response format");
         return null;

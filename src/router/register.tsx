@@ -9,7 +9,7 @@ export type IRoutesProps = {
 };
 
 // Component Wrapper
-const cw = (Component: LazyExoticComponent<() => JSX.Element>) => {
+const cw = (Component: LazyExoticComponent<React.ComponentType<any>>) => {
     return <Component />;
 };
 

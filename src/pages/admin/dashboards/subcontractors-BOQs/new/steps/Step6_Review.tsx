@@ -42,7 +42,7 @@ export const Step6_Review: React.FC = () => {
         return formData.boqData.reduce((sum, buildingBOQ) => 
             sum + buildingBOQ.items.reduce((itemSum, item) => {
                 if (!item.unite) return itemSum; // Skip items without unit
-                return itemSum + (item.totalPrice || item.qte * item.pu);
+                return itemSum + (item.qte * item.pu);
             }, 0), 0
         );
     };
@@ -162,7 +162,7 @@ export const Step6_Review: React.FC = () => {
                         {formData.boqData.map(buildingBOQ => {
                             const buildingTotal = buildingBOQ.items.reduce((sum, item) => {
                                 if (!item.unite) return sum; // Skip items without unit
-                                return sum + (item.totalPrice || item.qte * item.pu);
+                                return sum + (item.qte * item.pu);
                             }, 0);
                             
                             if (buildingBOQ.items.length === 0) return null;

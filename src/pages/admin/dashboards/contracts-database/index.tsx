@@ -593,14 +593,14 @@ const ContractsDatabase = () => {
                                         openStaticDialog={(type, data) => {
                                             if (type === "Preview" && data) {
                                                 return handlePreviewContract(data);
-                                            } else if (type === "GenerateFinal" && data) {
+                                            } else if ((type as any) === "Generate" && data) {
                                                 setContractToGenerateFinal(data);
                                                 setShowGenerateFinalModal(true);
                                             }
                                         }}
                                         dynamicDialog={false}
                                         rowActions={(row) => ({
-                                            generateFinalAction: row.originalStatus?.toLowerCase() === 'terminated',
+                                            generateAction: row.originalStatus?.toLowerCase() === 'terminated',
                                         })}
                                     />
                                 )}

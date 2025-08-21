@@ -11,7 +11,7 @@ import { Loader } from "@/components/Loader";
 const VOWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
-    const { showToast } = useToast();
+    const { toaster } = useToast();
     
     const {
         currentStep,
@@ -155,16 +155,16 @@ const VOWizardContent: React.FC = () => {
                                     // Show validation errors based on current step
                                     switch (currentStep) {
                                         case 1:
-                                            showToast("Please fill in title and description", "error");
+                                            toaster.error("Please fill in title and description");
                                             break;
                                         case 2:
-                                            showToast("Please select project and building/sheet", "error");
+                                            toaster.error("Please select project and building/sheet");
                                             break;
                                         case 3:
-                                            showToast("Please upload a file or add VO items", "error");
+                                            toaster.error("Please upload a file or add VO items");
                                             break;
                                         default:
-                                            showToast("Please complete all required fields", "error");
+                                            toaster.error("Please complete all required fields");
                                     }
                                 }
                             }}

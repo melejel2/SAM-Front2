@@ -48,6 +48,16 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
 
     const { toaster } = useToast();
 
+    // Create formData object for Preview step
+    const formData = {
+        contractDetails,
+        boqItems,
+        selectedProject,
+        selectedSubcontractor,
+        selectedTrade,
+        selectedBuilding,
+    };
+
     const handleSelectProject = (project: any) => {
         setSelectedProject(project);
     };
@@ -137,7 +147,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
             symbol: "",
             content: <SubcontractorBOQStep dialogType={dialogType} buildings={tableData} onBoqItemsChange={setBoqItems} />,
         },
-        { label: "Preview", value: "", symbol: "", content: <PreviewStep /> },
+        { label: "Preview", value: "", symbol: "", content: <PreviewStep formData={formData} selectedProject={selectedProject} selectedSubcontractor={selectedSubcontractor} /> },
     ];
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

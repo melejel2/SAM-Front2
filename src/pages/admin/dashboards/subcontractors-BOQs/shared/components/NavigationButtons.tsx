@@ -24,29 +24,29 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
     onShowBackConfirmDialog
 }) => {
     const navigate = useNavigate();
-    const { showToast } = useToast();
+    const { toaster } = useToast();
 
     const handleNext = () => {
         if (!validateCurrentStep()) {
             // Show specific validation errors based on current step
             switch (currentStep) {
                 case 1:
-                    showToast("Please select a project", "error");
+                    toaster.error("Please select a project");
                     break;
                 case 2:
-                    showToast("Please select at least one building", "error");
+                    toaster.error("Please select at least one building");
                     break;
                 case 3:
-                    showToast("Please select a subcontractor", "error");
+                    toaster.error("Please select a subcontractor");
                     break;
                 case 4:
-                    showToast("Please fill in all required contract details", "error");
+                    toaster.error("Please fill in all required contract details");
                     break;
                 case 5:
-                    showToast("Please add at least one BOQ item", "error");
+                    toaster.error("Please add at least one BOQ item");
                     break;
                 default:
-                    showToast("Please complete all required fields", "error");
+                    toaster.error("Please complete all required fields");
             }
             return;
         }
@@ -70,7 +70,7 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
 
     const handleSaveAndContinue = async () => {
         if (!validateCurrentStep()) {
-            showToast("Please complete all required fields before saving", "error");
+            toaster.error("Please complete all required fields before saving");
             return;
         }
         

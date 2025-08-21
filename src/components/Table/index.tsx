@@ -36,6 +36,7 @@ interface SAMTableProps {
     addBtn?: boolean;
     addBtnText?: string;
     onRowSelect?: (selectedRow: any) => void;
+    selectedRowId?: number | null;
 
     showAvailableOnly?: boolean;
     onToggleAvailableOnly?: () => void;

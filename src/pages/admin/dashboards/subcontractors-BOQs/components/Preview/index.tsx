@@ -339,7 +339,7 @@ function PreviewStep({
                     <div>
                         <h4 className="font-semibold text-base-content mb-2">Project Information</h4>
                         <p className="text-sm text-base-content/70">Project: {selectedProject?.name}</p>
-                        <p className="text-sm text-base-content/70">Buildings: {formData.buildingIds.map(id => 
+                        <p className="text-sm text-base-content/70">Buildings: {formData.buildingIds.map((id: any) => 
                             selectedProjectBuildings.find(b => b.id === id)?.name
                         ).join(', ')}</p>
                     </div>

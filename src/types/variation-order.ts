@@ -14,6 +14,36 @@ export enum BoqDeletionScope {
 }
 
 // Core VO Types
+export interface VariationOrder {
+  id: number;
+  voNumber: string;
+  title?: string;
+  description?: string;
+  level: 'Project' | 'Building' | 'Sheet';
+  projectId: number | null;
+  buildingId: number | null;
+  status: string;
+  date: string | null;
+  voSheets: VOSheetsModel[];
+}
+
+export interface VODataset {
+  id: number;
+  voNumber: string;
+  contractId: number;
+  projectId: number;
+  status: string;
+  date: string | null;
+}
+
+export interface CreateVORequest {
+  title: string;
+  description: string;
+  level: 'Project' | 'Building' | 'Sheet';
+  projectId: number | null;
+  buildingId: number | null;
+  voSheets: VOSheetsModel[];
+}
 export interface VoItemsModel {
   id: number;
   level: number;

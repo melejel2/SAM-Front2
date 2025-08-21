@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useVOWizardContext } from "../context/VOWizardContext";
-import { useProjects } from "@/pages/admin/adminTools/projects/use-projects";
-import { useBuildings } from "@/hooks/use-buildings";
-import { useSheets } from "@/hooks/use-sheets";
+import useProjects from "@/pages/admin/adminTools/projects/use-projects";
+import useBuildings from "@/hooks/use-buildings";
+import useSheets from "@/hooks/use-sheets";
 import SAMTable from "@/components/Table";
 
 interface Project {
@@ -25,9 +25,9 @@ interface Sheet {
 
 export const VOStep2_ProjectSelection: React.FC = () => {
     const { formData, setFormData } = useVOWizardContext();
-    const { projects, loading: projectsLoading, fetchProjects } = useProjects();
-    const { buildings, loading: buildingsLoading, fetchBuildingsByProject } = useBuildings();
-    const { sheets, loading: sheetsLoading, fetchSheetsByBuilding } = useSheets();
+    const { tableData: projects, loading: projectsLoading, getProjects } = useProjects();
+    const { buildings, loading: buildingsLoading, getBuildingsByProject } = useBuildings();
+    const { sheets, loading: sheetsLoading, getSheetsByProject } = useSheets();
     
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
@@ -35,20 +35,20 @@ export const VOStep2_ProjectSelection: React.FC = () => {
 
     // Load initial data
     useEffect(() => {
-        fetchProjects();
+        getProjects();
     }, []);
 
     // Update selected items when formData changes
     useEffect(() => {
         if (projects.length > 0 && formData.projectId) {
-            const project = projects.find(p => p.id === formData.projectId);
+            const project = projects.find((p: any) => p.id === formData.projectId);
             setSelectedProject(project || null);
         }
     }, [projects, formData.projectId]);
 
     useEffect(() => {
         if (buildings.length > 0 && formData.buildingId) {
-            const building = buildings.find(b => b.id === formData.buildingId);
+            const building = buildings.find((b: any) => b.id === formData.buildingId);
             setSelectedBuilding(building || null);
         }
     }, [buildings, formData.buildingId]);
@@ -65,7 +65,7 @@ export const VOStep2_ProjectSelection: React.FC = () => {
         
         // Load buildings for the selected project
         if (formData.level === 'Building' || formData.level === 'Sheet') {
-            await fetchBuildingsByProject(project.id);
+            await getBuildingsByProject(project.id);
         }
     };
 
@@ -79,7 +79,7 @@ export const VOStep2_ProjectSelection: React.FC = () => {
         
         // Load sheets for the selected building
         if (formData.level === 'Sheet') {
-            await fetchSheetsByBuilding(building.id);
+            await getSheetsByProject((building as any).projectId || building.id);
         }
     };
 

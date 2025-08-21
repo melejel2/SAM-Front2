@@ -20,7 +20,7 @@ interface VOUploadModalProps {
 
 const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
     const { toaster } = useToast();
-    const { projects, getProjects } = useProjects();
+    const { tableData: projects, getProjects } = useProjects();
     const { buildings, getBuildingsByProject } = useBuildings();
     const { sheets, getSheetsByProject } = useSheets();
     const { uploadVo, uploadLoading } = useVariationOrders();
@@ -119,7 +119,7 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
                             disabled={uploadLoading}
                         >
                             <option value="">Select a project</option>
-                            {projects.map((project) => (
+                            {projects.map((project: any) => (
                                 <option key={project.id} value={project.id}>
                                     {project.name}
                                 </option>
