@@ -84,7 +84,7 @@
 /* == Layout: Content == */
 
 #layout-content {
-    @apply grow p-6 transition-all;
+    @apply grow transition-all;
 }
 
 /* == Sidebar: Toggle == */
@@ -136,17 +136,28 @@ html[data-theme="material"] {
 }
 
 /* == New Dashboard Layout Classes == */
+/* Following comprehensive padding reference system */
 
 .app-background {
     background: hsl(var(--b2)) !important;
 }
 
 .dashboard-layout {
-    @apply min-h-[calc(100vh-4rem)];
+    @apply min-h-screen;
 }
 
 .dashboard-content {
-    @apply min-h-[calc(100vh-4rem)] w-full;
+    @apply min-h-[calc(100vh-4rem)] w-full; /* Account for 4rem (64px) topbar height */
+}
+
+/* Mobile content wrapper - Responsive horizontal padding */
+.mobile-content-wrapper {
+    @apply px-4 md:px-8; /* Mobile: 16px, Desktop: 32px */
+}
+
+/* Safe area padding for mobile bottom navigation - pb-24 equivalent (96px) + safe area */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem); /* Safe area fallback: 16px */
 }
 
 /* Blink animation for typing cursor */
@@ -154,3 +165,44 @@ html[data-theme="material"] {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
 }
+
+/* Modal animations */
+@keyframes modal-fade {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modal-slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+/* == Comprehensive Padding Reference System == */
+/*
+Mobile (<768px) Horizontal Padding:
+- px-0    (0px)  - Main content container (full width)
+- px-2    (8px)  - Bottom navigation, compact controls  
+- px-4    (16px) - Topbar, comfortable touch targets
+
+Desktop (≥768px) Horizontal Padding:
+- px-3    (12px) - Topbar, tighter desktop spacing
+- px-1    (4px)  - Logo container, minimal padding
+- left-12 (48px) - VerticalAppNav/Sidebar offset from left
+
+Vertical Spacing Values:
+- pb-8     (32px) - Desktop content bottom padding
+- pb-4     (16px) - Mobile content bottom padding (via pb-8 md:pb-0)
+- pb-24    (96px) - Mobile body padding for bottom navigation
+- space-y-4 (16px) - Standard vertical spacing between child elements
+- mt-4/mb-4 (16px) - Standard component margins
+
+Special Positioning:
+- left-12  (48px) - VerticalAppNav distance from left edge
+- top: 4rem (64px) - Distance from top (below topbar)
+- marginTop: -48px - Mobile header overlap compensation
+
+Z-index Hierarchy:
+- z-30     - VerticalAppNav/Sidebar layer
+- z-40     - Mobile topbar layer  
+- z-[95]   - Mobile bottom navigation layer
+*/

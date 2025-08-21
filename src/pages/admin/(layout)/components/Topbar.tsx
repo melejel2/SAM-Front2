@@ -1077,12 +1077,99 @@ export const Topbar = () => {
     setTextIndex(0);
   }, [location.pathname]);
 
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Topbar */}
+        <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-14">
+          <div className="h-full flex items-center justify-between px-36">
+            <div className="flex items-center gap-2">
+              <Link to="/" className="flex-shrink-0">
+                <div className="flex items-center bg-base-200 rounded-md px-1 h-[32px] inline-flex">
+                  <div className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center">
+                    <img src="/images/SAM.ico" alt="SAM Logo" className="h-4 w-4" />
+                  </div>
+                  <span className="ml-2 text-base font-semibold text-base-content whitespace-nowrap">
+                    {location.pathname === '/admin-tools' ? 'SAM - Admin Tools' : displayText}
+                    {location.pathname !== '/admin-tools' && (
+                      <span className={cn(
+                        "border-r-2 ml-0.5",
+                        (isTyping && displayText.length < logoTexts[textIndex].length) || (!isTyping && displayText.length > 0)
+                          ? "border-base-content animate-[blink_1s_step-end_infinite]"
+                          : "border-transparent"
+                      )}>
+                        &nbsp;
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2">
+              <NotificationButton
+                onClick={toggleNotificationsDialog}
+                count={notificationCount}
+                loading={notificationsLoading}
+              />
+              <ThemeToggleDropdown 
+                triggerClass="btn btn-circle btn-ghost btn-sm relative overflow-hidden hover:bg-base-300 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-base-300 cursor-pointer"
+                iconClass="text-base-content group-hover:text-base-content/70 transition-all duration-200 group-hover:rotate-6"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 z-[95] bg-base-100 border-t border-base-300">
+          <div className="flex items-center h-16 px-2">
+            <div className="flex-1">
+              <Link 
+                to="/dashboard" 
+                className="flex flex-col items-center justify-center p-0.5"
+              >
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="iconify lucide--home text-lg text-base-content" />
+                  <span className="text-[10px] text-base-content">Dashboard</span>
+                </div>
+              </Link>
+            </div>
+            
+            <div className="flex-1">
+              <Link 
+                to="/admin-tools" 
+                className="flex flex-col items-center justify-center p-0.5"
+              >
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="iconify lucide--settings text-lg text-base-content" />
+                  <span className="text-[10px] text-base-content">Admin</span>
+                </div>
+              </Link>
+            </div>
+            
+            <AccountDropdown
+              username={authState.user?.name || authState.user?.username || authState.user?.userName || ""}
+              userEmail={authState.user?.email || authState.user?.userCode}
+              onLogout={doLogout}
+              isMobile={true}
+            />
+          </div>
+        </div>
+
+        <NotificationsDialog
+          isOpen={isNotificationsDialogOpen}
+          onClose={toggleNotificationsDialog}
+        />
+      </>
+    );
+  }
+
+  // Desktop Topbar
   return (
     <>
-      <div className="w-full bg-base-100 z-40 shadow-sm">
-        <div className="container mx-auto px-8 h-16 flex justify-between items-center">
+      <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-16">
+        <div className="h-full flex items-center justify-between px-36">
+          {/* Left side - App Logo with typing animation */}
           <div className="flex items-center">
-            {/* App Logo */}
             <Link to="/" className="flex-shrink-0">
               <div className="flex items-center bg-base-200 rounded-md px-1 h-[36px] inline-flex">
                 <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">

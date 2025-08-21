@@ -1,48 +1,54 @@
-import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
+
+// Replace with your actual components
 import { Topbar } from './components/Topbar';
 import { Sidebar } from './components/Sidebar';
 
-interface AdminLayoutProps {
-  children?: React.ReactNode;
-}
+const DashboardLayout = ({ children }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const location = useLocation();
-  const isAdminTools = location.pathname.startsWith('/admin-tools');
-  
-  // Force re-render when location changes
-  React.useEffect(() => {
-    // This will trigger a re-render when the location changes
-  }, [location.pathname]);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className="min-h-screen app-background">
-      {/* Topbar */}
-      <div className="relative z-30">
-        <Topbar />
-      </div>
+    <div className="min-h-screen bg-base-200">
+      {/* Topbar - Always at top */}
+      <Topbar />
       
-      {/* Main content area */}
-      <div className="relative dashboard-layout">
-        {/* Floating Sidebar - only show when not in admin tools */}
-        {!isAdminTools && (
-          <div className="fixed left-10 top-1/2 -translate-y-1/2 z-20 pointer-events-none">
-            <div className="pointer-events-auto admin-sidebar-text">
-              <Sidebar />
-            </div>
+      {/* Main layout area */}
+      <div className="relative">
+        {/* Sidebar - Desktop only */}
+        {!isMobile && (
+          <div 
+            className="fixed z-30"
+            style={{
+              left: '48px',
+              top: '64px',
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <Sidebar />
           </div>
         )}
         
-        {/* Page content with same container structure as topbar */}
-        <div className="dashboard-content pt-4 admin-body-text">
-          <div className="container mx-auto px-8">
-            {children || <Outlet />}
-          </div>
+        {/* Main content */}
+        <div 
+          className={`
+            ${isMobile ? 'pt-16 pb-20' : 'pt-20'}
+            px-36
+          `}
+        >
+          {children || <Outlet />}
         </div>
       </div>
     </div>
   );
 };
 
-export default AdminLayout;
+export default DashboardLayout;

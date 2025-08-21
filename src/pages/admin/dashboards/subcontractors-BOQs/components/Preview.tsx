@@ -253,7 +253,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 </div>
                 <div className="ml-auto flex gap-2">
                     <button
-                        className="btn btn-sm btn-outline flex items-center gap-2"
+                        className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300 transition-all duration-200 ease-in-out flex items-center gap-2"
                         onClick={downloadPDF}
                         disabled={exportingPdf}
                     >
@@ -270,7 +270,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                         )}
                     </button>
                     <button
-                        className="btn btn-sm btn-outline flex items-center gap-2"
+                        className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300 transition-all duration-200 ease-in-out flex items-center gap-2"
                         onClick={downloadWord}
                         disabled={exportingWord}
                     >

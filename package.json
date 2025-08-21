@@ -23,6 +23,7 @@
         "apexcharts": "^5.3.3",
         "clsx": "^2.1.1",
         "filepond": "^4.32.8",
+        "filepond-plugin-file-validate-type": "^1.2.9",
         "filepond-plugin-image-preview": "^4.6.12",
         "react": "^19.1.1",
         "react-apexcharts": "^1.7.0",

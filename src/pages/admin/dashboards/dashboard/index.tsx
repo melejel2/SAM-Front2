@@ -178,12 +178,15 @@ const DashboardPage = () => {
   ];
 
   return (
-    <div className="overflow-x-hidden relative">
-      <div className="relative flex justify-between items-center mb-6 px-0">
-        <h1 className="text-3xl font-bold text-base-content">Dashboard</h1>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-base-content">Dashboard</h1>
       </div>
-
-      <div className="relative mb-6 px-0">
+      
+      {/* Main content */}
+      <div className="space-y-4">
+        <div className="relative">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {dashboardPages.map((page) => (
             <DashboardCard
@@ -194,6 +197,7 @@ const DashboardPage = () => {
               onMouseLeave={() => setHoveredCard(null)}
             />
           ))}
+        </div>
         </div>
       </div>
     </div>

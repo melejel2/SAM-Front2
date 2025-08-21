@@ -11,9 +11,14 @@
     @apply rounded-full;
 }
 
-/* Make back buttons medium size with minimal rounded corners */
+/* Make back buttons match budget-BOQs design - theme-aware semantic colors */
 .btn-back {
-    @apply h-10 rounded-md;
+    @apply h-10 rounded-md border border-base-300 bg-base-100 text-base-content hover:bg-base-200;
+}
+
+/* Cancel buttons with consistent white background */
+.btn-cancel {
+    @apply bg-white border border-base-300 hover:bg-gray-50 dark:bg-base-200 dark:hover:bg-base-300 dark:border-base-300 text-base-content;
 }
 
 /* Make table "New" buttons and search inputs medium size with less rounded corners */
@@ -197,6 +202,31 @@
     @apply bg-gray-50 text-gray-700 border border-gray-200;
 }
 
+/* Variation Order status badges */
+.badge-vo-active {
+    @apply bg-green-50 text-green-700 border border-green-200;
+}
+
+.badge-vo-terminated {
+    @apply bg-red-50 text-red-700 border border-red-200;
+}
+
+.badge-vo-editable {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+}
+
+.badge-vo-completed {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+.badge-vo-pending {
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
+}
+
+.badge-vo-approved {
+    @apply bg-teal-50 text-teal-700 border border-teal-200;
+}
+
 /* Dark mode variants */
 .dark .badge-status-editable {
     @apply bg-blue-900/30 text-blue-300 border-blue-700/50;
@@ -268,6 +298,31 @@
 
 .dark .badge-contract-apply {
     @apply bg-gray-900/30 text-gray-300 border-gray-700/50;
+}
+
+/* Dark mode VO badges */
+.dark .badge-vo-active {
+    @apply bg-green-900/30 text-green-300 border-green-700/50;
+}
+
+.dark .badge-vo-terminated {
+    @apply bg-red-900/30 text-red-300 border-red-700/50;
+}
+
+.dark .badge-vo-editable {
+    @apply bg-blue-900/30 text-blue-300 border-blue-700/50;
+}
+
+.dark .badge-vo-completed {
+    @apply bg-emerald-900/30 text-emerald-300 border-emerald-700/50;
+}
+
+.dark .badge-vo-pending {
+    @apply bg-amber-900/30 text-amber-300 border-amber-700/50;
+}
+
+.dark .badge-vo-approved {
+    @apply bg-teal-900/30 text-teal-300 border-teal-700/50;
 }
 
 .timeline:not(.timeline-vertical) > li > hr {

@@ -1,0 +1,44 @@
+/* Custom FilePond styles for attachments dialog */
+.filepond-compact .filepond--drop-label {
+  min-height: 60px !important;
+}
+
+.filepond-compact .filepond--panel-root {
+  border-radius: 8px !important;
+  border: 2px dashed oklch(var(--bc) / 0.2) !important;
+  background-color: oklch(var(--b1)) !important;
+}
+
+.filepond-compact .filepond--drop-label {
+  color: oklch(var(--bc) / 0.6) !important;
+  font-size: 0.875rem !important;
+}
+
+.filepond-compact .filepond--label-action {
+  color: oklch(var(--p)) !important;
+  text-decoration: underline !important;
+  font-weight: 500 !important;
+}
+
+.filepond-compact .filepond--panel-root:hover {
+  border-color: oklch(var(--p) / 0.5) !important;
+  background-color: oklch(var(--b2)) !important;
+}
+
+.filepond-compact .filepond--file {
+  background-color: oklch(var(--su) / 0.1) !important;
+  border: 1px solid oklch(var(--su) / 0.3) !important;
+}
+
+.filepond-compact .filepond--file-status {
+  color: oklch(var(--su)) !important;
+}
+
+.filepond-compact .filepond--file-action-button {
+  background-color: oklch(var(--er) / 0.1) !important;
+  color: oklch(var(--er)) !important;
+}
+
+.filepond-compact .filepond--file-action-button:hover {
+  background-color: oklch(var(--er) / 0.2) !important;
+}

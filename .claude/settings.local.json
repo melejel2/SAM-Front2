@@ -9,7 +9,11 @@
       "Bash(npm install:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:daisyui.com)",
+      "WebSearch",
+      "WebSearch",
+      "Bash(git show:*)"
     ],
     "deny": []
   }

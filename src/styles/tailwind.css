@@ -1,5 +1,6 @@
 /*** Tailwind CSS Presets ***/
 @import "tailwindcss";
+@import "./filepond-custom.css";
 
 /** Dark Variant with theme & system mode **/
 @variant dark {
@@ -13,9 +14,25 @@
     }
 }
 
-/** Container utility **/
+@theme {
+    /* Override default breakpoints to prevent zoom jumping */
+    --breakpoint-2xl: 1700px; /* Moved from 1536px to prevent 125% zoom trigger */
+    
+    /* Override container sizes with consistent padding */
+    --container: 80rem; /* Fixed max-width */
+}
+
+/* Clean container - NO built-in padding */
 @utility container {
     margin-inline: auto;
-    padding-inline: 1rem;
-    @apply px-[1rem] sm:px-[1rem] md:px-[2rem] lg:px-[3rem] xl:px-[4rem] 2xl:px-[6rem];
+    max-width: 80rem;
 }
+
+/* Ensure proper scrolling */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* FilePond base styles integration */
+@import "filepond/dist/filepond.min.css";

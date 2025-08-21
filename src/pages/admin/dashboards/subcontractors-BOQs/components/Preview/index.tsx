@@ -3,6 +3,7 @@ import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import apiRequest from "@/api/api";
+import { Loader } from "@/components/Loader";
 
 interface PreviewStepProps {
     formData: any;
@@ -309,7 +310,7 @@ function PreviewStep({
                     <button
                         onClick={generatePreview}
                         disabled={loading}
-                        className="btn btn-sm btn-outline border-base-300 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        className="btn btn-sm btn-primary hover:btn-primary-focus transition-all duration-200 ease-in-out flex items-center gap-2"
                     >
                         {loading ? (
                             <>
@@ -377,12 +378,7 @@ function PreviewStep({
                 <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
                     <div className="h-[calc(100vh-400px)]">
                         {loading ? (
-                            <div className="flex items-center justify-center h-full">
-                                <div className="text-center">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/30 border-t-primary mx-auto mb-4"></div>
-                                    <p className="text-base-content font-medium">Generating preview...</p>
-                                </div>
-                            </div>
+                            <Loader />
                         ) : previewData ? (
                             <PDFViewer
                                 fileBlob={previewData.blob}

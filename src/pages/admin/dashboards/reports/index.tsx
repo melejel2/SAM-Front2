@@ -26,7 +26,7 @@ const Reports = () => {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBackToDashboard}
-                        className="btn btn-sm btn-back border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                     >
                         <span className="iconify lucide--arrow-left size-4"></span>
                         <span>Back</span>

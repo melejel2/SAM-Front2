@@ -56,6 +56,17 @@ const dashboardRoutes: IRoutesProps[] = [
     },
 ];
 
+const variationOrdersRoutes: IRoutesProps[] = [
+    {
+        path: "/admin/variation-orders",
+        element: cw(lazy(() => import("@/pages/admin/variation-orders"))),
+    },
+    {
+        path: "/admin/variation-orders/create",
+        element: cw(lazy(() => import("@/pages/admin/variation-orders/wizard"))),
+    },
+];
+
 const adminToolsRoutes: IRoutesProps[] = [
     {
         path: "/admin-tools",
@@ -134,7 +145,7 @@ const otherRoutes: IRoutesProps[] = [
 ];
 
 export const registerRoutes = {
-    admin: [...dashboardRoutes, ...adminToolsRoutes],
+    admin: [...dashboardRoutes, ...variationOrdersRoutes, ...adminToolsRoutes],
     auth: authRoutes,
     other: otherRoutes,
 };

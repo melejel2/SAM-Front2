@@ -135,6 +135,7 @@ interface TableProps {
     customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
+    selectedRowId?: number | string | null;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -170,6 +171,7 @@ const TableComponent: React.FC<TableProps> = ({
     customHeaderContent,
     rowsPerPage = 10,
     previewLoadingRowId: externalPreviewLoadingRowId,
+    selectedRowId,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -202,10 +204,38 @@ const TableComponent: React.FC<TableProps> = ({
 
     const handleRowClick = useCallback((row: any) => {
         if (onRowSelect) {
-            setSelectedRow(row);
+            // Use functional update to prevent re-render loops
+            setSelectedRow(prevSelected => {
+                // Only update if actually different
+                if (prevSelected?.id === row.id) {
+                    return prevSelected;
+                }
+                return row;
+            });
             onRowSelect(row);
         }
     }, [onRowSelect]);
+
+    // Synchronize internal selectedRow state with external selectedRowId prop
+    React.useEffect(() => {
+        if (selectedRowId !== undefined && selectedRowId !== null) {
+            const matchingRow = tableData.find(row => row.id == selectedRowId);
+            if (matchingRow) {
+                setSelectedRow(prevSelected => {
+                    // Only update if actually different to prevent re-renders
+                    if (prevSelected?.id === matchingRow.id) {
+                        return prevSelected;
+                    }
+                    return matchingRow;
+                });
+            }
+        } else if (selectedRowId === null || selectedRowId === undefined) {
+            setSelectedRow(prevSelected => {
+                // Only clear if not already null
+                return prevSelected ? null : prevSelected;
+            });
+        }
+    }, [selectedRowId, tableData]);
 
     // Check scroll capabilities
     const checkScrollCapability = React.useCallback(() => {
@@ -234,9 +264,9 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Mouse drag scrolling handlers
     const handleMouseDown = (e: React.MouseEvent) => {
-        // Only start drag if not clicking on interactive elements
+        // Only start drag if not clicking on interactive elements or table rows
         const target = e.target as HTMLElement;
-        if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || target.closest('input')) {
+        if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || target.closest('input') || target.closest('tr')) {
             return;
         }
         
@@ -362,26 +392,41 @@ const TableComponent: React.FC<TableProps> = ({
         return data;
     }, [searchQuery, tableData, columnFilters]);
 
-    // Sort the data by the chosen column
+    // Sort the data by the chosen column, with selected row always first
     const sortedData = useMemo(() => {
-        if (!sortColumn) return filteredData;
-        return [...filteredData].sort((a, b) => {
-            const aValue = a[sortColumn];
-            const bValue = b[sortColumn];
+        let data = [...filteredData];
+        
+        // Apply column sorting if specified
+        if (sortColumn) {
+            data = data.sort((a, b) => {
+                const aValue = a[sortColumn];
+                const bValue = b[sortColumn];
 
-            if (aValue === undefined || bValue === undefined) return 0;
+                if (aValue === undefined || bValue === undefined) return 0;
 
-            if (typeof aValue === "string" && typeof bValue === "string") {
-                return sortOrder === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                if (typeof aValue === "string" && typeof bValue === "string") {
+                    return sortOrder === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                }
+
+                if (typeof aValue === "number" && typeof bValue === "number") {
+                    return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+                }
+
+                return 0;
+            });
+        }
+        
+        // Always put selected row first, regardless of other sorting
+        if (selectedRow) {
+            const selectedIndex = data.findIndex(row => row.id === selectedRow.id);
+            if (selectedIndex > 0) {
+                const [selectedItem] = data.splice(selectedIndex, 1);
+                data.unshift(selectedItem);
             }
-
-            if (typeof aValue === "number" && typeof bValue === "number") {
-                return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
-            }
-
-            return 0;
-        });
-    }, [filteredData, sortColumn, sortOrder]);
+        }
+        
+        return data;
+    }, [filteredData, sortColumn, sortOrder, selectedRow]);
 
     // Paginate the data
     const paginatedData = useMemo(() => {
@@ -906,6 +951,8 @@ const TableComponent: React.FC<TableProps> = ({
                                         {paginatedData.map((row, index) => {
                                         const rowAction = rowActions?.(row);
                                         const isTotal = row.isTotal === true;
+                                        const isSelected = !isTotal && selectedRow?.id === row.id;
+                                        
 
                                         return (
                                             <tr
@@ -913,12 +960,18 @@ const TableComponent: React.FC<TableProps> = ({
                                                 className={cn(
                                                     isTotal 
                                                         ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content" 
-                                                        : "bg-base-100 hover:bg-base-200 cursor-pointer",
-                                                    {
-                                                        "!bg-base-300": !isTotal && selectedRow?.id === row.id,
-                                                    }
+                                                        : "bg-base-100 hover:bg-base-200 cursor-pointer"
                                                 )}
-                                                onClick={() => !isTotal && handleRowClick(row)}>
+                                                style={isSelected ? {
+                                                    backgroundColor: 'rgb(239 246 255)', // Light blue background
+                                                    border: '2px solid rgb(147 197 253)', // Light blue border (blue-300)
+                                                    boxShadow: '0 0 0 1px rgb(147 197 253 / 0.2)'
+                                                } : undefined}
+                                                onClick={(e) => {
+                                                    if (!isTotal) {
+                                                        handleRowClick(row);
+                                                    }
+                                                }}>
                                                 {select && (
                                                     <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
                                                         {!isTotal && (
