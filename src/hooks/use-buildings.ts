@@ -1,20 +1,36 @@
-import { useState } from 'react';
-import apiRequest from '@/api/api';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
 
-interface Building {
+// Building interface
+export interface Building {
   id: number;
   name: string;
-  projectLevel: number;
-  subContractorLevel: number;
+  buildingName?: string;
 }
 
+// Building Sheet interface 
 export interface BuildingSheet {
   id: number;
   name: string;
-  hasVo: boolean;
-  isActive: boolean;
+  nameFr?: string;
+  isActive?: boolean;
+  costCode?: string;
+}
+
+// API Response interfaces
+export interface BuildingsApiResponse {
+  success: boolean;
+  data?: Building[];
+  message?: string;
+  error?: string;
+}
+
+export interface BuildingSheetsApiResponse {
+  success: boolean;
+  data?: BuildingSheet[];
+  message?: string;
+  error?: string;
 }
 
 const useBuildings = () => {
@@ -25,23 +41,21 @@ const useBuildings = () => {
   const { getToken } = useAuth();
   const { toaster } = useToast();
 
-  const getBuildingsByProject = async (projectId: number) => {
+  const getBuildingsByProject = useCallback(async (projectId: number): Promise<Building[]> => {
     setLoading(true);
     try {
-      const data = await apiRequest<Building[]>({
-        endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
-        method: 'GET',
-        token: getToken() ?? '',
-      });
+      // TODO: Implement actual API call when backend endpoint is ready
+      console.log(`🏢 Mock: Getting buildings for project ID: ${projectId}`);
       
-      if (Array.isArray(data)) {
-        setBuildings(data);
-        return data;
-      } else {
-        console.error('Unexpected response format for buildings', data);
-        setBuildings([]);
-        return [];
-      }
+      // Mock data for now
+      const mockBuildings: Building[] = [
+        { id: 1, name: 'Building A', buildingName: 'Building A' },
+        { id: 2, name: 'Building B', buildingName: 'Building B' },
+        { id: 3, name: 'Building C', buildingName: 'Building C' }
+      ];
+      
+      setBuildings(mockBuildings);
+      return mockBuildings;
     } catch (error) {
       console.error('API Error getting buildings:', error);
       toaster.error('Failed to load buildings');
@@ -50,34 +64,47 @@ const useBuildings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getToken]);
 
-  const getBuildingSheets = async (buildingId: number) => {
+  const getBuildingSheets = useCallback(async (buildingId: number): Promise<BuildingSheet[]> => {
     setSheetsLoading(true);
     try {
-      const data = await apiRequest<BuildingSheet[]>({
-        endpoint: `Building/GetBuildingSheets/${buildingId}`,
-        method: 'GET',
-        token: getToken() ?? '',
-      });
+      console.log(`🔍 Fetching sheets for building ID: ${buildingId}`);
       
-      if (Array.isArray(data)) {
-        setBuildingSheets(data);
-        return data;
+      const token = getToken();
+      if (!token) {
+        throw new Error('Authentication token not available');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/Building/GetBuildingSheets/${buildingId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiResponse: BuildingSheetsApiResponse = await response.json();
+      
+      if (apiResponse.success && apiResponse.data) {
+        setBuildingSheets(apiResponse.data);
+        return apiResponse.data;
       } else {
-        console.error('Unexpected response format for building sheets', data);
-        setBuildingSheets([]);
-        return [];
+        throw new Error(apiResponse.message || 'Failed to fetch building sheets');
       }
     } catch (error) {
-      console.error('API Error getting building sheets:', error);
+      console.error('🚨 API Error getting building sheets:', error);
       toaster.error('Failed to load building sheets');
       setBuildingSheets([]);
       return [];
     } finally {
       setSheetsLoading(false);
     }
-  };
+  }, [getToken]);
 
   return {
     buildings,

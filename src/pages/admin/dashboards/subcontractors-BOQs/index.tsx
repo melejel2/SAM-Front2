@@ -573,7 +573,7 @@ const handleDeleteConfirm = async () => {
             toaster.success("Contract deleted successfully!");
             getContractsDatasets(); // Refresh the table after deletion
         } else {
-            toaster.error(result.error!.message!);
+            toaster.error("Failed to delete contract");
         }
     }
     setShowDeleteConfirmDialog(false);
@@ -832,7 +832,7 @@ const handleVOCreated = () => {
                 // Refresh the data to reflect status change
                 getContractsDatasets();
             } else {
-                toaster.error(result.error || "Failed to generate contract");
+                toaster.error("Failed to generate contract");
             }
         } catch (error) {
             toaster.error("An error occurred while generating the contract");

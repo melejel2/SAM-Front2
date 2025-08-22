@@ -3,16 +3,19 @@ import { Icon } from "@iconify/react";
 import { useEditWizardContext, BOQItem } from "../context/EditWizardContext";
 import useToast from "@/hooks/use-toast";
 import useBOQUnits from "../../hooks/use-units";
+import useBuildings, { BuildingSheet } from "@/hooks/use-buildings";
 import DescriptionModal from "../../components/DescriptionModal";
 
 export const EditStep5_BOQItems: React.FC = () => {
     const { formData, setFormData, buildings } = useEditWizardContext();
     const { toaster } = useToast();
     const { units } = useBOQUnits();
+    const { buildingSheets, sheetsLoading, getBuildingSheets } = useBuildings();
     
     const [selectedBuildingForBOQ, setSelectedBuildingForBOQ] = useState<string>("");
+    const [selectedSheetForBOQ, setSelectedSheetForBOQ] = useState<string>("");
     
-    // Auto-select first building for BOQ when buildings are available (same as backup)
+    // Auto-select first building for BOQ when buildings are available
     useEffect(() => {
         if (formData.buildingIds && formData.buildingIds.length > 0 && !selectedBuildingForBOQ) {
             const firstBuildingId = formData.buildingIds[0];
@@ -21,6 +24,33 @@ export const EditStep5_BOQItems: React.FC = () => {
             }
         }
     }, [formData.buildingIds, selectedBuildingForBOQ]);
+
+    // Load sheets when building changes
+    useEffect(() => {
+        if (selectedBuildingForBOQ) {
+            const buildingId = parseInt(selectedBuildingForBOQ);
+            getBuildingSheets(buildingId);
+        }
+    }, [selectedBuildingForBOQ, getBuildingSheets]);
+
+    // Initialize sheet from existing BOQ data
+    useEffect(() => {
+        if (selectedBuildingForBOQ && formData.boqData && !selectedSheetForBOQ) {
+            const buildingId = parseInt(selectedBuildingForBOQ);
+            const existingBOQ = formData.boqData.find(b => b.buildingId === buildingId);
+            if (existingBOQ && existingBOQ.sheetName) {
+                setSelectedSheetForBOQ(existingBOQ.sheetName);
+            }
+        }
+    }, [selectedBuildingForBOQ, formData.boqData, selectedSheetForBOQ]);
+
+    // Auto-select first sheet when sheets are loaded (fallback)
+    useEffect(() => {
+        if (buildingSheets.length > 0 && !selectedSheetForBOQ) {
+            setSelectedSheetForBOQ(buildingSheets[0].name);
+        }
+    }, [buildingSheets, selectedSheetForBOQ]);
+
     const [isImportingBOQ, setIsImportingBOQ] = useState(false);
     const [showDescriptionModal, setShowDescriptionModal] = useState(false);
     const [selectedDescription, setSelectedDescription] = useState<{itemNo: string, description: string} | null>(null);
@@ -35,7 +65,7 @@ export const EditStep5_BOQItems: React.FC = () => {
 
     // Create empty BOQ item
     const createEmptyBOQItem = (): BOQItem => ({
-        id: Date.now() + Math.random(),
+        id: 0, // Use 0 for new items (backend expects this for new records)
         no: "",
         key: "",
         costCode: "",
@@ -65,7 +95,7 @@ export const EditStep5_BOQItems: React.FC = () => {
             updatedBOQData.push({
                 buildingId,
                 buildingName: getBuildingName(buildingId),
-                sheetName: "default",
+                sheetName: "", // Empty sheet name - backend will handle default
                 items: [newItem]
             });
         }

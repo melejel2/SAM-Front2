@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { useContractsApi } from "../../hooks/use-contracts-api";
+import type { SubcontractorBoqVM } from "@/types/contracts";
 
 // Types and Interfaces
 interface Project {
@@ -382,18 +384,21 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         }
     };
     
-    // Submission function
+    // Initialize contracts API hook
+    const contractsApi = useContractsApi();
+    
+    // Submission function using the new API service
     const handleSubmit = async () => {
         try {
             setLoading(true);
             
             // Prepare JSON data for submission according to SubcontractorBoqVM structure
-            const submitData = {
+            const submitData: SubcontractorBoqVM = {
                 id: 0, // New contract
-                currencyId: formData.currencyId,
-                projectId: formData.projectId,
-                subContractorId: formData.subcontractorId,
-                contractId: formData.contractId,
+                currencyId: formData.currencyId!,
+                projectId: formData.projectId!,
+                subContractorId: formData.subcontractorId!,
+                contractId: formData.contractId!,
                 contractDate: formData.contractDate,
                 completionDate: formData.completionDate,
                 advancePayment: formData.advancePayment,
@@ -422,52 +427,63 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 contractDatasetStatus: "Editable",
                 isGenerated: false,
                 buildings: formData.boqData.map(building => ({
-                    id: 0,
+                    id: building.buildingId, // Use actual building ID from selected building
                     buildingName: building.buildingName,
                     sheetId: 0, // Will be set by backend
-                    sheetName: building.sheetName,
+                    sheetName: building.sheetName || "", // Use empty string if no sheet specified
                     replaceAllItems: true,
                     boqsContract: building.items.map(item => ({
-                        id: item.id || 0,
+                        id: 0, // Use 0 for all items in new contracts (backend will auto-generate IDs)
                         no: item.no,
                         key: item.key,
                         unite: item.unite,
                         qte: item.qte,
                         pu: item.pu,
-                        costCode: item.costCode,
-                        costCodeId: null,
+                        costCode: item.costCode || '',
+                        costCodeId: null as number | null,
                         boqtype: "Subcontractor",
                         boqSheetId: 0,
-                        sheetName: building.sheetName,
-                        orderBoq: 0
+                        sheetName: building.sheetName || "", // Use empty string if no sheet specified
+                        orderBoq: 0,
+                        totalPrice: item.qte * item.pu
                     }))
                 }))
             };
             
-            const response = await apiRequest({
-                method: "POST",
-                endpoint: "ContractsDatasets/SaveSubcontractorDataset",
-                body: submitData,
-                token: token || undefined,
+            // DEBUG: Log the data being sent to backend
+            console.log("📤 SUBMITTING CONTRACT DATA:", JSON.stringify(submitData, null, 2));
+            console.log("📤 Form Data Summary:", {
+                projectId: formData.projectId,
+                subcontractorId: formData.subcontractorId,
+                contractId: formData.contractId,
+                currencyId: formData.currencyId,
+                buildingCount: formData.buildingIds.length,
+                boqDataCount: formData.boqData.length,
+                totalBoqItems: formData.boqData.reduce((sum, building) => sum + building.items.length, 0)
             });
             
-            if (response.success || response.isSuccess) {
-                const contractId = response.data?.id || response.id;
+            // Use the new API service
+            console.log("🎯 CALLING SAVE CONTRACT API...");
+            const result = await contractsApi.saveContract(submitData, false);
+            
+            // DEBUG: Log the response from backend
+            console.log("📥 BACKEND SAVE RESPONSE:", result);
+            console.log("📥 BACKEND SAVE RESPONSE - Success:", result.success);
+            console.log("📥 BACKEND SAVE RESPONSE - Error:", result.error);
+            console.log("📥 BACKEND SAVE RESPONSE - Message:", (result as any).message);
+            console.log("📥 BACKEND SAVE RESPONSE - Data:", result.data);
+            
+            if (result.success) {
+                const contractId = result.data?.id;
                 
                 // Upload documents if any
                 if (formData.attachments.length > 0 && contractId) {
                     try {
                         for (const attachment of formData.attachments) {
-                            const docData = new FormData();
-                            docData.append('contractsDataSetId', contractId.toString());
-                            docData.append('attachmentsType', attachment.type === 'PDF' ? '0' : '1'); // Enum values
-                            docData.append('wordFile', attachment.file);
-                            
-                            await apiRequest({
-                                method: "POST",
-                                endpoint: "ContractsDatasets/AttachDoc",
-                                body: docData,
-                                token: token || undefined,
+                            await contractsApi.attachDocument({
+                                contractsDataSetId: contractId,
+                                attachmentsType: attachment.type === 'PDF' ? 0 : 1, // AttachmentType enum
+                                wordFile: attachment.file
                             });
                         }
                     } catch (docError) {
@@ -480,10 +496,15 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 setHasUnsavedChanges(false);
                 // Navigation will be handled by the main component
             } else {
-                throw new Error(response.message || "Failed to create contract");
+                throw new Error(result.error || "Failed to create contract");
             }
         } catch (error) {
-            console.error("Error submitting form:", error);
+            console.error("🚨 ERROR SUBMITTING FORM:", error);
+            console.error("🚨 ERROR DETAILS:", {
+                name: error instanceof Error ? error.name : 'Unknown',
+                message: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+            });
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
             toaster.error(`Failed to create contract: ${errorMessage}`);
         } finally {
@@ -514,7 +535,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         formData,
         currentStep,
         hasUnsavedChanges,
-        loading,
+        loading: loading || contractsApi.loading,
         loadingProjects,
         loadingBuildings,
         

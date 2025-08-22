@@ -80,7 +80,7 @@ const FloatingLabelInput: React.FC<{
 
 export const Step4_ContractDetails: React.FC = () => {
     const { formData, setFormData, contracts, currencies, projects } = useWizardContext();
-    const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("001");
+    const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("");
     const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
 
     // Get the selected project to access its acronym from database
@@ -89,15 +89,15 @@ export const Step4_ContractDetails: React.FC = () => {
 
     // Generate the full contract number
     const generateContractNumber = (suffix: string) => {
-        return `CS-${projectAcronym}-${suffix.padStart(3, '0')}`;
+        // If suffix is empty, use "000" for the final contract number
+        const finalSuffix = suffix.trim() === '' ? '000' : suffix.padStart(3, '0');
+        return `CS-${projectAcronym}-${finalSuffix}`;
     };
 
     // Update contract number when suffix or project changes
     useEffect(() => {
         const newContractNumber = generateContractNumber(contractNumberSuffix);
-        if (formData.contractNumber !== newContractNumber) {
-            setFormData({ contractNumber: newContractNumber });
-        }
+        setFormData({ contractNumber: newContractNumber });
     }, [contractNumberSuffix, projectAcronym]);
 
     // Initialize contract number suffix from existing contract number
@@ -115,9 +115,9 @@ export const Step4_ContractDetails: React.FC = () => {
     };
 
     const handleContractNumberSuffixChange = (newSuffix: string) => {
-        // Only allow numbers, max 3 digits
-        const cleanSuffix = newSuffix.replace(/\D/g, '').substring(0, 3);
-        setContractNumberSuffix(cleanSuffix || "001");
+        // Only allow numeric input
+        const numericValue = newSuffix.replace(/\D/g, '');
+        setContractNumberSuffix(numericValue);
     };
 
     return (
@@ -172,7 +172,15 @@ export const Step4_ContractDetails: React.FC = () => {
                     <input type="date" className="input input-bordered" value={formData.completionDate} onChange={(e) => handleFieldChange('completionDate', e.target.value)} />
                 </div>
 
-                {/* Row 2: Contract Number & Sub-trade */}
+                {/* Row 2: Sub-trade (moved under currency) */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Sub-trade</span>
+                    </label>
+                    <input type="text" className="input input-bordered" value={formData.subTrade || ''} onChange={(e) => handleFieldChange('subTrade', e.target.value)} placeholder="Enter sub-trade" />
+                </div>
+
+                {/* Row 3: Contract Number */}
                 <div className="form-control lg:col-span-2">
                     <label className="label">
                         <span className="label-text">Contract Number *</span>
@@ -181,15 +189,8 @@ export const Step4_ContractDetails: React.FC = () => {
                         <span className={`font-mono px-3 py-2 rounded border ${projectAcronym === "XXX" ? "bg-warning/20 text-warning border-warning/40" : "bg-base-200 text-base-content/80 border-base-300"}`}>
                             CS-{projectAcronym}-
                         </span>
-                        <input type="text" className="input input-bordered w-24 text-center font-mono" value={contractNumberSuffix} onChange={(e) => handleContractNumberSuffixChange(e.target.value)} placeholder="001" maxLength={3} disabled={projectAcronym === "XXX"} />
+                        <input type="text" className="input input-bordered w-24 text-center font-mono" value={contractNumberSuffix} onChange={(e) => handleContractNumberSuffixChange(e.target.value)} placeholder="000" disabled={projectAcronym === "XXX"} />
                     </div>
-                </div>
-
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Sub-trade</span>
-                    </label>
-                    <input type="text" className="input input-bordered" value={formData.subTrade || ''} onChange={(e) => handleFieldChange('subTrade', e.target.value)} placeholder="Enter sub-trade" />
                 </div>
             </div>
 

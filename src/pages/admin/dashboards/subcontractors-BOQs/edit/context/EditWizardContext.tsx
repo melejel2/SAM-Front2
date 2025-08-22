@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { useContractsApi } from "../../hooks/use-contracts-api";
+import type { SubcontractorBoqVM } from "@/types/contracts";
 
 // Types and Interfaces (same as new wizard)
 interface Project {
@@ -328,36 +330,17 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         }
     };
     
-    // Load existing data for editing
+    // Initialize contracts API hook
+    const contractsApi = useContractsApi();
+    
+    // Load existing data for editing using the new API service
     const loadExistingData = async (contractId: number) => {
         try {
             setInitialDataLoading(true);
-            const response = await apiRequest({
-                method: "GET",
-                endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
-                token: token || undefined,
-            });
+            const result = await contractsApi.loadSubcontractorData(contractId);
             
-            // Handle both wrapped and direct responses
-            let existingData = null;
-            if (response && typeof response === 'object') {
-                if (response.success && response.data) {
-                    existingData = response.data;
-                } else if (response.id || response.projectId) {
-                    // Direct response without wrapper
-                    existingData = response;
-                } else {
-                    console.error('Unexpected response format:', response);
-                    toaster.error(response.message || "Failed to load contract data");
-                    return;
-                }
-            } else {
-                console.error('Invalid response:', response);
-                toaster.error("Failed to load contract data - invalid response");
-                return;
-            }
-
-            if (existingData) {
+            if (result.success && result.data) {
+                const existingData = result.data;
                 setFormDataState({
                     ...initialEditFormData,
                     id: existingData.id || contractId,
@@ -395,7 +378,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     boqData: existingData.buildings?.map((building: any) => ({
                         buildingId: building.id,
                         buildingName: building.buildingName,
-                        sheetName: building.sheetName || 'default',
+                        sheetName: building.sheetName || '', // Use empty string if no sheet specified
                         items: building.boqsContract?.map((item: any) => ({
                             id: item.id,
                             no: item.no,
@@ -415,8 +398,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 }
                 
                 setHasUnsavedChanges(false);
-            } else {
-                toaster.error("Failed to load contract data - no data found");
             }
         } catch (error) {
             console.error("Error loading existing data:", error);
@@ -488,18 +469,18 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         }
     };
     
-    // Submission function for updates
+    // Submission function for updates using the new API service
     const handleSubmit = async () => {
         try {
             setLoading(true);
             
             // Prepare JSON data for submission according to SubcontractorBoqVM structure
-            const submitData = {
+            const submitData: SubcontractorBoqVM = {
                 id: formData.id, // Existing contract ID
-                currencyId: formData.currencyId,
-                projectId: formData.projectId,
-                subContractorId: formData.subcontractorId,
-                contractId: formData.contractId,
+                currencyId: formData.currencyId!,
+                projectId: formData.projectId!,
+                subContractorId: formData.subcontractorId!,
+                contractId: formData.contractId!,
                 contractDate: formData.contractDate,
                 completionDate: formData.completionDate,
                 advancePayment: formData.advancePayment,
@@ -531,47 +512,38 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     id: building.buildingId || 0,
                     buildingName: building.buildingName,
                     sheetId: 0, // Will be managed by backend
-                    sheetName: building.sheetName,
+                    sheetName: building.sheetName || "", // Use empty string if no sheet specified
                     replaceAllItems: true,
                     boqsContract: building.items.map(item => ({
-                        id: item.id || 0,
+                        id: item.id && item.id > 0 && item.id < 2147483647 ? item.id : 0, // Use existing ID if valid, otherwise 0 for new items
                         no: item.no,
                         key: item.key,
                         unite: item.unite,
                         qte: item.qte,
                         pu: item.pu,
-                        costCode: item.costCode,
-                        costCodeId: null,
+                        costCode: item.costCode || '',
+                        costCodeId: null as number | null,
                         boqtype: "Subcontractor",
                         boqSheetId: 0,
-                        sheetName: building.sheetName,
-                        orderBoq: 0
+                        sheetName: building.sheetName || "", // Use empty string if no sheet specified
+                        orderBoq: 0,
+                        totalPrice: item.qte * item.pu
                     }))
                 }))
             };
             
-            const response = await apiRequest({
-                method: "POST", // Backend uses POST for both create and update
-                endpoint: "ContractsDatasets/SaveSubcontractorDataset",
-                body: submitData,
-                token: token || undefined,
-            });
+            // Use the new API service
+            const result = await contractsApi.saveContract(submitData, false);
             
-            if (response.success || response.isSuccess) {
+            if (result.success) {
                 // Upload new documents if any
                 if (formData.attachments.length > 0) {
                     try {
                         for (const attachment of formData.attachments) {
-                            const docData = new FormData();
-                            docData.append('contractsDataSetId', formData.id.toString());
-                            docData.append('attachmentsType', attachment.type === 'PDF' ? '0' : '1'); // Enum values
-                            docData.append('wordFile', attachment.file);
-                            
-                            await apiRequest({
-                                method: "POST",
-                                endpoint: "ContractsDatasets/AttachDoc",
-                                body: docData,
-                                token: token || undefined,
+                            await contractsApi.attachDocument({
+                                contractsDataSetId: formData.id,
+                                attachmentsType: attachment.type === 'PDF' ? 0 : 1, // AttachmentType enum
+                                wordFile: attachment.file
                             });
                         }
                     } catch (docError) {
@@ -584,7 +556,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 setHasUnsavedChanges(false);
                 // Navigation will be handled by the main component
             } else {
-                throw new Error(response.message || "Failed to update contract");
+                throw new Error(result.error || "Failed to update contract");
             }
         } catch (error) {
             console.error("Error updating contract:", error);
@@ -622,7 +594,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         formData,
         currentStep,
         hasUnsavedChanges,
-        loading,
+        loading: loading || contractsApi.loading,
         initialDataLoading,
         loadingProjects,
         loadingBuildings,

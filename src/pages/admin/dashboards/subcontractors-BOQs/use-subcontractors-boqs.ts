@@ -1,14 +1,10 @@
 import { useState } from "react";
-
-import apiRequest from "@/api/api";
-import { useAuth } from "@/contexts/auth";
+import { useContractsApi } from "./hooks/use-contracts-api";
+import { ContractDatasetStatus } from "@/api/services/contracts-api";
 
 const useSubcontractorsBOQs = () => {
     const [tableData, setTableData] = useState<any[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-
-    const { getToken } = useAuth();
-    const token = getToken();
+    const contractsApi = useContractsApi();
 
     const columns = {
         contractNumber: "Number",
@@ -110,113 +106,59 @@ const useSubcontractorsBOQs = () => {
         return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
     };
 
-    const generateContract = async (contractId: string) => {
-        try {
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/GenerateContract/${contractId}`,
-                method: "POST",
-                token: token ?? "",
-            });
-            
-            if (response && response.success !== false) {
-                // Refresh the data after generating contract
-                await getContractsDatasets();
-                return { success: true };
-            }
-            return { success: false, error: response?.error || "Failed to generate contract" };
-        } catch (error) {
-            console.error("Error generating contract:", error);
-            return { success: false, error: "An error occurred while generating the contract" };
+    const generateContract = async (contractId: string | number) => {
+        const result = await contractsApi.generateContractBOQ(Number(contractId));
+        if (result.success) {
+            // Refresh the data after generating contract
+            await getContractsDatasets();
         }
+        return result;
     };
 
     const getContractsDatasets = async () => {
-        setLoading(true);
-        try {
-            const data = await apiRequest({
-                endpoint: "ContractsDatasets/GetContractsDatasetsList/0", // Status 0 = Editable contracts for BOQs
-                method: "GET",
-                token: token ?? "",
-            });
+        const result = await contractsApi.fetchContractsDatasets(ContractDatasetStatus.Editable);
+        
+        if (result.success && result.data) {
+            // Process the data to format currency and dates
+            const processedData = result.data.map((contract: any) => ({
+                ...contract,
+                id: contract.id || contract.contractId || Math.random().toString(), // Ensure we have an ID
+                contractNumber: contract.contractNumber || contract.contractNb || '-',
+                projectName: contract.projectName || '-',
+                subcontractorName: contract.subcontractorName || '-',
+                tradeName: contract.tradeName || '-',
+                contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
+                completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
+                amount: contract.amount ? formatCurrency(contract.amount) : '-',
+                status: formatStatusBadge(contract.status),
+            }));
             
-            if (data && Array.isArray(data)) {
-                // Data is already filtered by status from the API
-                const editableData = data;
-                
-                // Process the data to format currency and dates
-                const processedData = editableData.map((contract: any) => ({
-                    ...contract,
-                    id: contract.id || contract.contractId || Math.random().toString(), // Ensure we have an ID
-                    contractNumber: contract.contractNumber || contract.contractNb || '-',
-                    projectName: contract.projectName || '-',
-                    subcontractorName: contract.subcontractorName || '-',
-                    tradeName: contract.tradeName || '-',
-                    contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
-                    completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
-                    amount: contract.amount ? formatCurrency(contract.amount) : '-',
-                    status: formatStatusBadge(contract.status),
-                }));
-                
-                // Reverse the order to show newest first
-                setTableData(processedData.reverse());
-            } else {
-                setTableData([]);
-            }
-        } catch (error) {
-            console.error("API Error:", error);
+            // Reverse the order to show newest first
+            setTableData(processedData.reverse());
+        } else {
             setTableData([]);
-        } finally {
-            setLoading(false);
         }
     };
 
     const previewContract = async (contractData: any) => {
-        try {
-            // For editable contracts (status 0), use live preview instead of export
-            // This generates a temporary preview without changing the contract status
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/LivePreviewPdf`,
-                method: "POST",
-                token: token ?? "",
-                body: contractData,
-                responseType: "blob",
-            });
-
-            if (response instanceof Blob) {
-                return { success: true, blob: response };
-            }
-            return { success: false, blob: null };
-        } catch (error) {
-            console.error("Live preview error:", error);
-            return { success: false, blob: null };
-        }            
+        // For editable contracts, use live preview instead of export
+        // This generates a temporary preview without changing the contract status
+        return await contractsApi.livePreviewPdfDocument(contractData);
     };
 
 const DeleteContract = async (contractId: number | string) => {
-    try {
-        const response = await apiRequest({
-            endpoint: `ContractsDatasets/DeleteSubContractorBoq/${contractId}`,
-            method: "DELETE", 
-            token: token ?? "",
-        });
-
-        if (response && response.success !== false) {
-            setTableData(prevData => prevData.filter(contract => contract.id !== contractId));
-            return { success: true };
-        }
-
-        return { success: false, error: response?.error || "Failed to delete contract" };
-    } catch (error) {
-        console.error("Error deleting contract:", error);
-        return { success: false, error: "An error occurred while deleting the contract" };
+    const result = await contractsApi.deleteContract(Number(contractId));
+    if (result.success) {
+        setTableData(prevData => prevData.filter(contract => contract.id !== contractId));
     }
+    return result;
 };
 
     return {
         columns,
         tableData,
         inputFields,
-        loading,
+        loading: contractsApi.loading,
         getContractsDatasets,
         previewContract,
         DeleteContract,

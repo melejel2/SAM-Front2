@@ -65,20 +65,63 @@ const apiRequest = async <T = any>({
     }
 
     try {
+        // DEBUG: Log the HTTP request details - only for save contracts
+        if (url.includes('SaveSubcontractorDataset')) {
+            console.log("🎯💾 === HTTP SAVE REQUEST ===");
+            console.log("🎯💾 URL:", url);
+            console.log("🎯💾 Method:", method);
+            console.log("🎯💾 Headers:", mergedHeaders);
+            if (body) {
+                if (body instanceof FormData) {
+                    console.log("🎯💾 Body: [FormData]");
+                } else if (body instanceof URLSearchParams) {
+                    console.log("🎯💾 Body: [URLSearchParams]");
+                } else {
+                    console.log("🎯💾 Body (JSON):", JSON.stringify(body, null, 2));
+                }
+            } else {
+                console.log("🎯💾 Body: No body");
+            }
+        }
+        
         const response = await fetch(url, requestOptions);
+        
+        // DEBUG: Log the HTTP response summary - only for save contracts
+        if (url.includes('SaveSubcontractorDataset')) {
+            console.log("🎯💾 === HTTP SAVE RESPONSE ===");
+            console.log("🎯💾 Status:", response.status);
+            console.log("🎯💾 Status Text:", response.statusText);
+            console.log("🎯💾 OK:", response.ok);
+            console.log("🎯💾 Headers:", Object.fromEntries(response.headers.entries()));
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
             let errorMessage = `HTTP error! status: ${response.status}`;
             let errorData: any = null;
 
+            // DEBUG: Log the error response details - focus on save contracts
+            if (url.includes('SaveSubcontractorDataset')) {
+                console.error("🎯💾 === SAVE CONTRACT ERROR ===");
+                console.error("🎯💾 Status:", response.status);
+                console.error("🎯💾 Status Text:", response.statusText);
+                console.error("🎯💾 URL:", url);
+                console.error("🎯💾 Error Text:", errorText);
+            }
+
             try {
                 errorData = JSON.parse(errorText);
                 errorMessage = errorData.message || errorMessage;
+                if (url.includes('SaveSubcontractorDataset')) {
+                    console.error("🎯💾 PARSED ERROR DATA:", errorData);
+                }
             } catch {
                 // If JSON parsing fails, use the raw error text if available
                 if (errorText && errorText.trim()) {
                     errorMessage = errorText;
+                }
+                if (url.includes('SaveSubcontractorDataset')) {
+                    console.error("🎯💾 COULD NOT PARSE ERROR RESPONSE AS JSON");
                 }
             }
 
