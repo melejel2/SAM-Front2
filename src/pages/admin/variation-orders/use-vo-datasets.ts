@@ -3,6 +3,11 @@ import { useState } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { 
+  getVoDatasetsList, 
+  getVoDatasetWithBoqs as getVoDatasetWithBoqsApi, 
+  saveVoDataset as saveVoDatasetApi 
+} from "@/api/services/vo-api";
 import {
   VoDatasetVM,
   VoDatasetBoqDetailsVM,
@@ -119,11 +124,7 @@ const useVoDatasets = () => {
     setLoading(true);
     
     try {
-      const data = await apiRequest<VoDatasetVM[]>({
-        endpoint: `VoDataSet/GetVoDatasetsList/${status}`,
-        method: "GET",
-        token: token ?? "",
-      });
+      const data = await getVoDatasetsList(status, token ?? "");
 
       let voArray: VoDatasetVM[] = [];
       
@@ -208,11 +209,7 @@ const useVoDatasets = () => {
     setLoading(true);
     
     try {
-      const data = await apiRequest<VoDatasetBoqDetailsVM>({
-        endpoint: `VoDataSet/GetVoDatasetWithBoqs/${id}`,
-        method: "GET",
-        token: token ?? "",
-      });
+      const data = await getVoDatasetWithBoqsApi(id, token ?? "");
 
       if (data && typeof data === 'object') {
         if ('isSuccess' in data && !data.isSuccess) {
@@ -242,12 +239,7 @@ const useVoDatasets = () => {
     setSaveLoading(true);
     
     try {
-      const response = await apiRequest<{ success: boolean; error?: string }>({
-        endpoint: "VoDataSet/SaveVoDataset",
-        method: "POST",
-        token: token ?? "",
-        body: voDataset as any,
-      });
+      const response = await saveVoDatasetApi(voDataset, token ?? "");
 
       if (response && typeof response === 'object') {
         if ('isSuccess' in response && !response.isSuccess) {

@@ -7,8 +7,436 @@ import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import apiRequest from "@/api/api";
+import { createSubcontractorVO } from "@/api/services/vo-api";
+import { CreateSubcontractorVoRequest } from "@/types/variation-order";
 
 import useSubcontractorsBOQs from "./use-subcontractors-boqs";
+
+// Contract Selection Modal for VO Creation
+const ContractSelectionModal = ({ 
+    isOpen, 
+    onClose, 
+    contracts,
+    onContractSelect 
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    contracts: any[];
+    onContractSelect: (contract: any) => void;
+}) => {
+    if (!isOpen) return null;
+
+    const availableContracts = contracts.filter(contract => 
+        contract.status?.toLowerCase().includes('active') || 
+        contract.status?.toLowerCase().includes('editable')
+    );
+
+    return (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden animate-[modal-fade_0.2s]">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-warning to-warning-focus p-6 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xl font-bold">Select Contract for VO</h3>
+                            <p className="text-white/80 text-sm mt-1">
+                                Choose which contract to create a variation order for
+                            </p>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="btn btn-ghost btn-sm text-white hover:bg-white/20"
+                        >
+                            <span className="iconify lucide--x size-5"></span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+                    {availableContracts.length === 0 ? (
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="iconify lucide--alert-triangle size-8 text-warning"></span>
+                            </div>
+                            <h4 className="font-semibold text-base-content mb-2">No Available Contracts</h4>
+                            <p className="text-base-content/60">
+                                No active or editable contracts found. Create or activate a contract first.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {availableContracts.map((contract, index) => (
+                                <div
+                                    key={index}
+                                    className="card bg-base-50 border border-base-300 hover:bg-base-100 transition-colors cursor-pointer"
+                                    onClick={() => {
+                                        onContractSelect(contract);
+                                        onClose();
+                                    }}
+                                >
+                                    <div className="card-body p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <h4 className="font-semibold text-base-content">
+                                                        {contract.contractNumber}
+                                                    </h4>
+                                                    <div dangerouslySetInnerHTML={{ __html: contract.status }}></div>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-base-content/60">Project:</span>
+                                                        <span className="ml-2 font-medium">{contract.projectName}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-base-content/60">Subcontractor:</span>
+                                                        <span className="ml-2 font-medium">{contract.subcontractorName}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-base-content/60">Trade:</span>
+                                                        <span className="ml-2 font-medium">{contract.tradeName}</span>
+                                                    </div>
+                                                </div>
+                                                {contract.amount && (
+                                                    <div className="mt-2 text-sm">
+                                                        <span className="text-base-content/60">Amount:</span>
+                                                        <span className="ml-2 font-semibold text-primary">${contract.amount}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center text-base-content/40">
+                                                <span className="iconify lucide--chevron-right size-5"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-base-300 p-6 bg-base-50">
+                    <div className="flex justify-end">
+                        <button
+                            onClick={onClose}
+                            className="btn btn-ghost"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// VO Modal Component for Subcontractor Contracts
+const SubcontractorVOModal = ({ 
+    isOpen, 
+    onClose, 
+    contractData,
+    onVOCreated 
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    contractData: any;
+    onVOCreated: () => void;
+}) => {
+    const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const { getToken } = useAuth();
+    const { toaster } = useToast();
+    
+    const [voData, setVoData] = useState({
+        voNumber: '',
+        description: '',
+        reason: '',
+        amount: '',
+        type: 'Addition' // Addition or Deduction
+    });
+
+    const handleSubmit = async () => {
+        // Comprehensive validation
+        if (!voData.voNumber?.trim()) {
+            toaster.error("VO Number is required");
+            return;
+        }
+        
+        if (!voData.description?.trim()) {
+            toaster.error("Description is required");
+            return;
+        }
+        
+        if (!voData.amount || parseFloat(voData.amount) <= 0) {
+            toaster.error("Amount must be greater than 0");
+            return;
+        }
+        
+        if (isNaN(parseFloat(voData.amount))) {
+            toaster.error("Please enter a valid amount");
+            return;
+        }
+        
+        if (!voData.type) {
+            toaster.error("VO Type is required");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Validate required contract data
+            if (!contractData.id || !contractData.subcontractorId || !contractData.projectId || !contractData.buildingId) {
+                toaster.error("Missing required contract information");
+                return;
+            }
+
+            const voPayload: CreateSubcontractorVoRequest = {
+                VoNumber: voData.voNumber.trim(),
+                Description: voData.description.trim(),
+                Reason: voData.reason?.trim() || undefined,
+                Amount: parseFloat(voData.amount),
+                Type: voData.type,
+                ContractDatasetId: contractData.id,
+                SubcontractorId: contractData.subcontractorId,
+                ProjectId: contractData.projectId,
+                BuildingId: contractData.buildingId,
+                Date: new Date().toISOString()
+            };
+
+            const response = await createSubcontractorVO(voPayload, getToken() ?? "");
+
+            if (response.success) {
+                toaster.success(`VO ${voData.voNumber} created successfully`);
+                onVOCreated();
+                handleClose();
+            } else {
+                const errorMessage = 'error' in response ? response.error : response.message || "Failed to create VO";
+                toaster.error(errorMessage);
+                console.error("VO creation failed:", response);
+            }
+        } catch (error) {
+            console.error("Error creating VO:", error);
+            toaster.error("Failed to create VO. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleClose = () => {
+        setStep(1);
+        setVoData({
+            voNumber: '',
+            description: '',
+            reason: '',
+            amount: '',
+            type: 'Addition'
+        });
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-[modal-fade_0.2s]">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-primary to-primary-focus p-6 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xl font-bold">Create Variation Order</h3>
+                            <p className="text-white/80 text-sm mt-1">
+                                For Contract: {contractData?.contractNumber} • {contractData?.projectName}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleClose}
+                            className="btn btn-ghost btn-sm text-white hover:bg-white/20"
+                        >
+                            <span className="iconify lucide--x size-5"></span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                    {step === 1 && (
+                        <div className="space-y-6">
+                            {/* VO Number */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">VO Number *</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className={`input input-bordered w-full ${!voData.voNumber?.trim() ? 'input-error' : ''}`}
+                                    placeholder="e.g., VO-001"
+                                    value={voData.voNumber}
+                                    onChange={(e) => setVoData({...voData, voNumber: e.target.value})}
+                                    maxLength={50}
+                                />
+                                {!voData.voNumber?.trim() && (
+                                    <label className="label">
+                                        <span className="label-text-alt text-error">VO Number is required</span>
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Type */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">VO Type *</span>
+                                </label>
+                                <div className="flex gap-4">
+                                    <label className="label cursor-pointer gap-2">
+                                        <input
+                                            type="radio"
+                                            name="voType"
+                                            className="radio radio-primary"
+                                            checked={voData.type === 'Addition'}
+                                            onChange={() => setVoData({...voData, type: 'Addition'})}
+                                        />
+                                        <span className="label-text">Addition</span>
+                                    </label>
+                                    <label className="label cursor-pointer gap-2">
+                                        <input
+                                            type="radio"
+                                            name="voType"
+                                            className="radio radio-warning"
+                                            checked={voData.type === 'Deduction'}
+                                            onChange={() => setVoData({...voData, type: 'Deduction'})}
+                                        />
+                                        <span className="label-text">Deduction</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Amount *</span>
+                                </label>
+                                <div className="input-group">
+                                    <span className="bg-base-200 px-4 flex items-center text-base-content/70">$</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        className={`input input-bordered w-full ${
+                                            !voData.amount || parseFloat(voData.amount) <= 0 || isNaN(parseFloat(voData.amount)) 
+                                                ? 'input-error' : ''
+                                        }`}
+                                        placeholder="0.00"
+                                        value={voData.amount}
+                                        onChange={(e) => setVoData({...voData, amount: e.target.value})}
+                                    />
+                                </div>
+                                {(!voData.amount || parseFloat(voData.amount) <= 0 || isNaN(parseFloat(voData.amount))) && (
+                                    <label className="label">
+                                        <span className="label-text-alt text-error">
+                                            Please enter a valid amount greater than 0
+                                        </span>
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Description */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Description *</span>
+                                </label>
+                                <textarea
+                                    className={`textarea textarea-bordered h-24 ${!voData.description?.trim() ? 'textarea-error' : ''}`}
+                                    placeholder="Describe the variation order..."
+                                    value={voData.description}
+                                    onChange={(e) => setVoData({...voData, description: e.target.value})}
+                                    maxLength={500}
+                                ></textarea>
+                                {!voData.description?.trim() && (
+                                    <label className="label">
+                                        <span className="label-text-alt text-error">Description is required</span>
+                                    </label>
+                                )}
+                                <label className="label">
+                                    <span className="label-text-alt">{voData.description?.length || 0}/500 characters</span>
+                                </label>
+                            </div>
+
+                            {/* Reason */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Reason</span>
+                                </label>
+                                <textarea
+                                    className="textarea textarea-bordered h-20"
+                                    placeholder="Reason for this variation order (optional)"
+                                    value={voData.reason}
+                                    onChange={(e) => setVoData({...voData, reason: e.target.value})}
+                                ></textarea>
+                            </div>
+
+                            {/* Contract Info Card */}
+                            <div className="card bg-base-200">
+                                <div className="card-body p-4">
+                                    <h4 className="font-semibold text-base-content/80 mb-2">Contract Details</h4>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span className="text-base-content/60">Contract:</span>
+                                            <span className="ml-2 font-medium">{contractData?.contractNumber}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-base-content/60">Project:</span>
+                                            <span className="ml-2 font-medium">{contractData?.projectName}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-base-content/60">Subcontractor:</span>
+                                            <span className="ml-2 font-medium">{contractData?.subcontractorName}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-base-content/60">Trade:</span>
+                                            <span className="ml-2 font-medium">{contractData?.tradeName}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-base-300 p-6 bg-base-50">
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={handleClose}
+                            className="btn btn-ghost"
+                            disabled={loading}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSubmit}
+                            className={`btn btn-primary text-white ${loading ? 'loading' : ''}`}
+                            disabled={loading || !voData.voNumber?.trim() || !voData.description?.trim() || !voData.amount || parseFloat(voData.amount) <= 0 || isNaN(parseFloat(voData.amount))}
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    Creating...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="iconify lucide--plus size-4"></span>
+                                    Create VO
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // Export Dropdown Component
 const ExportDropdown = ({ 
@@ -99,6 +527,11 @@ const SubcontractorsBOQs = () => {
 
     const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
     const [contractToDeleteId, setContractToDeleteId] = useState<number | null>(null);
+    
+    // VO Modal state
+    const [showVOModal, setShowVOModal] = useState(false);
+    const [selectedContractForVO, setSelectedContractForVO] = useState<any>(null);
+    const [showContractSelectionModal, setShowContractSelectionModal] = useState(false);
 
     const { 
         columns, 
@@ -150,6 +583,50 @@ const handleDeleteConfirm = async () => {
 const handleDeleteCancel = () => {
     setShowDeleteConfirmDialog(false);
     setContractToDeleteId(null);
+};
+
+// VO Modal Handlers
+const handleCreateVOFromButton = () => {
+    if (tableData.length === 0) {
+        toaster.error("No contracts available. Create a contract first.");
+        return;
+    }
+    
+    const availableContracts = tableData.filter(contract => 
+        contract.status?.toLowerCase().includes('active') || 
+        contract.status?.toLowerCase().includes('editable')
+    );
+    
+    if (availableContracts.length === 0) {
+        toaster.error("No active or editable contracts available for VO creation.");
+        return;
+    }
+    
+    if (availableContracts.length === 1) {
+        handleCreateVO(availableContracts[0]);
+    } else {
+        setShowContractSelectionModal(true);
+    }
+};
+
+const handleCreateVO = (contractData: any) => {
+    setSelectedContractForVO(contractData);
+    setShowVOModal(true);
+};
+
+const handleVOModalClose = () => {
+    setShowVOModal(false);
+    setSelectedContractForVO(null);
+};
+
+const handleContractSelectionClose = () => {
+    setShowContractSelectionModal(false);
+};
+
+const handleVOCreated = () => {
+    // Refresh the contracts list to reflect any changes
+    getContractsDatasets();
+    toaster.success("VO created successfully and linked to contract");
 };
 
     const handleBackToTable = () => {
@@ -382,6 +859,14 @@ const handleDeleteCancel = () => {
                         
                         <div className="flex items-center gap-3">
                             <button
+                                className="btn btn-sm btn-warning text-white flex items-center gap-2"
+                                onClick={handleCreateVOFromButton}
+                                disabled={loading || tableData.length === 0}
+                            >
+                                <span className="iconify lucide--file-plus size-4"></span>
+                                <span>Create VO</span>
+                            </button>
+                            <button
                                 className="btn btn-sm btn-primary text-white flex items-center gap-2"
                                 onClick={() => navigate('/dashboard/subcontractors-boqs/new')}
                             >
@@ -570,6 +1055,22 @@ const handleDeleteCancel = () => {
                     </div>
                 </div>
             )}
+
+            {/* Contract Selection Modal */}
+            <ContractSelectionModal
+                isOpen={showContractSelectionModal}
+                onClose={handleContractSelectionClose}
+                contracts={tableData}
+                onContractSelect={handleCreateVO}
+            />
+
+            {/* VO Creation Modal */}
+            <SubcontractorVOModal
+                isOpen={showVOModal}
+                onClose={handleVOModalClose}
+                contractData={selectedContractForVO}
+                onVOCreated={handleVOCreated}
+            />
         </div>
     );
 };

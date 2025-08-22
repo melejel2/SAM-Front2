@@ -127,6 +127,20 @@ export interface ImportVoRequest {
   excelFile?: File;
 }
 
+// Subcontractor VO Creation Request (now transforms to VoDatasetBoqDetailsVM for SaveVoDataset endpoint)
+export interface CreateSubcontractorVoRequest {
+  VoNumber: string;
+  Description: string;
+  Reason?: string;
+  Amount: number;
+  Type: string; // "Addition" or "Deduction"
+  ContractDatasetId: number;
+  SubcontractorId: number;
+  ProjectId: number;
+  BuildingId: number;
+  Date: string; // ISO date string
+}
+
 export interface ClearBoqItemsRequest {
   scope: BoqDeletionScope;
   projectId: number;
