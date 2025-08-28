@@ -97,18 +97,22 @@ export const Step4_ContractDetails: React.FC = () => {
     // Update contract number when suffix or project changes
     useEffect(() => {
         const newContractNumber = generateContractNumber(contractNumberSuffix);
-        setFormData({ contractNumber: newContractNumber });
-    }, [contractNumberSuffix, projectAcronym]);
+        // Only update if the generated number is different from current one
+        if (formData.contractNumber !== newContractNumber) {
+            setFormData({ contractNumber: newContractNumber });
+        }
+    }, [contractNumberSuffix, projectAcronym, formData.contractNumber, setFormData]);
 
-    // Initialize contract number suffix from existing contract number
+    // Initialize contract number suffix from existing contract number (only run once on mount or project change)
     useEffect(() => {
         if (formData.contractNumber && formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
             const suffix = formData.contractNumber.split('-')[2];
-            if (suffix && /^\d{3}$/.test(suffix)) {
+            if (suffix && /^\d{3}$/.test(suffix) && suffix !== contractNumberSuffix) {
                 setContractNumberSuffix(suffix);
             }
         }
-    }, [formData.contractNumber, projectAcronym]);
+        // Only run when projectAcronym changes, not when contractNumber changes
+    }, [projectAcronym]);
 
     const handleFieldChange = (field: string, value: any) => {
         setFormData({ [field]: value });
@@ -201,9 +205,9 @@ export const Step4_ContractDetails: React.FC = () => {
                 {/* Financial percentages */}
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Advance (%)</span>
+                        <span className="label-text">Advance Payment Eligible (%)</span>
                     </label>
-                    <input type="number" className="input input-bordered" value={formData.advancePayment || ''} onChange={(e) => handleFieldChange('advancePayment', Number(e.target.value))} placeholder="0" min="0" max="100" step="0.01" />
+                    <input type="number" className="input input-bordered" value={formData.subcontractorAdvancePayee || ''} onChange={(e) => handleFieldChange('subcontractorAdvancePayee', e.target.value)} placeholder="0" min="0" max="100" step="0.01" />
                 </div>
 
                 <div className="form-control">
@@ -307,6 +311,13 @@ export const Step4_ContractDetails: React.FC = () => {
                         <span className="label-text">Management Fees (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" value={formData.managementFees || ''} onChange={(e) => handleFieldChange('managementFees', e.target.value)} placeholder="0" />
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Plans Execution (%)</span>
+                    </label>
+                    <input type="text" className="input input-bordered" value={formData.plansExecution || ''} onChange={(e) => handleFieldChange('plansExecution', e.target.value)} placeholder="0" />
                 </div>
 
                 <div className="form-control">

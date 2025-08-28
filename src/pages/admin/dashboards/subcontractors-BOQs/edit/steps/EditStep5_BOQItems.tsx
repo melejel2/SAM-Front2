@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import layersIcon from "@iconify/icons-lucide/layers";
+import editIcon from "@iconify/icons-lucide/edit-2";
+import uploadIcon from "@iconify/icons-lucide/upload";
+import trashIcon from "@iconify/icons-lucide/trash";
+import calculatorIcon from "@iconify/icons-lucide/calculator";
+import xIcon from "@iconify/icons-lucide/x";
+import infoIcon from "@iconify/icons-lucide/info";
 import { useEditWizardContext, BOQItem } from "../context/EditWizardContext";
 import useToast from "@/hooks/use-toast";
 import useBOQUnits from "../../hooks/use-units";
 import useBuildings, { BuildingSheet } from "@/hooks/use-buildings";
 import DescriptionModal from "../../components/DescriptionModal";
+import SheetSelectionModal from "../../components/SheetSelectionModal";
+import BOQImportModal from "../../shared/components/BOQImportModal";
 
 export const EditStep5_BOQItems: React.FC = () => {
     const { formData, setFormData, buildings } = useEditWizardContext();
@@ -31,7 +40,7 @@ export const EditStep5_BOQItems: React.FC = () => {
             const buildingId = parseInt(selectedBuildingForBOQ);
             getBuildingSheets(buildingId);
         }
-    }, [selectedBuildingForBOQ, getBuildingSheets]);
+    }, [selectedBuildingForBOQ]); // Remove getBuildingSheets from deps to prevent infinite loop
 
     // Initialize sheet from existing BOQ data
     useEffect(() => {
@@ -44,16 +53,96 @@ export const EditStep5_BOQItems: React.FC = () => {
         }
     }, [selectedBuildingForBOQ, formData.boqData, selectedSheetForBOQ]);
 
-    // Auto-select first sheet when sheets are loaded (fallback)
+    // EDIT MODE FIX: Maintain contract's original trade across all buildings
     useEffect(() => {
-        if (buildingSheets.length > 0 && !selectedSheetForBOQ) {
-            setSelectedSheetForBOQ(buildingSheets[0].name);
+        if (buildingSheets.length > 0 && !selectedSheetForBOQ && formData.boqData && formData.boqData.length > 0) {
+            // Get the contract's consistent trade name from existing BOQ data
+            const contractTrade = formData.boqData[0]?.sheetName;
+            if (contractTrade) {
+                // Only select the trade if it exists in current building's sheets
+                const matchingSheet = buildingSheets.find(sheet => sheet.name === contractTrade);
+                if (matchingSheet) {
+                    setSelectedSheetForBOQ(contractTrade);
+                } else {
+                    console.warn(`Contract trade "${contractTrade}" not found in building sheets:`, buildingSheets.map(s => s.name));
+                }
+            }
         }
-    }, [buildingSheets, selectedSheetForBOQ]);
+    }, [buildingSheets, selectedSheetForBOQ, formData.boqData]);
 
     const [isImportingBOQ, setIsImportingBOQ] = useState(false);
     const [showDescriptionModal, setShowDescriptionModal] = useState(false);
     const [selectedDescription, setSelectedDescription] = useState<{itemNo: string, description: string} | null>(null);
+    const [showSheetSelectionModal, setShowSheetSelectionModal] = useState(false);
+
+    // Handle imported BOQ items
+    const handleBOQImport = (importedItems: any[]) => {
+        if (!importedItems || importedItems.length === 0) {
+            toaster.error("No items to import");
+            return;
+        }
+
+        if (!selectedBuildingForBOQ) {
+            toaster.error("Please select a building first");
+            return;
+        }
+
+        const buildingId = parseInt(selectedBuildingForBOQ);
+
+        // Convert imported items to BOQItem format
+        const newBOQItems: BOQItem[] = importedItems.map((item, index) => ({
+            id: 0, // Use 0 for new items (backend expects this)
+            no: item.id?.toString() || '',
+            key: item.description || '',
+            costCode: item.costCodeName || '',
+            unite: item.unit || '',
+            qte: item.quantity || 0,
+            pu: item.unitPrice || 0,
+            pt: item.totalPrice || 0
+        }));
+
+        // Find or create BOQ data for the current building
+        const existingBOQData = formData.boqData || [];
+        const buildingBOQIndex = existingBOQData.findIndex(b => b.buildingId === buildingId);
+        
+        if (buildingBOQIndex !== -1) {
+            // Update existing building BOQ data
+            const updatedBOQData = [...existingBOQData];
+            const existingItems = updatedBOQData[buildingBOQIndex].boqItems || [];
+            
+            // Filter out empty rows from existing items
+            const nonEmptyExistingItems = existingItems.filter(item => 
+                !(item.no === '' && item.key === '' && (!item.costCode || item.costCode === '') && 
+                  (!item.unite || item.unite === '') && item.qte === 0 && item.pu === 0)
+            );
+            
+            updatedBOQData[buildingBOQIndex] = {
+                ...updatedBOQData[buildingBOQIndex],
+                boqItems: [...nonEmptyExistingItems, ...newBOQItems]
+            };
+
+            setFormData(prev => ({
+                ...prev,
+                boqData: updatedBOQData
+            }));
+        } else {
+            // Create new BOQ data entry for this building
+            const newBOQData = {
+                buildingId: buildingId,
+                buildingName: buildings.find(b => b.id === buildingId)?.name || '',
+                sheetName: selectedSheetForBOQ,
+                boqItems: newBOQItems
+            };
+
+            setFormData(prev => ({
+                ...prev,
+                boqData: [...existingBOQData, newBOQData]
+            }));
+        }
+
+        setIsImportingBOQ(false);
+        toaster.success(`Successfully imported ${newBOQItems.length} BOQ items`);
+    };
 
     // Number formatting function
     const formatNumber = (value: number) => {
@@ -81,6 +170,29 @@ export const EditStep5_BOQItems: React.FC = () => {
         return building?.name || building?.buildingName || `Building ${buildingId}`;
     };
 
+    // Handle sheet selection from modal
+    const handleSheetSelect = (sheet: BuildingSheet) => {
+        const previousSheet = selectedSheetForBOQ;
+        setSelectedSheetForBOQ(sheet.name);
+        
+        // If sheet changed and we have existing BOQ data, clear it
+        if (previousSheet && previousSheet !== sheet.name) {
+            const buildingId = parseInt(selectedBuildingForBOQ);
+            const updatedBOQData = (formData.boqData || []).filter(b => b.buildingId !== buildingId);
+            setFormData({ boqData: updatedBOQData });
+            
+            toaster.success(`Sheet changed to "${sheet.name}". BOQ data has been cleared.`);
+        }
+    };
+
+    // Check if current building has BOQ data
+    const hasExistingBOQData = (): boolean => {
+        if (!selectedBuildingForBOQ) return false;
+        const buildingId = parseInt(selectedBuildingForBOQ);
+        const buildingBOQ = (formData.boqData || []).find(b => b.buildingId === buildingId);
+        return Boolean(buildingBOQ && buildingBOQ.items.length > 0);
+    };
+
     // Add new BOQ item
     const addNewBOQItem = (initialData: Partial<BOQItem>, fieldName: string) => {
         const buildingId = parseInt(selectedBuildingForBOQ);
@@ -95,7 +207,7 @@ export const EditStep5_BOQItems: React.FC = () => {
             updatedBOQData.push({
                 buildingId,
                 buildingName: getBuildingName(buildingId),
-                sheetName: "", // Empty sheet name - backend will handle default
+                sheetName: selectedSheetForBOQ || "", // Use selected sheet name
                 items: [newItem]
             });
         }
@@ -148,7 +260,7 @@ export const EditStep5_BOQItems: React.FC = () => {
     if (!formData.buildingIds || formData.buildingIds.length === 0) {
         return (
             <div className="text-center py-8">
-                <Icon icon="lucide:calculator" className="w-12 h-12 text-base-content/40 mx-auto mb-2" />
+                <Icon icon={calculatorIcon} className="w-12 h-12 text-base-content/40 mx-auto mb-2" />
                 <p className="text-base-content/60">Please select buildings first</p>
             </div>
         );
@@ -156,6 +268,7 @@ export const EditStep5_BOQItems: React.FC = () => {
 
     const buildingBOQ = formData.boqData?.find(b => b.buildingId === parseInt(selectedBuildingForBOQ || "0"));
     const items = buildingBOQ?.items || [];
+    
     
     // Always show at least one empty row for new entries
     const displayItems = [...items];
@@ -165,29 +278,65 @@ export const EditStep5_BOQItems: React.FC = () => {
 
     return (
         <div>
-            {/* Building Selection and Upload Button in same row */}
+            {/* Building Selection, Sheet Selection, and Upload Button */}
             <div className="mb-6 flex items-center justify-between gap-4">
-                <select 
-                    className="select select-bordered w-auto max-w-xs"
-                    value={selectedBuildingForBOQ || ''}
-                    onChange={(e) => setSelectedBuildingForBOQ(e.target.value)}
-                >
-                    {(formData.buildingIds || []).map(buildingId => {
-                        if (buildingId == null || buildingId === undefined) return null;
-                        const building = buildings.find(b => b.id === buildingId);
-                        return (
-                            <option key={buildingId} value={buildingId.toString()}>
-                                {building?.name || building?.buildingName}
-                            </option>
-                        );
-                    }).filter(Boolean)}
-                </select>
+                <div className="flex items-center gap-4">
+                    {/* Building Selection */}
+                    <select 
+                        className="select select-bordered w-auto max-w-xs"
+                        value={selectedBuildingForBOQ || ''}
+                        onChange={(e) => {
+                            setSelectedBuildingForBOQ(e.target.value);
+                            // EDIT MODE: Don't reset sheet - trade should be consistent across buildings
+                        }}
+                    >
+                        {(formData.buildingIds || []).map(buildingId => {
+                            if (buildingId == null || buildingId === undefined) return null;
+                            const building = buildings.find(b => b.id === buildingId);
+                            return (
+                                <option key={buildingId} value={buildingId.toString()}>
+                                    {building?.name || building?.buildingName}
+                                </option>
+                            );
+                        }).filter(Boolean)}
+                    </select>
+
+                    {/* Sheet Selection Button */}
+                    {selectedBuildingForBOQ && (
+                        <button
+                            onClick={() => setShowSheetSelectionModal(true)}
+                            className={`btn btn-outline btn-sm gap-2 min-w-fit ${
+                                selectedSheetForBOQ 
+                                    ? 'btn-primary' 
+                                    : 'btn-warning border-dashed'
+                            }`}
+                            disabled={sheetsLoading}
+                        >
+                            <Icon icon={layersIcon} className="w-4 h-4" />
+                            {sheetsLoading ? (
+                                <span className="flex items-center gap-2">
+                                    <div className="loading loading-spinner loading-xs"></div>
+                                    Loading...
+                                </span>
+                            ) : selectedSheetForBOQ ? (
+                                <span className="flex items-center gap-2">
+                                    {selectedSheetForBOQ}
+                                    <Icon icon={editIcon} className="w-3 h-3 opacity-60" />
+                                </span>
+                            ) : (
+                                <span className="text-warning-content font-medium">
+                                    Select Sheet (Trade)
+                                </span>
+                            )}
+                        </button>
+                    )}
+                </div>
                 
                 <button
                     onClick={() => setIsImportingBOQ(true)}
                     className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
                 >
-                    <span className="iconify lucide--upload w-4 h-4"></span>
+                    <Icon icon={uploadIcon} className="w-4 h-4" />
                     Import BOQ
                 </button>
             </div>
@@ -370,7 +519,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                                                                 className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
                                                                 title="Delete item"
                                                             >
-                                                                <span className="iconify lucide--trash size-4"></span>
+                                                                <Icon icon={trashIcon} className="w-4 h-4" />
                                                             </button>
                                                         </div>
                                                     )}
@@ -405,37 +554,23 @@ export const EditStep5_BOQItems: React.FC = () => {
                 </div>
             )}
 
-            {/* Import BOQ Modal */}
-            {isImportingBOQ && (
-                <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-base-content">Import BOQ</h3>
-                            <button
-                                onClick={() => setIsImportingBOQ(false)}
-                                className="btn btn-sm btn-circle btn-ghost"
-                            >
-                                <Icon icon="lucide:x" className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="text-center py-8">
-                            <Icon icon="lucide:info" className="w-12 h-12 text-info mx-auto mb-4" />
-                            <p className="text-base-content mb-4">
-                                BOQ import functionality will be implemented soon.
-                            </p>
-                            <button
-                                onClick={() => {
-                                    setIsImportingBOQ(false);
-                                    toaster.info("BOQ import functionality will be implemented soon");
-                                }}
-                                className="btn btn-primary"
-                            >
-                                OK
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* BOQ Import Modal */}
+            <BOQImportModal
+                isOpen={isImportingBOQ}
+                onClose={() => setIsImportingBOQ(false)}
+                onSuccess={handleBOQImport}
+                contractDataSetId={formData.contractDataSetId || 0}
+                availableBuildings={buildings.map(building => ({
+                    id: building.id,
+                    name: building.name,
+                    sheets: buildingSheets.map(sheet => ({
+                        id: sheet.id,
+                        name: sheet.name
+                    }))
+                }))}
+                currentBuildingId={selectedBuildingForBOQ ? parseInt(selectedBuildingForBOQ) : undefined}
+                currentSheetName={selectedSheetForBOQ}
+            />
 
             {/* Description Modal */}
             {showDescriptionModal && selectedDescription && (
@@ -448,6 +583,20 @@ export const EditStep5_BOQItems: React.FC = () => {
                     title={`Item ${selectedDescription.itemNo} Description`}
                     description={selectedDescription.description}
                     itemNo={selectedDescription.itemNo}
+                />
+            )}
+
+            {/* Sheet Selection Modal */}
+            {showSheetSelectionModal && selectedBuildingForBOQ && (
+                <SheetSelectionModal
+                    isOpen={showSheetSelectionModal}
+                    onClose={() => setShowSheetSelectionModal(false)}
+                    onSheetSelect={handleSheetSelect}
+                    sheets={buildingSheets}
+                    currentSheet={selectedSheetForBOQ}
+                    buildingName={getBuildingName(parseInt(selectedBuildingForBOQ))}
+                    hasExistingBOQData={hasExistingBOQData()}
+                    sheetsLoading={sheetsLoading}
                 />
             )}
         </div>

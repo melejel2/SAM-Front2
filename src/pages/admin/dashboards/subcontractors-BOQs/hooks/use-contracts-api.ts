@@ -40,8 +40,6 @@ export const useContractsApi = () => {
   const { getToken } = useAuth();
   const { toaster } = useToast();
   const [loading, setLoading] = useState(false);
-  const [sheetsLoading, setSheetsLoading] = useState(false);
-  const [buildingSheets, setBuildingSheets] = useState<any[]>([]);
   
   const token = getToken();
 
@@ -478,7 +476,7 @@ export const useContractsApi = () => {
     }
   };
 
-  const livePreviewPdfDocument = async (model: SubcontractorBoqVM) => {
+  const livePreviewPdfDocument = async (contractData: any) => {
     if (!token) {
       toaster.error('Authentication required');
       return { success: false, blob: null };
@@ -486,10 +484,45 @@ export const useContractsApi = () => {
 
     try {
       setLoading(true);
-      const blob = await livePreviewPdf(model, token);
-      return { success: true, blob };
+      
+      console.log('🎯📄 LIVE PREVIEW DEBUG - Input contractData:', contractData);
+      console.log('🎯📄 Contract ID exists:', !!contractData.id);
+      console.log('🎯📄 Contract has BOQ items:', !!(contractData.contractDetailsList && contractData.contractDetailsList.length > 0));
+      
+      // If contractData has an ID, fetch the full contract data first (like the working preview)
+      if (contractData.id) {
+        console.log('🎯📄 Fetching full contract data from API for ID:', contractData.id);
+        // Get the full contract data structure from the API
+        const contractResponse = await getSubcontractorData(Number(contractData.id), token);
+        
+        if (!contractResponse.success || !contractResponse.data) {
+          console.error('🎯📄 Failed to fetch contract data:', contractResponse);
+          toaster.error('Failed to load contract data for preview');
+          return { success: false, blob: null };
+        }
+        
+        console.log('🎯📄 Full contract data fetched:', contractResponse.data);
+        console.log('🎯📄 BOQ items count:', contractResponse.data.contractDetailsList?.length || 0);
+        console.log('🎯📄 Contract basics:', {
+          contractNumber: contractResponse.data.contractNumber,
+          projectName: contractResponse.data.projectName,
+          subcontractorName: contractResponse.data.subcontractorName,
+          totalAmount: contractResponse.data.totalAmount
+        });
+        
+        // Use the full contract data for live preview
+        const blob = await livePreviewPdf(contractResponse.data, token);
+        return { success: true, blob };
+      } else {
+        console.log('🎯📄 Using provided contract data directly (no ID found)');
+        console.log('🎯📄 Direct data BOQ items:', contractData.contractDetailsList?.length || 0);
+        
+        // For cases where we already have a properly structured SubcontractorBoqVM
+        const blob = await livePreviewPdf(contractData, token);
+        return { success: true, blob };
+      }
     } catch (error) {
-      console.error('Live preview PDF error:', error);
+      console.error('🎯📄 Live preview PDF error:', error);
       toaster.error('An error occurred while generating live PDF preview');
       return { success: false, blob: null };
     } finally {
@@ -516,44 +549,12 @@ export const useContractsApi = () => {
     }
   };
 
-  // Building sheets integration for BOQ operations
-  const fetchBuildingSheets = async (buildingId: number) => {
-    if (!token) {
-      toaster.error('Authentication required');
-      return { success: false, data: [] };
-    }
-
-    try {
-      setSheetsLoading(true);
-      console.log(`🏗️ Fetching building sheets for building ID: ${buildingId}`);
-      
-      const result = await getBuildingSheets(buildingId, token);
-      
-      if (!result.success) {
-        console.error('❌ Failed to fetch building sheets:', result.error);
-        toaster.error(result.message || 'Failed to load building sheets');
-        setBuildingSheets([]);
-        return { success: false, data: [] };
-      }
-      
-      console.log('✅ Successfully fetched building sheets:', result.data);
-      setBuildingSheets(result.data || []);
-      return { success: true, data: result.data || [] };
-    } catch (error) {
-      console.error('🚨 Building sheets API Error:', error);
-      toaster.error('An error occurred while fetching building sheets');
-      setBuildingSheets([]);
-      return { success: false, data: [] };
-    } finally {
-      setSheetsLoading(false);
-    }
-  };
+  // Note: Building sheets functionality moved to use-buildings.ts hook
+  // Use useBuildings() hook instead of this contracts API for building sheets
 
   return {
     // State
     loading,
-    sheetsLoading,
-    buildingSheets,
     
     // Core CRUD operations
     fetchContractsDatasets,
@@ -565,7 +566,6 @@ export const useContractsApi = () => {
     copyBoqItems,
     importBoqFromExcel,
     clearBoqItems,
-    fetchBuildingSheets,
     
     // Contract lifecycle
     generateContractBOQ,

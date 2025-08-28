@@ -25,35 +25,51 @@ const steps = [
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
     const getStepColorClass = (stepNumber: number) => {
         if (currentStep === stepNumber) {
-            return "bg-primary border-primary text-primary-content";
+            // Current Active Step: Use primary color with opacity variations
+            return "bg-primary/10 border-primary/20 text-primary";
         }
         if (currentStep > stepNumber) {
-            return "bg-success border-success text-success-content";
+            // Completed/Approved Steps: Use success green with opacity variations
+            return "bg-success/10 border-success/20 text-success";
         }
-        return "bg-base-200 border-base-300 text-base-content/60";
+        // Future/Inactive Steps: Use muted base colors
+        return "bg-base-200 border-base-300 text-base-content/50";
     };
 
     const getConnectorColor = (stepNumber: number) => {
         if (currentStep > stepNumber) {
-            return "bg-success";
+            // Connector lines between completed steps: success with opacity
+            return "bg-success/30";
         }
+        // Future connector lines: muted
         return "bg-base-300";
     };
 
     return (
         <div className="w-full">
-            {/* Step indicator with integrated progress */}
+            {/* Step indicator */}
             <div className="flex items-center justify-center">
                 {steps.map((step, idx) => (
                     <div key={step.number} className="flex items-center">
-                        <div className="flex flex-col items-center" style={{ width: "90px" }}>
-                            <div className={`w-10 h-10 flex items-center justify-center rounded-full border-2 transition-all duration-300 ${getStepColorClass(step.number)}`}>
-                                <Icon icon={step.icon} width={20} height={20} />
+                        {/* Step Container - Fixed 80px width */}
+                        <div className="flex flex-col items-center" style={{ width: "80px" }}>
+                            {/* Step indicator: circular with 2px borders and 32px diameter (w-8 h-8) */}
+                            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all duration-300 ${getStepColorClass(step.number)}`}>
+                                {/* Icons: 16x16 pixels when present, centered */}
+                                <Icon icon={step.icon} width={16} height={16} />
                             </div>
-                            <span className="text-xs font-medium text-center mt-1.5 text-base-content">
+                            {/* Step labels: small text (text-xs), centered below indicators */}
+                            <span className={`text-xs font-medium text-center mt-1.5 transition-colors duration-300 ${
+                                currentStep === step.number 
+                                    ? "text-primary" 
+                                    : currentStep > step.number 
+                                        ? "text-success" 
+                                        : "text-base-content/50"
+                            }`}>
                                 {step.title}
                             </span>
                         </div>
+                        {/* Flexible connectors between steps */}
                         {idx < steps.length - 1 && (
                             <div className="flex-1 flex items-center" style={{ marginTop: "-16px", minWidth: "50px" }}>
                                 <div className="h-1 w-full">
@@ -63,11 +79,6 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => 
                         )}
                     </div>
                 ))}
-                
-                {/* Progress percentage - positioned to the right */}
-                <div className="ml-6 text-xs font-medium text-base-content/70">
-                    {Math.round((currentStep / steps.length) * 100)}%
-                </div>
             </div>
         </div>
     );

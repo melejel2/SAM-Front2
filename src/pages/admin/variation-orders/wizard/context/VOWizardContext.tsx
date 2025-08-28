@@ -9,11 +9,13 @@ interface VOWizardFormData {
     // Step 1: Basic Info
     title: string;
     description: string;
-    level: 'Project' | 'Building' | 'Sheet';
+    level: 'Project' | 'Building' | 'Sheet' | 'Multi-Building';
     
     // Step 2: Project/Building Selection
     projectId: number | null;
     buildingId: number | null;
+    buildingIds: number[]; // For multi-building support
+    multiBuildingConfigs: any[]; // Building configurations with VO levels and modes
     sheetName: string;
     
     // Step 3: VO Data
@@ -53,6 +55,8 @@ const initialFormData: VOWizardFormData = {
     level: 'Project',
     projectId: null,
     buildingId: null,
+    buildingIds: [],
+    multiBuildingConfigs: [],
     sheetName: '',
     voItems: [],
     approved: false
@@ -104,6 +108,8 @@ export const VOWizardProvider: React.FC<VOWizardProviderProps> = ({ children }) 
             return formData.projectId !== null;
         } else if (formData.level === 'Building') {
             return formData.projectId !== null && formData.buildingId !== null;
+        } else if (formData.level === 'Multi-Building') {
+            return formData.projectId !== null && formData.buildingIds.length > 0;
         } else { // Sheet
             return formData.projectId !== null && formData.buildingId !== null && formData.sheetName.trim() !== '';
         }

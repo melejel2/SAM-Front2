@@ -68,6 +68,16 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 console.log('PDF response type:', typeof livePreviewResponse);
                 console.log('PDF response size:', livePreviewResponse instanceof Blob ? livePreviewResponse.size : 'Not a blob');
 
+                // Check if the response is an error object (from 400+ HTTP status)
+                if (livePreviewResponse && typeof livePreviewResponse === 'object' && !(livePreviewResponse instanceof Blob)) {
+                    const errorObj = livePreviewResponse as any;
+                    if (errorObj.success === false || errorObj.isSuccess === false) {
+                        const errorMessage = errorObj.message || errorObj.error || 'Failed to generate PDF preview';
+                        toaster.error(errorMessage);
+                        return;
+                    }
+                }
+
                 if (livePreviewResponse && livePreviewResponse instanceof Blob && livePreviewResponse.size > 0) {
                     const fileName = `contract-${contractId}-preview.pdf`;
                     setPreviewData({ blob: livePreviewResponse, fileName });
@@ -122,40 +132,40 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 projectId: formData.projectId!,
                 subContractorId: formData.subcontractorId!,
                 contractId: formData.contractId!,
-                contractDate: formData.contractDate,
-                completionDate: formData.completionDate,
-                advancePayment: formData.advancePayment,
-                materialSupply: formData.materialSupply,
-                purchaseIncrease: formData.purchaseIncrease,
-                latePenalties: formData.latePenalties,
-                latePenaliteCeiling: formData.latePenalityCeiling,
-                holdWarranty: formData.holdWarranty,
-                mintenancePeriod: formData.mintenancePeriod,
-                workWarranty: formData.workWarranty,
-                termination: formData.termination,
-                daysNumber: formData.daysNumber,
-                progress: formData.progress,
-                holdBack: formData.holdBack,
-                subcontractorAdvancePayee: formData.subcontractorAdvancePayee,
-                recoverAdvance: formData.recoverAdvance,
-                procurementConstruction: formData.procurementConstruction,
-                prorataAccount: formData.prorataAccount,
-                managementFees: formData.managementFees,
-                plansExecution: formData.plansExecution,
-                subTrade: formData.subTrade,
-                paymentsTerm: formData.paymentsTerm,
-                contractNumber: formData.contractNumber,
-                remark: formData.remark,
-                remarkCP: formData.remarkCP,
+                contractDate: formData.contractDate || "",
+                completionDate: formData.completionDate || "",
+                advancePayment: formData.advancePayment || 0,
+                materialSupply: formData.materialSupply || 0,
+                purchaseIncrease: formData.purchaseIncrease || "",
+                latePenalties: formData.latePenalties || "",
+                latePenaliteCeiling: formData.latePenalityCeiling || "",
+                holdWarranty: formData.holdWarranty || "",
+                mintenancePeriod: formData.mintenancePeriod || "",
+                workWarranty: formData.workWarranty || "",
+                termination: formData.termination || "",
+                daysNumber: formData.daysNumber || "",
+                progress: formData.progress || "",
+                holdBack: formData.holdBack || "",
+                subcontractorAdvancePayee: formData.subcontractorAdvancePayee || "",
+                recoverAdvance: formData.recoverAdvance || "",
+                procurementConstruction: formData.procurementConstruction || "",
+                prorataAccount: formData.prorataAccount || "",
+                managementFees: formData.managementFees || "",
+                plansExecution: formData.plansExecution || "",
+                subTrade: formData.subTrade || "",
+                paymentsTerm: formData.paymentsTerm || "",
+                contractNumber: formData.contractNumber || "",
+                remark: formData.remark || "",
+                remarkCP: formData.remarkCP || "",
                 contractDatasetStatus: "Editable",
                 isGenerated: false,
-                buildings: formData.boqData.map(building => ({
+                buildings: formData.boqData.map((building: any) => ({
                     id: building.buildingId, // Use actual building ID from selected building
                     buildingName: building.buildingName,
                     sheetId: 0,
                     sheetName: building.sheetName || "", // Use empty string if no sheet specified
                     replaceAllItems: true,
-                    boqsContract: building.items.map(item => ({
+                    boqsContract: building.items.map((item: any) => ({
                         id: 0, // Use 0 for preview (not saving to DB, just generating document)
                         no: item.no,
                         key: item.key,
@@ -173,21 +183,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 }))
             };
 
-            console.log('📤 [Live Preview] Sending live preview model to backend:');
-            console.log('📊 [Live Preview] Model summary:', {
-                id: previewModel.id,
-                projectId: previewModel.projectId,
-                contractId: previewModel.contractId,
-                subContractorId: previewModel.subContractorId,
-                currencyId: previewModel.currencyId,
-                contractNumber: previewModel.contractNumber,
-                buildingCount: previewModel.buildings?.length || 0,
-                totalBoqItems: previewModel.buildings?.reduce((sum: number, building: any) => sum + (building.boqsContract?.length || 0), 0) || 0
-            });
-            console.log('📤 [Live Preview] Full model:', JSON.stringify(previewModel, null, 2));
-
-            console.log('🔄 [Live Preview] Calling LivePreviewPdf endpoint...');
-            console.log('🔄 [Live Preview] JSON payload being sent:', JSON.stringify(previewModel, null, 2));
             
             // Generate PDF preview using live preview endpoint
             const livePreviewResponse = await apiRequest({
@@ -198,32 +193,12 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 responseType: "blob",
             });
 
-            console.log('📥 [Live Preview] Response received');
-            console.log('📥 [Live Preview] Response type:', typeof livePreviewResponse);
-            console.log('📥 [Live Preview] Is Blob:', livePreviewResponse instanceof Blob);
-            console.log('📥 [Live Preview] Full response object:', livePreviewResponse);
-            
-            if (livePreviewResponse instanceof Blob) {
-                console.log('📥 [Live Preview] Blob size:', livePreviewResponse.size, 'bytes');
-            }
 
             // Check if the response is an error object (from 400+ HTTP status)
             if (livePreviewResponse && typeof livePreviewResponse === 'object' && !(livePreviewResponse instanceof Blob)) {
                 const errorObj = livePreviewResponse as any;
                 if (errorObj.success === false || errorObj.isSuccess === false) {
-                    console.error('❌ [Live Preview] Backend returned error response:', errorObj);
-                    console.error('❌ [Live Preview] Full error object with all properties:', JSON.stringify(errorObj, null, 2));
-                    console.error('❌ [Live Preview] Error object keys:', Object.keys(errorObj));
-                    
-                    // Check for validation errors specifically
-                    if (errorObj.errors && Array.isArray(errorObj.errors)) {
-                        console.error('❌ [Live Preview] Validation errors found:', errorObj.errors);
-                        errorObj.errors.forEach((error: any, index: number) => {
-                            console.error(`❌ [Live Preview] Validation Error ${index + 1}:`, error);
-                        });
-                    }
-                    
-                    const errorMessage = errorObj.message || errorObj.error || JSON.stringify(errorObj.errors || []) || 'Unknown backend error';
+                    const errorMessage = errorObj.message || errorObj.error || 'Unknown backend error';
                     toaster.error(`Backend error: ${errorMessage}`);
                     return;
                 }
@@ -232,27 +207,10 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
             if (livePreviewResponse && livePreviewResponse instanceof Blob && livePreviewResponse.size > 0) {
                 const fileName = `contract-preview-${selectedProject.name || 'document'}.pdf`;
                 setPreviewData({ blob: livePreviewResponse, fileName });
-                console.log('✅ [Live Preview] PDF preview generated successfully:', fileName);
             } else {
-                console.error('❌ [Live Preview] Invalid live preview response - not a valid blob');
-                console.error('❌ [Live Preview] Response details:', {
-                    type: typeof livePreviewResponse,
-                    isBlob: livePreviewResponse instanceof Blob,
-                    response: livePreviewResponse,
-                    size: livePreviewResponse instanceof Blob ? livePreviewResponse.size : 'N/A'
-                });
                 toaster.error('Failed to generate preview - invalid response from server');
             }
         } catch (error) {
-            console.error('🚨 [Live Preview] Error occurred:', error);
-            console.error('🚨 [Live Preview] Error details:', {
-                name: error instanceof Error ? error.name : 'Unknown',
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                response: (error as any)?.response,
-                status: (error as any)?.status,
-                statusText: (error as any)?.statusText
-            });
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
             toaster.error(`Failed to generate live preview: ${errorMessage}`);
         } finally {
@@ -338,29 +296,41 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
             let previewModel: any = null;
 
             if (contractId) {
-                // For saved contracts, get contract data
-                console.log(`🔄 [Word Download] Getting contract data for ID: ${contractId}`);
+                // For saved contracts, get contract data (same as PDF)
                 const contractResponse = await apiRequest({
                     endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
                     method: "GET",
                     token: token ?? "",
                 });
-
-                console.log('📥 [Word Download] Contract response:', contractResponse);
                 if (contractResponse && contractResponse.success !== false) {
                     previewModel = contractResponse;
                 }
             } else {
                 // For new contracts, build model from form data
                 if (!formData.contractId || !formData.currencyId || !formData.projectId || !formData.subcontractorId) {
-                    console.error('❌ [Word Download] Missing required data:', {
-                        contractId: formData.contractId,
-                        currencyId: formData.currencyId,
-                        projectId: formData.projectId,
-                        subcontractorId: formData.subcontractorId
-                    });
                     toaster.error('Missing required data for Word export');
                     return;
+                }
+
+                // For new contracts, get actual building IDs from backend
+                const buildingsResponse = await apiRequest({
+                    endpoint: `Building/GetBuildingsList?projectId=${formData.projectId}`,
+                    method: "GET", 
+                    token: token ?? "",
+                });
+
+                let buildingsWithIds = formData.boqData;
+                if (buildingsResponse && Array.isArray(buildingsResponse)) {
+                    // Map form data buildings to actual database building IDs
+                    buildingsWithIds = formData.boqData?.map((building: any) => {
+                        const dbBuilding = buildingsResponse.find((b: any) => 
+                            b.buildingName === building.buildingName || b.name === building.buildingName
+                        );
+                        return {
+                            ...building,
+                            id: dbBuilding?.id || building.id || 0,
+                        };
+                    });
                 }
 
                 previewModel = {
@@ -375,7 +345,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     materialSupply: formData.materialSupply || 0,
                     purchaseIncrease: formData.purchaseIncrease || '',
                     latePenalties: formData.latePenalties || '',
-                    latePenaliteCeiling: formData.latePenalityCeiling || '',
+                    latePenaliteCeiling: formData.latePenaliteCeiling || '',
                     holdWarranty: formData.holdWarranty || '',
                     mintenancePeriod: formData.mintenancePeriod || '',
                     workWarranty: formData.workWarranty || '',
@@ -396,11 +366,11 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     remarkCP: formData.remarkCP || '',
                     contractDatasetStatus: "Editable",
                     isGenerated: false,
-                    buildings: formData.boqData?.map((building: any) => ({
-                        id: 0,
+                    buildings: buildingsWithIds?.map((building: any) => ({
+                        id: building.id,  // Use actual building ID from database
                         buildingName: building.buildingName,
-                        sheetId: 0,
-                        sheetName: building.sheetName || "", // Use empty string if no sheet specified
+                        sheetId: building.sheetId || 0,
+                        sheetName: building.sheetName || "", 
                         replaceAllItems: true,
                         boqsContract: building.items?.map((item: any) => ({
                             id: Math.floor(item.id || 0),
@@ -418,11 +388,9 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                         })) || []
                     })) || []
                 };
-                console.log('📤 [Word Download] Sending live preview model:', JSON.stringify(previewModel, null, 2));
             }
 
             if (previewModel) {
-                console.log('🔄 [Word Download] Generating Word document with LivePreviewWord endpoint');
                 // Generate Word document using LivePreviewWord endpoint
                 const livePreviewResponse = await apiRequest({
                     endpoint: "ContractsDatasets/LivePreviewWord",
@@ -432,10 +400,14 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     responseType: "blob",
                 });
 
-                console.log('📥 [Word Download] LivePreviewWord response type:', typeof livePreviewResponse);
-                console.log('📥 [Word Download] Response is Blob:', livePreviewResponse instanceof Blob);
-                if (livePreviewResponse instanceof Blob) {
-                    console.log('📥 [Word Download] Blob size:', livePreviewResponse.size);
+                // Check if the response is an error object (from 500+ HTTP status)
+                if (livePreviewResponse && typeof livePreviewResponse === 'object' && !(livePreviewResponse instanceof Blob)) {
+                    const errorObj = livePreviewResponse as any;
+                    if (errorObj.success === false || errorObj.isSuccess === false) {
+                        const errorMessage = errorObj.message || 'Server error occurred while generating Word document';
+                        toaster.error(errorMessage);
+                        return;
+                    }
                 }
 
                 if (livePreviewResponse && livePreviewResponse instanceof Blob) {
@@ -450,26 +422,14 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    console.log('✅ [Word Download] Word document downloaded successfully:', fileName);
                     toaster.success('Word document downloaded successfully');
                 } else {
-                    console.error('❌ [Word Download] Invalid response - not a blob:', livePreviewResponse);
-                    toaster.error('Failed to download Word document');
+                    toaster.error('Failed to download Word document - invalid response from server');
                 }
             } else {
-                console.error('❌ [Word Download] No preview model available');
                 toaster.error('Contract data not found');
             }
         } catch (error) {
-            console.error('🚨 [Word Download] Error occurred:', error);
-            console.error('🚨 [Word Download] Error details:', {
-                name: error instanceof Error ? error.name : 'Unknown',
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                response: (error as any)?.response,
-                status: (error as any)?.status,
-                statusText: (error as any)?.statusText
-            });
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
             toaster.error(`Failed to download Word document: ${errorMessage}`);
         } finally {
@@ -511,19 +471,19 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header - matching main page style */}
-            <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col h-full">
+            {/* Header - PDF Preview with download buttons */}
+            <div className="flex items-center gap-4 mb-4 flex-shrink-0">
                 <div className="w-12 h-12 bg-error/10 rounded-lg flex items-center justify-center">
                     <span className="iconify lucide--file-text text-error size-5"></span>
                 </div>
-                <div>
+                <div className="flex-1">
                     <h3 className="font-semibold text-base-content">PDF Preview</h3>
                     <p className="text-sm text-base-content/60">
                         {previewData?.fileName} • {contractId ? `Contract #${contractId}` : 'Live Preview'}
                     </p>
                 </div>
-                <div className="ml-auto flex gap-2">
+                <div className="flex gap-2">
                     <button
                         className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300 transition-all duration-200 ease-in-out flex items-center gap-2"
                         onClick={downloadPDF}
@@ -561,16 +521,14 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 </div>
             </div>
             
-            {/* Contract Preview Content - matching main page style */}
-            <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
-                <div className="h-[calc(100vh-200px)]">
-                    {previewData && (
-                        <PDFViewer
-                            fileBlob={previewData.blob}
-                            fileName={previewData.fileName}
-                        />
-                    )}
-                </div>
+            {/* PDF Viewer Container - takes remaining space */}
+            <div className="flex-1 min-h-0 bg-base-200 border border-base-300 rounded-lg overflow-hidden">
+                {previewData && (
+                    <PDFViewer
+                        fileBlob={previewData.blob}
+                        fileName={previewData.fileName}
+                    />
+                )}
             </div>
         </div>
     );

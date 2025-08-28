@@ -26,9 +26,12 @@ export const EditStep3_SubcontractorSelection: React.FC = () => {
         return null;
     }, [subcontractors, formData.subcontractorId]);
 
+    // Remove forced re-rendering - it was breaking prop passing
+
     const handleSubcontractorSelect = (subcontractor: Subcontractor) => {
         setFormData({ subcontractorId: subcontractor.id });
     };
+
 
     return (
         <>

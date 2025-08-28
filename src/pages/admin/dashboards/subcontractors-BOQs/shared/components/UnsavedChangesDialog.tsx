@@ -15,8 +15,8 @@ export const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
 
     return (
         <>
-            {/* Modal backdrop */}
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50"></div>
+            {/* Modal backdrop - UPDATED TO FIX BLACK SCREEN */}
+            <div className="fixed inset-0 bg-base-content/10 backdrop-blur-md z-50"></div>
             
             {/* Modal */}
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

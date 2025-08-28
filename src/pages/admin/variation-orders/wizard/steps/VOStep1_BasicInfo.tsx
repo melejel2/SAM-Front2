@@ -8,12 +8,13 @@ export const VOStep1_BasicInfo: React.FC = () => {
         setFormData({ [field]: value });
     };
 
-    const handleLevelChange = (level: 'Project' | 'Building' | 'Sheet') => {
+    const handleLevelChange = (level: 'Project' | 'Building' | 'Sheet' | 'Multi-Building') => {
         setFormData({ 
             level,
             // Reset dependent fields when level changes
             projectId: null,
             buildingId: null,
+            buildingIds: [], // For multi-building support
             sheetName: ''
         });
     };
@@ -52,10 +53,11 @@ export const VOStep1_BasicInfo: React.FC = () => {
                     <select 
                         className="select select-bordered"
                         value={formData.level}
-                        onChange={(e) => handleLevelChange(e.target.value as 'Project' | 'Building' | 'Sheet')}
+                        onChange={(e) => handleLevelChange(e.target.value as 'Project' | 'Building' | 'Sheet' | 'Multi-Building')}
                     >
                         <option value="Project">Project Level</option>
-                        <option value="Building">Building Level</option>
+                        <option value="Building">Single Building Level</option>
+                        <option value="Multi-Building">Multiple Buildings Level</option>
                         <option value="Sheet">Sheet Level</option>
                     </select>
                 </div>
@@ -82,6 +84,7 @@ export const VOStep1_BasicInfo: React.FC = () => {
                     <div className="text-xs">
                         {formData.level === 'Project' && "This VO will apply to the entire project"}
                         {formData.level === 'Building' && "This VO will apply to a specific building within a project"}
+                        {formData.level === 'Multi-Building' && "This VO will apply to multiple buildings within a project with individual configuration"}
                         {formData.level === 'Sheet' && "This VO will apply to a specific sheet within a building"}
                     </div>
                 </div>

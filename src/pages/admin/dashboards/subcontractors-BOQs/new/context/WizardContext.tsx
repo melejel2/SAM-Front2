@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
@@ -239,7 +239,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         }
     };
     
-    const fetchBuildingsByProject = async (projectId: number) => {
+    const fetchBuildingsByProject = useCallback(async (projectId: number) => {
         try {
             setLoadingBuildings(true);
             const response = await apiRequest({
@@ -258,7 +258,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         } finally {
             setLoadingBuildings(false);
         }
-    };
+    }, [token, toaster]);
     
     const fetchSubcontractors = async () => {
         try {
@@ -399,31 +399,31 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 projectId: formData.projectId!,
                 subContractorId: formData.subcontractorId!,
                 contractId: formData.contractId!,
-                contractDate: formData.contractDate,
-                completionDate: formData.completionDate,
-                advancePayment: formData.advancePayment,
-                materialSupply: formData.materialSupply,
-                purchaseIncrease: formData.purchaseIncrease,
-                latePenalties: formData.latePenalties,
-                latePenaliteCeiling: formData.latePenalityCeiling,
-                holdWarranty: formData.holdWarranty,
-                mintenancePeriod: formData.mintenancePeriod,
-                workWarranty: formData.workWarranty,
-                termination: formData.termination,
-                daysNumber: formData.daysNumber,
-                progress: formData.progress,
-                holdBack: formData.holdBack,
-                subcontractorAdvancePayee: formData.subcontractorAdvancePayee,
-                recoverAdvance: formData.recoverAdvance,
-                procurementConstruction: formData.procurementConstruction,
-                prorataAccount: formData.prorataAccount,
-                managementFees: formData.managementFees,
-                plansExecution: formData.plansExecution,
-                subTrade: formData.subTrade,
-                paymentsTerm: formData.paymentsTerm,
-                contractNumber: formData.contractNumber,
-                remark: formData.remark,
-                remarkCP: formData.remarkCP,
+                contractDate: formData.contractDate || "",
+                completionDate: formData.completionDate || "",
+                advancePayment: formData.advancePayment || 0,
+                materialSupply: formData.materialSupply || 0,
+                purchaseIncrease: formData.purchaseIncrease || "",
+                latePenalties: formData.latePenalties || "",
+                latePenaliteCeiling: formData.latePenalityCeiling || "",
+                holdWarranty: formData.holdWarranty || "",
+                mintenancePeriod: formData.mintenancePeriod || "",
+                workWarranty: formData.workWarranty || "",
+                termination: formData.termination || "",
+                daysNumber: formData.daysNumber || "",
+                progress: formData.progress || "",
+                holdBack: formData.holdBack || "",
+                subcontractorAdvancePayee: formData.subcontractorAdvancePayee || "",
+                recoverAdvance: formData.recoverAdvance || "",
+                procurementConstruction: formData.procurementConstruction || "",
+                prorataAccount: formData.prorataAccount || "",
+                managementFees: formData.managementFees || "",
+                plansExecution: formData.plansExecution || "",
+                subTrade: formData.subTrade || "",
+                paymentsTerm: formData.paymentsTerm || "",
+                contractNumber: formData.contractNumber || "",
+                remark: formData.remark || "",
+                remarkCP: formData.remarkCP || "",
                 contractDatasetStatus: "Editable",
                 isGenerated: false,
                 buildings: formData.boqData.map(building => ({
@@ -527,7 +527,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         if (formData.projectId) {
             fetchBuildingsByProject(formData.projectId);
         }
-    }, [formData.projectId]);
+    }, [formData.projectId]); // Remove fetchBuildingsByProject from deps to prevent infinite loop
     
     // Context value
     const contextValue: WizardContextType = {

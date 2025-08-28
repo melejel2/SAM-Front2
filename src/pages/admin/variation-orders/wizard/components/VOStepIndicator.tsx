@@ -3,68 +3,88 @@ import { Icon } from "@iconify/react";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
 import fileTextIcon from "@iconify/icons-lucide/file-text";
+import rocketIcon from "@iconify/icons-lucide/rocket";
 import eyeIcon from "@iconify/icons-lucide/eye";
 
 interface VOStepIndicatorProps {
     currentStep: number;
+    isMultiBuilding?: boolean;
 }
 
-// Simplified 4-step process (vs 7 steps for subcontractor)
-const steps = [
+// Normal 4-step process
+const normalSteps = [
     { number: 1, title: "Basic Info", icon: infoIcon },
     { number: 2, title: "Project/Building", icon: buildingIcon },
     { number: 3, title: "VO Data", icon: fileTextIcon },
     { number: 4, title: "Review", icon: eyeIcon }
 ];
 
-export const VOStepIndicator: React.FC<VOStepIndicatorProps> = ({ currentStep }) => {
+// Multi-Building 4-step process (step 3 is different)
+const multiBuildingSteps = [
+    { number: 1, title: "Basic Info", icon: infoIcon },
+    { number: 2, title: "Building Config", icon: buildingIcon },
+    { number: 3, title: "Generate VOs", icon: rocketIcon },
+    { number: 4, title: "Review", icon: eyeIcon }
+];
+
+export const VOStepIndicator: React.FC<VOStepIndicatorProps> = ({ currentStep, isMultiBuilding = false }) => {
+    const steps = isMultiBuilding ? multiBuildingSteps : normalSteps;
+    
     const getStepColorClass = (stepNumber: number) => {
         if (currentStep === stepNumber) {
-            return "bg-primary border-primary text-primary-content";
+            // Current Active Step: Use primary color with opacity variations
+            return "bg-primary/10 border-primary/20 text-primary";
         }
         if (currentStep > stepNumber) {
-            return "bg-success border-success text-success-content";
+            // Completed/Approved Steps: Use success green with opacity variations
+            return "bg-success/10 border-success/20 text-success";
         }
-        return "bg-base-200 border-base-300 text-base-content";
+        // Future/Inactive Steps: Use muted base colors
+        return "bg-base-200 border-base-300 text-base-content/50";
     };
 
-    const getConnectorClass = (stepNumber: number) => {
-        return currentStep > stepNumber ? "bg-success" : "bg-base-300";
+    const getConnectorColor = (stepNumber: number) => {
+        if (currentStep > stepNumber) {
+            // Connector lines between completed steps: success with opacity
+            return "bg-success/30";
+        }
+        // Future connector lines: muted
+        return "bg-base-300";
     };
 
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between">
-                {steps.map((step, index) => (
-                    <React.Fragment key={step.number}>
-                        {/* Step Circle */}
-                        <div className="flex flex-col items-center">
-                            <div
-                                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${getStepColorClass(step.number)}`}
-                            >
-                                <Icon 
-                                    icon={step.icon} 
-                                    className="w-5 h-5" 
-                                />
+        <div className="w-full">
+            {/* Step indicator */}
+            <div className="flex items-center justify-center">
+                {steps.map((step, idx) => (
+                    <div key={step.number} className="flex items-center">
+                        {/* Step Container - Fixed 80px width */}
+                        <div className="flex flex-col items-center" style={{ width: "80px" }}>
+                            {/* Step indicator: circular with 2px borders and 32px diameter (w-8 h-8) */}
+                            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all duration-300 ${getStepColorClass(step.number)}`}>
+                                {/* Icons: 16x16 pixels when present, centered */}
+                                <Icon icon={step.icon} width={16} height={16} />
                             </div>
-                            <span className={`text-xs mt-2 font-medium transition-colors duration-300 ${
+                            {/* Step labels: small text (text-xs), centered below indicators */}
+                            <span className={`text-xs font-medium text-center mt-1.5 transition-colors duration-300 ${
                                 currentStep === step.number 
                                     ? "text-primary" 
                                     : currentStep > step.number 
                                         ? "text-success" 
-                                        : "text-base-content/60"
+                                        : "text-base-content/50"
                             }`}>
                                 {step.title}
                             </span>
                         </div>
-                        
-                        {/* Connector Line */}
-                        {index < steps.length - 1 && (
-                            <div
-                                className={`flex-1 h-0.5 mx-4 transition-colors duration-300 ${getConnectorClass(step.number)}`}
-                            />
+                        {/* Flexible connectors between steps */}
+                        {idx < steps.length - 1 && (
+                            <div className="flex-1 flex items-center" style={{ marginTop: "-16px", minWidth: "50px" }}>
+                                <div className="h-1 w-full">
+                                    <div className={`h-1 w-full transition-colors duration-500 ${getConnectorColor(step.number)}`} />
+                                </div>
+                            </div>
                         )}
-                    </React.Fragment>
+                    </div>
                 ))}
             </div>
         </div>

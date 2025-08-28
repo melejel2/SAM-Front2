@@ -10,7 +10,8 @@ import {
   ContractsApiResponse,
   ApiResult,
   ContractExportResult,
-  BoqContractVM
+  BoqContractVM,
+  ParticularConditionVM
 } from '@/types/contracts';
 
 /**
@@ -610,6 +611,47 @@ export const livePreviewWord = async (
   }
 };
 
+/**
+ * Get particular conditions for an active contract dataset
+ * @param id Contract dataset ID
+ * @param token Authentication token
+ */
+export const getParticularConditions = async (id: number, token: string): Promise<ContractsApiResponse<ParticularConditionVM>> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `ContractsDatasets/EditActiveContractBoq/${id}`,
+      method: 'GET',
+      token
+    });
+
+    return handleApiResponse<ParticularConditionVM>(response);
+  } catch (error) {
+    console.error('Get particular conditions API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Save particular conditions for an active contract dataset
+ * @param model ParticularConditionVM data to save
+ * @param token Authentication token
+ */
+export const saveParticularConditions = async (model: ParticularConditionVM, token: string): Promise<ContractsApiResponse<void>> => {
+  try {
+    const response = await apiRequest({
+      endpoint: 'ContractsDatasets/SaveActiveContractBoq',
+      method: 'POST',
+      token,
+      body: model
+    });
+
+    return handleApiResponse<void>(response);
+  } catch (error) {
+    console.error('Save particular conditions API Error:', error);
+    throw error;
+  }
+};
+
 // Export all functions for easy importing
 export {
   ContractDatasetStatus,
@@ -620,5 +662,6 @@ export {
   type ImportContractBoqsRequest,
   type ClearContractBoqItemsRequest,
   type AttachDocVM,
-  type BoqContractVM
+  type BoqContractVM,
+  type ParticularConditionVM
 };

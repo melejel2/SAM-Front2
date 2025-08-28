@@ -236,7 +236,7 @@ const NewSubcontractWizardContent: React.FC = () => {
                                 </>
                             ) : (
                                 <>
-                                    <span>Save & Continue</span>
+                                    <span>Save</span>
                                     <span className="iconify lucide--check size-4"></span>
                                 </>
                             )}

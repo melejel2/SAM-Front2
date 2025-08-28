@@ -21,6 +21,7 @@ export const EditStep1_ProjectSelection: React.FC = () => {
         return null;
     }, [projects, formData.projectId]);
     
+    // Remove forced re-rendering - it was breaking prop passing
 
     const handleProjectSelect = (project: Project) => {
         setFormData({ 
@@ -29,6 +30,7 @@ export const EditStep1_ProjectSelection: React.FC = () => {
         });
         // Buildings will be loaded automatically by the useEffect in EditWizardContext
     };
+
 
     return (
         <>

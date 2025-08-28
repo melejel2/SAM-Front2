@@ -15,6 +15,7 @@ const VOWizardContent: React.FC = () => {
     
     const {
         currentStep,
+        formData,
         hasUnsavedChanges,
         loading,
         validateCurrentStep,
@@ -121,6 +122,40 @@ const VOWizardContent: React.FC = () => {
                 .filepond-wrapper .filepond--progress-indicator {
                     display: none !important;
                 }
+                
+                /* Custom styles for floating labels */
+                .floating-label-group {
+                    position: relative;
+                }
+                
+                .floating-label-group input:focus + .floating-label,
+                .floating-label-group input:not(:placeholder-shown) + .floating-label,
+                .floating-label-group select:focus + .floating-label,
+                .floating-label-group select:not([value=""]) + .floating-label,
+                .floating-label-group textarea:focus + .floating-label,
+                .floating-label-group textarea:not(:placeholder-shown) + .floating-label {
+                    transform: translateY(-1.5rem) scale(0.75);
+                    color: var(--fallback-p, oklch(var(--p)));
+                    background-color: var(--fallback-b1, oklch(var(--b1)));
+                    padding: 0 0.5rem;
+                    z-index: 10;
+                }
+                
+                .floating-label {
+                    position: absolute;
+                    left: 0.75rem;
+                    top: 0.75rem;
+                    pointer-events: none;
+                    transition: all 0.2s ease-out;
+                    transform-origin: left center;
+                    color: var(--fallback-bc, oklch(var(--bc) / 0.6));
+                    font-size: 1rem;
+                }
+                
+                .floating-input {
+                    padding-top: 1.5rem !important;
+                    padding-bottom: 0.5rem !important;
+                }
             `}</style>
 
             {/* Header with Back Button, Timeline, and Navigation (same layout as subcontractor) */}
@@ -140,7 +175,10 @@ const VOWizardContent: React.FC = () => {
                 
                 {/* Timeline in the center */}
                 <div className="flex-1 flex justify-center">
-                    <VOStepIndicator currentStep={currentStep} />
+                    <VOStepIndicator 
+                        currentStep={currentStep} 
+                        isMultiBuilding={formData.level === 'Multi-Building'}
+                    />
                 </div>
 
                 {/* Next/Save Button */}
@@ -195,7 +233,7 @@ const VOWizardContent: React.FC = () => {
                                 </>
                             ) : (
                                 <>
-                                    <span>Create VO</span>
+                                    <span>Save</span>
                                     <span className="iconify lucide--check size-4"></span>
                                 </>
                             )}
@@ -204,11 +242,8 @@ const VOWizardContent: React.FC = () => {
                 </div>
             </div>
 
-            {/* Main Card Container */}
-            <div className="card bg-base-100 shadow-sm p-4">
-                {/* Step Content */}
-                <VOStepRenderer />
-            </div>
+            {/* Step Content */}
+            <VOStepRenderer />
 
             {/* Unsaved Changes Dialog */}
             <UnsavedChangesDialog

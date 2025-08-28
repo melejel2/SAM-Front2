@@ -1,5 +1,16 @@
 // Variation Order Types matching the backend API
 
+// Re-export VO API types for backward compatibility
+export type {
+  VoDatasetBoqDetailsVM,
+  VoDataSetBuildingsVM,
+  ContractVoVM,
+  ContractContext,
+  ContractBuilding,
+  VoApiResponse,
+  VoApiError
+} from '@/api/services/vo-api';
+
 // Enums
 export enum ContractDatasetStatus {
   Editable = 0,
@@ -7,10 +18,29 @@ export enum ContractDatasetStatus {
   Active = 2
 }
 
+export enum VOType {
+  BudgetBOQ = 'budget-boq',     // Budget-level VOs that modify project BOQs
+  ContractDataset = 'contract-dataset'  // Subcontractor-specific VOs for individual contracts
+}
+
 export enum BoqDeletionScope {
   Sheet = 0,
   Building = 1,
   Project = 2
+}
+
+export enum BOQType {
+  Header = 0,
+  Item = 1,
+  SubTotal = 2,
+  Total = 3
+}
+
+export enum ContractType {
+  VO = 0,
+  RG = 1,
+  Terminate = 2,
+  Final = 3
 }
 
 // Core VO Types
@@ -141,6 +171,11 @@ export interface CreateSubcontractorVoRequest {
   Date: string; // ISO date string
 }
 
+export interface ImportContractVoRequest {
+  contractDataSetId: number;
+  excelFile: File;
+}
+
 export interface ClearBoqItemsRequest {
   scope: BoqDeletionScope;
   projectId: number;
@@ -207,4 +242,61 @@ export interface FormattedVoDataset extends Omit<VoDatasetVM, 'date' | 'amount' 
   amount: string; // Formatted currency
   status: string; // HTML badge
   originalStatus: string; // Original status for filtering
+}
+
+// VO Template Types
+export interface VOContractVM {
+  id: number;
+  name: string;
+  templateNumber: string;
+  type: ContractType;
+  language: string;
+  created: string;
+  content?: Uint8Array;
+  fileSize?: string;
+}
+
+export interface UploadVOTemplateRequest {
+  name: string;
+  templateNumber: string;
+  type: ContractType;
+  language?: string;
+  templateFile: File;
+}
+
+// VO Level Hierarchy Types
+export type VOLevelType = 'Project' | 'Building' | 'Sheet';
+
+export interface VOLevelContext {
+  level: VOLevelType;
+  projectId?: number;
+  buildingId?: number;
+  sheetId?: number;
+  projectName?: string;
+  buildingName?: string;
+  sheetName?: string;
+}
+
+export interface VOLevelHierarchyState {
+  currentLevel: VOLevelType;
+  context: VOLevelContext;
+  filteredItems: ContractVoesVM[];
+  availableBuildings: VoDataSetBuildingsVM[];
+  availableSheets: { id: number; name: string }[];
+}
+
+// VO Type Selection Types
+export interface VOTypeSelectionData {
+  voType: VOType;
+  selectedFor?: {
+    // For Budget BOQ VOs
+    projectId?: number;
+    projectName?: string;
+    
+    // For Contract Dataset VOs
+    contractDatasetId?: number;
+    contractNumber?: string;
+    subcontractorId?: number;
+    subcontractorName?: string;
+  };
 }

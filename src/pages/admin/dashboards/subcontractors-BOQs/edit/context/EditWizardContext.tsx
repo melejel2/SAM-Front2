@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -219,13 +219,13 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const [currencies, setCurrencies] = useState<Currency[]>([]);
     
     // Enhanced form data setter that tracks changes
-    const setFormData = (data: Partial<EditWizardFormData>) => {
+    const setFormData = useCallback((data: Partial<EditWizardFormData>) => {
         setFormDataState(prev => ({ ...prev, ...data }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
     
     // Data fetching functions (same as new wizard)
-    const fetchProjects = async () => {
+    const fetchProjects = useCallback(async () => {
         try {
             setLoadingProjects(true);
             const response = await apiRequest({
@@ -244,9 +244,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoadingProjects(false);
         }
-    };
+    }, [token]);
     
-    const fetchBuildingsByProject = async (projectId: number) => {
+    const fetchBuildingsByProject = useCallback(async (projectId: number) => {
         try {
             setLoadingBuildings(true);
             const response = await apiRequest({
@@ -265,9 +265,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoadingBuildings(false);
         }
-    };
+    }, [token]);
     
-    const fetchSubcontractors = async () => {
+    const fetchSubcontractors = useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest({
@@ -286,9 +286,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
     
-    const fetchContracts = async () => {
+    const fetchContracts = useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest({
@@ -307,9 +307,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
     
-    const fetchCurrencies = async () => {
+    const fetchCurrencies = useCallback(async () => {
         try {
             setLoading(true);
             const response = await apiRequest({
@@ -328,20 +328,36 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
     
     // Initialize contracts API hook
     const contractsApi = useContractsApi();
     
     // Load existing data for editing using the new API service
-    const loadExistingData = async (contractId: number) => {
+    const loadExistingData = useCallback(async (contractId: number) => {
         try {
             setInitialDataLoading(true);
             const result = await contractsApi.loadSubcontractorData(contractId);
             
             if (result.success && result.data) {
                 const existingData = result.data;
-                setFormDataState({
+                
+
+                // 🔍 DEBUGGING: Log buildings and BOQ structure
+                console.log("🔍 EDIT PAGE - Buildings and BOQ Structure:", {
+                    contractId: contractId,
+                    existingDataBuildings: existingData.buildings,
+                    buildingsCount: existingData.buildings?.length || 0,
+                    buildingDetails: existingData.buildings?.map((building: any) => ({
+                        id: building.id,
+                        buildingName: building.buildingName,
+                        sheetName: building.sheetName,
+                        boqsContractCount: building.boqsContract?.length || 0,
+                        boqsContract: building.boqsContract || null,
+                    })),
+                });
+
+                const newFormData = {
                     ...initialEditFormData,
                     id: existingData.id || contractId,
                     projectId: existingData.projectId,
@@ -366,7 +382,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     holdBack: existingData.holdBack || '',
                     subcontractorAdvancePayee: existingData.subcontractorAdvancePayee || '',
                     recoverAdvance: existingData.recoverAdvance || '',
-                    procurementConstruction: existingData.procurementConstruction || '',
+                    procurementConstruction: existingData.procurementConstraction || '',
                     prorataAccount: existingData.prorataAccount || '',
                     managementFees: existingData.managementFees || '',
                     plansExecution: existingData.plansExecution || '',
@@ -390,7 +406,10 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             totalPrice: item.totalPrice || (item.qte * item.pu)
                         })) || []
                     })) || []
-                });
+                };
+
+                setFormDataState(newFormData);
+                
                 
                 // Load buildings for the project
                 if (existingData.projectId) {
@@ -406,7 +425,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setInitialDataLoading(false);
         }
-    };
+    }, [contractsApi, fetchBuildingsByProject]);
     
     // Validation functions (same as new wizard)
     const validateStep1 = (): boolean => {
@@ -443,7 +462,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         return true;
     };
     
-    const validateCurrentStep = (): boolean => {
+    const validateCurrentStep = useCallback((): boolean => {
         switch (currentStep) {
             case 1: return validateStep1();
             case 2: return validateStep2();
@@ -454,23 +473,23 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             case 7: return validateStep7();
             default: return false;
         }
-    };
+    }, [currentStep, formData]);
     
     // Navigation functions
-    const goToNextStep = () => {
+    const goToNextStep = useCallback(() => {
         if (validateCurrentStep() && currentStep < 7) {
             setCurrentStep(currentStep + 1);
         }
-    };
+    }, [validateCurrentStep, currentStep]);
     
-    const goToPreviousStep = () => {
+    const goToPreviousStep = useCallback(() => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
-    };
+    }, [currentStep]);
     
     // Submission function for updates using the new API service
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         try {
             setLoading(true);
             
@@ -483,8 +502,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 contractId: formData.contractId!,
                 contractDate: formData.contractDate,
                 completionDate: formData.completionDate,
-                advancePayment: formData.advancePayment,
-                materialSupply: formData.materialSupply,
+                advancePayment: formData.advancePayment, // Store as percentage directly
+                materialSupply: formData.materialSupply, // Store as percentage directly
                 purchaseIncrease: formData.purchaseIncrease,
                 latePenalties: formData.latePenalties,
                 latePenaliteCeiling: formData.latePenalityCeiling,
@@ -565,28 +584,122 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setLoading(false);
         }
-    };
+    }, [formData, contractsApi, toaster]);
     
     // Initialize data on component mount
     useEffect(() => {
+        let isMounted = true; // Prevent state updates if component unmounts
+        
         const initializeData = async () => {
-            if (token) {
-                await Promise.all([
-                    fetchProjects(),
-                    fetchSubcontractors(),
-                    fetchContracts(),
-                    fetchCurrencies()
-                ]);
-                
-                // Load existing contract data
-                if (id) {
-                    await loadExistingData(parseInt(id));
+            if (token && isMounted) {
+                try {
+                    // Inline API calls to avoid dependency issues
+                    setLoadingProjects(true);
+                    setLoading(true);
+                    
+                    // First load all master data BEFORE loading existing contract data
+                    const [projectsRes, subcontractorsRes, contractsRes, currenciesRes] = await Promise.allSettled([
+                        apiRequest({
+                            method: "GET",
+                            endpoint: "Project/GetProjectsList",
+                            token: token,
+                        }),
+                        apiRequest({
+                            method: "GET",
+                            endpoint: "Subcontractors/GetSubcontractors",
+                            token: token,
+                        }),
+                        apiRequest({
+                            method: "GET",
+                            endpoint: "Templates/GetContracts",
+                            token: token,
+                        }),
+                        apiRequest({
+                            method: "GET",
+                            endpoint: "Currencie/GetCurrencies",
+                            token: token,
+                        })
+                    ]);
+                    
+                    if (isMounted) {
+                        // Process projects
+                        if (projectsRes.status === 'fulfilled') {
+                            const response = projectsRes.value;
+                            if (Array.isArray(response)) {
+                                setProjects(response);
+                            } else if (response.success && Array.isArray(response.data)) {
+                                setProjects(response.data);
+                            }
+                        } else {
+                            console.error("Error fetching projects:", projectsRes.reason);
+                            toaster.error("Failed to fetch projects");
+                        }
+                        
+                        // Process subcontractors
+                        if (subcontractorsRes.status === 'fulfilled') {
+                            const response = subcontractorsRes.value;
+                            if (Array.isArray(response)) {
+                                setSubcontractors(response);
+                            } else if (response.success && Array.isArray(response.data)) {
+                                setSubcontractors(response.data);
+                            }
+                        } else {
+                            console.error("Error fetching subcontractors:", subcontractorsRes.reason);
+                            toaster.error("Failed to fetch subcontractors");
+                        }
+                        
+                        // Process contracts
+                        if (contractsRes.status === 'fulfilled') {
+                            const response = contractsRes.value;
+                            if (Array.isArray(response)) {
+                                setContracts(response);
+                            } else if (response.success && Array.isArray(response.data)) {
+                                setContracts(response.data);
+                            }
+                        } else {
+                            console.error("Error fetching contracts:", contractsRes.reason);
+                            toaster.error("Failed to fetch contracts");
+                        }
+                        
+                        // Process currencies
+                        if (currenciesRes.status === 'fulfilled') {
+                            const response = currenciesRes.value;
+                            if (Array.isArray(response)) {
+                                setCurrencies(response);
+                            } else if (response.success && Array.isArray(response.data)) {
+                                setCurrencies(response.data);
+                            }
+                        } else {
+                            console.error("Error fetching currencies:", currenciesRes.reason);
+                            toaster.error("Failed to fetch currencies");
+                        }
+                        
+                        // THEN load existing contract data so selectedRowId can find matches
+                        if (id) {
+                            await loadExistingData(parseInt(id));
+                        }
+                    }
+                } catch (error) {
+                    if (isMounted) {
+                        console.error("Error in initializeData:", error);
+                        toaster.error("Failed to initialize data");
+                    }
+                } finally {
+                    if (isMounted) {
+                        setLoadingProjects(false);
+                        setLoading(false);
+                    }
                 }
             }
         };
         
         initializeData();
-    }, [id, token]);
+        
+        // Cleanup function
+        return () => {
+            isMounted = false;
+        };
+    }, [id, token]); // Only re-run when id or token changes
     
     // Context value
     const contextValue: EditWizardContextType = {

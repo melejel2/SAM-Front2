@@ -86,6 +86,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     customHeaderContent,
     rowsPerPage,
     previewLoadingRowId,
+    selectedRowId,
 }) => {
     return (
         <div className="mt-5">
@@ -126,6 +127,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             generateAction={generateAction}
                             rowActions={rowActions}
                             previewLoadingRowId={previewLoadingRowId}
+                            selectedRowId={selectedRowId}
                         />
                     </div>
 

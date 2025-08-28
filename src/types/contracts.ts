@@ -23,6 +23,39 @@ export enum AttachmentsType {
 // Keep the old name for backward compatibility
 export const AttachmentType = AttachmentsType;
 
+// Particular Conditions VM - matches backend ContractsDataSetBase + Id
+export interface ParticularConditionVM {
+  [key: string]: any; // Add index signature for API compatibility
+  id: number;
+  contractDate?: string | null;
+  completionDate?: string | null;
+  purchaseIncrease?: string | null;
+  latePenalties?: string | null;
+  latePenaliteCeiling?: string | null;
+  holdWarranty?: string | null;
+  mintenancePeriod?: string | null;
+  workWarranty?: string | null;
+  termination?: string | null;
+  daysNumber?: string | null;
+  progress?: string | null;
+  holdBack?: string | null;
+  subcontractorAdvancePayee?: string | null;
+  recoverAdvance?: string | null;
+  procurementConstruction?: string | null;
+  prorataAccount?: string | null;
+  managementFees?: string | null;
+  contractNumber?: string | null;
+  contractDatasetStatus: ContractDatasetStatus;
+  remark?: string | null;
+  remarkCP?: string | null;
+  isGenerated: boolean;
+  advancePayment: number;
+  plansExecution?: string | null;
+  subTrade?: string | null;
+  paymentsTerm?: string | null;
+  materialSupply: number;
+}
+
 // Core DTOs matching backend
 export interface BoqContractVM {
   id: number;

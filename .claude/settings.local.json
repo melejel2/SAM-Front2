@@ -13,7 +13,9 @@
       "WebFetch(domain:daisyui.com)",
       "WebSearch",
       "WebSearch",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Read(c:\\Users\\engme\\OneDrive\\Pictures\\Screenshots/**)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

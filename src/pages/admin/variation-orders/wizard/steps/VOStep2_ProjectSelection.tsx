@@ -4,6 +4,8 @@ import useProjects from "@/pages/admin/adminTools/projects/use-projects";
 import useBuildings from "@/hooks/use-buildings";
 import useSheets from "@/hooks/use-sheets";
 import SAMTable from "@/components/Table";
+import { Button } from "@/components/daisyui";
+import MultiBuildingSelector from "../../components/MultiBuildingSelector";
 
 interface Project {
     id: number;
@@ -32,6 +34,8 @@ export const VOStep2_ProjectSelection: React.FC = () => {
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
     const [selectedSheet, setSelectedSheet] = useState<Sheet | null>(null);
+    const [showMultiBuildingSelector, setShowMultiBuildingSelector] = useState(false);
+    const [selectedBuildingConfigs, setSelectedBuildingConfigs] = useState<any[]>([]);
 
     // Load initial data
     useEffect(() => {
@@ -88,6 +92,21 @@ export const VOStep2_ProjectSelection: React.FC = () => {
         setFormData({ sheetName: sheet.name });
     };
 
+    const handleMultiBuildingSelect = () => {
+        if (!selectedProject) return;
+        setShowMultiBuildingSelector(true);
+    };
+
+    const handleMultiBuildingConfirm = (buildingConfigs: any[]) => {
+        setSelectedBuildingConfigs(buildingConfigs);
+        const buildingIds = buildingConfigs.map(config => config.buildingId);
+        setFormData({ 
+            buildingIds,
+            multiBuildingConfigs: buildingConfigs
+        });
+        setShowMultiBuildingSelector(false);
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -130,6 +149,55 @@ export const VOStep2_ProjectSelection: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Multi-Building Selection (only for Multi-Building level) */}
+            {formData.level === 'Multi-Building' && formData.projectId && (
+                <div>
+                    <h3 className="font-medium mb-3">2. Configure Buildings *</h3>
+                    <div className="bg-base-100 border border-base-300 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-base-content/70 mb-2">
+                                    Select multiple buildings and configure VO settings for each
+                                </p>
+                                {selectedBuildingConfigs.length > 0 && (
+                                    <div className="text-sm text-success">
+                                        {selectedBuildingConfigs.length} buildings configured
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                type="button"
+                                onClick={handleMultiBuildingSelect}
+                                className="bg-primary text-primary-content hover:bg-primary/90"
+                            >
+                                <span className="iconify lucide--building-2 size-4"></span>
+                                {selectedBuildingConfigs.length > 0 ? 'Reconfigure Buildings' : 'Select Buildings'}
+                            </Button>
+                        </div>
+                        
+                        {selectedBuildingConfigs.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                                <div className="text-sm font-medium text-base-content">Selected Buildings:</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {selectedBuildingConfigs.map((config) => (
+                                        <div key={config.buildingId} className="bg-primary/5 border border-primary/20 rounded p-2">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="font-medium text-sm">{config.buildingName}</div>
+                                                    <div className="text-xs text-base-content/60">
+                                                        Level {config.voLevel} • {config.replaceMode ? 'Replace' : 'Append'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Building Selection (only for Building and Sheet levels) */}
             {(formData.level === 'Building' || formData.level === 'Sheet') && formData.projectId && (
@@ -200,10 +268,13 @@ export const VOStep2_ProjectSelection: React.FC = () => {
                     <div>
                         <div className="font-bold">Selection Summary</div>
                         <div className="text-sm">
-                            This VO will be applied at the <strong>{formData.level.toLowerCase()}</strong> level:
+                            This VO will be applied at the <strong>{formData.level.toLowerCase().replace('-', ' ')}</strong> level:
                             <br />
                             Project: {selectedProject?.name}
-                            {formData.level !== 'Project' && selectedBuilding && (
+                            {formData.level === 'Multi-Building' && selectedBuildingConfigs.length > 0 && (
+                                <><br />Buildings: {selectedBuildingConfigs.length} selected ({selectedBuildingConfigs.map(c => c.buildingName).join(', ')})</>
+                            )}
+                            {formData.level !== 'Project' && formData.level !== 'Multi-Building' && selectedBuilding && (
                                 <><br />Building: {selectedBuilding.name}</>
                             )}
                             {formData.level === 'Sheet' && formData.sheetName && (
@@ -213,6 +284,15 @@ export const VOStep2_ProjectSelection: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Multi-Building Selector Modal */}
+            <MultiBuildingSelector
+                isOpen={showMultiBuildingSelector}
+                onClose={() => setShowMultiBuildingSelector(false)}
+                onConfirm={handleMultiBuildingConfirm}
+                projectId={formData.projectId || 0}
+                initialSelectedBuildings={formData.buildingIds || []}
+            />
         </div>
     );
 };

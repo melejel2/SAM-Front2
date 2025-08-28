@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
+import apiRequest from '@/api/api';
 
 // Building interface
 export interface Building {
@@ -9,13 +10,14 @@ export interface Building {
   buildingName?: string;
 }
 
-// Building Sheet interface 
+// Building Sheet interface (matches backend BuildingSheetVM with camelCase)
 export interface BuildingSheet {
   id: number;
   name: string;
   nameFr?: string;
-  isActive?: boolean;
   costCode?: string;
+  hasVo?: boolean;
+  isActive?: boolean;
 }
 
 // API Response interfaces
@@ -69,42 +71,36 @@ const useBuildings = () => {
   const getBuildingSheets = useCallback(async (buildingId: number): Promise<BuildingSheet[]> => {
     setSheetsLoading(true);
     try {
-      console.log(`🔍 Fetching sheets for building ID: ${buildingId}`);
-      
       const token = getToken();
       if (!token) {
         throw new Error('Authentication token not available');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/Building/GetBuildingSheets/${buildingId}`, {
+      const response = await apiRequest({
+        endpoint: `Building/GetBuildingSheets/${buildingId}`,
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        token,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Check if response indicates error
+      if (response && 'success' in response && !response.success) {
+        throw new Error(response.message || 'Failed to fetch building sheets');
       }
 
-      const apiResponse: BuildingSheetsApiResponse = await response.json();
+      // Handle successful response
+      const buildingSheets: BuildingSheet[] = Array.isArray(response) ? response : [];
       
-      if (apiResponse.success && apiResponse.data) {
-        setBuildingSheets(apiResponse.data);
-        return apiResponse.data;
-      } else {
-        throw new Error(apiResponse.message || 'Failed to fetch building sheets');
-      }
+      setBuildingSheets(buildingSheets);
+      return buildingSheets;
     } catch (error) {
-      console.error('🚨 API Error getting building sheets:', error);
+      console.error('API Error getting building sheets:', error);
       toaster.error('Failed to load building sheets');
       setBuildingSheets([]);
       return [];
     } finally {
       setSheetsLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, toaster]);
 
   return {
     buildings,

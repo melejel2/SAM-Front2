@@ -10,10 +10,12 @@ export const Step7_Preview: React.FC = () => {
     const selectedSubcontractor = subcontractors.find(s => s.id === formData.subcontractorId);
 
     return (
-        <PreviewStep 
-            formData={formData}
-            selectedProject={selectedProject}
-            selectedSubcontractor={selectedSubcontractor}
-        />
+        <div className="h-full flex flex-col">
+            <PreviewStep 
+                formData={formData}
+                selectedProject={selectedProject}
+                selectedSubcontractor={selectedSubcontractor}
+            />
+        </div>
     );
 };

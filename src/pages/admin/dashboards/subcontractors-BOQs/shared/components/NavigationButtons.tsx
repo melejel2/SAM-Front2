@@ -112,7 +112,7 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
                     </>
                 ) : (
                     <>
-                        {/* Save & Continue Button (Preview step) */}
+                        {/* Save Button (Preview step) */}
                         <button
                             type="button"
                             className="btn btn-success"
@@ -125,7 +125,7 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
                                     Saving...
                                 </>
                             ) : (
-                                "Save & Continue"
+                                "Save"
                             )}
                         </button>
                     </>

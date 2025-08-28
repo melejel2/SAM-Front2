@@ -33,10 +33,22 @@ export const EditStepRenderer: React.FC = () => {
     };
 
     // Steps 4, 5, 6, and 7 need the white container for their form content
-    if (currentStep === 4 || currentStep === 5 || currentStep === 6 || currentStep === 7) {
+    // Step 7 (Preview) needs special height handling for PDF viewer
+    if (currentStep === 4 || currentStep === 5 || currentStep === 6) {
         return (
             <div className="card bg-base-100 shadow-sm p-4">
                 {renderStepContent()}
+            </div>
+        );
+    }
+
+    // Step 7 gets white container with optimized height for PDF preview
+    if (currentStep === 7) {
+        return (
+            <div className="card bg-base-100 shadow-sm p-4 h-[calc(100vh-180px)] flex flex-col">
+                <div className="flex-1 min-h-0">
+                    {renderStepContent()}
+                </div>
             </div>
         );
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
 import { AttachmentsDialog, AttachmentsType } from "../components/AttachmentsDialog";
 
@@ -7,6 +7,7 @@ export const EditStep4_ContractDetails: React.FC = () => {
     const { formData, setFormData, contracts, currencies, projects } = useEditWizardContext();
     const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("001");
     const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
+    const previousContractNumberRef = useRef<string>("");
 
     // Get the selected project to access its acronym from database
     const selectedProject = projects.find(p => p.id === formData.projectId);
@@ -17,20 +18,7 @@ export const EditStep4_ContractDetails: React.FC = () => {
         return `CS-${projectAcronym}-${suffix.padStart(3, '0')}`;
     };
 
-    // Update contract number when suffix or project changes (only if not already manually set)
-    useEffect(() => {
-        if (projectAcronym !== "XXX") {
-            const newContractNumber = generateContractNumber(contractNumberSuffix);
-            // Only update if it's empty or follows the pattern (not a custom contract number)
-            if (!formData.contractNumber || formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
-                if (formData.contractNumber !== newContractNumber) {
-                    setFormData({ contractNumber: newContractNumber });
-                }
-            }
-        }
-    }, [contractNumberSuffix, projectAcronym]);
-
-    // Initialize contract number suffix from existing contract number
+    // Initialize contract number suffix from existing contract number (run once on mount)
     useEffect(() => {
         if (formData.contractNumber && formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
             const suffix = formData.contractNumber.split('-')[2];
@@ -38,7 +26,19 @@ export const EditStep4_ContractDetails: React.FC = () => {
                 setContractNumberSuffix(suffix);
             }
         }
-    }, [formData.contractNumber, projectAcronym]);
+        // Remove automatic contract number generation - only generate when user changes suffix
+    }, []); // Run only once on mount
+    
+    // Update contract number when suffix changes (handle manually)
+    const updateContractNumber = (newSuffix: string) => {
+        if (projectAcronym !== "XXX") {
+            const newContractNumber = generateContractNumber(newSuffix);
+            // Only update if it's empty or follows the pattern (not a custom contract number)
+            if (!formData.contractNumber || formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
+                setFormData({ contractNumber: newContractNumber });
+            }
+        }
+    };
 
     const handleFieldChange = (field: string, value: any) => {
         setFormData({ [field]: value });
@@ -47,7 +47,10 @@ export const EditStep4_ContractDetails: React.FC = () => {
     const handleContractNumberSuffixChange = (newSuffix: string) => {
         // Only allow numbers, max 3 digits
         const cleanSuffix = newSuffix.replace(/\D/g, '').substring(0, 3);
-        setContractNumberSuffix(cleanSuffix || "001");
+        const finalSuffix = cleanSuffix || "001";
+        setContractNumberSuffix(finalSuffix);
+        // Update contract number immediately when suffix changes
+        updateContractNumber(finalSuffix);
     };
 
     return (
@@ -130,9 +133,9 @@ export const EditStep4_ContractDetails: React.FC = () => {
                 {/* Financial percentages */}
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Advance (%)</span>
+                        <span className="label-text">Advance Payment Eligible (%)</span>
                     </label>
-                    <input type="number" className="input input-bordered" value={formData.advancePayment || ''} onChange={(e) => handleFieldChange('advancePayment', Number(e.target.value))} placeholder="0" min="0" max="100" step="0.01" />
+                    <input type="number" className="input input-bordered" value={formData.subcontractorAdvancePayee || ''} onChange={(e) => handleFieldChange('subcontractorAdvancePayee', e.target.value)} placeholder="0" min="0" max="100" step="0.01" />
                 </div>
 
                 <div className="form-control">
@@ -236,6 +239,13 @@ export const EditStep4_ContractDetails: React.FC = () => {
                         <span className="label-text">Management Fees (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" value={formData.managementFees || ''} onChange={(e) => handleFieldChange('managementFees', e.target.value)} placeholder="0" />
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Plans Execution (%)</span>
+                    </label>
+                    <input type="text" className="input input-bordered" value={formData.plansExecution || ''} onChange={(e) => handleFieldChange('plansExecution', e.target.value)} placeholder="0" />
                 </div>
 
                 <div className="form-control">

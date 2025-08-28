@@ -6,7 +6,13 @@ import useToast from "@/hooks/use-toast";
 import { 
   getVoDatasetsList, 
   getVoDatasetWithBoqs as getVoDatasetWithBoqsApi, 
-  saveVoDataset as saveVoDatasetApi 
+  saveVoDataset as saveVoDatasetApi,
+  previewVoDataSet as previewVoDataSetApi,
+  copyVoProjectToVoDataSet as copyVoProjectToVoDataSetApi,
+  uploadContractVo as uploadContractVoApi,
+  generateVoDataSet as generateVoDataSetApi,
+  clearVoContractItems as clearVoContractItemsApi,
+  deleteVoDataSet as deleteVoDataSetApi
 } from "@/api/services/vo-api";
 import {
   VoDatasetVM,
@@ -15,7 +21,8 @@ import {
   VariationOrderApiError,
   VOServiceResult,
   FormattedVoDataset,
-  VOTableColumns
+  VOTableColumns,
+  ImportContractVoRequest
 } from "@/types/variation-order";
 
 /**
@@ -289,6 +296,191 @@ const useVoDatasets = () => {
     ]);
   };
 
+  /**
+   * Preview VO dataset (download ZIP with Word and PDF)
+   * @param voDataSetId VO dataset ID
+   */
+  const previewVoDataSet = async (voDataSetId: number): Promise<Blob | null> => {
+    try {
+      const blob = await previewVoDataSetApi(voDataSetId, token ?? "");
+      return blob;
+    } catch (error) {
+      console.error("Preview VO dataset error:", error);
+      toaster.error("Failed to preview VO dataset");
+      return null;
+    }
+  };
+
+  /**
+   * Copy VO project to VO dataset
+   * @param buildingId Building ID
+   * @param voLevel VO level
+   * @param contractDataSetId Contract dataset ID
+   */
+  const copyVoProjectToVoDataSet = async (
+    buildingId: number, 
+    voLevel: number, 
+    contractDataSetId: number
+  ) => {
+    setLoading(true);
+    
+    try {
+      const response = await copyVoProjectToVoDataSetApi(buildingId, voLevel, contractDataSetId, token ?? "");
+      
+      if (response && typeof response === 'object') {
+        if ('isSuccess' in response && !response.isSuccess) {
+          const errorResponse = response as VariationOrderApiError;
+          toaster.error(errorResponse.message || "Copy operation failed");
+          return null;
+        }
+        
+        toaster.success("VO project copied to dataset successfully");
+        return response;
+      } else {
+        toaster.success("VO project copied to dataset successfully");
+        return response;
+      }
+    } catch (error) {
+      console.error("Copy VO project to dataset error:", error);
+      toaster.error("Failed to copy VO project to dataset");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Upload contract VO from Excel file
+   * @param contractDataSetId Contract dataset ID
+   * @param excelFile Excel file
+   */
+  const uploadContractVo = async (contractDataSetId: number, excelFile: File) => {
+    setLoading(true);
+    
+    try {
+      const response = await uploadContractVoApi(contractDataSetId, excelFile, token ?? "");
+      
+      if (response && typeof response === 'object') {
+        if ('isSuccess' in response && !response.isSuccess) {
+          const errorResponse = response as VariationOrderApiError;
+          toaster.error(errorResponse.message || "Upload failed");
+          return null;
+        }
+        
+        toaster.success("Contract VO uploaded successfully");
+        return response;
+      } else {
+        toaster.success("Contract VO uploaded successfully");
+        return response;
+      }
+    } catch (error) {
+      console.error("Upload contract VO error:", error);
+      toaster.error("Failed to upload contract VO");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Generate VO dataset
+   * @param id VO dataset ID
+   */
+  const generateVoDataSet = async (id: number): Promise<VOServiceResult> => {
+    setLoading(true);
+    
+    try {
+      const response = await generateVoDataSetApi(id, token ?? "");
+      
+      if ('success' in response && response.success) {
+        toaster.success("VO dataset generated successfully");
+        
+        // Refresh datasets to reflect changes
+        await loadAllVoDatasets();
+        
+        return { isSuccess: true, data: response };
+      } else if ('success' in response && !response.success) {
+        toaster.error(response.error || "Generation failed");
+        return { isSuccess: false, error: { message: response.error || "Generation failed" } };
+      } else {
+        toaster.success("VO dataset generated successfully");
+        return { isSuccess: true, data: response };
+      }
+    } catch (error) {
+      console.error("Generate VO dataset error:", error);
+      toaster.error("Failed to generate VO dataset");
+      return { isSuccess: false, error: { message: "Failed to generate VO dataset" } };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Clear VO contract items
+   * @param voDataSetId VO dataset ID
+   */
+  const clearVoContractItems = async (voDataSetId: number): Promise<VOServiceResult> => {
+    setLoading(true);
+    
+    try {
+      const response = await clearVoContractItemsApi(voDataSetId, token ?? "");
+      
+      if ('success' in response && response.success) {
+        toaster.success("VO contract items cleared successfully");
+        
+        // Refresh datasets to reflect changes
+        await loadAllVoDatasets();
+        
+        return { isSuccess: true, data: response };
+      } else if ('success' in response && !response.success) {
+        toaster.error(response.error || "Clear operation failed");
+        return { isSuccess: false, error: { message: response.error || "Clear operation failed" } };
+      } else {
+        toaster.success("VO contract items cleared successfully");
+        return { isSuccess: true, data: response };
+      }
+    } catch (error) {
+      console.error("Clear VO contract items error:", error);
+      toaster.error("Failed to clear VO contract items");
+      return { isSuccess: false, error: { message: "Failed to clear VO contract items" } };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Delete editable VO dataset
+   * @param id VO dataset ID
+   */
+  const deleteVoDataSet = async (id: number): Promise<VOServiceResult> => {
+    setLoading(true);
+    
+    try {
+      const response = await deleteVoDataSetApi(id, token ?? "");
+      
+      if ('success' in response && response.success) {
+        toaster.success("VO dataset deleted successfully");
+        
+        // Refresh datasets to reflect changes
+        await loadAllVoDatasets();
+        
+        return { isSuccess: true, data: response };
+      } else if ('success' in response && !response.success) {
+        toaster.error(response.error || "Delete operation failed");
+        return { isSuccess: false, error: { message: response.error || "Delete operation failed" } };
+      } else {
+        toaster.success("VO dataset deleted successfully");
+        return { isSuccess: true, data: response };
+      }
+    } catch (error) {
+      console.error("Delete VO dataset error:", error);
+      toaster.error("Failed to delete VO dataset");
+      return { isSuccess: false, error: { message: "Failed to delete VO dataset" } };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     // State
     activeVoDatasets,
@@ -304,6 +496,14 @@ const useVoDatasets = () => {
     getVoDatasets,
     getVoDatasetWithBoqs,
     saveVoDataset,
+
+    // Advanced VO Operations
+    previewVoDataSet,
+    copyVoProjectToVoDataSet,
+    uploadContractVo,
+    generateVoDataSet,
+    clearVoContractItems,
+    deleteVoDataSet,
 
     // Convenience methods
     getActiveVoDatasets,

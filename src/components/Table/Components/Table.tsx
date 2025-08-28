@@ -957,16 +957,13 @@ const TableComponent: React.FC<TableProps> = ({
                                         return (
                                             <tr
                                                 key={index}
+                                                data-selected={isSelected || undefined}
                                                 className={cn(
                                                     isTotal 
                                                         ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content" 
-                                                        : "bg-base-100 hover:bg-base-200 cursor-pointer"
+                                                        : "bg-base-100 hover:bg-base-200 cursor-pointer",
+                                                    isSelected && !isTotal && "!bg-blue-50 !border-2 !border-blue-300 dark:!bg-blue-900/30 dark:!border-blue-700/50"
                                                 )}
-                                                style={isSelected ? {
-                                                    backgroundColor: 'rgb(239 246 255)', // Light blue background
-                                                    border: '2px solid rgb(147 197 253)', // Light blue border (blue-300)
-                                                    boxShadow: '0 0 0 1px rgb(147 197 253 / 0.2)'
-                                                } : undefined}
                                                 onClick={(e) => {
                                                     if (!isTotal) {
                                                         handleRowClick(row);

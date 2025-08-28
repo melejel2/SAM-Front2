@@ -293,7 +293,7 @@ const DatabaseSwitchDialog: React.FC<{
   if (!isOpen || !targetDatabase) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
@@ -660,7 +660,7 @@ const NotificationsDialog: React.FC<{
 
   return (
     <div 
-      className="fixed inset-0 z-[100] overflow-hidden bg-black/50 backdrop-blur-sm flex items-start justify-center md:items-center"
+      className="fixed inset-0 z-[100] overflow-hidden bg-black/20 backdrop-blur-sm flex items-start justify-center md:items-center"
       onClick={onClose}
     >
       <div
