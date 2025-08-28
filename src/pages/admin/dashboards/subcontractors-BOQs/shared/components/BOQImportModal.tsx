@@ -142,17 +142,27 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
         setIsPreviewing(true);
         
         try {
+            console.log('Starting BOQ import request...');
             const formData = new FormData();
             formData.append('excelFile', excelFile);
-            formData.append('contractsDataSetId', contractDataSetId > 0 ? contractDataSetId.toString() : '0');
-            formData.append('buildingId', selectedBuildingId.toString());
-            formData.append('sheetName', selectedSheetName);
+            formData.append('ContractsDataSetId', contractDataSetId > 0 ? contractDataSetId.toString() : '0');
+            formData.append('BuildingId', selectedBuildingId.toString());
+            formData.append('SheetName', selectedSheetName);
+
+            console.log('FormData prepared:', {
+                fileName: excelFile.name,
+                contractsDataSetId: contractDataSetId > 0 ? contractDataSetId.toString() : '0',
+                buildingId: selectedBuildingId.toString(),
+                sheetName: selectedSheetName
+            });
 
             const result = await apiRequest({
                 endpoint: 'ContractsDatasets/GetContractBoqItemsFromExcel',
                 method: 'POST',
                 body: formData
             });
+
+            console.log('API request completed, result:', result);
 
             // Check if the request was successful
             if (!result.isSuccess && result.isSuccess === false) {
