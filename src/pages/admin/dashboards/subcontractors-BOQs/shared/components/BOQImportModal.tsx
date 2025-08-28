@@ -4,6 +4,7 @@ import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
 import apiRequest from "@/api/api";
 import { Icon } from "@iconify/react";
+import { useAuth } from "@/contexts/auth";
 
 // Icon imports following established pattern
 import uploadIcon from "@iconify/icons-lucide/upload";
@@ -53,12 +54,16 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
     const [excelPreviewRows, setExcelPreviewRows] = useState<string[][]>([]);
 
     const { toaster } = useToast();
+    const { getToken } = useAuth();
 
     // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             setSelectedBuildingId(currentBuildingId || 0);
             setSelectedSheetName(currentSheetName || '');
+            
+            // Clear any old error data
+            localStorage.removeItem('boq-import-error');
         } else {
             handleReset();
         }
@@ -127,13 +132,6 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
     };
 
     const handlePreview = async () => {
-        console.log('Debug values:', {
-            excelFile: !!excelFile,
-            selectedBuildingId,
-            selectedSheetName,
-            contractDataSetId
-        });
-        
         if (!excelFile || selectedBuildingId === 0 || !selectedSheetName) {
             toaster.error("Please select file, building, and sheet");
             return;
@@ -142,27 +140,24 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
         setIsPreviewing(true);
         
         try {
-            console.log('Starting BOQ import request...');
+            const token = getToken();
+            if (!token) {
+                toaster.error("Authentication token is missing. Please log in again.");
+                return;
+            }
+            
             const formData = new FormData();
             formData.append('excelFile', excelFile);
             formData.append('ContractsDataSetId', contractDataSetId > 0 ? contractDataSetId.toString() : '0');
             formData.append('BuildingId', selectedBuildingId.toString());
             formData.append('SheetName', selectedSheetName);
 
-            console.log('FormData prepared:', {
-                fileName: excelFile.name,
-                contractsDataSetId: contractDataSetId > 0 ? contractDataSetId.toString() : '0',
-                buildingId: selectedBuildingId.toString(),
-                sheetName: selectedSheetName
-            });
-
             const result = await apiRequest({
                 endpoint: 'ContractsDatasets/GetContractBoqItemsFromExcel',
                 method: 'POST',
-                body: formData
+                body: formData,
+                token: token
             });
-
-            console.log('API request completed, result:', result);
 
             // Check if the request was successful
             if (!result.isSuccess && result.isSuccess === false) {
@@ -200,13 +195,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             }
         } catch (error) {
             console.error("Preview error:", error);
-            
-            // Check if it's an authentication error
-            if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
-                toaster.error("Session expired. Please login again.");
-            } else {
-                toaster.error("Failed to preview BOQ items from Excel file");
-            }
+            toaster.error("Failed to preview BOQ items from Excel file");
         } finally {
             setIsPreviewing(false);
         }
