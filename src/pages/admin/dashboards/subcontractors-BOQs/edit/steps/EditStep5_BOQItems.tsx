@@ -92,7 +92,7 @@ export const EditStep5_BOQItems: React.FC = () => {
         // Convert imported items to BOQItem format
         const newBOQItems: BOQItem[] = importedItems.map((item, index) => ({
             id: 0, // Use 0 for new items (backend expects this)
-            no: item.id?.toString() || '',
+            no: item.no || (index + 1).toString(),
             key: item.description || '',
             costCode: item.costCodeName || '',
             unite: item.unit || '',
@@ -349,7 +349,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                             <table className="w-full table-auto bg-base-100">
                                 <thead className="bg-base-200">
                                     <tr>
-                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">No.</th>
+                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Ref#</th>
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Description</th>
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Cost Code</th>
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">Unit</th>
@@ -378,7 +378,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                                                                 updateBOQItem(index, 'no', e.target.value);
                                                             }
                                                         }}
-                                                        placeholder=""
+                                                        placeholder="Ref#"
                                                     />
                                                 </td>
                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
