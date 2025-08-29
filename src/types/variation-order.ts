@@ -1,21 +1,20 @@
 // Variation Order Types matching the backend API
 
-// Re-export VO API types for backward compatibility
+// Re-export VO API types for backward compatibility (avoid conflicts)
 export type {
-  VoDatasetBoqDetailsVM,
-  VoDataSetBuildingsVM,
-  ContractVoVM,
   ContractContext,
   ContractBuilding,
   VoApiResponse,
   VoApiError
 } from '@/api/services/vo-api';
 
-// Enums
+// Enums - Updated to match backend enum exactly (SAMBACK/SAMBackend.Domain/Enums/ContractDatasetStatus.cs)
 export enum ContractDatasetStatus {
   Editable = 0,
   Terminated = 1,
-  Active = 2
+  Active = 2,
+  PendingApproval = 3,
+  None = 4
 }
 
 export enum VOType {

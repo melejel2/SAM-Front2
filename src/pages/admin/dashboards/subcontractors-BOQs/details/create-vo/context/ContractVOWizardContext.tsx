@@ -249,10 +249,10 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                         currencySymbol: contractInfo.currencySymbol
                     });
                 } else {
-                    const errorMsg = contractResponse.error || "Failed to load contract details";
+                    const errorMsg = (contractResponse as any).error || "Failed to load contract details";
                     console.error("❌ Contract loading failed:", {
                         success: contractResponse.success,
-                        error: contractResponse.error,
+                        error: (contractResponse as any).error,
                         message: contractResponse.message || 'No message',
                         contractId: contractId
                     });
@@ -397,7 +397,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 // Navigate back to contract details page
                 window.location.href = `/dashboard/subcontractors-boqs/details/${contractId}`;
             } else {
-                throw new Error(response.error || "Failed to create VO");
+                throw new Error((response as any).error || "Failed to create VO");
             }
         } catch (error) {
             console.error("🚨 ERROR SUBMITTING CONTRACT VO:", error);

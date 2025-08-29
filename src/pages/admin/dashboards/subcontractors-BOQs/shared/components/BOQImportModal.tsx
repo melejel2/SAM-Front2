@@ -26,6 +26,7 @@ interface BOQImportModalProps {
 
 interface ImportedBoqItem {
     id: number;
+    no: string;
     description: string;
     unit: string;
     quantity: number;
@@ -151,6 +152,13 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             formData.append('ContractsDataSetId', contractDataSetId > 0 ? contractDataSetId.toString() : '0');
             formData.append('BuildingId', selectedBuildingId.toString());
             formData.append('SheetName', selectedSheetName);
+            
+            console.log('📤 Sending FormData:');
+            console.log('  - File name:', excelFile.name);
+            console.log('  - File size:', excelFile.size, 'bytes');
+            console.log('  - ContractsDataSetId:', contractDataSetId > 0 ? contractDataSetId.toString() : '0');
+            console.log('  - BuildingId:', selectedBuildingId.toString());
+            console.log('  - SheetName:', selectedSheetName);
 
             const result = await apiRequest({
                 endpoint: 'ContractsDatasets/GetContractBoqItemsFromExcel',
@@ -158,6 +166,12 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                 body: formData,
                 token: token
             });
+
+            console.log('Raw API response:', result);
+            console.log('API response type:', typeof result);
+            console.log('API response keys:', result ? Object.keys(result) : 'null');
+            console.log('Is Array?', Array.isArray(result));
+            console.log('Response structure:', JSON.stringify(result, null, 2));
 
             // Check if the request was successful
             if (!result.isSuccess && result.isSuccess === false) {
@@ -167,22 +181,105 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             // Extract BOQ items from the response structure
             const items: ImportedBoqItem[] = [];
             if (result && Array.isArray(result)) {
-                result.forEach((building: any) => {
+                console.log('Processing result array with length:', result.length);
+                result.forEach((building: any, index: number) => {
+                    console.log(`Building ${index}:`, building);
                     if (building.boqsContract && Array.isArray(building.boqsContract)) {
+                        console.log(`Building ${index} has ${building.boqsContract.length} BOQ items`);
                         building.boqsContract.forEach((item: any) => {
-                            items.push({
+                            console.log('Processing BOQ item:', item);
+                            console.log('Mapping first array item:', item);
+                            const mappedItem = {
                                 id: item.id || 0,
-                                description: item.description || '',
-                                unit: item.unit || '',
-                                quantity: item.quantity || 0,
-                                unitPrice: item.unitPrice || 0,
-                                totalPrice: item.totalPrice || 0,
+                                no: item.no || '',
+                                description: item.key || '',
+                                unit: item.unite || '',
+                                quantity: item.qte || 0,
+                                unitPrice: item.pu || 0,
+                                totalPrice: item.totalPrice || ((item.qte || 0) * (item.pu || 0)),
                                 costCodeId: item.costCodeId,
-                                costCodeName: item.costCodeName
-                            });
+                                costCodeName: item.costCode
+                            };
+                            console.log('First array mapped to:', mappedItem);
+                            items.push(mappedItem);
                         });
+                    } else {
+                        console.log(`Building ${index} has no boqsContract or it's not an array:`, building.boqsContract);
                     }
                 });
+            } else if (result && typeof result === 'object') {
+                console.log('Result is an object, checking for direct array...');
+                
+                // Handle case where result might be an object wrapping the array
+                let dataArray = result;
+                if (result.data && Array.isArray(result.data)) {
+                    dataArray = result.data;
+                    console.log('Found data property with array length:', dataArray.length);
+                } else if (Array.isArray(result)) {
+                    console.log('Result is directly an array with length:', result.length);
+                } else {
+                    console.log('Result is not an array, treating as single building object');
+                    // Result might be a single building object or wrapped differently
+                    console.log('Trying to extract buildings from object...');
+                    
+                    // Try different possible structures
+                    if (result.buildings && Array.isArray(result.buildings)) {
+                        dataArray = result.buildings;
+                        console.log('Found buildings array with length:', dataArray.length);
+                    } else if (result.boqsContract && Array.isArray(result.boqsContract)) {
+                        // Single building case
+                        console.log('Found single building with BOQ items:', result.boqsContract.length);
+                        result.boqsContract.forEach((item: any) => {
+                            console.log('Processing single building BOQ item:', item);
+                            console.log('Mapping item:', item);
+                            const mappedItem = {
+                                id: item.id || 0,
+                                no: item.no || '',
+                                description: item.key || '',
+                                unit: item.unite || '',
+                                quantity: item.qte || 0,
+                                unitPrice: item.pu || 0,
+                                totalPrice: item.totalPrice || ((item.qte || 0) * (item.pu || 0)),
+                                costCodeId: item.costCodeId,
+                                costCodeName: item.costCode
+                            };
+                            console.log('Mapped to:', mappedItem);
+                            items.push(mappedItem);
+                        });
+                    } else {
+                        console.log('Unknown result structure, keys:', Object.keys(result));
+                    }
+                }
+                
+                // Process array if we found one
+                if (Array.isArray(dataArray) && dataArray !== result) {
+                    dataArray.forEach((building: any, index: number) => {
+                        console.log(`Building ${index}:`, building);
+                        if (building.boqsContract && Array.isArray(building.boqsContract)) {
+                            console.log(`Building ${index} has ${building.boqsContract.length} BOQ items`);
+                            building.boqsContract.forEach((item: any) => {
+                                console.log('Processing BOQ item:', item);
+                                console.log('Mapping array item:', item);
+                                const mappedItem = {
+                                    id: item.id || 0,
+                                    description: item.key || '',
+                                    unit: item.unite || '',
+                                    quantity: item.qte || 0,
+                                    unitPrice: item.pu || 0,
+                                    totalPrice: item.totalPrice || ((item.qte || 0) * (item.pu || 0)),
+                                    costCodeId: item.costCodeId,
+                                    costCodeName: item.costCode
+                                };
+                                console.log('Array mapped to:', mappedItem);
+                                items.push(mappedItem);
+                            });
+                        } else {
+                            console.log(`Building ${index} has no boqsContract or it's not an array:`, building.boqsContract);
+                        }
+                    });
+                }
+            } else {
+                console.log('Result is not an array or object:', result);
             }
             
             setPreviewItems(items);
@@ -228,10 +325,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                         <div className="p-1.5 bg-green-100 rounded-lg dark:bg-green-900/30">
                             <Icon icon={uploadIcon} className="text-green-600 dark:text-green-400 size-4" />
                         </div>
-                        <div>
-                            <h3 className="text-lg font-semibold text-base-content">Import BOQ from Excel</h3>
-                            <p className="text-xs text-base-content/70">Upload an Excel file to import BOQ items</p>
-                        </div>
+                        <h3 className="text-lg font-semibold text-base-content">Import BOQ</h3>
                     </div>
                     <button
                         className="btn btn-sm btn-ghost"
@@ -402,19 +496,18 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                     ) : (
                         /* Preview Section */
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Icon icon={checkCircleIcon} className="size-5 text-success" />
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300"
+                                        onClick={() => setShowPreview(false)}
+                                    >
+                                        Back
+                                    </button>
                                     <span className="font-medium text-base-content">
                                         Preview: {previewItems.length} BOQ items ready to import
                                     </span>
                                 </div>
-                                <button
-                                    className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300"
-                                    onClick={() => setShowPreview(false)}
-                                >
-                                    Back to Upload
-                                </button>
                             </div>
 
                             {/* Preview Table */}
@@ -422,23 +515,25 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                 <table className="table table-sm w-full">
                                     <thead className="bg-base-200">
                                         <tr>
+                                            <th className="text-base-content">Item No</th>
                                             <th className="text-base-content">Description</th>
                                             <th className="text-base-content">Unit</th>
+                                            <th className="text-base-content">Cost Code</th>
                                             <th className="text-base-content">Quantity</th>
                                             <th className="text-base-content">Unit Price</th>
                                             <th className="text-base-content">Total</th>
-                                            <th className="text-base-content">Cost Code</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {previewItems.slice(0, 10).map((item, index) => (
                                             <tr key={index} className="hover:bg-base-100">
+                                                <td className="text-base-content font-mono text-sm">{item.no || (index + 1).toString()}</td>
                                                 <td className="text-base-content">{item.description}</td>
-                                                <td className="text-base-content">{item.unit}</td>
+                                                <td className="text-base-content text-center">{item.unit || '-'}</td>
+                                                <td className="text-base-content text-center text-sm">{item.costCodeName || '-'}</td>
                                                 <td className="text-base-content text-right">{item.quantity.toLocaleString()}</td>
                                                 <td className="text-base-content text-right">${item.unitPrice.toLocaleString()}</td>
                                                 <td className="text-base-content text-right font-medium">${item.totalPrice.toLocaleString()}</td>
-                                                <td className="text-base-content text-sm">{item.costCodeName || '-'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -456,16 +551,6 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-base-300 mt-6">
-                    <Button
-                        type="button"
-                        size="sm"
-                        className="bg-base-200 text-base-content hover:bg-base-300"
-                        onClick={handleClose}
-                        disabled={isPreviewing || isUploading}
-                    >
-                        Cancel
-                    </Button>
-
                     {!showPreview ? (
                         <Button
                             type="button"

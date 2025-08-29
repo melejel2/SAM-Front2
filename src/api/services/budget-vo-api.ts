@@ -163,7 +163,7 @@ export const saveBudgetVo = async (
       endpoint: 'Vo/SaveVo',
       method: 'POST',
       token,
-      body: request
+      body: request as any // Cast to satisfy TypeScript requirements
     });
 
     // Handle backend Result format
@@ -201,7 +201,7 @@ export const clearBudgetVo = async (
       endpoint: 'Vo/ClearVo',
       method: 'POST',
       token,
-      body: request
+      body: request as any // Cast to satisfy TypeScript requirements
     });
 
     // Handle backend Result format

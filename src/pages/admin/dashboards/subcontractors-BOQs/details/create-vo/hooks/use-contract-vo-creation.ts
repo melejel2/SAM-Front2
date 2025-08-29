@@ -42,7 +42,7 @@ export const useContractVOCreation = () => {
       if (response.success && response.data) {
         return response.data;
       } else {
-        toaster.error(response.error || 'Failed to load contract context');
+        toaster.error((response as any).error || 'Failed to load contract context');
         return null;
       }
     } catch (error) {
@@ -64,7 +64,7 @@ export const useContractVOCreation = () => {
       if (response.success && response.data) {
         return response.data;
       } else {
-        toaster.error(response.error || 'Failed to load contract buildings');
+        toaster.error((response as any).error || 'Failed to load contract buildings');
         return [];
       }
     } catch (error) {
@@ -86,7 +86,7 @@ export const useContractVOCreation = () => {
       if (response.success && response.data) {
         return response.data;
       } else {
-        toaster.error(response.error || 'Failed to load BOQ items');
+        toaster.error((response as any).error || 'Failed to load BOQ items');
         return [];
       }
     } catch (error) {
@@ -145,7 +145,7 @@ export const useContractVOCreation = () => {
         toaster.success('Variation Order created successfully!');
         return { success: true };
       } else {
-        const errorMsg = response.error || 'Failed to create VO';
+        const errorMsg = (response as any).error || 'Failed to create VO';
         toaster.error(errorMsg);
         return { success: false, error: errorMsg };
       }
@@ -169,7 +169,7 @@ export const useContractVOCreation = () => {
       if (response.success && response.data) {
         return response.data;
       } else {
-        toaster.error(response.error || 'Failed to load contract VOs');
+        toaster.error((response as any).error || 'Failed to load contract VOs');
         return [];
       }
     } catch (error) {

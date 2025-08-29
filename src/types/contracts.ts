@@ -91,6 +91,9 @@ export interface SubcontractorBoqVM {
   contractId: number;
   contractDatasetStatus: string;
   
+  // NEW: Total contract amount calculated from BOQ items (added in commit diff)
+  amount: number;
+  
   // Contract details from ContractsDataSetBase
   contractDate?: string;
   completionDate?: string;

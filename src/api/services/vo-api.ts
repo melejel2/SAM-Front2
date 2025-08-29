@@ -197,13 +197,16 @@ export const createSubcontractorVO = async (
 
 /**
  * Get VO datasets list by status
- * @param status Contract dataset status
+ * @param status Contract dataset status or 'All' for all statuses
  * @param token Authentication token
  */
-export const getVoDatasetsList = async (status: ContractDatasetStatus, token: string) => {
+export const getVoDatasetsList = async (status: ContractDatasetStatus | 'All', token: string) => {
   try {
+    // Handle "All" parameter that backend now supports (commit e7d30b0)
+    const statusParam = status === 'All' ? 'All' : status.toString();
+    
     const response = await apiRequest({
-      endpoint: `VoDataSet/GetVoDatasetsList/${status}`,
+      endpoint: `VoDataSet/GetVoDatasetsList/${statusParam}`,
       method: 'GET',
       token
     });
@@ -654,7 +657,7 @@ export const getContractBuildings = async (contractId: number, token: string): P
     
     return {
       success: false,
-      error: contractResponse.error || 'Failed to load contract buildings',
+      error: (contractResponse as VoApiError).error || 'Failed to load contract buildings',
       message: contractResponse.message || 'Unable to retrieve building information'
     };
   } catch (error) {
@@ -758,7 +761,7 @@ export const createContractVO = async (voData: VoDatasetBoqDetailsVM, token: str
       endpoint: 'VoDataSet/SaveVoDataset',
       method: 'POST',
       token,
-      body: voData
+      body: voData as any // Cast to satisfy TypeScript requirements
     });
 
     if (response && typeof response === 'object') {
@@ -914,4 +917,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
 };
 
 // Export types for use in components
-export type { VoApiResponse, VoApiError, VoDatasetBoqDetailsVM, VoDataSetBuildingsVM, ContractVoVM, ContractContext, ContractBuilding };
+export type { 
+  VoApiResponse, 
+  VoApiError
+};
