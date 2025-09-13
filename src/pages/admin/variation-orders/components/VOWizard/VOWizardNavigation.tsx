@@ -58,7 +58,7 @@ const VOWizardNavigation: React.FC<VOWizardNavigationProps> = ({
 
     return (
         <div className="space-y-2">
-            {VO_WIZARD_STEP_DEFINITIONS.map((stepInfo) => {
+            {VO_WIZARD_STEP_DEFINITIONS.map((stepInfo, index) => {
                 const status = getStepStatus(stepInfo.key);
                 const stepNumber = getStepNumber(stepInfo);
                 
@@ -114,7 +114,7 @@ const VOWizardNavigation: React.FC<VOWizardNavigationProps> = ({
                                     {/* Time estimate and status */}
                                     <div className="flex items-center justify-between mt-2">
                                         <span className="text-xs text-current/50">
-                                            {stepInfo.estimatedTime}
+                                            Step {index + 1} of {VO_WIZARD_STEP_DEFINITIONS.length}
                                         </span>
                                         
                                         {status === 'completed' && (

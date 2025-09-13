@@ -82,8 +82,23 @@ const useMultiBuildingVO = () => {
                         buildingId: config.buildingId,
                         voLevel: config.voLevel,
                         replaceMode: config.replaceMode,
-                        templateId: baseVOData.templateId
-                    };
+                        templateId: baseVOData.templateId,
+                        // Add missing required properties with defaults
+                        id: 0,
+                        contractNumber: '',
+                        date: baseVOData.voDate,
+                        status: 'Draft',
+                        projectName: '',
+                        subcontractorName: '',
+                        type: '',
+                        amount: 0,
+                        tradeName: '',
+                        contractId: null,
+                        contractsDatasetId: null,
+                        subTrade: null,
+                        remark: null,
+                        buildings: []
+                    } as any;
 
                     // Update progress
                     setGenerationProgress(prev => 

@@ -63,7 +63,7 @@ const useVOLevelHierarchy = ({
                             ...item,
                             buildingName: building.buildingName,
                             buildingId: building.id,
-                            level: state.currentLevel
+                            level: state.currentLevel === 'Project' ? 0 : state.currentLevel === 'Building' ? 1 : 2
                         }))
                     );
                     break;
@@ -77,7 +77,7 @@ const useVOLevelHierarchy = ({
                                 ...item,
                                 buildingName: building.buildingName,
                                 buildingId: building.id,
-                                level: state.currentLevel
+                                level: state.currentLevel === 'Project' ? 0 : state.currentLevel === 'Building' ? 1 : 2
                             }));
                         }
                     }
@@ -94,7 +94,7 @@ const useVOLevelHierarchy = ({
                                     ...item,
                                     buildingName: building.buildingName,
                                     buildingId: building.id,
-                                    level: state.currentLevel
+                                    level: state.currentLevel === 'Project' ? 0 : state.currentLevel === 'Building' ? 1 : 2
                                 }));
                         }
                     }

@@ -51,13 +51,13 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
                         no: item.no || '',
                         key: item.key || '',
                         unite: item.unite || '',
-                        costCode: item.costCode?.name || item.costCode?.code || '',
+                        costCode: typeof item.costCode === 'string' ? item.costCode : '',
                         qte: item.qte?.toString() || '0',
                         pu: item.pu?.toString() || '0',
                         pt: calculatePt(item.qte || 0, item.pu || 0).toString(),
-                        remark: item.remark || '',
+                        remark: (item as any).remark || '',
                         level: item.level || voLevel,
-                        boqtype: item.boqtype || BOQType.Item,
+                        boqtype: (item as any).boqtype || BOQType.Item,
                         // Keep original item data for saving
                         originalItem: item
                     }))
@@ -157,14 +157,12 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
                     no: item.no,
                     key: item.key,
                     unite: item.unite,
-                    remark: item.remark,
                     qte: parseFloat(item.qte) || 0,
                     pu: parseFloat(item.pu) || 0,
-                    pt: parseFloat(item.pt.toString().replace(/,/g, '')) || 0,
-                    orderVo: parseFloat(item.order) || 0,
-                    boqtype: item.boqtype || BOQType.Item,
-                    level: item.level || voLevel,
-                    costCode: item.costCode ? { name: item.costCode, code: item.costCode } : null
+                    costCode: item.costCode,
+                    costCodeId: item.originalItem?.costCodeId || null,
+                    level: typeof item.level === 'number' ? item.level : parseInt(item.level) || voLevel,
+                    orderVo: parseFloat(item.order) || 0
                 }));
 
             // Construct VoVM array
@@ -172,6 +170,7 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
                 buildingId: buildingId,
                 voLevel: voLevel,
                 voSheets: [{
+                    id: 0,
                     sheetName: `VO Level ${voLevel}`,
                     voItems: voItems
                 }]

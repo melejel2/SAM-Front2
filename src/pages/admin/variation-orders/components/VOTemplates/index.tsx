@@ -150,7 +150,6 @@ const VOTemplatesManager: React.FC<VOTemplatesManagerProps> = ({
                                 handleDeleteTemplate(template);
                             }
                         }}
-                        onRowClick={onTemplateSelect ? handleTemplateSelect : undefined}
                         selectedRowId={selectedTemplateId}
                     />
                 )}

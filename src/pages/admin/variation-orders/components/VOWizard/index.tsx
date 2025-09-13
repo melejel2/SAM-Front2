@@ -44,7 +44,7 @@ const VOWizard: React.FC<VOWizardProps> = ({
 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const { toaster } = useToast();
-    const { user } = useAuth();
+    const { authState } = useAuth();
 
     // Initialize wizard data from existing VO dataset if in edit mode
     useEffect(() => {
@@ -57,7 +57,7 @@ const VOWizard: React.FC<VOWizardProps> = ({
         const initialData: WizardStepData = {
             // Step 1: VO Type Selection
             voTypeSelection: {
-                voType: 'contract-dataset', // Default assumption for existing VOs
+                voType: VOType.ContractDataset, // Default assumption for existing VOs
                 selectedFor: {
                     contractDatasetId: voDataset.contractsDatasetId || 1,
                     contractNumber: voDataset.contractNumber || '',
@@ -111,13 +111,14 @@ const VOWizard: React.FC<VOWizardProps> = ({
             data: wizardState.stepData,
             onDataChange: (stepData: any) => updateStepData(step, stepData),
             onValidationChange: (isValid: boolean) => setStepValidation(isValid),
+            onValidityChange: (isValid: boolean) => setStepValidation(isValid),
             mode,
             voDataset
         };
 
         switch (step) {
             case VOWizardSteps.VOTypeSelection:
-                return <VOTypeSelectionStep {...stepProps} />;
+                return <VOTypeSelectionStep {...stepProps as any} />;
             case VOWizardSteps.BuildingSelection:
                 return <BuildingSelectionStep {...stepProps} />;
             case VOWizardSteps.VODataEntry:
@@ -202,7 +203,7 @@ const VOWizard: React.FC<VOWizardProps> = ({
             const voData = compileWizardData();
             const voType = wizardState.stepData.voTypeSelection?.voType;
             
-            if (!user?.token) {
+            if (!authState.user?.token) {
                 throw new Error('Authentication token is required');
             }
 
@@ -212,16 +213,16 @@ const VOWizard: React.FC<VOWizardProps> = ({
             if (voType === VOType.BudgetBOQ) {
                 // Use Budget BOQ VO API (api/Vo/*)
                 if (mode === 'create') {
-                    result = await createBudgetVO(voData, user.token);
+                    result = await createBudgetVO(voData, authState.user.token);
                 } else {
-                    result = await updateBudgetVO(voDatasetId!, voData, user.token);
+                    result = await updateBudgetVO(voDatasetId!, voData, authState.user.token);
                 }
             } else if (voType === VOType.ContractDataset) {
                 // Use Contract Dataset VO API (api/VoDataSet/*)
                 if (mode === 'create') {
-                    result = await createContractDatasetVO(voData, user.token);
+                    result = await createContractDatasetVO(voData, authState.user.token);
                 } else {
-                    result = await updateContractDatasetVO(voDatasetId!, voData, user.token);
+                    result = await updateContractDatasetVO(voDatasetId!, voData, authState.user.token);
                 }
             } else {
                 throw new Error('VO type must be selected before submitting');

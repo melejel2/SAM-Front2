@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TextArea, Button } from "@/components/daisyui";
+import { Button } from "@/components/daisyui";
 import { WizardStepProps, SaveConfirmationStepData } from "../types";
 
 const SaveConfirmationStep: React.FC<WizardStepProps> = ({
@@ -179,10 +179,10 @@ const SaveConfirmationStep: React.FC<WizardStepProps> = ({
                     Final Comments (Optional)
                 </h3>
                 
-                <TextArea
+                <textarea
                     className="textarea textarea-sm bg-base-100 border-base-300 min-h-20"
                     value={formData.finalComments}
-                    onChange={(e) => handleFieldChange('finalComments', e.target.value)}
+                    onChange={(e: any) => handleFieldChange('finalComments', e.target.value)}
                     placeholder="Add any final comments or notes about this VO..."
                     rows={3}
                 />

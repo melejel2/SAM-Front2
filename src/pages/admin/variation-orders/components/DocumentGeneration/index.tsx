@@ -82,7 +82,7 @@ const DocumentGeneration: React.FC<DocumentGenerationProps> = ({
         }
 
         try {
-            const previewResult = await previewDocument(null, null, voDatasetId);
+            const previewResult = await previewDocument(undefined, undefined, voDatasetId);
             if (previewResult) {
                 setPreviewData({
                     type: 'saved',
@@ -119,7 +119,7 @@ const DocumentGeneration: React.FC<DocumentGenerationProps> = ({
             }
 
             setShowProgressModal(true);
-            const success = await generateDocument(null, null, voDatasetId);
+            const success = await generateDocument(undefined, undefined, voDatasetId);
             
             if (success) {
                 toaster.success("Document regenerated successfully");

@@ -149,7 +149,7 @@ export const VOStep2_ContractReview: React.FC = () => {
                                 <p className="font-medium mt-1">
                                     <span className={`badge badge-sm ${
                                         formData.voType === 'Addition' ? 'badge-success' :
-                                        formData.voType === 'Deduction' ? 'badge-error' :
+                                        formData.voType === 'Omission' ? 'badge-error' :
                                         'badge-info'
                                     }`}>
                                         {formData.voType}

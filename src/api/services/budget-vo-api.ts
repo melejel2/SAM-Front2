@@ -84,8 +84,8 @@ export const getBudgetVosByBuilding = async (
 ): Promise<BudgetVO[]> => {
   try {
     const endpoint = level !== null 
-      ? `Vo/GetVoByBuilding?buildingId=${buildingId}&level=${level}`
-      : `Vo/GetVoByBuilding?buildingId=${buildingId}`;
+      ? `Vo/GetVos?buildingId=${buildingId}&level=${level}`
+      : `Vo/GetVos?buildingId=${buildingId}`;
 
     const response = await apiRequest({
       endpoint,
@@ -96,7 +96,8 @@ export const getBudgetVosByBuilding = async (
     return response || [];
   } catch (error) {
     console.error('Get Budget VOs by building API Error:', error);
-    throw error;
+    // Return empty array instead of throwing to prevent dialog from breaking
+    return [];
   }
 };
 

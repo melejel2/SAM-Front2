@@ -595,24 +595,43 @@ export const getContractForVO = async (contractId: number, token: string): Promi
 
     console.log("📥 Raw API response:", response);
 
-    if (response && response.success && response.data) {
-      const data = response.data;
-      
+    // The API returns the data directly, not wrapped in a success/data structure
+    if (response && response.id) {
       // Transform backend data to contract context
+      // Check multiple possible field names for project and subcontractor
+      // The backend includes related entities but doesn't map names to the DTO
+      const projectName = response.projectName || 
+                          response.project?.name || 
+                          response.project?.acronym ||
+                          response.projectTitle || 
+                          `Project ${response.projectId}`;
+                          
+      const subcontractorName = response.subcontractorName || 
+                                response.subContractor?.name || 
+                                response.subcontractor?.name || 
+                                response.contractorName || 
+                                `Subcontractor ${response.subContractorId || response.subcontractorId}`;
+      
+      // Get currency symbol from related entity or response
+      const currencySymbol = response.currencySymbol || 
+                             response.currency?.symbol || 
+                             response.currency?.name ||
+                             'MAD';
+      
       const contractContext: ContractContext = {
-        id: data.id,
-        contractNumber: data.contractNumber || `Contract-${contractId}`,
-        projectId: data.projectId,
-        projectName: data.projectName || 'N/A',
-        subcontractorId: data.subContractorId,
-        subcontractorName: data.subcontractorName || 'N/A',
-        currencyId: data.currencyId,
-        currencySymbol: data.currencySymbol || '$',
-        tradeName: data.subTrade,
-        buildings: (data.buildings || []).map((building: any) => ({
+        id: response.id,
+        contractNumber: response.contractNumber || `Contract-${contractId}`,
+        projectId: response.projectId,
+        projectName: projectName,
+        subcontractorId: response.subContractorId || response.subcontractorId,
+        subcontractorName: subcontractorName,
+        currencyId: response.currencyId,
+        currencySymbol: currencySymbol,
+        tradeName: response.subTrade || response.trade || response.tradeName || '',
+        buildings: (response.buildings || []).map((building: any) => ({
           id: building.id,
-          name: building.buildingName || `Building ${building.id}`,
-          buildingName: building.buildingName || `Building ${building.id}`
+          name: building.buildingName || building.name || `Building ${building.id}`,
+          buildingName: building.buildingName || building.name || `Building ${building.id}`
         }))
       };
       

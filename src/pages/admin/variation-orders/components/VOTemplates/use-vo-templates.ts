@@ -59,7 +59,7 @@ const useVOTemplates = () => {
                 } else if ('items' in data && Array.isArray(data.items)) {
                     templatesArray = data.items;
                 } else if ('id' in data) {
-                    templatesArray = [data as VOContractVM];
+                    templatesArray = [data as unknown as VOContractVM];
                 }
             }
 
@@ -75,8 +75,8 @@ const useVOTemplates = () => {
                 language: template.language || 'Default'
             }));
 
-            setVoTemplates(formattedTemplates);
-            return formattedTemplates;
+            setVoTemplates(formattedTemplates as unknown as VOContractVM[]);
+            return formattedTemplates as unknown as VOContractVM[];
         } catch (error) {
             console.error("API Error getting VO templates:", error);
             toaster.error("Failed to load VO templates");

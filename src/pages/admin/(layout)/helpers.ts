@@ -17,7 +17,7 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
         id: "dashboard-subcontractors-BOQs",
         icon: "lucide--hard-hat",
         label: "Subcontractors BOQs",
-        url: "/dashboard/subcontractors-BOQs",
+        url: "/dashboard/subcontractors-boqs",
     },
     {
         id: "dashboard-contracts-database",

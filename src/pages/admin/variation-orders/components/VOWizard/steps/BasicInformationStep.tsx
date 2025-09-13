@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Input, Select, SelectOption, TextArea } from "@/components/daisyui";
-import { WizardStepProps, BasicInformationStepData } from "../types";
+import { Input, Select, SelectOption } from "@/components/daisyui";
+import { WizardStepProps, VODataEntryStepData } from "../types";
 
 const BasicInformationStep: React.FC<WizardStepProps> = ({
     data,
@@ -9,13 +9,15 @@ const BasicInformationStep: React.FC<WizardStepProps> = ({
     mode,
     voDataset
 }) => {
-    const [formData, setFormData] = useState<BasicInformationStepData>({
-        voNumber: data.basicInformation?.voNumber || '',
-        title: data.basicInformation?.title || '',
-        description: data.basicInformation?.description || '',
-        date: data.basicInformation?.date || new Date().toISOString().split('T')[0],
-        type: data.basicInformation?.type || 'Addition',
-        reason: data.basicInformation?.reason || ''
+    const [formData, setFormData] = useState<VODataEntryStepData>({
+        voNumber: data.voDataEntry?.voNumber || '',
+        description: data.voDataEntry?.description || '',
+        type: data.voDataEntry?.type || 'Addition',
+        date: data.voDataEntry?.date || new Date().toISOString().split('T')[0],
+        items: data.voDataEntry?.items || [],
+        totalAmount: data.voDataEntry?.totalAmount || 0,
+        currency: data.voDataEntry?.currency || '',
+        attachments: data.voDataEntry?.attachments || []
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -28,9 +30,6 @@ const BasicInformationStep: React.FC<WizardStepProps> = ({
             newErrors.voNumber = 'VO Number is required';
         }
 
-        if (!formData.title.trim()) {
-            newErrors.title = 'Title is required';
-        }
 
         if (!formData.description.trim()) {
             newErrors.description = 'Description is required';
@@ -49,7 +48,7 @@ const BasicInformationStep: React.FC<WizardStepProps> = ({
         onDataChange(formData);
     }, [formData, onDataChange, onValidationChange]);
 
-    const handleFieldChange = (field: keyof BasicInformationStepData, value: string) => {
+    const handleFieldChange = (field: keyof VODataEntryStepData, value: string) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -114,32 +113,16 @@ const BasicInformationStep: React.FC<WizardStepProps> = ({
                 </label>
             </div>
 
-            {/* Title */}
-            <label className="floating-label">
-                <span>VO Title *</span>
-                <Input
-                    type="text"
-                    className={`input input-sm bg-base-100 ${
-                        errors.title ? 'border-red-500' : 'border-base-300'
-                    }`}
-                    value={formData.title}
-                    onChange={(e) => handleFieldChange('title', e.target.value)}
-                    placeholder="Enter a clear, descriptive title for this VO"
-                />
-                {errors.title && (
-                    <div className="text-red-500 text-xs mt-1">{errors.title}</div>
-                )}
-            </label>
 
             {/* Description */}
             <label className="floating-label">
                 <span>Description *</span>
-                <TextArea
+                <textarea
                     className={`textarea textarea-sm bg-base-100 min-h-24 ${
                         errors.description ? 'border-red-500' : 'border-base-300'
                     }`}
                     value={formData.description}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
+                    onChange={(e: any) => handleFieldChange('description', e.target.value)}
                     placeholder="Provide a detailed description of the variation order..."
                     rows={4}
                 />
@@ -168,19 +151,6 @@ const BasicInformationStep: React.FC<WizardStepProps> = ({
                     )}
                 </label>
 
-                <label className="floating-label">
-                    <span>Reason/Justification</span>
-                    <Input
-                        type="text"
-                        className="input input-sm bg-base-100 border-base-300"
-                        value={formData.reason}
-                        onChange={(e) => handleFieldChange('reason', e.target.value)}
-                        placeholder="Brief reason for this variation"
-                    />
-                    <div className="text-xs text-base-content/60 mt-1">
-                        Optional: Brief justification or reason code
-                    </div>
-                </label>
             </div>
 
             {/* VO Type Impact Indicator */}

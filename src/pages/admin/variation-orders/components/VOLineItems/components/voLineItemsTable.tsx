@@ -74,8 +74,6 @@ const VOLineItemsTable: React.FC<VOLineItemsTableProps> = ({
                 hasSheets={true}
                 sheets={sheets}
                 rowsPerPage={15}
-                editable={!readonly}
-                editableColumns={readonly ? [] : ['no', 'key', 'unite', 'costCode', 'qte', 'pu', 'remark']}
             />
         </div>
     );

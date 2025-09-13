@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Input, TextArea, Select, SelectOption, Button } from "@/components/daisyui";
+import { Input, Select, SelectOption, Button } from "@/components/daisyui";
 import { WizardStepProps, VODataEntryStepData } from "../types";
 import VOLineItemsWrapper from "../components/VOLineItemsWrapper";
 
@@ -74,12 +74,12 @@ const VODataEntryStep: React.FC<WizardStepProps> = ({
     const handleFileUpload = (files: FileList | null) => {
         if (files) {
             const newAttachments = Array.from(files);
-            handleFieldChange('attachments', [...formData.attachments, ...newAttachments]);
+            handleFieldChange('attachments', [...(formData.attachments || []), ...newAttachments]);
         }
     };
 
     const removeAttachment = (index: number) => {
-        const newAttachments = formData.attachments.filter((_, i) => i !== index);
+        const newAttachments = (formData.attachments || []).filter((_, i) => i !== index);
         handleFieldChange('attachments', newAttachments);
     };
 
@@ -140,12 +140,12 @@ const VODataEntryStep: React.FC<WizardStepProps> = ({
 
                     <label className="floating-label md:col-span-2">
                         <span>Description *</span>
-                        <TextArea
+                        <textarea
                             className={`textarea textarea-sm bg-base-100 min-h-16 ${
                                 errors.description ? 'border-red-500' : 'border-base-300'
                             }`}
                             value={formData.description}
-                            onChange={(e) => handleFieldChange('description', e.target.value)}
+                            onChange={(e: any) => handleFieldChange('description', e.target.value)}
                             placeholder="Enter VO description..."
                             rows={3}
                         />
@@ -235,10 +235,10 @@ const VODataEntryStep: React.FC<WizardStepProps> = ({
                     </p>
                 </div>
 
-                {formData.attachments.length > 0 && (
+                {(formData.attachments && formData.attachments.length > 0) && (
                     <div className="space-y-2">
                         <h4 className="text-sm font-medium text-base-content">Attached Files:</h4>
-                        {formData.attachments.map((file, index) => (
+                        {(formData.attachments || []).map((file, index) => (
                             <div key={index} className="flex items-center justify-between p-2 bg-base-200 rounded">
                                 <div className="flex items-center gap-2">
                                     <span className="iconify lucide--file size-4 text-base-content/70"></span>

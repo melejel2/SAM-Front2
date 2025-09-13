@@ -189,10 +189,8 @@ const ExportDropdown = ({
 const ContractsDatabase = () => {
     const { 
         contractsColumns, 
-        vosColumns, 
         terminatedColumns, 
         contractsData, 
-        vosData, 
         terminatedData,
         loading,
         getContractsDatasets,
@@ -241,16 +239,17 @@ const ContractsDatabase = () => {
             setContractForDocumentSelection(row);
             setShowDocumentTypeModal(true);
         } else {
-            // Direct preview for active contracts
-            const result = await previewContract(row.id);
-            if (result.success && result.blob) {
-                // Use PDF extension for preview since we're using the PDF endpoint
-                const fileName = `contract-${row.id}-${row.projectName || 'document'}.pdf`;
-                setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
-                setViewMode('preview');
-            } else {
-                toaster.error("Failed to load contract preview");
-            }
+            // Navigate to contract details page for active contracts and VOs
+            navigate(`/dashboard/contracts-database/details/${row.id}`, {
+                state: {
+                    contractNumber: row.contractNumber,
+                    projectName: row.projectName,
+                    subcontractorName: row.subcontractorName,
+                    amount: row.amount,
+                    status: row.status,
+                    type: row.type || 'Contract'
+                }
+            });
         }
     };
 
@@ -512,18 +511,6 @@ const ContractsDatabase = () => {
                                 }`}
                                 onClick={() => setActiveTab(1)}
                             >
-                                <span className="iconify lucide--file-plus size-4" />
-                                <span>Active VOs ({vosData.length})</span>
-                            </button>
-                            
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 2 
-                                        ? "btn-primary" 
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(2)}
-                            >
                                 <span className="iconify lucide--x-circle size-4" />
                                 <span>Terminated Contracts ({terminatedData.length})</span>
                             </button>
@@ -549,31 +536,6 @@ const ContractsDatabase = () => {
                                         openStaticDialog={(type, data) => {
                                             if (type === "Preview" && data) {
                                                 return handlePreviewContract(data);
-                                            } else if (type === "Terminate" && data) {
-                                                setContractToTerminate(data);
-                                                setShowTerminateModal(true);
-                                            }
-                                        }}
-                                        dynamicDialog={false}
-                                        rowActions={(row) => ({
-                                            terminateAction: row.originalStatus?.toLowerCase() === 'active',
-                                        })}
-                                    />
-                                )}
-
-                                {/* VOs Tab */}
-                                {activeTab === 1 && (
-                                    <SAMTable
-                                        columns={vosColumns}
-                                        tableData={vosData}
-                                        actions
-                                        previewAction
-                                        title={"VO"}
-                                        loading={false}
-                                        onSuccess={() => {}}
-                                        openStaticDialog={(type, data) => {
-                                            if (type === "Preview" && data) {
-                                                return handlePreviewContract(data);
                                             }
                                         }}
                                         dynamicDialog={false}
@@ -581,7 +543,7 @@ const ContractsDatabase = () => {
                                 )}
 
                                 {/* Terminated Tab */}
-                                {activeTab === 2 && (
+                                {activeTab === 1 && (
                                     <SAMTable
                                         columns={terminatedColumns}
                                         tableData={terminatedData}

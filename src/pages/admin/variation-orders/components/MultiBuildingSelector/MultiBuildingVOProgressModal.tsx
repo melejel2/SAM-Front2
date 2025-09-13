@@ -74,7 +74,7 @@ const MultiBuildingVOProgressModal: React.FC<MultiBuildingVOProgressModalProps> 
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={!isGenerating ? onClose : undefined} size="lg">
+        <Modal open={isOpen} responsive backdrop>
             <div className="bg-base-100">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-4 border-b border-base-300">

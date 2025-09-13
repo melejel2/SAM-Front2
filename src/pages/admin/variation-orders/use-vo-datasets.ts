@@ -254,7 +254,7 @@ const useVoDatasets = () => {
           toaster.error(errorResponse.message || "Save failed");
           return { isSuccess: false, error: { message: errorResponse.message || "Save failed" } };
         } else if ('success' in response && !response.success) {
-          const errorMessage = 'error' in response ? response.error : "Save failed";
+          const errorMessage = 'error' in response ? (response as any).error : "Save failed";
           toaster.error(errorMessage || "Save failed");
           return { isSuccess: false, error: { message: errorMessage || "Save failed" } };
         }
@@ -400,8 +400,8 @@ const useVoDatasets = () => {
         
         return { isSuccess: true, data: response };
       } else if ('success' in response && !response.success) {
-        toaster.error(response.error || "Generation failed");
-        return { isSuccess: false, error: { message: response.error || "Generation failed" } };
+        toaster.error((response as any).error || "Generation failed");
+        return { isSuccess: false, error: { message: (response as any).error || "Generation failed" } };
       } else {
         toaster.success("VO dataset generated successfully");
         return { isSuccess: true, data: response };
@@ -433,8 +433,8 @@ const useVoDatasets = () => {
         
         return { isSuccess: true, data: response };
       } else if ('success' in response && !response.success) {
-        toaster.error(response.error || "Clear operation failed");
-        return { isSuccess: false, error: { message: response.error || "Clear operation failed" } };
+        toaster.error((response as any).error || "Clear operation failed");
+        return { isSuccess: false, error: { message: (response as any).error || "Clear operation failed" } };
       } else {
         toaster.success("VO contract items cleared successfully");
         return { isSuccess: true, data: response };
@@ -466,8 +466,8 @@ const useVoDatasets = () => {
         
         return { isSuccess: true, data: response };
       } else if ('success' in response && !response.success) {
-        toaster.error(response.error || "Delete operation failed");
-        return { isSuccess: false, error: { message: response.error || "Delete operation failed" } };
+        toaster.error((response as any).error || "Delete operation failed");
+        return { isSuccess: false, error: { message: (response as any).error || "Delete operation failed" } };
       } else {
         toaster.success("VO dataset deleted successfully");
         return { isSuccess: true, data: response };

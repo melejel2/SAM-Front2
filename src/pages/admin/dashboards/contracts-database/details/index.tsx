@@ -7,60 +7,8 @@ import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import apiRequest from "@/api/api";
-import { useContractsApi } from "../hooks/use-contracts-api";
-import { getContractVOs } from "@/api/services/vo-api";
-
-// Contract-specific VOs hook
-const useContractVOs = (contractId: string) => {
-    const [vos, setVos] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const { getToken } = useAuth();
-
-    const voColumns = {
-        voNumber: "VO Number",
-        description: "Description", 
-        type: "Type",
-        amount: "Amount",
-        status: "Status",
-        date: "Date Created"
-    };
-
-    const getContractVOsData = async () => {
-        if (!contractId) return;
-        
-        setLoading(true);
-        try {
-            const response = await getContractVOs(parseInt(contractId), getToken() ?? '');
-
-            if (response.success && response.data && Array.isArray(response.data)) {
-                const formattedVos = response.data.map((vo: any) => ({
-                    id: vo.id,
-                    voNumber: vo.voNumber || vo.VoNumber || '-',
-                    description: vo.subTrade || vo.Description || '-',
-                    type: vo.type || vo.Type || '-',
-                    amount: formatCurrency(vo.amount || vo.Amount),
-                    status: vo.status || vo.Status || '-',
-                    date: formatDate(vo.date || vo.Date || vo.createdDate)
-                }));
-                setVos(formattedVos);
-            } else {
-                setVos([]);
-            }
-        } catch (error) {
-            console.error("Error fetching contract VOs:", error);
-            setVos([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return {
-        vos,
-        voColumns,
-        loading,
-        getContractVOs: getContractVOsData
-    };
-};
+import { useContractsApi } from "../../subcontractors-BOQs/hooks/use-contracts-api";
+import { getContractVOs as fetchContractVOs } from "@/api/services/vo-api";
 
 // Helper functions
 const formatCurrency = (amount: number | string | undefined) => {
@@ -93,7 +41,7 @@ const formatPercentage = (value: number | undefined) => {
     return `${value}%`;
 };
 
-const ContractDetails = () => {
+const ContractDatabaseDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -104,33 +52,79 @@ const ContractDetails = () => {
     const [loading, setLoading] = useState(true);
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
-    const [generatingContract, setGeneratingContract] = useState(false);
-    const [deletingContract, setDeletingContract] = useState(false);
     const [loadingPreview, setLoadingPreview] = useState(false);
-    const [exportingPDF, setExportingPDF] = useState(false);
+    const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingWord, setExportingWord] = useState(false);
     const [currency, setCurrency] = useState('$');
     const [projects, setProjects] = useState<any[]>([]);
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
     const [currencies, setCurrencies] = useState<any[]>([]);
+    const [showTerminateModal, setShowTerminateModal] = useState(false);
+    const [terminating, setTerminating] = useState(false);
+    // Contract-specific VOs hook
+    const useContractVOs = (contractId: string) => {
+        const [vos, setVos] = useState<any[]>([]);
+        const [loading, setLoading] = useState(false);
+        const { getToken } = useAuth();
+
+        const voColumns = {
+            voNumber: "VO Number",
+            description: "Description", 
+            type: "Type",
+            amount: "Amount",
+            status: "Status",
+            date: "Date Created"
+        };
+
+    const getContractVOsData = async () => {
+            if (!contractId) return;
+            
+            setLoading(true);
+            try {
+        const response = await fetchContractVOs(parseInt(contractId), getToken() ?? '');
+
+                if (response.success && response.data && Array.isArray(response.data)) {
+                    const formattedVos = response.data.map((vo: any) => ({
+                        id: vo.id,
+                        voNumber: vo.voNumber || vo.VoNumber || '-',
+                        description: vo.subTrade || vo.Description || '-',
+                        type: vo.type || vo.Type || '-',
+                        amount: formatCurrency(vo.amount || vo.Amount),
+                        status: vo.status || vo.Status || '-',
+                        date: formatDate(vo.date || vo.Date || vo.createdDate)
+                    }));
+                    setVos(formattedVos);
+                } else {
+                    setVos([]);
+                }
+            } catch (error) {
+                console.error("Error fetching contract VOs:", error);
+                setVos([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return {
+            vos,
+            voColumns,
+            loading,
+            getContractVOs: getContractVOsData
+        };
+    };
     
     // Get data passed from navigation state
     const navigationData = location.state as {
         contractNumber?: string;
         projectName?: string;
         subcontractorName?: string;
-        tradeName?: string;
         amount?: string;
-        contractDate?: string;
-        completionDate?: string;
         status?: string;
+        type?: string;
     } | null;
-    
+
     // Contract VOs management
     const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(id || '');
-    
-    // Initialize contracts API
-    const contractsApi = useContractsApi();
 
     useEffect(() => {
         if (id) {
@@ -139,12 +133,15 @@ const ContractDetails = () => {
         }
     }, [id]);
 
+    // Initialize contracts API
+    const contractsApi = useContractsApi();
+
     const loadContractDetails = async () => {
         if (!id) return;
         
         setLoading(true);
         try {
-            // Load all reference data in parallel
+            // Load contract details and reference data in parallel
             const [contractResult, projectsResponse, subcontractorsResponse, currenciesResponse] = await Promise.all([
                 contractsApi.loadSubcontractorData(parseInt(id)),
                 apiRequest({
@@ -165,10 +162,7 @@ const ContractDetails = () => {
             ]);
             
             if (contractResult.success && contractResult.data) {
-                const data = contractResult.data;
-                
-                
-                setContractData(data);
+                setContractData(contractResult.data);
                 
                 // Set reference data
                 setProjects(Array.isArray(projectsResponse) ? projectsResponse : (projectsResponse?.data || []));
@@ -177,63 +171,26 @@ const ContractDetails = () => {
                 
                 // Find and set the correct currency symbol
                 const currencyData = Array.isArray(currenciesResponse) ? currenciesResponse : (currenciesResponse?.data || []);
-                setCurrencies(currencyData);
-                
-                const contractCurrency = currencyData.find((c: any) => c.id === data.currencyId);
-                if (contractCurrency?.currencies) {
-                    setCurrency(contractCurrency.currencies); // Use 'currencies' field (like MAD, USD, EUR)
+                const contractCurrencyId = contractResult.data?.currencyId;
+                if (contractCurrencyId !== undefined && contractCurrencyId !== null) {
+                    const contractCurrency = currencyData.find((c: any) => c.id === contractCurrencyId);
+                    if (contractCurrency?.currencies) {
+                        setCurrency(contractCurrency.currencies);
+                    }
                 }
             } else {
                 toaster.error("Failed to load contract details");
-                navigate('/dashboard/subcontractors-boqs');
+                navigate('/dashboard/contracts-database');
             }
         } catch (error) {
             console.error("Error loading contract:", error);
             toaster.error("An error occurred while loading contract details");
-            navigate('/dashboard/subcontractors-boqs');
+            navigate('/dashboard/contracts-database');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleGenerateContract = async () => {
-        if (!id) return;
-        
-        setGeneratingContract(true);
-        try {
-            const result = await contractsApi.generateContractBOQ(parseInt(id));
-            if (result.success) {
-                toaster.success("Contract generated successfully!");
-                // Reload contract data to get updated status
-                loadContractDetails();
-            }
-        } finally {
-            setGeneratingContract(false);
-        }
-    };
-
-    const handleDeleteContract = async () => {
-        if (!id) return;
-        
-        if (!confirm("Are you sure you want to delete this contract? This action cannot be undone.")) {
-            return;
-        }
-        
-        setDeletingContract(true);
-        try {
-            const result = await contractsApi.deleteContract(parseInt(id));
-            if (result.success) {
-                toaster.success("Contract deleted successfully!");
-                navigate('/dashboard/subcontractors-boqs');
-            }
-        } finally {
-            setDeletingContract(false);
-        }
-    };
-
-    const handleEditContract = () => {
-        navigate(`/dashboard/subcontractors-boqs/edit/${id}`);
-    };
 
     const handlePreviewContract = async () => {
         if (!contractData) return;
@@ -251,64 +208,28 @@ const ContractDetails = () => {
             } else {
                 toaster.error("Failed to generate contract preview");
             }
+        } catch (error) {
+            toaster.error("Failed to generate contract preview");
         } finally {
             setLoadingPreview(false);
         }
     };
 
-    const handleExportPDF = async () => {
-        if (!id) {
-            console.error("❌ PDF Export: No contract ID available");
-            return;
-        }
+    const handleExportPdf = async () => {
+        if (!id || !contractData) return;
         
-        if (exportingPDF || exportingWord) {
-            console.log("❌ Export already in progress, ignoring click");
-            return;
-        }
-        
-        console.log("🔄 Starting PDF export for contract:", {
-            id,
-            idParsed: parseInt(id),
-            contractNumber: contractData?.contractNumber,
-            status: contractData?.contractDatasetStatus
-        });
-        
+        setExportingPdf(true);
         try {
-            setExportingPDF(true);
             let result;
             
             // Use live preview for editable contracts, regular export for generated ones
             if (contractData?.contractDatasetStatus === 'Editable') {
-                console.log("📄 Using live preview PDF for editable contract");
                 result = await contractsApi.livePreviewPdfDocument(contractData);
             } else {
-                console.log("📄 Using regular export PDF for generated contract");
                 result = await contractsApi.exportContractPdfDocument(parseInt(id));
             }
             
-            console.log("📥 PDF Export API result:", result);
-            
             if (result.success && result.blob) {
-                // Validate blob before creating URL
-                if (!(result.blob instanceof Blob)) {
-                    console.error("❌ Invalid blob type:", typeof result.blob, result.blob);
-                    toaster.error("Invalid response format from server");
-                    return;
-                }
-                
-                // Check blob size
-                if (result.blob.size === 0) {
-                    console.error("❌ Empty blob received");
-                    toaster.error("Received empty file from server");
-                    return;
-                }
-                
-                console.log("✅ Valid blob received:", {
-                    size: result.blob.size,
-                    type: result.blob.type
-                });
-                
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -319,78 +240,30 @@ const ContractDetails = () => {
                 window.URL.revokeObjectURL(url);
                 toaster.success("Contract exported as PDF successfully!");
             } else {
-                console.error("❌ PDF Export failed:", {
-                    success: result.success,
-                    hasBlob: !!result.blob,
-                    result: result
-                });
                 toaster.error("Failed to export contract as PDF");
             }
         } catch (error) {
-            console.error("🚨 PDF Export exception:", {
-                error,
-                contractId: id,
-                errorMessage: error instanceof Error ? error.message : 'Unknown error'
-            });
-            toaster.error("PDF Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
+            toaster.error("Failed to export contract as PDF");
         } finally {
-            setExportingPDF(false);
+            setExportingPdf(false);
         }
     };
 
     const handleExportWord = async () => {
-        if (!id) {
-            console.error("❌ Word Export: No contract ID available");
-            return;
-        }
+        if (!id || !contractData) return;
         
-        if (exportingPDF || exportingWord) {
-            console.log("❌ Export already in progress, ignoring click");
-            return;
-        }
-        
-        console.log("🔄 Starting Word export for contract:", {
-            id,
-            idParsed: parseInt(id),
-            contractNumber: contractData?.contractNumber,
-            status: contractData?.contractDatasetStatus
-        });
-        
+        setExportingWord(true);
         try {
-            setExportingWord(true);
             let result;
             
             // Use live preview for editable contracts, regular export for generated ones
             if (contractData?.contractDatasetStatus === 'Editable') {
-                console.log("📄 Using live preview Word for editable contract");
                 result = await contractsApi.livePreviewWordDocument(contractData);
             } else {
-                console.log("📄 Using regular export Word for generated contract");
                 result = await contractsApi.exportContractWordDocument(parseInt(id));
             }
             
-            console.log("📥 Word Export API result:", result);
-            
             if (result.success && result.blob) {
-                // Validate blob before creating URL
-                if (!(result.blob instanceof Blob)) {
-                    console.error("❌ Invalid blob type:", typeof result.blob, result.blob);
-                    toaster.error("Invalid response format from server");
-                    return;
-                }
-                
-                // Check blob size
-                if (result.blob.size === 0) {
-                    console.error("❌ Empty blob received");
-                    toaster.error("Received empty file from server");
-                    return;
-                }
-                
-                console.log("✅ Valid blob received:", {
-                    size: result.blob.size,
-                    type: result.blob.type
-                });
-                
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -401,30 +274,20 @@ const ContractDetails = () => {
                 window.URL.revokeObjectURL(url);
                 toaster.success("Contract exported as Word successfully!");
             } else {
-                console.error("❌ Word Export failed:", {
-                    success: result.success,
-                    hasBlob: !!result.blob,
-                    result: result
-                });
                 toaster.error("Failed to export contract as Word");
             }
         } catch (error) {
-            console.error("🚨 Word Export exception:", {
-                error,
-                contractId: id,
-                errorMessage: error instanceof Error ? error.message : 'Unknown error'
-            });
-            toaster.error("Word Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
+            toaster.error("Failed to export contract as Word");
         } finally {
             setExportingWord(false);
         }
     };
 
     const handleCreateVO = () => {
-        // ✅ Navigate to proper contract-specific VO creation wizard
+        // Navigate to proper contract-specific VO creation wizard
         if (!id) return;
         
-        navigate(`/dashboard/subcontractors-boqs/details/${id}/create-vo`, {
+        navigate(`/dashboard/contracts-database/details/${id}/create-vo`, {
             state: {
                 contractId: id,
                 contractNumber: contractData?.contractNumber,
@@ -433,10 +296,37 @@ const ContractDetails = () => {
                 currencyId: contractData?.currencyId,
                 projectName: navigationData?.projectName || currentProject?.name,
                 subcontractorName: navigationData?.subcontractorName || currentSubcontractor?.name,
-                tradeName: navigationData?.tradeName || contractData?.subTrade,
+                tradeName: contractData?.subTrade,
                 contractContext: contractData // Pass full contract context for wizard
             }
         });
+    };
+
+    const handleTerminateContract = async () => {
+        if (!id || !contractData) return;
+        
+        setTerminating(true);
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/TerminateContract/${id}`,
+                method: "POST",
+                token: getToken() ?? ""
+            });
+            
+            if (response && typeof response === 'object' && 'success' in response && response.success) {
+                toaster.success(`Contract ${contractData.contractNumber} has been terminated successfully`);
+                setShowTerminateModal(false);
+                // Navigate back to contracts database
+                navigate('/dashboard/contracts-database');
+            } else {
+                toaster.error("Failed to terminate contract");
+            }
+        } catch (error) {
+            console.error("Error terminating contract:", error);
+            toaster.error("An error occurred while terminating the contract");
+        } finally {
+            setTerminating(false);
+        }
     };
 
     // Calculate total contract amount from BOQ items (fallback)
@@ -470,21 +360,17 @@ const ContractDetails = () => {
         );
     }
 
-    // Get project, subcontractor and currency data first
+    // Get project, subcontractor and currency data
     const currentProject = projects.find(p => p.id === contractData?.projectId);
     const currentSubcontractor = subcontractors.find(s => s.id === contractData?.subContractorId);
     const currentCurrency = currencies.find(c => c.id === contractData?.currencyId);
     
-    // Use the amount from contract data if available, otherwise fall back to advancePayment field or calculate from BOQ
-    // Note: advancePayment field often contains the contract total (legacy behavior)
+    // Use the amount from contract data or calculate from BOQ
     const totalAmount = contractData?.amount || contractData?.advancePayment || calculateTotalAmount();
     
-    // FIXED: Use correct field for advance payment percentage
-    // advancePayment stores contract amounts, subcontractorAdvancePayee stores percentages
+    // Get advance payment info
     const advancePercentage = parseFloat(contractData?.subcontractorAdvancePayee || '0') || 0;
     const advanceAmount = totalAmount * (advancePercentage / 100);
-    
-    
 
     return (
         <div className="space-y-6">
@@ -492,7 +378,7 @@ const ContractDetails = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/dashboard/subcontractors-boqs')}
+                        onClick={() => navigate('/dashboard/contracts-database')}
                         className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                     >
                         <span className="iconify lucide--arrow-left size-4"></span>
@@ -524,99 +410,32 @@ const ContractDetails = () => {
                         <button 
                             tabIndex={0} 
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            disabled={exportingPDF || exportingWord}
                         >
-                            {(exportingPDF || exportingWord) ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Exporting...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--download size-4"></span>
-                                    <span>Export</span>
-                                    <span className="iconify lucide--chevron-down size-3"></span>
-                                </>
-                            )}
+                            <span className="iconify lucide--download size-4"></span>
+                            <span>Export</span>
+                            <span className="iconify lucide--chevron-down size-3"></span>
                         </button>
                         <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                             <li>
-                                <a 
-                                    onClick={handleExportPDF}
-                                    className={exportingPDF ? 'opacity-60 cursor-not-allowed' : ''}
-                                >
-                                    {exportingPDF ? (
-                                        <>
-                                            <span className="loading loading-spinner loading-xs"></span>
-                                            <span>Exporting PDF...</span>
-                                        </>
-                                    ) : (
-                                        <span>Export as PDF</span>
-                                    )}
+                                <a onClick={handleExportPdf}>
+                                    Export as PDF
                                 </a>
                             </li>
                             <li>
-                                <a 
-                                    onClick={handleExportWord}
-                                    className={exportingWord ? 'opacity-60 cursor-not-allowed' : ''}
-                                >
-                                    {exportingWord ? (
-                                        <>
-                                            <span className="loading loading-spinner loading-xs"></span>
-                                            <span>Exporting Word...</span>
-                                        </>
-                                    ) : (
-                                        <span>Export as Word</span>
-                                    )}
+                                <a onClick={handleExportWord}>
+                                    Export as Word
                                 </a>
                             </li>
                         </ul>
                     </div>
-
-                    <button
-                        onClick={handleEditContract}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--edit size-4"></span>
-                        <span>Edit</span>
-                    </button>
-
-                    {contractData.contractDatasetStatus === 'Editable' && (
-                        <button
-                            onClick={handleGenerateContract}
-                            disabled={generatingContract}
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                        >
-                            {generatingContract ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Generating...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--check-circle size-4"></span>
-                                    <span>Generate</span>
-                                </>
-                            )}
-                        </button>
-                    )}
                     
                     <button
-                        onClick={handleDeleteContract}
-                        disabled={deletingContract}
-                        className="btn btn-sm btn-error text-error-content hover:bg-error/10 flex items-center gap-2"
+                        onClick={() => setShowTerminateModal(true)}
+                        disabled={terminating || contractData?.contractDatasetStatus?.toLowerCase() === 'terminated'}
+                        className="btn btn-sm btn-error text-white flex items-center gap-2"
                     >
-                        {deletingContract ? (
-                            <>
-                                <span className="loading loading-spinner loading-xs"></span>
-                                <span>Deleting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="iconify lucide--trash-2 size-4"></span>
-                                <span>Delete</span>
-                            </>
-                        )}
+                        <span className="iconify lucide--x-circle size-4"></span>
+                        <span>Terminate</span>
                     </button>
                 </div>
             </div>
@@ -640,19 +459,13 @@ const ContractDetails = () => {
                             <div className="flex justify-between">
                                 <span className="text-base-content/70">Status:</span>
                                 <span className="badge badge-sm badge-success">
-                                    {contractData.contractDatasetStatus || 'Active'}
+                                    {contractData.contractDatasetStatus || navigationData?.status || 'Active'}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-base-content/70">Contract Date:</span>
+                                <span className="text-base-content/70">Type:</span>
                                 <span className="text-base-content">
-                                    {formatDate(contractData.contractDate) || navigationData?.contractDate || '-'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Completion Date:</span>
-                                <span className="text-base-content">
-                                    {formatDate(contractData.completionDate) || navigationData?.completionDate || '-'}
+                                    {navigationData?.type || contractData.contractType || 'Contract'}
                                 </span>
                             </div>
                             <div className="divider"></div>
@@ -689,7 +502,7 @@ const ContractDetails = () => {
                             <div>
                                 <span className="text-base-content/70 text-sm">Trade:</span>
                                 <p className="font-semibold text-base-content mt-1">
-                                    {navigationData?.tradeName || contractData.subTrade || 'N/A'}
+                                    {contractData.subTrade || 'N/A'}
                                 </p>
                             </div>
                         </div>
@@ -714,12 +527,6 @@ const ContractDetails = () => {
                                 <span className="text-base-content/70">Advance Amount:</span>
                                 <span className="font-semibold text-base-content">
                                     {currentCurrency?.currencies || currency} {formatCurrency(advanceAmount)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Prorata Account:</span>
-                                <span className="text-base-content">
-                                    {contractData.prorataAccount || '0'}
                                 </span>
                             </div>
                             <div className="flex justify-between">
@@ -814,8 +621,65 @@ const ContractDetails = () => {
                     </form>
                 </dialog>
             )}
+
+            {/* Terminate Contract Confirmation Modal */}
+            {showTerminateModal && (
+                <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-error/10 rounded-full flex items-center justify-center">
+                                <span className="iconify lucide--x-circle w-6 h-6 text-error" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-base-content">Terminate Contract</h3>
+                                <p className="text-sm text-base-content/60">This action cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-base-content/80 mb-3">
+                                Are you sure you want to terminate contract <strong>{contractData?.contractNumber}</strong>
+                                {currentProject?.name && <> for project <strong>{currentProject.name}</strong></>}?
+                            </p>
+                            <div className="bg-error/30 border border-error/20 rounded-lg p-3">
+                                <p className="text-sm text-error-content">
+                                    <span className="iconify lucide--info w-4 h-4 inline mr-1" />
+                                    The contract will be moved to the terminated contracts list.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowTerminateModal(false)}
+                                className="btn btn-ghost btn-sm px-6"
+                                disabled={terminating}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleTerminateContract}
+                                className="btn btn-error btn-sm px-6"
+                                disabled={terminating}
+                            >
+                                {terminating ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Terminating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--x-circle size-4"></span>
+                                        <span>Terminate Contract</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-export default ContractDetails;
+export default ContractDatabaseDetails;

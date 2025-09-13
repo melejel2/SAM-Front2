@@ -44,6 +44,12 @@ export const Sidebar = () => {
     
     // For dashboard items, check if we're on any dashboard route
     if (item.url === '/dashboard' && pathname.startsWith('/dashboard')) {
+      // Only highlight main dashboard if we're exactly on /dashboard
+      return pathname === '/dashboard';
+    }
+    
+    // For specific dashboard routes, check if current path starts with the item's URL
+    if (item.url.startsWith('/dashboard/') && pathname.startsWith(item.url)) {
       return true;
     }
     

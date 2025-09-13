@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/daisyui";
 import { Loader } from "@/components/Loader";
-import SAMTable from "@/components/SAMTable";
 import { VOLevelType } from "@/types/variation-order";
 
 interface VOItemsViewProps {
@@ -28,7 +27,7 @@ const VOItemsView: React.FC<VOItemsViewProps> = ({
 
     // Define columns based on the current level
     const getColumns = () => {
-        const baseColumns = [
+        const baseColumns: any[] = [
             {
                 key: 'orderVo',
                 label: 'Order',
@@ -148,7 +147,7 @@ const VOItemsView: React.FC<VOItemsViewProps> = ({
                 key: 'actions',
                 label: 'Actions',
                 sortable: false,
-                render: (_, item: any) => (
+                render: (_: any, item: any) => (
                     <div className="flex items-center gap-1">
                         <Button
                             type="button"
@@ -313,20 +312,75 @@ const VOItemsView: React.FC<VOItemsViewProps> = ({
             )}
 
             {/* Items Table */}
-            <div className="bg-base-100 rounded-lg border border-base-300">
-                <SAMTable
-                    data={sortedItems}
-                    columns={getColumns()}
-                    onSort={handleSort}
-                    sortField={sortField}
-                    sortDirection={sortDirection}
-                    rowSelection={mode === 'edit' ? {
-                        selectedRows: selectedItems,
-                        onRowSelect: handleSelectItem,
-                        getRowId: (item) => item.id
-                    } : undefined}
-                    className="table-zebra"
-                />
+            <div className="bg-base-100 rounded-lg border border-base-300 overflow-x-auto">
+                <table className="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            {mode === 'edit' && (
+                                <th className="w-10">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-sm"
+                                        checked={selectedItems.size === sortedItems.length && sortedItems.length > 0}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedItems(new Set(sortedItems.map(item => item.id)));
+                                            } else {
+                                                setSelectedItems(new Set());
+                                            }
+                                        }}
+                                    />
+                                </th>
+                            )}
+                            {getColumns().map((column: any) => (
+                                <th
+                                    key={column.key}
+                                    className={column.sortable ? 'cursor-pointer hover:bg-base-200' : ''}
+                                    onClick={() => column.sortable && handleSort(column.key)}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        {column.label}
+                                        {column.sortable && sortField === column.key && (
+                                            <span className={`iconify lucide--chevron-${sortDirection === 'asc' ? 'up' : 'down'} size-3`}></span>
+                                        )}
+                                    </div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {sortedItems.map((item: any) => (
+                            <tr key={item.id} className="hover:bg-base-200">
+                                {mode === 'edit' && (
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-sm"
+                                            checked={selectedItems.has(item.id)}
+                                            onChange={() => handleSelectItem(item.id)}
+                                        />
+                                    </td>
+                                )}
+                                {getColumns().map((column: any) => (
+                                    <td key={column.key}>
+                                        {column.render ? 
+                                            (column.key === 'actions' ? 
+                                                column.render(item[column.key], item) : 
+                                                column.render(item[column.key])) 
+                                            : item[column.key]}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                        {sortedItems.length === 0 && (
+                            <tr>
+                                <td colSpan={getColumns().length + (mode === 'edit' ? 1 : 0)} className="text-center py-8">
+                                    <div className="text-base-content/50">No items to display</div>
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
 
             {/* Level Information */}

@@ -64,6 +64,7 @@ interface EditWizardFormData {
     subcontractorId: number | null;
     contractId: number | null;
     currencyId: number | null;
+    amount: number; // Add missing amount property
     contractNumber: string;
     contractDate: string;
     completionDate: string;
@@ -149,6 +150,7 @@ const initialEditFormData: EditWizardFormData = {
     subcontractorId: null,
     contractId: null,
     currencyId: null,
+    amount: 0, // Add missing amount property
     contractDate: new Date().toISOString().split('T')[0],
     completionDate: '',
     contractNumber: '',
@@ -500,6 +502,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 projectId: formData.projectId!,
                 subContractorId: formData.subcontractorId!,
                 contractId: formData.contractId!,
+                amount: formData.amount || 0, // Add missing amount property
                 contractDate: formData.contractDate,
                 completionDate: formData.completionDate,
                 advancePayment: formData.advancePayment, // Store as percentage directly

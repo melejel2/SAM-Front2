@@ -211,20 +211,28 @@ const useBudgetBOQsDialog = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount)) return '0.0';
+        if (!amount || isNaN(amount) || amount === 0) return '-';
+        
+        // Check if the number has meaningful decimals
+        const hasDecimals = amount % 1 !== 0;
+        
         return new Intl.NumberFormat('en-US', {
             style: 'decimal',
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1
+            minimumFractionDigits: hasDecimals ? 1 : 0,
+            maximumFractionDigits: hasDecimals ? 2 : 0
         }).format(amount);
     };
 
     const formatQuantity = (quantity: number) => {
-        if (!quantity || isNaN(quantity)) return '0.00';
+        if (!quantity || isNaN(quantity) || quantity === 0) return '-';
+        
+        // Check if the number has meaningful decimals
+        const hasDecimals = quantity % 1 !== 0;
+        
         return new Intl.NumberFormat('en-US', {
             style: 'decimal',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            minimumFractionDigits: hasDecimals ? 1 : 0,
+            maximumFractionDigits: hasDecimals ? 3 : 0
         }).format(quantity);
     };
 

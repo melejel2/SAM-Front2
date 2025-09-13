@@ -108,36 +108,38 @@ export const EditStep5_BOQItems: React.FC = () => {
         if (buildingBOQIndex !== -1) {
             // Update existing building BOQ data
             const updatedBOQData = [...existingBOQData];
-            const existingItems = updatedBOQData[buildingBOQIndex].boqItems || [];
+            const existingItems = updatedBOQData[buildingBOQIndex].items || [];
             
             // Filter out empty rows from existing items
-            const nonEmptyExistingItems = existingItems.filter(item => 
+            const nonEmptyExistingItems = existingItems.filter((item: any) => 
                 !(item.no === '' && item.key === '' && (!item.costCode || item.costCode === '') && 
                   (!item.unite || item.unite === '') && item.qte === 0 && item.pu === 0)
             );
             
             updatedBOQData[buildingBOQIndex] = {
                 ...updatedBOQData[buildingBOQIndex],
-                boqItems: [...nonEmptyExistingItems, ...newBOQItems]
+                items: [...nonEmptyExistingItems, ...newBOQItems]
             };
 
-            setFormData(prev => ({
-                ...prev,
+            const newFormData = {
+                ...formData,
                 boqData: updatedBOQData
-            }));
+            };
+            setFormData(newFormData);
         } else {
             // Create new BOQ data entry for this building
             const newBOQData = {
                 buildingId: buildingId,
                 buildingName: buildings.find(b => b.id === buildingId)?.name || '',
                 sheetName: selectedSheetForBOQ,
-                boqItems: newBOQItems
+                items: newBOQItems
             };
 
-            setFormData(prev => ({
-                ...prev,
+            const newFormData = {
+                ...formData,
                 boqData: [...existingBOQData, newBOQData]
-            }));
+            };
+            setFormData(newFormData);
         }
 
         setIsImportingBOQ(false);
@@ -559,7 +561,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                 isOpen={isImportingBOQ}
                 onClose={() => setIsImportingBOQ(false)}
                 onSuccess={handleBOQImport}
-                contractDataSetId={formData.contractDataSetId || 0}
+                contractDataSetId={formData.id || 0}
                 availableBuildings={buildings.map(building => ({
                     id: building.id,
                     name: building.name,

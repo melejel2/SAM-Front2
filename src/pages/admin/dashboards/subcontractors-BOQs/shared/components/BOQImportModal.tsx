@@ -262,6 +262,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                 console.log('Mapping array item:', item);
                                 const mappedItem = {
                                     id: item.id || 0,
+                                    no: item.no || item.key || '', // Add missing 'no' property
                                     description: item.key || '',
                                     unit: item.unite || '',
                                     quantity: item.qte || 0,

@@ -3,6 +3,7 @@ import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
 import BOQTable from "./components/boqTable";
+import VODialog from "../VOManagement/VODialog";
 import useBudgetBOQsDialog from "../use-budget-boq-dialog";
 
 interface BOQStepProps {
@@ -35,6 +36,8 @@ const BOQStep: React.FC<BOQStepProps> = ({
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [clearScope, setClearScope] = useState<"trade" | "building" | "all">("trade");
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [showVODialog, setShowVODialog] = useState(false);
+    const [currentSheetForVO, setCurrentSheetForVO] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const {
@@ -42,7 +45,8 @@ const BOQStep: React.FC<BOQStepProps> = ({
         previewBuildings,
         uploadBoq,
         getBoqPreview,
-        clearBoq
+        clearBoq,
+        selectedTrade
     } = useBudgetBOQsDialog();
     
     const { toaster } = useToast();
@@ -231,6 +235,38 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         Create buildings
                     </button>
                     
+                    {/* View VOs Button */}
+                    <button
+                        type="button" 
+                        onClick={() => {
+                            // Capture the current sheet info when button is clicked
+                            const building = projectData?.buildings?.find((b: any) => b.id === selectedBuilding?.id);
+                            let sheet = null;
+                            
+                            if ((selectedTrade as any)?.buildingSheetId) {
+                                sheet = building?.boqSheets?.find((s: any) => s.id === (selectedTrade as any).buildingSheetId);
+                            } else if (selectedTrade?.name) {
+                                sheet = building?.boqSheets?.find((s: any) => s.name === selectedTrade.name);
+                            }
+                            
+                            // If no sheet found by the above methods, try to find the first sheet with data
+                            if (!sheet && building?.boqSheets) {
+                                sheet = building.boqSheets.find((s: any) => s.boqItems && s.boqItems.length > 0);
+                            }
+                            
+                            setCurrentSheetForVO({
+                                sheet,
+                                trade: selectedTrade,
+                                sheetId: sheet?.id || (selectedTrade as any)?.buildingSheetId || selectedTrade?.id
+                            });
+                            setShowVODialog(true);
+                        }}
+                        disabled={!selectedProject || !selectedBuilding}
+                        className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
+                    >
+                        View VOs
+                    </button>
+                    
                     {/* Import BOQ Button */}
                     <button
                         type="button" 
@@ -405,6 +441,23 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         </div>
                     </div>
                 </div>
+            )}
+            
+            {/* VO Dialog */}
+            {selectedProject && selectedBuilding && currentSheetForVO && (
+                <VODialog
+                    isOpen={showVODialog}
+                    onClose={() => {
+                        setShowVODialog(false);
+                        setCurrentSheetForVO(null);
+                    }}
+                    projectId={selectedProject.id}
+                    buildingId={selectedBuilding.id}
+                    buildingName={selectedBuilding.name}
+                    tradeName={currentSheetForVO.sheet?.name || currentSheetForVO.trade?.name || "Unknown"}
+                    sheetId={currentSheetForVO.sheetId}
+                    projectLevel={selectedProject.projectLevel || projectData?.projectLevel || 0}
+                />
             )}
         </div>
     );

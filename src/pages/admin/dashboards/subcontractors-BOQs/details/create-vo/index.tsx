@@ -159,29 +159,7 @@ const CreateContractVOContent: React.FC = () => {
                     padding-bottom: 0.5rem !important;
                 }
             `}</style>
-            {/* Contract context banner */}
-            {contractData && (
-                <div className="bg-base-200 rounded-lg p-4 border border-base-300 mb-6">
-                    <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <span className="iconify lucide--file-text text-purple-600 size-4"></span>
-                            <span className="font-medium">{contractData.contractNumber}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="iconify lucide--building-2 text-blue-600 size-4"></span>
-                            <span>{contractData.projectName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="iconify lucide--users text-green-600 size-4"></span>
-                            <span>{contractData.subcontractorName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="iconify lucide--hammer text-amber-600 size-4"></span>
-                            <span>{contractData.tradeName || 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Contract context banner - removed to avoid duplication */}
 
             {/* Navigation and Timeline */}
             <div className="flex justify-between items-center mb-6">
