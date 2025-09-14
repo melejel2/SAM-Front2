@@ -239,9 +239,11 @@ const ContractsDatabase = () => {
             setContractForDocumentSelection(row);
             setShowDocumentTypeModal(true);
         } else {
-            // Navigate to contract details page for active contracts and VOs
-            navigate(`/dashboard/contracts-database/details/${row.id}`, {
+            // Navigate to contract details page for active contracts and VOs using contract number
+            const contractNumber = row.contractNumber || row.id; // Fallback to ID if no contract number
+            navigate(`/dashboard/contracts-database/details/${contractNumber}`, {
                 state: {
+                    contractId: row.id, // Keep actual ID for API calls
                     contractNumber: row.contractNumber,
                     projectName: row.projectName,
                     subcontractorName: row.subcontractorName,
@@ -261,20 +263,23 @@ const ContractsDatabase = () => {
             let endpoint = '';
             let fileName = '';
             
+            // Use contract number instead of database ID in filenames
+            const contractRef = contractForDocumentSelection.contractNumber || contractForDocumentSelection.id;
+            
             switch (documentType) {
                 case 'contract':
                     endpoint = `ContractsDatasets/ExportContractPdf/${contractForDocumentSelection.id}`;
-                    fileName = `contract-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    fileName = `contract-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'termination':
                     // Note: This endpoint may not exist yet according to the documentation
                     endpoint = `ContractsDatasets/ExportTerminateFile/${contractForDocumentSelection.id}`;
-                    fileName = `termination-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    fileName = `termination-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'dischargeFinal':
                     // Note: This endpoint may not exist yet according to the documentation
                     endpoint = `ContractsDatasets/ExportFinalFile/${contractForDocumentSelection.id}`;
-                    fileName = `discharge-final-${contractForDocumentSelection.id}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
+                    fileName = `discharge-final-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'dischargeRG':
                     // Note: Not implemented according to the documentation
@@ -363,7 +368,8 @@ const ContractsDatabase = () => {
             }
             
             const blob = response as Blob;
-            const fileName = `contract-${previewData.id}-${previewData.rowData.projectName || 'document'}.pdf`;
+            const contractRef = previewData.rowData.contractNumber || previewData.id;
+            const fileName = `contract-${contractRef}-${previewData.rowData.projectName || 'document'}.pdf`;
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -399,7 +405,8 @@ const ContractsDatabase = () => {
             }
             
             const blob = response as Blob;
-            const fileName = `contract-${previewData.id}-${previewData.rowData.projectName || 'document'}.docx`;
+            const contractRef = previewData.rowData.contractNumber || previewData.id;
+            const fileName = `contract-${contractRef}-${previewData.rowData.projectName || 'document'}.docx`;
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -435,7 +442,8 @@ const ContractsDatabase = () => {
             }
             
             const blob = response as Blob;
-            const fileName = `contract-${previewData.id}-${previewData.rowData.projectName || 'document'}.zip`;
+            const contractRef = previewData.rowData.contractNumber || previewData.id;
+            const fileName = `contract-${contractRef}-${previewData.rowData.projectName || 'document'}.zip`;
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -605,7 +613,7 @@ const ContractsDatabase = () => {
                             <div>
                                 <h3 className="font-semibold text-base-content">PDF Preview</h3>
                                 <p className="text-sm text-base-content/60">
-                                    {previewData?.fileName} • Contract #{previewData?.id}
+                                    {previewData?.fileName}
                                 </p>
                             </div>
                         </div>

@@ -180,19 +180,22 @@ const Templates = () => {
             let endpoint = '';
             let fileName = '';
             
+            // Use template name instead of database ID in filenames
+            const templateRef = row.templateName || row.name || row.id;
+            
             if (templateType === 'contract') {
                 endpoint = `Templates/PreviewTemplatePdf?id=${row.id}&isVo=false`;
-                fileName = `template-${row.id}-${row.templateName || 'document'}.pdf`;
+                fileName = `template-${templateRef}.pdf`;
             } else if (templateType === 'vo') {
                 endpoint = `Templates/PreviewTemplatePdf?id=${row.id}&isVo=true`;
-                fileName = `vo-template-${row.id}-${row.name || 'document'}.pdf`;
+                fileName = `vo-template-${templateRef}.pdf`;
             } else {
                 endpoint = `Templates/PreviewTemplatePdf?id=${row.id}&isVo=true`;
                 let typeLabel = "template";
                 if (row.type === "1") typeLabel = "discharge-rg";
                 else if (row.type === "2") typeLabel = "terminate";
                 else if (row.type === "3") typeLabel = "discharge-final";
-                fileName = `${typeLabel}-template-${row.id}-${row.name || 'document'}.pdf`;
+                fileName = `${typeLabel}-${templateRef}.pdf`;
             }
 
             const response = await apiRequest({

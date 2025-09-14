@@ -316,11 +316,11 @@ const Accordion: React.FC<AccordionProps> = ({
                                 onClick={() => {
                                     if (onShow) onShow(rowData);
                                 }}>
-                                {previewLoadingRowId === ((rowData as any).id || (rowData as any).contractId || (rowData as any).projectId || String(rowData)) ? (
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                ) : (
-                                    <Icon icon={"eye"} className="text-base-content/70" fontSize={4} />
-                                )}
+                                <Icon 
+                                    icon={previewLoadingRowId === ((rowData as any).id || (rowData as any).contractId || (rowData as any).projectId || String(rowData)) ? "loader-2" : "eye"} 
+                                    className={`text-base-content/70 ${previewLoadingRowId === ((rowData as any).id || (rowData as any).contractId || (rowData as any).projectId || String(rowData)) ? 'animate-spin' : ''}`} 
+                                    fontSize={4} 
+                                />
                             </Button>
                         )}
                         {editAction && (

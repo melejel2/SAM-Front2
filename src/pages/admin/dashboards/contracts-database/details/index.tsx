@@ -42,11 +42,15 @@ const formatPercentage = (value: number | undefined) => {
 };
 
 const ContractDatabaseDetails = () => {
-    const { id } = useParams<{ id: string }>();
+    const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
     const navigate = useNavigate();
     const location = useLocation();
     const { toaster } = useToast();
     const { getToken } = useAuth();
+    
+    // Get actual contract ID from navigation state (for API calls) or try to parse if it's numeric
+    const contractId = location.state?.contractId || 
+        (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
     
     const [contractData, setContractData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -124,26 +128,30 @@ const ContractDatabaseDetails = () => {
     } | null;
 
     // Contract VOs management
-    const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(id || '');
+    const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(contractId || '');
 
     useEffect(() => {
-        if (id) {
+        if (contractId) {
             loadContractDetails();
             getContractVOs();
+        } else if (contractIdentifier) {
+            // If we have a contract number but no ID, we need to look it up
+            toaster.error("Contract not found. Please navigate from the contracts list.");
+            navigate('/dashboard/contracts-database');
         }
-    }, [id]);
+    }, [contractId, contractIdentifier]);
 
     // Initialize contracts API
     const contractsApi = useContractsApi();
 
     const loadContractDetails = async () => {
-        if (!id) return;
+        if (!contractId) return;
         
         setLoading(true);
         try {
             // Load contract details and reference data in parallel
             const [contractResult, projectsResponse, subcontractorsResponse, currenciesResponse] = await Promise.all([
-                contractsApi.loadSubcontractorData(parseInt(id)),
+                contractsApi.loadSubcontractorData(parseInt(contractId)),
                 apiRequest({
                     method: "GET",
                     endpoint: "Project/GetProjectsList",
@@ -202,7 +210,7 @@ const ContractDatabaseDetails = () => {
             if (result.success && result.blob) {
                 setPreviewData({
                     blob: result.blob,
-                    fileName: `Contract_${contractData.contractNumber || id}.pdf`
+                    fileName: `Contract_${contractData.contractNumber || contractIdentifier}.pdf`
                 });
                 setShowPreview(true);
             } else {
@@ -216,7 +224,7 @@ const ContractDatabaseDetails = () => {
     };
 
     const handleExportPdf = async () => {
-        if (!id || !contractData) return;
+        if (!contractId || !contractData) return;
         
         setExportingPdf(true);
         try {
@@ -226,14 +234,14 @@ const ContractDatabaseDetails = () => {
             if (contractData?.contractDatasetStatus === 'Editable') {
                 result = await contractsApi.livePreviewPdfDocument(contractData);
             } else {
-                result = await contractsApi.exportContractPdfDocument(parseInt(id));
+                result = await contractsApi.exportContractPdfDocument(parseInt(contractId));
             }
             
             if (result.success && result.blob) {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || id}.pdf`;
+                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -250,7 +258,7 @@ const ContractDatabaseDetails = () => {
     };
 
     const handleExportWord = async () => {
-        if (!id || !contractData) return;
+        if (!contractId || !contractData) return;
         
         setExportingWord(true);
         try {
@@ -260,14 +268,14 @@ const ContractDatabaseDetails = () => {
             if (contractData?.contractDatasetStatus === 'Editable') {
                 result = await contractsApi.livePreviewWordDocument(contractData);
             } else {
-                result = await contractsApi.exportContractWordDocument(parseInt(id));
+                result = await contractsApi.exportContractWordDocument(parseInt(contractId));
             }
             
             if (result.success && result.blob) {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || id}.docx`;
+                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.docx`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -285,11 +293,11 @@ const ContractDatabaseDetails = () => {
 
     const handleCreateVO = () => {
         // Navigate to proper contract-specific VO creation wizard
-        if (!id) return;
+        if (!contractId) return;
         
-        navigate(`/dashboard/contracts-database/details/${id}/create-vo`, {
+        navigate(`/dashboard/contracts-database/details/${contractIdentifier}/create-vo`, {
             state: {
-                contractId: id,
+                contractId: contractId,
                 contractNumber: contractData?.contractNumber,
                 projectId: contractData?.projectId,
                 subcontractorId: contractData?.subContractorId,
@@ -303,12 +311,12 @@ const ContractDatabaseDetails = () => {
     };
 
     const handleTerminateContract = async () => {
-        if (!id || !contractData) return;
+        if (!contractId || !contractData) return;
         
         setTerminating(true);
         try {
             const response = await apiRequest({
-                endpoint: `ContractsDatasets/TerminateContract/${id}`,
+                endpoint: `ContractsDatasets/TerminateContract/${contractId}`,
                 method: "POST",
                 token: getToken() ?? ""
             });

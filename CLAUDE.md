@@ -456,6 +456,116 @@ The correct advance payment system uses three distinct fields:
 - ✅ Maintains compatibility with existing backend structure
 - ✅ Follows legacy SAM-Desktop patterns exactly
 
+## ID Exposure Prevention & User-Friendly URLs
+
+### Problem Analysis
+During code review, potential ID exposure issues were identified in the subcontractors-BOQs module where database IDs might be shown to frontend users instead of meaningful business values like contract numbers.
+
+### Investigation Results
+
+#### ✅ **Good Practices Found:**
+1. **Table Display** - Uses meaningful business values:
+   ```tsx
+   const columns = {
+       contractNumber: "Number",        // ✅ Contract number, not ID
+       projectName: "Project",          // ✅ Project name, not ID
+       subcontractorName: "Subcontractor", // ✅ Name, not ID
+       tradeName: "Trade"               // ✅ Trade name, not ID
+   };
+   ```
+
+2. **Data Transformation** - IDs are properly converted:
+   ```tsx
+   const processedData = result.data.map((contract: any) => ({
+       ...contract,
+       contractNumber: contract.contractNumber || contract.contractNb || '-',
+       projectName: contract.projectName || '-',
+       subcontractorName: contract.subcontractorName || '-'
+   }));
+   ```
+
+3. **UI Display** - Shows user-friendly values:
+   ```tsx
+   {contractData.contractNumber || navigationData?.contractNumber || '-'}
+   ```
+
+#### ⚠️ **Issues Found & Fixed:**
+
+1. **URL Structure** - Database IDs exposed in URLs:
+   ```
+   ❌ Before: /dashboard/subcontractors-boqs/details/123
+   ✅ After:  /dashboard/subcontractors-boqs/details/CT-2024-001
+   ```
+
+### Solution Applied
+
+#### Router Updates
+**File**: `src/router/register.tsx`
+```tsx
+// Changed from using :id to :contractIdentifier
+{
+    path: "/dashboard/subcontractors-boqs/edit/:contractIdentifier",
+    path: "/dashboard/subcontractors-boqs/details/:contractIdentifier",
+    path: "/dashboard/subcontractors-boqs/details/:contractIdentifier/create-vo"
+}
+```
+
+#### Navigation Logic Updates
+**File**: `src/pages/admin/dashboards/subcontractors-BOQs/index.tsx`
+```tsx
+// Use contract number in URL, keep ID in state for API calls
+const handleViewContractDetails = (row: any) => {
+    const contractNumber = row.contractNumber || row.id;
+    navigate(`/dashboard/subcontractors-boqs/details/${contractNumber}`, {
+        state: {
+            contractId: row.id, // Keep actual ID for API calls
+            contractNumber: row.contractNumber,
+            // ... other meaningful values
+        }
+    });
+};
+```
+
+#### Details Page Updates
+**File**: `src/pages/admin/dashboards/subcontractors-BOQs/details/index.tsx`
+```tsx
+// Extract contract identifier from URL and actual ID from state
+const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
+const contractId = location.state?.contractId || 
+    (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
+```
+
+### Benefits Achieved
+
+1. **User-Friendly URLs**: Contract numbers in URLs instead of database IDs
+   - `CT-2024-001` instead of `123`
+   - More meaningful for bookmarks and sharing
+
+2. **Security**: Database IDs not exposed in frontend URLs
+   - Internal IDs remain in navigation state for API calls
+   - User sees business identifiers only
+
+3. **Backwards Compatibility**: Fallback handling for existing bookmarks
+   - Numeric identifiers still work if passed via state
+   - Graceful error handling for invalid identifiers
+
+4. **Maintainability**: Clear separation of concerns
+   - Business identifiers for user interface
+   - Database IDs for API communication
+
+### Files Updated
+- `src/router/register.tsx` - URL parameter naming
+- `src/pages/admin/dashboards/subcontractors-BOQs/index.tsx` - Navigation logic
+- `src/pages/admin/dashboards/subcontractors-BOQs/details/index.tsx` - Parameter handling
+
+### Implementation Pattern
+This pattern can be extended to other modules:
+```tsx
+// URL Pattern: /module/action/:businessIdentifier
+// State Pattern: { actualId, ...businessData }
+// API Pattern: Use actualId from state for backend calls
+```
+
 ## Icon System Architecture & Square Icon Fix
 
 ### Problem: Square Icons Instead of Proper Icons

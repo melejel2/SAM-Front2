@@ -38,9 +38,12 @@ const BudgetBOQs = () => {
             setSelectedProjectInHook(null);
         }
         
-        // Navigate to edit page for Edit action
+        // Navigate to edit page for Edit action using project code instead of ID
         if (type === "Edit" && data) {
-            navigate(`/dashboard/budget-BOQs/edit/${data.id}`);
+            const projectCode = data.code || data.id; // fallback to ID if no code
+            navigate(`/dashboard/budget-BOQs/edit/${projectCode}`, {
+                state: { projectId: data.id } // Keep actual ID for API calls
+            });
             return;
         }
         

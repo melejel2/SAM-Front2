@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { Loader } from "@/components/Loader";
@@ -10,8 +10,13 @@ import useBudgetBOQs from "../use-budget-boqs";
 
 const BudgetBOQEdit = () => {
     const navigate = useNavigate();
-    const { projectId } = useParams<{ projectId: string }>();
+    const { projectIdentifier } = useParams<{ projectIdentifier: string }>();
+    const location = useLocation();
     const { toaster } = useToast();
+    
+    // Get actual project ID from navigation state (for API calls) or try to parse if it's numeric
+    const projectId = location.state?.projectId || 
+        (!isNaN(Number(projectIdentifier)) ? projectIdentifier : null);
     
     const [projectData, setProjectData] = useState<any>(null);
     const [originalProjectData, setOriginalProjectData] = useState<any>(null);
@@ -45,12 +50,17 @@ const BudgetBOQEdit = () => {
         if (projectsLoaded && projectId) {
             if (selectedProject) {
                 loadProjectData();
+            } else if (projectIdentifier) {
+                // If we have a project code but no ID, show error and redirect
+                toaster.error("Project not found. Please navigate from the projects list.");
+                navigate('/dashboard/budget-BOQs');
+                return;
             } else {
                 // Project not found, stop loading
                 setLoading(false);
             }
         }
-    }, [projectsLoaded, projectId, selectedProject]);
+    }, [projectsLoaded, projectId, projectIdentifier, selectedProject]);
     
     const loadProjectData = async () => {
         if (!selectedProject) return;

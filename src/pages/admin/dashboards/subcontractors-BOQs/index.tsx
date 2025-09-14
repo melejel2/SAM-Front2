@@ -29,9 +29,11 @@ const SubcontractorsBOQs = () => {
     }, [location.pathname]);
 
     const handleViewContractDetails = (row: any) => {
-        // Navigate to contract details page with contract data
-        navigate(`/dashboard/subcontractors-boqs/details/${row.id}`, {
+        // Navigate to contract details page using contract number (user-friendly) instead of ID
+        const contractNumber = row.contractNumber || row.id; // Fallback to ID if no contract number
+        navigate(`/dashboard/subcontractors-boqs/details/${contractNumber}`, {
             state: {
+                contractId: row.id, // Keep actual ID for API calls
                 contractNumber: row.contractNumber,
                 projectName: row.projectName,
                 subcontractorName: row.subcontractorName,

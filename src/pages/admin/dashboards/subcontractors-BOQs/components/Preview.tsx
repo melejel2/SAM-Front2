@@ -79,7 +79,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 }
 
                 if (livePreviewResponse && livePreviewResponse instanceof Blob && livePreviewResponse.size > 0) {
-                    const fileName = `contract-${contractId}-preview.pdf`;
+                    const fileName = `contract-${formData.contractNumber || contractId}-preview.pdf`;
                     setPreviewData({ blob: livePreviewResponse, fileName });
                     console.log('PDF preview loaded successfully');
                 } else {
@@ -249,7 +249,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
 
                     if (livePreviewResponse && livePreviewResponse instanceof Blob) {
                         pdfBlob = livePreviewResponse;
-                        fileName = `contract-${contractId}-${selectedProject?.name || 'document'}.pdf`;
+                        fileName = `contract-${formData.contractNumber || contractId}-${selectedProject?.name || 'document'}.pdf`;
                     }
                 }
             } else {
@@ -412,7 +412,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
 
                 if (livePreviewResponse && livePreviewResponse instanceof Blob) {
                     const fileName = contractId 
-                        ? `contract-${contractId}-${selectedProject?.name || 'document'}.docx`
+                        ? `contract-${formData.contractNumber || contractId}-${selectedProject?.name || 'document'}.docx`
                         : `contract-preview-${selectedProject?.name || 'document'}.docx`;
                     const url = window.URL.createObjectURL(livePreviewResponse);
                     const a = document.createElement('a');
@@ -480,7 +480,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 <div className="flex-1">
                     <h3 className="font-semibold text-base-content">PDF Preview</h3>
                     <p className="text-sm text-base-content/60">
-                        {previewData?.fileName} • {contractId ? `Contract #${contractId}` : 'Live Preview'}
+                        {previewData?.fileName}
                     </p>
                 </div>
                 <div className="flex gap-2">

@@ -23,7 +23,7 @@ const dashboardRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/dashboards/budget-boqs"))),
     },
     {
-        path: "/dashboard/budget-BOQs/edit/:projectId",
+        path: "/dashboard/budget-BOQs/edit/:projectIdentifier",
         element: cw(lazy(() => import("@/pages/admin/dashboards/budget-boqs/edit"))),
     },
     {
@@ -35,15 +35,15 @@ const dashboardRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/new"))),
     },
     {
-        path: "/dashboard/subcontractors-boqs/edit/:id",
+        path: "/dashboard/subcontractors-boqs/edit/:contractIdentifier",
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/edit"))),
     },
     {
-        path: "/dashboard/subcontractors-boqs/details/:id",
+        path: "/dashboard/subcontractors-boqs/details/:contractIdentifier",
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details"))),
     },
     {
-        path: "/dashboard/subcontractors-boqs/details/:id/create-vo",
+        path: "/dashboard/subcontractors-boqs/details/:contractIdentifier/create-vo",
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details/create-vo"))),
     },
     {
@@ -51,11 +51,11 @@ const dashboardRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database"))),
     },
     {
-        path: "/dashboard/contracts-database/details/:id",
+        path: "/dashboard/contracts-database/details/:contractIdentifier",
         element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database/details"))),
     },
     {
-        path: "/dashboard/contracts-database/details/:id/create-vo",
+        path: "/dashboard/contracts-database/details/:contractIdentifier/create-vo",
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details/create-vo"))),
     },
     {

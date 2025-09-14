@@ -94,11 +94,15 @@ const formatPercentage = (value: number | undefined) => {
 };
 
 const ContractDetails = () => {
-    const { id } = useParams<{ id: string }>();
+    const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
     const navigate = useNavigate();
     const location = useLocation();
     const { toaster } = useToast();
     const { getToken } = useAuth();
+    
+    // Get actual contract ID from navigation state (for API calls) or try to parse if it's numeric
+    const contractId = location.state?.contractId || 
+        (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
     
     const [contractData, setContractData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -127,26 +131,31 @@ const ContractDetails = () => {
     } | null;
     
     // Contract VOs management
-    const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(id || '');
+    const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(contractId || '');
     
     // Initialize contracts API
     const contractsApi = useContractsApi();
 
     useEffect(() => {
-        if (id) {
+        if (contractId) {
             loadContractDetails();
             getContractVOs();
+        } else if (contractIdentifier) {
+            // If we have a contract number but no ID, we need to look it up
+            // This would require a backend endpoint to find contract by number
+            toaster.error("Contract not found. Please navigate from the contracts list.");
+            navigate('/dashboard/subcontractors-boqs');
         }
-    }, [id]);
+    }, [contractId, contractIdentifier]);
 
     const loadContractDetails = async () => {
-        if (!id) return;
+        if (!contractId) return;
         
         setLoading(true);
         try {
             // Load all reference data in parallel
             const [contractResult, projectsResponse, subcontractorsResponse, currenciesResponse] = await Promise.all([
-                contractsApi.loadSubcontractorData(parseInt(id)),
+                contractsApi.loadSubcontractorData(parseInt(contractId)),
                 apiRequest({
                     method: "GET",
                     endpoint: "Project/GetProjectsList",
@@ -197,11 +206,11 @@ const ContractDetails = () => {
     };
 
     const handleGenerateContract = async () => {
-        if (!id) return;
+        if (!contractId) return;
         
         setGeneratingContract(true);
         try {
-            const result = await contractsApi.generateContractBOQ(parseInt(id));
+            const result = await contractsApi.generateContractBOQ(parseInt(contractId));
             if (result.success) {
                 toaster.success("Contract generated successfully!");
                 // Reload contract data to get updated status
@@ -213,7 +222,7 @@ const ContractDetails = () => {
     };
 
     const handleDeleteContract = async () => {
-        if (!id) return;
+        if (!contractId) return;
         
         if (!confirm("Are you sure you want to delete this contract? This action cannot be undone.")) {
             return;
@@ -221,7 +230,7 @@ const ContractDetails = () => {
         
         setDeletingContract(true);
         try {
-            const result = await contractsApi.deleteContract(parseInt(id));
+            const result = await contractsApi.deleteContract(parseInt(contractId));
             if (result.success) {
                 toaster.success("Contract deleted successfully!");
                 navigate('/dashboard/subcontractors-boqs');
@@ -232,7 +241,9 @@ const ContractDetails = () => {
     };
 
     const handleEditContract = () => {
-        navigate(`/dashboard/subcontractors-boqs/edit/${id}`);
+        navigate(`/dashboard/subcontractors-boqs/edit/${contractIdentifier}`, {
+            state: { contractId }
+        });
     };
 
     const handlePreviewContract = async () => {
@@ -245,7 +256,7 @@ const ContractDetails = () => {
             if (result.success && result.blob) {
                 setPreviewData({
                     blob: result.blob,
-                    fileName: `Contract_${contractData.contractNumber || id}.pdf`
+                    fileName: `Contract_${contractData.contractNumber || contractIdentifier}.pdf`
                 });
                 setShowPreview(true);
             } else {
@@ -257,7 +268,7 @@ const ContractDetails = () => {
     };
 
     const handleExportPDF = async () => {
-        if (!id) {
+        if (!contractId) {
             console.error("❌ PDF Export: No contract ID available");
             return;
         }
@@ -268,8 +279,8 @@ const ContractDetails = () => {
         }
         
         console.log("🔄 Starting PDF export for contract:", {
-            id,
-            idParsed: parseInt(id),
+            contractId,
+            idParsed: parseInt(contractId),
             contractNumber: contractData?.contractNumber,
             status: contractData?.contractDatasetStatus
         });
@@ -284,7 +295,7 @@ const ContractDetails = () => {
                 result = await contractsApi.livePreviewPdfDocument(contractData);
             } else {
                 console.log("📄 Using regular export PDF for generated contract");
-                result = await contractsApi.exportContractPdfDocument(parseInt(id));
+                result = await contractsApi.exportContractPdfDocument(parseInt(contractId));
             }
             
             console.log("📥 PDF Export API result:", result);
@@ -312,7 +323,7 @@ const ContractDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || id}.pdf`;
+                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -329,7 +340,7 @@ const ContractDetails = () => {
         } catch (error) {
             console.error("🚨 PDF Export exception:", {
                 error,
-                contractId: id,
+                contractId: contractId,
                 errorMessage: error instanceof Error ? error.message : 'Unknown error'
             });
             toaster.error("PDF Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
@@ -339,7 +350,7 @@ const ContractDetails = () => {
     };
 
     const handleExportWord = async () => {
-        if (!id) {
+        if (!contractId) {
             console.error("❌ Word Export: No contract ID available");
             return;
         }
@@ -350,8 +361,8 @@ const ContractDetails = () => {
         }
         
         console.log("🔄 Starting Word export for contract:", {
-            id,
-            idParsed: parseInt(id),
+            contractId,
+            idParsed: parseInt(contractId),
             contractNumber: contractData?.contractNumber,
             status: contractData?.contractDatasetStatus
         });
@@ -366,7 +377,7 @@ const ContractDetails = () => {
                 result = await contractsApi.livePreviewWordDocument(contractData);
             } else {
                 console.log("📄 Using regular export Word for generated contract");
-                result = await contractsApi.exportContractWordDocument(parseInt(id));
+                result = await contractsApi.exportContractWordDocument(parseInt(contractId));
             }
             
             console.log("📥 Word Export API result:", result);
@@ -394,7 +405,7 @@ const ContractDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || id}.docx`;
+                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.docx`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -411,7 +422,7 @@ const ContractDetails = () => {
         } catch (error) {
             console.error("🚨 Word Export exception:", {
                 error,
-                contractId: id,
+                contractId: contractId,
                 errorMessage: error instanceof Error ? error.message : 'Unknown error'
             });
             toaster.error("Word Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
@@ -422,11 +433,11 @@ const ContractDetails = () => {
 
     const handleCreateVO = () => {
         // ✅ Navigate to proper contract-specific VO creation wizard
-        if (!id) return;
+        if (!contractId) return;
         
-        navigate(`/dashboard/subcontractors-boqs/details/${id}/create-vo`, {
+        navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}/create-vo`, {
             state: {
-                contractId: id,
+                contractId: contractId,
                 contractNumber: contractData?.contractNumber,
                 projectId: contractData?.projectId,
                 subcontractorId: contractData?.subContractorId,

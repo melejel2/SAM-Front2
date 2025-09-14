@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ContractVOWizardProvider, useContractVOWizardContext } from "./context/ContractVOWizardContext";
 import { ContractVOStepIndicator } from "./components/ContractVOStepIndicator";
 import useToast from "@/hooks/use-toast";
@@ -10,9 +10,13 @@ import { Loader } from "@/components/Loader";
 // Inner component that uses the context
 const CreateContractVOContent: React.FC = () => {
     const navigate = useNavigate();
-    const { id: contractId } = useParams<{ id: string }>();
+    const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
+    const location = useLocation();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
+    
+    // Get actual contract ID from navigation state (for API calls)
+    const contractId = location.state?.contractId;
     
     const {
         currentStep,
@@ -27,7 +31,9 @@ const CreateContractVOContent: React.FC = () => {
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate(`/dashboard/subcontractors-boqs/details/${contractId}`);
+        navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+            state: { contractId }
+        });
     };
 
     const handleCancelBack = () => {
@@ -38,7 +44,9 @@ const CreateContractVOContent: React.FC = () => {
         await handleSubmit();
         // If submission was successful, navigate back to contract details
         if (!loading) {
-            navigate(`/dashboard/subcontractors-boqs/details/${contractId}`);
+            navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+                state: { contractId }
+            });
         }
     };
 
@@ -167,7 +175,9 @@ const CreateContractVOContent: React.FC = () => {
                     onClick={currentStep === 1 && hasUnsavedChanges 
                         ? () => setShowBackConfirmDialog(true) 
                         : currentStep === 1 
-                            ? () => navigate(`/dashboard/subcontractors-boqs/details/${contractId}`)
+                            ? () => navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+                                state: { contractId }
+                            })
                             : goToPreviousStep
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"

@@ -1051,11 +1051,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             e.stopPropagation();
                                                                             openPreviewDialog(row);
                                                                         }}>
-                                                                        {previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? (
-                                                                            <span className="loading loading-spinner loading-xs"></span>
-                                                                        ) : (
-                                                                            <span className="iconify lucide--eye text-base-content/70 size-4"></span>
-                                                                        )}
+                                                                        <span className={`iconify ${previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--eye'} text-base-content/70 size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.editAction || editAction) && (

@@ -138,9 +138,6 @@ export const VOStep3_BuildingSelection: React.FC = () => {
                                             }`}>
                                                 {building.name}
                                             </p>
-                                            <p className="text-xs text-base-content/60">
-                                                ID: #{building.id}
-                                            </p>
                                         </div>
                                         
                                         {/* Selected Badge */}

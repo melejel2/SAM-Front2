@@ -394,8 +394,9 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 toaster.success("Variation Order created successfully!");
                 setHasUnsavedChanges(false);
                 
-                // Navigate back to contract details page
-                window.location.href = `/dashboard/subcontractors-boqs/details/${contractId}`;
+                // Navigate back to contract details page using contract number
+                const contractNumber = formData.contractNumber || contractId;
+                window.location.href = `/dashboard/subcontractors-boqs/details/${contractNumber}`;
             } else {
                 throw new Error((response as any).error || "Failed to create VO");
             }

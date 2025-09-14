@@ -50,11 +50,11 @@ export const EditStep6_Review: React.FC = () => {
     return (
         <div>
             <div className="space-y-4">
-                {/* Contract ID Display */}
+                {/* Contract Number Display */}
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                     <div className="flex items-center gap-2">
                         <span className="iconify lucide--file-text w-5 h-5 text-primary"></span>
-                        <span className="font-semibold text-primary">Contract ID: {formData.id}</span>
+                        <span className="font-semibold text-primary">Contract: {formData.contractNumber || 'Not specified'}</span>
                     </div>
                 </div>
 

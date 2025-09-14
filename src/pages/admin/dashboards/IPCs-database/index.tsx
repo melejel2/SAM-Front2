@@ -86,7 +86,10 @@ const IPCsDatabase = () => {
     const handlePreviewIpc = async (row: any) => {
         const result = await previewIpc(row.id);
         if (result.success && result.blob) {
-            const fileName = `ipc-${row.id}-${row.contract || 'document'}.pdf`;
+            // Use contract number and IPC reference instead of database IDs
+            const contractRef = row.contract || 'document';
+            const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id; // Use business identifier
+            const fileName = `ipc-${ipcRef}-${contractRef}.pdf`;
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
             setViewMode('preview');
         } else {
@@ -152,7 +155,8 @@ const IPCsDatabase = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `ipc-${previewData.id}-${previewData.rowData.contract || 'document'}.xlsx`;
+                const ipcRef = previewData.rowData.number || previewData.rowData.ipcRef || previewData.id;
+                a.download = `ipc-${ipcRef}-${previewData.rowData.contract || 'document'}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -240,7 +244,7 @@ const IPCsDatabase = () => {
                             <div>
                                 <h3 className="font-semibold text-base-content">PDF Preview</h3>
                                 <p className="text-sm text-base-content/60">
-                                    {previewData?.fileName} • IPC #{previewData?.id}
+                                    {previewData?.fileName}
                                 </p>
                             </div>
                         </div>

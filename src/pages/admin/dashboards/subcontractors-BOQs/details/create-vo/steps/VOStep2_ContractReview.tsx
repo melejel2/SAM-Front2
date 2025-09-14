@@ -32,10 +32,6 @@ export const VOStep2_ContractReview: React.FC = () => {
                             </h4>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                    <span className="text-base-content/70">Contract ID:</span>
-                                    <span className="font-medium">#{contractData.id}</span>
-                                </div>
-                                <div className="flex justify-between">
                                     <span className="text-base-content/70">Contract Number:</span>
                                     <span className="font-medium">{contractData.contractNumber}</span>
                                 </div>
@@ -116,7 +112,6 @@ export const VOStep2_ContractReview: React.FC = () => {
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium text-sm">{building.name}</p>
-                                            <p className="text-xs text-base-content/60">ID: #{building.id}</p>
                                         </div>
                                     </div>
                                 </div>

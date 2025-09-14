@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
@@ -201,8 +201,13 @@ interface EditWizardProviderProps {
 export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children }) => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
-    const { id } = useParams<{ id: string }>();
+    const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
+    const location = useLocation();
     const token = getToken();
+    
+    // Get actual contract ID from navigation state (for API calls) or try to parse if it's numeric
+    const contractId = location.state?.contractId || 
+        (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
     
     // State
     const [formData, setFormDataState] = useState<EditWizardFormData>(initialEditFormData);
@@ -678,8 +683,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         }
                         
                         // THEN load existing contract data so selectedRowId can find matches
-                        if (id) {
-                            await loadExistingData(parseInt(id));
+                        if (contractId) {
+                            await loadExistingData(parseInt(contractId));
                         }
                     }
                 } catch (error) {
@@ -702,7 +707,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         return () => {
             isMounted = false;
         };
-    }, [id, token]); // Only re-run when id or token changes
+    }, [contractId, token]); // Only re-run when contractId or token changes
     
     // Context value
     const contextValue: EditWizardContextType = {
