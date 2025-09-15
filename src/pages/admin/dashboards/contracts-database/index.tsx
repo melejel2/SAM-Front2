@@ -11,18 +11,18 @@ import apiRequest from "@/api/api";
 import useContractsDatabase from "./use-contracts-database";
 
 // Document Type Selection Modal Component
-const DocumentTypeModal = ({ 
-    isOpen, 
-    onClose, 
-    onSelectDocument, 
-    contractData, 
-    loading 
+const DocumentTypeModal = ({
+    isOpen,
+    onClose,
+    onSelectDocument,
+    contractData,
+    loadingDocumentType
 }: {
     isOpen: boolean;
     onClose: () => void;
     onSelectDocument: (type: string) => void;
     contractData: any;
-    loading: boolean;
+    loadingDocumentType: string | null;
 }) => {
     if (!isOpen) return null;
 
@@ -37,25 +37,27 @@ const DocumentTypeModal = ({
         {
             id: 'termination',
             title: 'Termination Letter',
-            description: 'Contract termination document',
+            description: 'Contract termination document (generated when contract is terminated)',
             icon: 'lucide--file-x',
-            available: true // Will be available after termination
+            available: true // Backend will return 404 if not generated yet
         },
         {
             id: 'dischargeFinal',
             title: 'Discharge Final',
-            description: 'Final discharge document',
+            description: 'Final discharge document (generated after termination)',
             icon: 'lucide--file-check',
-            available: true // This would depend on backend status
+            available: true // Backend will return 404 if not generated yet
         },
         {
             id: 'dischargeRG',
             title: 'Discharge RG',
-            description: 'RG discharge document',
+            description: 'RG discharge document (not yet implemented)',
             icon: 'lucide--file-check-2',
             available: false // Not implemented yet
         }
     ];
+
+    const anyLoading = loadingDocumentType !== null;
 
     return (
         <div className="modal modal-open">
@@ -65,45 +67,62 @@ const DocumentTypeModal = ({
                     Contract: <strong>{contractData?.contractNumber}</strong>
                     {contractData?.projectName && <> • Project: <strong>{contractData?.projectName}</strong></>}
                 </p>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {documentTypes.map((docType) => (
-                        <button
-                            key={docType.id}
-                            onClick={() => docType.available ? onSelectDocument(docType.id) : null}
-                            disabled={!docType.available || loading}
-                            className={`
-                                card border-2 p-4 text-left transition-all duration-200
-                                ${docType.available 
-                                    ? 'border-base-300 hover:border-primary hover:shadow-md cursor-pointer' 
-                                    : 'border-base-200 bg-base-200 cursor-not-allowed opacity-50'
-                                }
-                                ${loading ? 'loading' : ''}
-                            `}
-                        >
-                            <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0">
-                                    <span className={`iconify ${docType.icon} size-6 ${
-                                        docType.available ? 'text-primary' : 'text-base-content/40'
-                                    }`}></span>
+                    {documentTypes.map((docType) => {
+                        const isLoadingThisDocument = loadingDocumentType === docType.id;
+                        const isDisabled = !docType.available || anyLoading;
+
+                        return (
+                            <button
+                                key={docType.id}
+                                onClick={() => docType.available ? onSelectDocument(docType.id) : null}
+                                disabled={isDisabled}
+                                className={`
+                                    card border-2 p-4 text-left transition-all duration-200
+                                    ${docType.available
+                                        ? 'border-base-300 hover:border-primary hover:shadow-md cursor-pointer'
+                                        : 'border-base-200 bg-base-200 cursor-not-allowed opacity-50'
+                                    }
+                                    ${isLoadingThisDocument ? 'opacity-75' : ''}
+                                    ${anyLoading && !isLoadingThisDocument ? 'opacity-50' : ''}
+                                `}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                        {isLoadingThisDocument ? (
+                                            <span className="loading loading-spinner loading-sm text-primary"></span>
+                                        ) : (
+                                            <span className={`iconify ${docType.icon} size-6 ${
+                                                docType.available ? 'text-primary' : 'text-base-content/40'
+                                            }`}></span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold mb-1">
+                                            {docType.title}
+                                            {isLoadingThisDocument && (
+                                                <span className="text-sm font-normal text-base-content/70 ml-2">
+                                                    Loading...
+                                                </span>
+                                            )}
+                                        </h4>
+                                        <p className="text-sm text-base-content/70">{docType.description}</p>
+                                        {!docType.available && (
+                                            <p className="text-xs text-warning mt-1">Not available</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h4 className="font-semibold mb-1">{docType.title}</h4>
-                                    <p className="text-sm text-base-content/70">{docType.description}</p>
-                                    {!docType.available && (
-                                        <p className="text-xs text-warning mt-1">Not available</p>
-                                    )}
-                                </div>
-                            </div>
-                        </button>
-                    ))}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 <div className="modal-action">
-                    <button 
-                        className="btn btn-ghost" 
+                    <button
+                        className="btn btn-ghost"
                         onClick={onClose}
-                        disabled={loading}
+                        disabled={anyLoading}
                     >
                         Cancel
                     </button>
@@ -214,7 +233,7 @@ const ContractsDatabase = () => {
     const [contractToTerminate, setContractToTerminate] = useState<any>(null);
     const [showDocumentTypeModal, setShowDocumentTypeModal] = useState(false);
     const [contractForDocumentSelection, setContractForDocumentSelection] = useState<any>(null);
-    const [documentTypeLoading, setDocumentTypeLoading] = useState(false);
+    const [loadingDocumentType, setLoadingDocumentType] = useState<string | null>(null);
     const [generatingFinalId, setGeneratingFinalId] = useState<string | null>(null);
     const [showGenerateFinalModal, setShowGenerateFinalModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
@@ -258,37 +277,35 @@ const ContractsDatabase = () => {
     const handleDocumentTypeSelect = async (documentType: string) => {
         if (!contractForDocumentSelection) return;
 
-        setDocumentTypeLoading(true);
+        setLoadingDocumentType(documentType);
         try {
             let endpoint = '';
             let fileName = '';
-            
+
             // Use contract number instead of database ID in filenames
             const contractRef = contractForDocumentSelection.contractNumber || contractForDocumentSelection.id;
-            
+
             switch (documentType) {
                 case 'contract':
                     endpoint = `ContractsDatasets/ExportContractPdf/${contractForDocumentSelection.id}`;
                     fileName = `contract-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'termination':
-                    // Note: This endpoint may not exist yet according to the documentation
                     endpoint = `ContractsDatasets/ExportTerminateFile/${contractForDocumentSelection.id}`;
                     fileName = `termination-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'dischargeFinal':
-                    // Note: This endpoint may not exist yet according to the documentation
                     endpoint = `ContractsDatasets/ExportFinalFile/${contractForDocumentSelection.id}`;
                     fileName = `discharge-final-${contractRef}-${contractForDocumentSelection.projectName || 'document'}.pdf`;
                     break;
                 case 'dischargeRG':
                     // Note: Not implemented according to the documentation
                     toaster.error("Discharge RG is not yet implemented");
-                    setDocumentTypeLoading(false);
+                    setLoadingDocumentType(null);
                     return;
                 default:
                     toaster.error("Unknown document type");
-                    setDocumentTypeLoading(false);
+                    setLoadingDocumentType(null);
                     return;
             }
 
@@ -300,11 +317,11 @@ const ContractsDatabase = () => {
             });
 
             if (response instanceof Blob) {
-                setPreviewData({ 
-                    blob: response, 
-                    id: contractForDocumentSelection.id, 
-                    fileName, 
-                    rowData: contractForDocumentSelection 
+                setPreviewData({
+                    blob: response,
+                    id: contractForDocumentSelection.id,
+                    fileName,
+                    rowData: contractForDocumentSelection
                 });
                 setViewMode('preview');
                 setShowDocumentTypeModal(false);
@@ -312,10 +329,26 @@ const ContractsDatabase = () => {
             } else {
                 toaster.error("Failed to load document preview");
             }
-        } catch (error) {
-            toaster.error("Failed to load document preview");
+        } catch (error: any) {
+            // Handle specific error cases
+            if (error?.response?.status === 404) {
+                switch (documentType) {
+                    case 'termination':
+                        toaster.error("Termination letter has not been generated yet. Please terminate the contract first.");
+                        break;
+                    case 'dischargeFinal':
+                        toaster.error("Final discharge document has not been generated yet. Please generate it first.");
+                        break;
+                    default:
+                        toaster.error("Document not found. It may not have been generated yet.");
+                }
+            } else if (error?.response?.status === 500) {
+                toaster.error("Server error occurred while loading the document.");
+            } else {
+                toaster.error("Failed to load document preview");
+            }
         } finally {
-            setDocumentTypeLoading(false);
+            setLoadingDocumentType(null);
         }
     };
 
@@ -684,10 +717,11 @@ const ContractsDatabase = () => {
                 onClose={() => {
                     setShowDocumentTypeModal(false);
                     setContractForDocumentSelection(null);
+                    setLoadingDocumentType(null);
                 }}
                 onSelectDocument={handleDocumentTypeSelect}
                 contractData={contractForDocumentSelection}
-                loading={documentTypeLoading}
+                loadingDocumentType={loadingDocumentType}
             />
 
             {/* Generate Final Contract Confirmation Modal */}

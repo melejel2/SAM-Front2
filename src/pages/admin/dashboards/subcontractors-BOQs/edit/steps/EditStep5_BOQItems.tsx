@@ -23,6 +23,11 @@ export const EditStep5_BOQItems: React.FC = () => {
     
     const [selectedBuildingForBOQ, setSelectedBuildingForBOQ] = useState<string>("");
     const [selectedSheetForBOQ, setSelectedSheetForBOQ] = useState<string>("");
+    const [isImportingBOQ, setIsImportingBOQ] = useState(false);
+    const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+    const [selectedDescription, setSelectedDescription] = useState<{itemNo: string, description: string} | null>(null);
+    const [showSheetSelectionModal, setShowSheetSelectionModal] = useState(false);
+    const [hasShownAutoPopup, setHasShownAutoPopup] = useState(false);
     
     // Auto-select first building for BOQ when buildings are available
     useEffect(() => {
@@ -70,10 +75,24 @@ export const EditStep5_BOQItems: React.FC = () => {
         }
     }, [buildingSheets, selectedSheetForBOQ, formData.boqData]);
 
-    const [isImportingBOQ, setIsImportingBOQ] = useState(false);
-    const [showDescriptionModal, setShowDescriptionModal] = useState(false);
-    const [selectedDescription, setSelectedDescription] = useState<{itemNo: string, description: string} | null>(null);
-    const [showSheetSelectionModal, setShowSheetSelectionModal] = useState(false);
+    // ✅ AUTO-POPUP: Show sheet selection modal when no trade is selected
+    useEffect(() => {
+        // Only trigger auto-popup when:
+        // 1. User is on Step 5 (component is mounted)
+        // 2. Building is selected
+        // 3. Building sheets are loaded
+        // 4. No sheet is selected yet
+        // 5. Haven't shown auto-popup before
+        if (selectedBuildingForBOQ && 
+            buildingSheets.length > 0 && 
+            !selectedSheetForBOQ && 
+            !sheetsLoading && 
+            !hasShownAutoPopup) {
+            
+            setShowSheetSelectionModal(true);
+            setHasShownAutoPopup(true);
+        }
+    }, [selectedBuildingForBOQ, buildingSheets, selectedSheetForBOQ, sheetsLoading, hasShownAutoPopup]);
 
     // Handle imported BOQ items
     const handleBOQImport = (importedItems: any[]) => {
@@ -307,10 +326,10 @@ export const EditStep5_BOQItems: React.FC = () => {
                     {selectedBuildingForBOQ && (
                         <button
                             onClick={() => setShowSheetSelectionModal(true)}
-                            className={`btn btn-outline btn-sm gap-2 min-w-fit ${
+                            className={`btn btn-outline btn-sm gap-2 min-w-fit transition-all duration-200 ease-in-out ${
                                 selectedSheetForBOQ 
-                                    ? 'btn-primary' 
-                                    : 'btn-warning border-dashed'
+                                    ? 'btn-primary hover:btn-primary-focus' 
+                                    : 'bg-warning/10 border-warning text-warning-content hover:bg-warning/20 hover:border-warning-focus border-dashed dark:bg-warning/20 dark:border-warning dark:text-warning dark:hover:bg-warning/30'
                             }`}
                             disabled={sheetsLoading}
                         >
@@ -318,7 +337,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                             {sheetsLoading ? (
                                 <span className="flex items-center gap-2">
                                     <div className="loading loading-spinner loading-xs"></div>
-                                    Loading...
+                                    <span className="text-base-content/70">Loading...</span>
                                 </span>
                             ) : selectedSheetForBOQ ? (
                                 <span className="flex items-center gap-2">
@@ -326,7 +345,7 @@ export const EditStep5_BOQItems: React.FC = () => {
                                     <Icon icon={editIcon} className="w-3 h-3 opacity-60" />
                                 </span>
                             ) : (
-                                <span className="text-warning-content font-medium">
+                                <span className="font-medium">
                                     Select Sheet (Trade)
                                 </span>
                             )}

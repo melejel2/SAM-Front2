@@ -15,7 +15,9 @@
       "WebSearch",
       "Bash(git show:*)",
       "Read(c:\\Users\\engme\\OneDrive\\Pictures\\Screenshots/**)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Read(//Users/melejel/SAMWEB/SAMBACK/SAMBackend.Application/Services/ContractsDataset/**)",
+      "Read(//Users/melejel/SAMWEB/SAMBACK/**)"
     ],
     "deny": []
   }

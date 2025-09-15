@@ -119,6 +119,7 @@ interface EditWizardContextType {
     subcontractors: Subcontractor[];
     contracts: Contract[];
     currencies: Currency[];
+    originalContractData: SubcontractorBoqVM | null;
     
     // Actions
     setFormData: (data: Partial<EditWizardFormData>) => void;
@@ -224,6 +225,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [currencies, setCurrencies] = useState<Currency[]>([]);
+    const [originalContractData, setOriginalContractData] = useState<SubcontractorBoqVM | null>(null);
     
     // Enhanced form data setter that tracks changes
     const setFormData = useCallback((data: Partial<EditWizardFormData>) => {
@@ -349,6 +351,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             if (result.success && result.data) {
                 const existingData = result.data;
                 
+                // ✅ Store original contract data for project change detection
+                setOriginalContractData(existingData);
 
                 // 🔍 DEBUGGING: Log buildings and BOQ structure
                 console.log("🔍 EDIT PAGE - Buildings and BOQ Structure:", {
@@ -726,6 +730,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         subcontractors,
         contracts,
         currencies,
+        originalContractData,
         
         // Actions
         setFormData,
