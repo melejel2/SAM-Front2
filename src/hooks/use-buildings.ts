@@ -14,10 +14,10 @@ export interface Building {
 export interface BuildingSheet {
   id: number;
   name: string;
-  nameFr?: string;
-  costCode?: string;
-  hasVo?: boolean;
-  isActive?: boolean;
+  hasVo: boolean;
+  isActive: boolean;
+  costCodeId?: number;
+  boqItemCount?: number; // Count of actual BOQ items in this sheet
 }
 
 // API Response interfaces

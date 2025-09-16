@@ -1,10 +1,12 @@
 import React from "react";
 import { Icon } from "@iconify/react";
 import folderIcon from "@iconify/icons-lucide/folder";
+import layersIcon from "@iconify/icons-lucide/layers";
 import buildingIcon from "@iconify/icons-lucide/building";
 import userIcon from "@iconify/icons-lucide/user";
 import contractIcon from "@iconify/icons-lucide/file-signature";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
+import checkIcon from "@iconify/icons-lucide/check";
 import eyeIcon from "@iconify/icons-lucide/eye";
 import sendIcon from "@iconify/icons-lucide/send";
 
@@ -14,12 +16,13 @@ interface StepIndicatorProps {
 
 const steps = [
     { number: 1, title: "Project", icon: folderIcon },
-    { number: 2, title: "Buildings", icon: buildingIcon },
-    { number: 3, title: "Subcontractor", icon: userIcon },
-    { number: 4, title: "Details", icon: contractIcon },
-    { number: 5, title: "BOQ Items", icon: calculatorIcon },
-    { number: 6, title: "Review", icon: eyeIcon },
-    { number: 7, title: "Preview", icon: sendIcon }
+    { number: 2, title: "Trade", icon: layersIcon },
+    { number: 3, title: "Buildings", icon: buildingIcon },
+    { number: 4, title: "Subcontractor", icon: userIcon },
+    { number: 5, title: "Details", icon: contractIcon },
+    { number: 6, title: "BOQ Items", icon: calculatorIcon },
+    { number: 7, title: "Review", icon: checkIcon },
+    { number: 8, title: "Preview", icon: eyeIcon }
 ];
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {

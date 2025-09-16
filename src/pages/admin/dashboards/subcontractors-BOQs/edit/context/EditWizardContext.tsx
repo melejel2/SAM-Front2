@@ -46,6 +46,32 @@ interface Currency {
     currencies: string;
 }
 
+interface Trade {
+    id: number;
+    name: string;
+    code: string;
+    buildingCount: number;
+}
+
+interface BuildingWithSheets extends Building {
+    sheets: Array<{
+        id: number;
+        name: string;
+        hasVo: boolean;
+        isActive: boolean;
+        costCodeId?: number;
+        boqItemCount?: number;
+    }>;
+    availableSheets: Array<{
+        id: number;
+        name: string;
+        hasVo: boolean;
+        isActive: boolean;
+        boqItemCount?: number;
+    }>;
+    sheetCount: number;
+}
+
 export interface BOQItem {
     id?: number;
     no: string;
@@ -60,6 +86,7 @@ export interface BOQItem {
 interface EditWizardFormData {
     id: number; // Different from new wizard - this has an ID
     projectId: number | null;
+    tradeId: number | null;
     buildingIds: number[];
     subcontractorId: number | null;
     contractId: number | null;
@@ -112,13 +139,15 @@ interface EditWizardContextType {
     initialDataLoading: boolean;
     loadingProjects: boolean;
     loadingBuildings: boolean;
-    
+
     // Data
     projects: Project[];
-    buildings: Building[];
+    trades: Trade[];
+    buildings: BuildingWithSheets[];
     subcontractors: Subcontractor[];
     contracts: Contract[];
     currencies: Currency[];
+    allCostCodes: any[];
     originalContractData: SubcontractorBoqVM | null;
     
     // Actions
@@ -128,7 +157,8 @@ interface EditWizardContextType {
     
     // Data fetching
     fetchProjects: () => Promise<void>;
-    fetchBuildingsByProject: (projectId: number) => Promise<void>;
+    fetchCostCodes: () => Promise<void>;
+    fetchBuildingsWithSheets: (projectId: number) => Promise<void>;
     fetchSubcontractors: () => Promise<void>;
     fetchContracts: () => Promise<void>;
     fetchCurrencies: () => Promise<void>;
@@ -147,6 +177,7 @@ interface EditWizardContextType {
 const initialEditFormData: EditWizardFormData = {
     id: 0,
     projectId: null,
+    tradeId: null,
     buildingIds: [],
     subcontractorId: null,
     contractId: null,
@@ -221,10 +252,13 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     
     // Data arrays
     const [projects, setProjects] = useState<Project[]>([]);
-    const [buildings, setBuildings] = useState<Building[]>([]);
+    const [trades, setTrades] = useState<Trade[]>([]);
+    const [allBuildings, setAllBuildings] = useState<BuildingWithSheets[]>([]);
+    const [buildings, setBuildings] = useState<BuildingWithSheets[]>([]);
     const [subcontractors, setSubcontractors] = useState<Subcontractor[]>([]);
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [currencies, setCurrencies] = useState<Currency[]>([]);
+    const [allCostCodes, setAllCostCodes] = useState<any[]>([]);
     const [originalContractData, setOriginalContractData] = useState<SubcontractorBoqVM | null>(null);
     
     // Enhanced form data setter that tracks changes
@@ -255,22 +289,73 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         }
     }, [token]);
     
-    const fetchBuildingsByProject = useCallback(async (projectId: number) => {
+    const fetchCostCodes = useCallback(async () => {
         try {
-            setLoadingBuildings(true);
             const response = await apiRequest({
                 method: "GET",
-                endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
+                endpoint: "CostCode/GetCodeCostLibrary",
                 token: token || undefined,
             });
             if (Array.isArray(response)) {
-                setBuildings(response);
+                setAllCostCodes(response);
             } else if (response.success && Array.isArray(response.data)) {
-                setBuildings(response.data);
+                setAllCostCodes(response.data);
             }
         } catch (error) {
-            console.error("Error fetching buildings:", error);
-            toaster.error("Failed to fetch buildings");
+            console.error("Error fetching cost codes:", error);
+            toaster.error("Failed to fetch cost codes");
+        }
+    }, [token]);
+
+    const fetchBuildingsWithSheets = useCallback(async (projectId: number) => {
+        try {
+            setLoadingBuildings(true);
+            // Use OpenProject API to get full project data with BOQ items (matching budget BOQ approach)
+            const projectData = await apiRequest({
+                method: "GET",
+                endpoint: `Project/OpenProject/${projectId}`,
+                token: token || undefined,
+            });
+
+            if (projectData && projectData.buildings && Array.isArray(projectData.buildings)) {
+                const buildingsWithSheets: BuildingWithSheets[] = projectData.buildings.map((building: any) => {
+                    // Extract sheets with actual BOQ data
+                    const sheets = building.boqSheets || [];
+                    const enhancedSheets = sheets.map((sheet: any) => {
+                        const boqItemCount = (sheet.boqItems && Array.isArray(sheet.boqItems)) ? sheet.boqItems.length : 0;
+
+                        return {
+                            id: sheet.id,
+                            name: sheet.name,
+                            hasVo: sheet.hasVo || false,
+                            isActive: sheet.isActive || true,
+                            costCodeId: sheet.costCodeId,
+                            boqItemCount: boqItemCount
+                        };
+                    });
+
+                    return {
+                        id: building.id,
+                        name: building.name || building.buildingName || `Building ${building.id}`,
+                        buildingName: building.buildingName,
+                        sheets: enhancedSheets,
+                        availableSheets: [],
+                        sheetCount: enhancedSheets.length
+                    };
+                });
+
+                setAllBuildings(buildingsWithSheets);
+                setBuildings(buildingsWithSheets);
+            } else {
+                console.warn("OpenProject returned no buildings or invalid data");
+                setAllBuildings([]);
+                setBuildings([]);
+            }
+        } catch (error) {
+            console.error("Error fetching project with BOQ data:", error);
+            toaster.error("Failed to fetch project data");
+            setAllBuildings([]);
+            setBuildings([]);
         } finally {
             setLoadingBuildings(false);
         }
@@ -424,7 +509,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 
                 // Load buildings for the project
                 if (existingData.projectId) {
-                    await fetchBuildingsByProject(existingData.projectId);
+                    await fetchBuildingsWithSheets(existingData.projectId);
                 }
                 
                 setHasUnsavedChanges(false);
@@ -436,7 +521,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         } finally {
             setInitialDataLoading(false);
         }
-    }, [contractsApi, fetchBuildingsByProject]);
+    }, [contractsApi, fetchBuildingsWithSheets]);
     
     // Validation functions (same as new wizard)
     const validateStep1 = (): boolean => {
@@ -444,14 +529,18 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     };
     
     const validateStep2 = (): boolean => {
+        return formData.tradeId !== null;
+    };
+
+    const validateStep3 = (): boolean => {
         return formData.buildingIds.length > 0;
     };
-    
-    const validateStep3 = (): boolean => {
+
+    const validateStep4 = (): boolean => {
         return formData.subcontractorId !== null;
     };
-    
-    const validateStep4 = (): boolean => {
+
+    const validateStep5 = (): boolean => {
         return (
             formData.contractId !== null &&
             formData.currencyId !== null &&
@@ -460,17 +549,17 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             formData.completionDate !== ''
         );
     };
-    
-    const validateStep5 = (): boolean => {
+
+    const validateStep6 = (): boolean => {
         return formData.boqData.some(building => building.items.length > 0);
     };
-    
-    const validateStep6 = (): boolean => {
-        return true;
-    };
-    
+
     const validateStep7 = (): boolean => {
-        return true;
+        return true; // Review step doesn't require validation
+    };
+
+    const validateStep8 = (): boolean => {
+        return true; // Preview step doesn't require validation
     };
     
     const validateCurrentStep = useCallback((): boolean => {
@@ -482,13 +571,14 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             case 5: return validateStep5();
             case 6: return validateStep6();
             case 7: return validateStep7();
+            case 8: return validateStep8();
             default: return false;
         }
     }, [currentStep, formData]);
     
     // Navigation functions
     const goToNextStep = useCallback(() => {
-        if (validateCurrentStep() && currentStep < 7) {
+        if (validateCurrentStep() && currentStep < 8) {
             setCurrentStep(currentStep + 1);
         }
     }, [validateCurrentStep, currentStep]);
@@ -610,10 +700,15 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     setLoading(true);
                     
                     // First load all master data BEFORE loading existing contract data
-                    const [projectsRes, subcontractorsRes, contractsRes, currenciesRes] = await Promise.allSettled([
+                    const [projectsRes, costCodesRes, subcontractorsRes, contractsRes, currenciesRes] = await Promise.allSettled([
                         apiRequest({
                             method: "GET",
                             endpoint: "Project/GetProjectsList",
+                            token: token,
+                        }),
+                        apiRequest({
+                            method: "GET",
+                            endpoint: "CostCode/GetCodeCostLibrary",
                             token: token,
                         }),
                         apiRequest({
@@ -646,7 +741,20 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             console.error("Error fetching projects:", projectsRes.reason);
                             toaster.error("Failed to fetch projects");
                         }
-                        
+
+                        // Process cost codes
+                        if (costCodesRes.status === 'fulfilled') {
+                            const response = costCodesRes.value;
+                            if (Array.isArray(response)) {
+                                setAllCostCodes(response);
+                            } else if (response.success && Array.isArray(response.data)) {
+                                setAllCostCodes(response.data);
+                            }
+                        } else {
+                            console.error("Error fetching cost codes:", costCodesRes.reason);
+                            toaster.error("Failed to fetch cost codes");
+                        }
+
                         // Process subcontractors
                         if (subcontractorsRes.status === 'fulfilled') {
                             const response = subcontractorsRes.value;
@@ -712,7 +820,78 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             isMounted = false;
         };
     }, [contractId, token]); // Only re-run when contractId or token changes
-    
+
+    // Build trades list from sheet names - ONLY sheets with actual BOQ data (matching budget BOQ behavior)
+    useEffect(() => {
+        if (formData.projectId && allBuildings.length > 0) {
+            const tradesMap = new Map<string, Trade>();
+
+            // Use sheet names as trades - but ONLY sheets with actual BOQ data
+            allBuildings.forEach((building) => {
+                building.sheets.forEach((sheet) => {
+                    // Only include sheets that have actual BOQ data populated (matching budget BOQ behavior)
+                    const hasBoqData = sheet.boqItemCount && sheet.boqItemCount > 0;
+
+                    if (sheet.name && sheet.name.trim() && hasBoqData) {
+                        const sheetName = sheet.name.trim();
+                        const existingTrade = tradesMap.get(sheetName);
+                        if (existingTrade) {
+                            existingTrade.buildingCount++;
+                        } else {
+                            tradesMap.set(sheetName, {
+                                id: sheet.id,
+                                name: sheetName,
+                                code: sheetName,
+                                buildingCount: 1
+                            });
+                        }
+                    }
+                });
+            });
+
+            const finalTrades = Array.from(tradesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+            setTrades(finalTrades);
+        }
+    }, [formData.projectId, allBuildings]); // Remove allCostCodes dependency
+
+    // Fetch buildings with sheets when project changes
+    useEffect(() => {
+        if (formData.projectId) {
+            fetchBuildingsWithSheets(formData.projectId);
+            // Clear trade and building selections when project changes
+            setFormData({ tradeId: null, buildingIds: [] });
+        }
+    }, [formData.projectId]);
+
+    // Filter buildings when trade changes (SIMPLE: based on sheet names)
+    useEffect(() => {
+        if (formData.tradeId && allBuildings.length > 0) {
+            // Find the selected trade
+            const selectedTrade = trades.find(t => t.id === formData.tradeId);
+            if (selectedTrade) {
+                const filteredBuildings = allBuildings.map(building => {
+                    // Filter sheets by trade name (sheet name)
+                    const availableSheets = building.sheets.filter(sheet =>
+                        sheet.name === selectedTrade.name
+                    );
+                    return {
+                        ...building,
+                        availableSheets,
+                        sheetCount: availableSheets.length
+                    };
+                }).filter(building => building.sheetCount > 0);
+
+                console.log(`🔍 EDIT Filtered buildings for trade "${selectedTrade.name}":`, filteredBuildings);
+                setBuildings(filteredBuildings);
+                // Clear building selection when trade changes
+                setFormData({ buildingIds: [] });
+            }
+        } else if (!formData.tradeId) {
+            // Reset to all buildings when no trade selected
+            setBuildings(allBuildings);
+        }
+    }, [formData.tradeId, allBuildings, trades]);
+
     // Context value
     const contextValue: EditWizardContextType = {
         // State
@@ -726,20 +905,23 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         
         // Data
         projects,
+        trades,
         buildings,
         subcontractors,
         contracts,
         currencies,
+        allCostCodes,
         originalContractData,
-        
+
         // Actions
         setFormData,
         setCurrentStep,
         setHasUnsavedChanges,
-        
+
         // Data fetching
         fetchProjects,
-        fetchBuildingsByProject,
+        fetchCostCodes,
+        fetchBuildingsWithSheets,
         fetchSubcontractors,
         fetchContracts,
         fetchCurrencies,

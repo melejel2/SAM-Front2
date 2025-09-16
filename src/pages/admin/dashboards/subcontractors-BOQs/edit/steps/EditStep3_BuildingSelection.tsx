@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
 import BuildingChangeWarningDialog from "../../shared/components/BuildingChangeWarningDialog";
 
-export const EditStep2_BuildingSelection: React.FC = () => {
+export const EditStep3_BuildingSelection: React.FC = () => {
     const { formData, setFormData, projects, buildings, originalContractData } = useEditWizardContext();
     const [showBuildingChangeWarning, setShowBuildingChangeWarning] = useState(false);
     const [pendingBuildingChange, setPendingBuildingChange] = useState<{
@@ -89,14 +89,10 @@ export const EditStep2_BuildingSelection: React.FC = () => {
                     <span className="iconify lucide--folder-open size-5 text-primary"></span>
                     <h3 className="font-semibold text-base-content">Project: {selectedProject.name}</h3>
                 </div>
-                <p className="text-sm text-base-content/70 ml-7">Select the buildings for this subcontract</p>
             </div>
 
             {buildings.length > 0 ? (
                 <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Buildings *</span>
-                    </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {buildings.map(building => (
                             <div key={building.id} className="relative">
@@ -125,22 +121,6 @@ export const EditStep2_BuildingSelection: React.FC = () => {
                         ))}
                     </div>
                     
-                    {formData.buildingIds.length > 0 && (
-                        <div className="bg-base-200 border border-base-300 p-3 rounded-lg mt-4">
-                            <div className="flex items-center gap-2">
-                                <span className="iconify lucide--check-circle size-5 text-primary"></span>
-                                <span className="font-medium text-base-content">
-                                    {formData.buildingIds.length} building(s) selected
-                                </span>
-                            </div>
-                            <div className="text-sm text-base-content/70 mt-1">
-                                {buildings
-                                    .filter(b => formData.buildingIds.some(id => id == b.id))
-                                    .map(b => b.name || b.buildingName)
-                                    .join(', ')}
-                            </div>
-                        </div>
-                    )}
                 </div>
             ) : (
                 <div className="text-center py-8">

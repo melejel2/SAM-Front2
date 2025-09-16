@@ -1,9 +1,9 @@
 import React from "react";
-import { useEditWizardContext } from "../context/EditWizardContext";
+import { useWizardContext } from "../context/WizardContext";
 import PreviewStep from "../../components/Preview";
 
-export const EditStep7_Preview: React.FC = () => {
-    const { formData, projects, subcontractors } = useEditWizardContext();
+export const Step8_Preview: React.FC = () => {
+    const { formData, projects, subcontractors } = useWizardContext();
     
     // Get selected project and subcontractor for preview
     const selectedProject = projects.find(p => p.id === formData.projectId);
@@ -15,7 +15,6 @@ export const EditStep7_Preview: React.FC = () => {
                 formData={formData}
                 selectedProject={selectedProject}
                 selectedSubcontractor={selectedSubcontractor}
-                contractId={formData.id} // Pass the contract ID for edit mode
             />
         </div>
     );

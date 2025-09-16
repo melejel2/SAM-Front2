@@ -1,87 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { useWizardContext } from "../context/WizardContext";
+import React, { useState, useEffect, useRef } from "react";
+import { useEditWizardContext } from "../context/EditWizardContext";
 import { AttachmentsDialog, AttachmentsType } from "../components/AttachmentsDialog";
 
-// Define the floating label input component for reusability
-const FloatingLabelInput: React.FC<{
-    type?: string;
-    value: string | number;
-    onChange: (value: string | number) => void;
-    label: string;
-    required?: boolean;
-    placeholder?: string;
-    min?: string;
-    max?: string;
-    step?: string;
-    suffix?: string;
-}> = ({ 
-    type = "text", 
-    value, 
-    onChange, 
-    label, 
-    required = false, 
-    placeholder = " ",
-    min,
-    max,
-    step,
-    suffix
-}) => {
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (type === "number") {
-            const numValue = e.target.value === '' ? 0 : Number(e.target.value);
-            onChange(numValue);
-        } else {
-            onChange(e.target.value);
-        }
-    };
 
-    const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
-        if (suffix) {
-            // Allow only numbers and decimal point for percentage fields
-            const value = e.currentTarget.value;
-            if (!/^\d*\.?\d*$/.test(value)) {
-                e.currentTarget.value = value.slice(0, -1);
-            }
-        }
-    };
-
-    const displayValue = type === "number" && value === 0 ? '' : value;
-    const hasValue = value !== undefined && value !== null && value !== '' && !(type === "number" && value === 0);
-
-    return (
-        <div className="relative">
-            <input
-                type={type}
-                className={`input input-bordered w-full peer ${suffix ? 'pr-10' : ''}`}
-                placeholder={placeholder}
-                value={displayValue}
-                onChange={handleChange}
-                onInput={handleInput}
-                required={required}
-                min={min}
-                max={max}
-                step={step}
-            />
-            <label className={`absolute left-3 text-base-content/60 text-sm transition-all duration-200 pointer-events-none ${
-                hasValue
-                    ? 'top-1 text-xs text-primary bg-base-100 px-1'
-                    : 'top-1/2 transform -translate-y-1/2 peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-base-100 peer-focus:px-1'
-            }`}>
-                {label}{required && " *"}
-            </label>
-            {suffix && (
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-base-content/60 text-sm">
-                    {suffix}
-                </span>
-            )}
-        </div>
-    );
-};
-
-export const Step4_ContractDetails: React.FC = () => {
-    const { formData, setFormData, contracts, currencies, projects } = useWizardContext();
-    const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("");
+export const EditStep5_ContractDetails: React.FC = () => {
+    const { formData, setFormData, contracts, currencies, projects } = useEditWizardContext();
+    const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("001");
     const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
+    const previousContractNumberRef = useRef<string>("");
 
     // Get the selected project to access its acronym from database
     const selectedProject = projects.find(p => p.id === formData.projectId);
@@ -89,39 +15,42 @@ export const Step4_ContractDetails: React.FC = () => {
 
     // Generate the full contract number
     const generateContractNumber = (suffix: string) => {
-        // If suffix is empty, use "000" for the final contract number
-        const finalSuffix = suffix.trim() === '' ? '000' : suffix.padStart(3, '0');
-        return `CS-${projectAcronym}-${finalSuffix}`;
+        return `CS-${projectAcronym}-${suffix.padStart(3, '0')}`;
     };
 
-    // Update contract number when suffix or project changes
-    useEffect(() => {
-        const newContractNumber = generateContractNumber(contractNumberSuffix);
-        // Only update if the generated number is different from current one
-        if (formData.contractNumber !== newContractNumber) {
-            setFormData({ contractNumber: newContractNumber });
-        }
-    }, [contractNumberSuffix, projectAcronym, formData.contractNumber, setFormData]);
-
-    // Initialize contract number suffix from existing contract number (only run once on mount or project change)
+    // Initialize contract number suffix from existing contract number (run once on mount)
     useEffect(() => {
         if (formData.contractNumber && formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
             const suffix = formData.contractNumber.split('-')[2];
-            if (suffix && /^\d{3}$/.test(suffix) && suffix !== contractNumberSuffix) {
+            if (suffix && /^\d{3}$/.test(suffix)) {
                 setContractNumberSuffix(suffix);
             }
         }
-        // Only run when projectAcronym changes, not when contractNumber changes
-    }, [projectAcronym]);
+        // Remove automatic contract number generation - only generate when user changes suffix
+    }, []); // Run only once on mount
+    
+    // Update contract number when suffix changes (handle manually)
+    const updateContractNumber = (newSuffix: string) => {
+        if (projectAcronym !== "XXX") {
+            const newContractNumber = generateContractNumber(newSuffix);
+            // Only update if it's empty or follows the pattern (not a custom contract number)
+            if (!formData.contractNumber || formData.contractNumber.startsWith(`CS-${projectAcronym}-`)) {
+                setFormData({ contractNumber: newContractNumber });
+            }
+        }
+    };
 
     const handleFieldChange = (field: string, value: any) => {
         setFormData({ [field]: value });
     };
 
     const handleContractNumberSuffixChange = (newSuffix: string) => {
-        // Only allow numeric input
-        const numericValue = newSuffix.replace(/\D/g, '');
-        setContractNumberSuffix(numericValue);
+        // Only allow numbers, max 3 digits
+        const cleanSuffix = newSuffix.replace(/\D/g, '').substring(0, 3);
+        const finalSuffix = cleanSuffix || "001";
+        setContractNumberSuffix(finalSuffix);
+        // Update contract number immediately when suffix changes
+        updateContractNumber(finalSuffix);
     };
 
     return (
@@ -176,15 +105,7 @@ export const Step4_ContractDetails: React.FC = () => {
                     <input type="date" className="input input-bordered" value={formData.completionDate} onChange={(e) => handleFieldChange('completionDate', e.target.value)} />
                 </div>
 
-                {/* Row 2: Sub-trade (moved under currency) */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Sub-trade</span>
-                    </label>
-                    <input type="text" className="input input-bordered" value={formData.subTrade || ''} onChange={(e) => handleFieldChange('subTrade', e.target.value)} placeholder="Enter sub-trade" />
-                </div>
-
-                {/* Row 3: Contract Number */}
+                {/* Row 2: Contract Number & Sub-trade */}
                 <div className="form-control lg:col-span-2">
                     <label className="label">
                         <span className="label-text">Contract Number *</span>
@@ -193,8 +114,15 @@ export const Step4_ContractDetails: React.FC = () => {
                         <span className={`font-mono px-3 py-2 rounded border ${projectAcronym === "XXX" ? "bg-warning/20 text-warning border-warning/40" : "bg-base-200 text-base-content/80 border-base-300"}`}>
                             CS-{projectAcronym}-
                         </span>
-                        <input type="text" className="input input-bordered w-24 text-center font-mono" value={contractNumberSuffix} onChange={(e) => handleContractNumberSuffixChange(e.target.value)} placeholder="000" disabled={projectAcronym === "XXX"} />
+                        <input type="text" className="input input-bordered w-24 text-center font-mono" value={contractNumberSuffix} onChange={(e) => handleContractNumberSuffixChange(e.target.value)} placeholder="001" maxLength={3} disabled={projectAcronym === "XXX"} />
                     </div>
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Sub-trade</span>
+                    </label>
+                    <input type="text" className="input input-bordered" value={formData.subTrade || ''} onChange={(e) => handleFieldChange('subTrade', e.target.value)} placeholder="Enter sub-trade" />
                 </div>
             </div>
 

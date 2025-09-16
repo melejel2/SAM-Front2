@@ -15,7 +15,7 @@ interface Subcontractor {
     subcontractorTel?: string | null;
 }
 
-export const EditStep3_SubcontractorSelection: React.FC = () => {
+export const EditStep4_SubcontractorSelection: React.FC = () => {
     const { formData, setFormData, subcontractors, loading } = useEditWizardContext();
     
     // Calculate selectedSubcontractor directly from current state

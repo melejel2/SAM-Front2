@@ -75,7 +75,7 @@ export const Sidebar = () => {
     setDisplayText("");
     setIsTyping(true);
     let index = 0;
-    const typingSpeed = 50; // ms per letter
+    const typingSpeed = 25; // ms per letter (reduced from 50 for faster typing)
     const timer = setInterval(() => {
       index++;
       setDisplayText(hoveredItem.substring(0, index));
@@ -94,8 +94,8 @@ export const Sidebar = () => {
 
   // Calculate line positioning based on number of items
   const totalItems = navigationItems.length;
-  const itemHeight = 44; // height of each icon container (increased from 40)
-  const spacing = 16; // spacing between items (increased from 14)
+  const itemHeight = 40; // height of each icon container (reduced from 44)
+  const spacing = 14; // spacing between items (reduced from 16)
   const totalHeight = (totalItems * itemHeight) + ((totalItems - 1) * spacing);
   const lineStart = (itemHeight / 2); // Start from center of first icon
   const lineEnd = totalHeight - (itemHeight / 2); // End at center of last icon
@@ -117,13 +117,13 @@ export const Sidebar = () => {
         )}
         
         {/* Navigation items */}
-        <div className="relative flex flex-col items-center space-y-4 py-4">
+        <div className="relative flex flex-col items-center space-y-3.5 py-4">
           {navigationItems.map((item, index) => {
             const active = isActive(item);
             const isHovered = hoveredItem === item.label;
 
             // Base styles for icon and container
-            let containerClasses = 'flex items-center transition-all duration-200 rounded-full h-11 relative z-10 ';
+            let containerClasses = 'flex items-center transition-all duration-200 rounded-full h-10 relative z-10 ';
             
             if (active) {
               containerClasses += 'bg-primary text-primary-content shadow-sm';
@@ -151,33 +151,40 @@ export const Sidebar = () => {
                   onMouseEnter={() => setHoveredItem(item.label)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  <div className={containerClasses} style={{
-                    width: isHovered ? 'auto' : '2.75rem',
-                    maxWidth: isHovered ? '200px' : '2.75rem',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <div className="flex items-center justify-center min-w-[44px] h-11">
-                      <span className={`iconify ${item.icon} text-2xl`} />
+                  <div className="flex items-center relative">
+                    {/* Fixed icon button container */}
+                    <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 relative z-20 ${containerClasses}`}>
+                      <span className={`iconify ${item.icon} text-xl`} />
                     </div>
-                    
-                    <div className="whitespace-nowrap overflow-hidden" style={{
-                      maxWidth: isHovered ? '160px' : '0',
-                      opacity: isHovered ? 1 : 0,
-                      transition: 'all 0.2s ease'
-                    }}>
-                      <span className="pr-3 text-base font-medium">
-                        {isHovered ? (
-                          <>
+
+                    {/* Expanding text container - positioned behind and to the right */}
+                    {isHovered && (
+                      <div
+                        className={`absolute left-6 top-0 h-10 flex items-center rounded-r-lg transition-all duration-200 overflow-hidden z-10 ${
+                          active
+                            ? 'bg-primary text-primary-content shadow-sm'
+                            : (isDarkMode
+                                ? 'bg-gray-800 border border-gray-700 text-gray-400'
+                                : 'bg-white border border-gray-300 text-gray-700')
+                        }`}
+                        style={{
+                          paddingLeft: '24px', // Space for the icon overlap
+                          paddingRight: '12px',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div className="whitespace-nowrap">
+                          <span className="text-sm font-medium">
                             {displayText}
                             {isTyping && (
                               <span className="border-r-2 ml-0.5 border-current animate-[blink_1s_step-end_infinite]">
                                 &nbsp;
                               </span>
                             )}
-                          </>
-                        ) : item.label}
-                      </span>
-                    </div>
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Link>
               </div>

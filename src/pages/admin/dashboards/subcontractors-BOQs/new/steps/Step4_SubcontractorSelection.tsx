@@ -15,7 +15,7 @@ interface Subcontractor {
     subcontractorTel?: string | null;
 }
 
-export const Step3_SubcontractorSelection: React.FC = () => {
+export const Step4_SubcontractorSelection: React.FC = () => {
     const { formData, setFormData, subcontractors, loading } = useWizardContext();
     
     // Find selected subcontractor based on formData.subcontractorId

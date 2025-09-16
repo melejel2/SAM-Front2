@@ -1,8 +1,8 @@
 import React from "react";
-import { useWizardContext } from "../context/WizardContext";
+import { useEditWizardContext } from "../context/EditWizardContext";
 
-export const Step6_Review: React.FC = () => {
-    const { formData, projects, buildings, subcontractors, contracts, currencies } = useWizardContext();
+export const EditStep7_Review: React.FC = () => {
+    const { formData, projects, buildings, subcontractors, contracts, currencies } = useEditWizardContext();
 
     // Helper functions
     const getProjectName = () => {
@@ -12,7 +12,7 @@ export const Step6_Review: React.FC = () => {
 
     const getBuildingNames = () => {
         return formData.buildingIds
-            .map(id => buildings.find(b => b.id === id)?.name || `Building ${id}`)
+            .map(id => buildings.find(b => b.id === id)?.name || buildings.find(b => b.id === id)?.buildingName || `Building ${id}`)
             .join(', ');
     };
 
@@ -42,7 +42,7 @@ export const Step6_Review: React.FC = () => {
         return formData.boqData.reduce((sum, buildingBOQ) => 
             sum + buildingBOQ.items.reduce((itemSum, item) => {
                 if (!item.unite) return itemSum; // Skip items without unit
-                return itemSum + (item.qte * item.pu);
+                return itemSum + (item.totalPrice || item.qte * item.pu);
             }, 0), 0
         );
     };
@@ -50,6 +50,14 @@ export const Step6_Review: React.FC = () => {
     return (
         <div>
             <div className="space-y-4">
+                {/* Contract Number Display */}
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                        <span className="iconify lucide--file-text w-5 h-5 text-primary"></span>
+                        <span className="font-semibold text-primary">Contract: {formData.contractNumber || 'Not specified'}</span>
+                    </div>
+                </div>
+
                 {/* Project Information */}
                 <div className="bg-base-200/50 rounded-xl p-6 border border-base-300">
                     <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
@@ -162,7 +170,7 @@ export const Step6_Review: React.FC = () => {
                         {formData.boqData.map(buildingBOQ => {
                             const buildingTotal = buildingBOQ.items.reduce((sum, item) => {
                                 if (!item.unite) return sum; // Skip items without unit
-                                return sum + (item.qte * item.pu);
+                                return sum + (item.totalPrice || item.qte * item.pu);
                             }, 0);
                             
                             if (buildingBOQ.items.length === 0) return null;
@@ -225,7 +233,7 @@ export const Step6_Review: React.FC = () => {
                             <h4 className="font-semibold text-info mb-1">Review Complete</h4>
                             <p className="text-sm text-base-content/70">
                                 Please review all information above carefully. Click "Next" to proceed to the preview step 
-                                where you can generate the final contract document.
+                                where you can generate the updated contract document.
                             </p>
                         </div>
                     </div>
