@@ -14,12 +14,26 @@ import useBuildings, { BuildingSheet } from "@/hooks/use-buildings";
 import DescriptionModal from "../../components/DescriptionModal";
 import SheetSelectionModal from "../../components/SheetSelectionModal";
 import BOQImportModal from "../../shared/components/BOQImportModal";
+import CostCodeSelectionModal from "../../components/CostCodeSelectionModal";
+import useCostCodeSelection from "../../hooks/use-cost-code-selection";
+import BudgetBOQSelectionModal from "../../components/BudgetBOQSelectionModal";
+import { useContractsApi } from "../../hooks/use-contracts-api";
 
 export const Step6_BOQItems: React.FC = () => {
     const { formData, setFormData, buildings } = useWizardContext();
     const { toaster } = useToast();
     const { units } = useBOQUnits();
     const { buildingSheets, sheetsLoading, getBuildingSheets } = useBuildings();
+    const { 
+        costCodes, 
+        loading: costCodesLoading, 
+        selectedCostCode, 
+        modalOpen: costCodeModalOpen, 
+        setModalOpen: setCostCodeModalOpen,
+        handleCostCodeSelect,
+        handleCostCodeDoubleClick 
+    } = useCostCodeSelection();
+    const { copyBoqItems, loading: budgetBOQLoading } = useContractsApi();
     
     const [selectedBuildingForBOQ, setSelectedBuildingForBOQ] = useState<string>(
         formData.buildingIds && formData.buildingIds.length > 0 ? formData.buildingIds[0].toString() : ""
@@ -29,6 +43,9 @@ export const Step6_BOQItems: React.FC = () => {
     const [showDescriptionModal, setShowDescriptionModal] = useState(false);
     const [selectedDescription, setSelectedDescription] = useState<{itemNo: string, description: string} | null>(null);
     const [showSheetSelectionModal, setShowSheetSelectionModal] = useState(false);
+    const [selectedBOQItemIndex, setSelectedBOQItemIndex] = useState<number | null>(null);
+    const [showBudgetBOQModal, setShowBudgetBOQModal] = useState(false);
+    const [budgetBOQLoaded, setBudgetBOQLoaded] = useState(false);
 
     // Load sheets when building changes
     useEffect(() => {
@@ -54,6 +71,12 @@ export const Step6_BOQItems: React.FC = () => {
 
         if (!selectedBuildingForBOQ) {
             toaster.error("Please select a building first");
+            return;
+        }
+
+        // Check if Budget BOQ is loaded and prevent import
+        if (budgetBOQLoaded) {
+            toaster.error("Cannot import BOQ items when Budget BOQ is loaded. Budget BOQ structure must be preserved.");
             return;
         }
 
@@ -211,6 +234,122 @@ export const Step6_BOQItems: React.FC = () => {
         return buildingBOQ?.items || [];
     };
 
+    // Handle cost code selection for a BOQ item
+    const handleCostCodeSelectForItem = (costCode: any) => {
+        if (selectedBOQItemIndex !== null) {
+            updateBOQItem(selectedBOQItemIndex, 'costCode', costCode.code);
+            setSelectedBOQItemIndex(null);
+        }
+    };
+
+    // Handle double-click on cost code cell
+    const handleCostCodeCellDoubleClick = (itemIndex: number, currentCostCode?: string) => {
+        setSelectedBOQItemIndex(itemIndex);
+        handleCostCodeDoubleClick(currentCostCode);
+    };
+
+    // Check if a field is readonly for Budget BOQ items
+    const isFieldReadonly = (item: any, fieldName: string) => {
+        const isReadonly = item._budgetBOQSource && item._readonly && item._readonly.includes(fieldName);
+        // 🔍 DEBUG: Log readonly check results - FOCUS ON RESTRICTED FIELDS
+        if (item._budgetBOQSource) {
+            if (['no', 'key', 'costCode', 'unite'].includes(fieldName)) {
+                console.log(`🚫 RESTRICTED FIELD CHECK - Field: ${fieldName}`);
+                console.log(`🚫 _budgetBOQSource: ${item._budgetBOQSource}`);
+                console.log(`🚫 _readonly array:`, item._readonly);
+                console.log(`🚫 Field in readonly array:`, item._readonly?.includes(fieldName));
+                console.log(`🚫 Final readonly result: ${isReadonly}`);
+                if (isReadonly) {
+                    console.log(`✅ FIELD SHOULD BE BLOCKED: ${fieldName}`);
+                } else {
+                    console.log(`❌ FIELD NOT BLOCKED - BUG! ${fieldName}`);
+                }
+            } else if (['qte', 'pu'].includes(fieldName)) {
+                console.log(`✅ EDITABLE FIELD: ${fieldName} should be editable (readonly: ${isReadonly})`);
+            }
+        }
+        return isReadonly;
+    };
+
+    // Handle field edit with Budget BOQ restrictions
+    const handleFieldEdit = (index: number, field: string, value: any, item: any, isEmptyRow: boolean) => {
+        // Check if field is readonly
+        if (isFieldReadonly(item, field)) {
+            toaster.warning(`${field.charAt(0).toUpperCase() + field.slice(1)} cannot be modified when loaded from Budget BOQ`);
+            return;
+        }
+
+        // Allow editing for empty rows or editable fields
+        if (isEmptyRow && value) {
+            const newItemData: Partial<BOQItem> = {};
+            newItemData[field as keyof BOQItem] = value;
+            addNewBOQItem(newItemData, field);
+        } else if (!isEmptyRow) {
+            updateBOQItem(index, field as keyof BOQItem, value);
+        }
+    };
+
+    // Handle Budget BOQ loading
+    const handleLoadBudgetBOQ = async (sheetName: string, buildingIds: number[]) => {
+        console.log("🎯📋 NEW - BUDGET BOQ LOADING STARTED");
+        console.log("🎯📋 NEW - Sheet Name:", sheetName);
+        console.log("🎯📋 NEW - Building IDs:", buildingIds);
+        
+        if (!sheetName || buildingIds.length === 0) {
+            toaster.error("Please select a sheet and buildings");
+            return;
+        }
+
+        try {
+            const result = await copyBoqItems({
+                sheetName: sheetName,
+                buildingIds: buildingIds
+            });
+
+            console.log("🎯📋 NEW - API RESPONSE:", result);
+            console.log("🎯📋 NEW - API Success:", result.success);
+            console.log("🎯📋 NEW - API Data:", result.data);
+
+            if (result.success && result.data) {
+                // Transform Budget BOQ data to our BOQ format with field restrictions
+                const transformedBOQData = result.data.map((building: any) => ({
+                    buildingId: building.id,
+                    buildingName: building.buildingName,
+                    sheetName: building.sheetName,
+                    items: building.boqsContract.map((item: any) => ({
+                        id: item.id || 0,
+                        no: item.no || '',
+                        key: item.key || '',
+                        costCode: item.costCode || '',
+                        unite: item.unite || '',
+                        // ✅ LOAD quantities and unit prices from Budget BOQ (user can edit these)
+                        qte: item.qte || 0,
+                        pu: item.pu || 0,
+                        totalPrice: item.totalPrice || ((item.qte || 0) * (item.pu || 0)),
+                        // Add metadata to track Budget BOQ source
+                        _budgetBOQSource: true,
+                        _readonly: ['no', 'key', 'costCode', 'unite'] // Only these fields are readonly
+                    }))
+                }));
+
+                // Update form data with Budget BOQ items - use the correct function signature
+                console.log("🎯📋 CALLING setFormData with:", { boqData: transformedBOQData });
+                
+                setFormData({ boqData: transformedBOQData });
+
+                setBudgetBOQLoaded(true);
+                setShowBudgetBOQModal(false);
+                
+                toaster.success(`Budget BOQ loaded successfully! Loaded ${transformedBOQData.reduce((sum: number, building: any) => sum + building.items.length, 0)} items with quantities/prices from ${transformedBOQData.length} buildings. Structure fields are now read-only.`);
+            } else {
+                toaster.error("Failed to load Budget BOQ items");
+            }
+        } catch (error) {
+            console.error("Error loading Budget BOQ:", error);
+            toaster.error("An error occurred while loading Budget BOQ items");
+        }
+    };
+
     if (formData.buildingIds.length === 0) {
         return (
             <div className="text-center py-8">
@@ -284,13 +423,36 @@ export const Step6_BOQItems: React.FC = () => {
                     )}
                 </div>
                 
-                <button
-                    onClick={() => setIsImportingBOQ(true)}
-                    className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
-                >
-                    <Icon icon={uploadIcon} className="w-4 h-4" />
-                    Import BOQ
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowBudgetBOQModal(true)}
+                        className="btn btn-success btn-sm hover:btn-success-focus transition-all duration-200 ease-in-out"
+                        disabled={!selectedSheetForBOQ || budgetBOQLoading}
+                        title="Load items from Budget BOQ with field restrictions"
+                    >
+                        {budgetBOQLoading ? (
+                            <>
+                                <div className="loading loading-spinner loading-xs"></div>
+                                Loading...
+                            </>
+                        ) : (
+                            <>
+                                <Icon icon={layersIcon} className="w-4 h-4" />
+                                Load Budget BOQ
+                            </>
+                        )}
+                    </button>
+                    
+                    <button
+                        onClick={() => setIsImportingBOQ(true)}
+                        className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
+                        disabled={budgetBOQLoaded}
+                        title={budgetBOQLoaded ? "Import disabled when Budget BOQ is loaded" : "Import BOQ from Excel file"}
+                    >
+                        <Icon icon={uploadIcon} className="w-4 h-4" />
+                        Import BOQ
+                    </button>
+                </div>
             </div>
 
             {selectedBuildingForBOQ && (
@@ -324,6 +486,11 @@ export const Step6_BOQItems: React.FC = () => {
                                                         className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
                                                         value={item.no}
                                                         onChange={(e) => {
+                                                            if (isFieldReadonly(item, 'no')) {
+                                                                e.preventDefault();
+                                                                toaster.warning('Reference number cannot be modified for Budget BOQ items');
+                                                                return false;
+                                                            }
                                                             if (isEmptyRow && e.target.value) {
                                                                 addNewBOQItem({ no: e.target.value }, 'no');
                                                             } else if (!isEmptyRow) {
@@ -340,6 +507,11 @@ export const Step6_BOQItems: React.FC = () => {
                                                         className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
                                                         value={item.key}
                                                         onChange={(e) => {
+                                                            if (isFieldReadonly(item, 'key')) {
+                                                                e.preventDefault();
+                                                                toaster.warning('Description cannot be modified for Budget BOQ items');
+                                                                return false;
+                                                            }
                                                             if (isEmptyRow && e.target.value) {
                                                                 addNewBOQItem({ key: e.target.value }, 'key');
                                                             } else if (!isEmptyRow) {
@@ -347,6 +519,10 @@ export const Step6_BOQItems: React.FC = () => {
                                                             }
                                                         }}
                                                         onDoubleClick={() => {
+                                                            if (isFieldReadonly(item, 'key')) {
+                                                                toaster.warning('Description cannot be modified for Budget BOQ items');
+                                                                return;
+                                                            }
                                                             if (item.key) {
                                                                 setSelectedDescription({
                                                                     itemNo: item.no || `Item ${index + 1}`,
@@ -362,16 +538,42 @@ export const Step6_BOQItems: React.FC = () => {
                                                     <input
                                                         id={`boq-input-${item.id}-costCode`}
                                                         type="text"
-                                                        className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                                                        className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 transition-colors ${
+                                                            isFieldReadonly(item, 'costCode') 
+                                                                ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50' 
+                                                                : 'bg-transparent focus:ring-primary/20 cursor-pointer hover:bg-base-200/50'
+                                                        }`}
                                                         value={item.costCode || ''}
                                                         onChange={(e) => {
+                                                            console.log(`📝 COST CODE CHANGE ATTEMPT - Value: "${e.target.value}", Item:`, item);
+                                                            console.log(`📝 _budgetBOQSource: ${item._budgetBOQSource}, _readonly:`, item._readonly);
+                                                            
+                                                            if (isFieldReadonly(item, 'costCode')) {
+                                                                console.log('🚫 BLOCKING COST CODE CHANGE!');
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                toaster.warning('Cost code cannot be modified for Budget BOQ items');
+                                                                return false;
+                                                            }
+                                                            
+                                                            console.log('✅ ALLOWING COST CODE CHANGE (not readonly)');
                                                             if (isEmptyRow && e.target.value) {
                                                                 addNewBOQItem({ costCode: e.target.value }, 'costCode');
                                                             } else if (!isEmptyRow) {
                                                                 updateBOQItem(index, 'costCode', e.target.value);
                                                             }
                                                         }}
+                                                        onDoubleClick={() => {
+                                                            if (isFieldReadonly(item, 'costCode')) {
+                                                                toaster.warning('Cost code cannot be modified for Budget BOQ items');
+                                                                return;
+                                                            }
+                                                            handleCostCodeCellDoubleClick(index, item.costCode);
+                                                        }}
                                                         placeholder=""
+                                                        readOnly={isFieldReadonly(item, 'costCode')}
+                                                        disabled={isFieldReadonly(item, 'costCode')}
+                                                        title={isFieldReadonly(item, 'costCode') ? 'This field is read-only (loaded from Budget BOQ)' : 'Double-click to select from cost code library'}
                                                     />
                                                 </td>
                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
@@ -380,6 +582,11 @@ export const Step6_BOQItems: React.FC = () => {
                                                         className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 border-0"
                                                         value={item.unite || ''}
                                                         onChange={(e) => {
+                                                            if (isFieldReadonly(item, 'unite')) {
+                                                                e.preventDefault();
+                                                                toaster.warning('Unit cannot be modified for Budget BOQ items');
+                                                                return false;
+                                                            }
                                                             const selectedUnit = units.find(unit => unit.name === e.target.value);
                                                             const unitName = selectedUnit?.name || e.target.value;
                                                             if (isEmptyRow && unitName) {
@@ -401,9 +608,17 @@ export const Step6_BOQItems: React.FC = () => {
                                                     <input
                                                         id={`boq-input-${item.id}-qte`}
                                                         type="number"
-                                                        className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unite && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
+                                                            (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')
+                                                                ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
+                                                                : 'bg-transparent focus:ring-primary/20'
+                                                        }`}
                                                         value={item.qte || ''}
                                                         onChange={(e) => {
+                                                            if (isFieldReadonly(item, 'qte')) {
+                                                                toaster.warning('Quantity cannot be modified for Budget BOQ items with readonly restrictions');
+                                                                return;
+                                                            }
                                                             if (!item.unite && !isEmptyRow) return; // Prevent editing if no unit
                                                             const value = parseFloat(e.target.value) || 0;
                                                             if (isEmptyRow && value > 0) {
@@ -414,16 +629,26 @@ export const Step6_BOQItems: React.FC = () => {
                                                         }}
                                                         placeholder=""
                                                         step="0.01"
-                                                        disabled={!item.unite && !isEmptyRow}
+                                                        disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')}
+                                                        readOnly={isFieldReadonly(item, 'qte')}
+                                                        title={isFieldReadonly(item, 'qte') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter quantity'}
                                                     />
                                                 </td>
                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
                                                     <input
                                                         id={`boq-input-${item.id}-pu`}
                                                         type="number"
-                                                        className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unite && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
+                                                            (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')
+                                                                ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
+                                                                : 'bg-transparent focus:ring-primary/20'
+                                                        }`}
                                                         value={item.pu || ''}
                                                         onChange={(e) => {
+                                                            if (isFieldReadonly(item, 'pu')) {
+                                                                toaster.warning('Unit price cannot be modified for Budget BOQ items with readonly restrictions');
+                                                                return;
+                                                            }
                                                             if (!item.unite && !isEmptyRow) return; // Prevent editing if no unit
                                                             const value = parseFloat(e.target.value) || 0;
                                                             if (isEmptyRow && value > 0) {
@@ -434,7 +659,9 @@ export const Step6_BOQItems: React.FC = () => {
                                                         }}
                                                         placeholder=""
                                                         step="0.01"
-                                                        disabled={!item.unite && !isEmptyRow}
+                                                        disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')}
+                                                        readOnly={isFieldReadonly(item, 'pu')}
+                                                        title={isFieldReadonly(item, 'pu') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter unit price'}
                                                     />
                                                 </td>
                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content text-center">
@@ -528,6 +755,32 @@ export const Step6_BOQItems: React.FC = () => {
                     sheetsLoading={sheetsLoading}
                 />
             )}
+
+            {/* Cost Code Selection Modal */}
+            <CostCodeSelectionModal
+                isOpen={costCodeModalOpen}
+                onClose={() => {
+                    setCostCodeModalOpen(false);
+                    setSelectedBOQItemIndex(null);
+                }}
+                onSelect={handleCostCodeSelectForItem}
+                selectedCostCode={selectedCostCode}
+                costCodes={costCodes}
+                loading={costCodesLoading}
+            />
+
+            {/* Budget BOQ Selection Modal */}
+            <BudgetBOQSelectionModal
+                isOpen={showBudgetBOQModal}
+                onClose={() => setShowBudgetBOQModal(false)}
+                onLoadBudgetBOQ={handleLoadBudgetBOQ}
+                projectId={formData.projectId}
+                buildingIds={formData.buildingIds || []}
+                buildings={buildings}
+                selectedSheetName={selectedSheetForBOQ}
+                hasExistingBOQData={hasExistingBOQData()}
+                loading={budgetBOQLoading}
+            />
         </div>
     );
 };

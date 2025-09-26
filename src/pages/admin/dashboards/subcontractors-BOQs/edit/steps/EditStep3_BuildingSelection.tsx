@@ -4,6 +4,23 @@ import BuildingChangeWarningDialog from "../../shared/components/BuildingChangeW
 
 export const EditStep3_BuildingSelection: React.FC = () => {
     const { formData, setFormData, projects, buildings, originalContractData } = useEditWizardContext();
+    
+    // 🔍 DEBUG: Log what the component receives
+    React.useEffect(() => {
+        console.log("🏢 BUILDING SELECTION COMPONENT - Current state:", {
+            formDataBuildingIds: formData.buildingIds,
+            formDataBuildingIdsCount: formData.buildingIds.length,
+            availableBuildings: buildings.map(b => ({ id: b.id, name: b.name || b.buildingName })),
+            availableBuildingsCount: buildings.length,
+            selectedBuildingsCheck: buildings.map(b => ({
+                id: b.id,
+                name: b.name || b.buildingName,
+                isSelected: formData.buildingIds.some(id => id == b.id),
+                isSelectedStrict: formData.buildingIds.some(id => id === b.id)
+            })),
+            hasOriginalContractData: !!originalContractData
+        });
+    }, [formData.buildingIds, buildings, originalContractData]);
     const [showBuildingChangeWarning, setShowBuildingChangeWarning] = useState(false);
     const [pendingBuildingChange, setPendingBuildingChange] = useState<{
         buildingId: number;

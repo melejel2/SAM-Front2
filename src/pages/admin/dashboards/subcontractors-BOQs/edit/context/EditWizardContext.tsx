@@ -453,11 +453,19 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     })),
                 });
 
+                // 🔍 DEBUG: Log building IDs from existing data
+                const extractedBuildingIds = existingData.buildings?.map((b: any) => b.id) || [];
+                console.log("🏢 EDIT MODE - Building IDs from existing data:", {
+                    existingDataBuildings: existingData.buildings,
+                    extractedBuildingIds: extractedBuildingIds,
+                    buildingCount: extractedBuildingIds.length
+                });
+
                 const newFormData = {
                     ...initialEditFormData,
                     id: existingData.id || contractId,
                     projectId: existingData.projectId,
-                    buildingIds: existingData.buildings?.map((b: any) => b.id) || [],
+                    buildingIds: extractedBuildingIds,
                     subcontractorId: existingData.subContractorId,
                     contractId: existingData.contractId,
                     currencyId: existingData.currencyId,
@@ -505,6 +513,14 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 };
 
                 setFormDataState(newFormData);
+                
+                // 🔍 DEBUG: Log final form data
+                console.log("🏢 EDIT MODE - Final form data set:", {
+                    buildingIds: newFormData.buildingIds,
+                    buildingCount: newFormData.buildingIds.length,
+                    projectId: newFormData.projectId,
+                    tradeId: newFormData.tradeId
+                });
                 
                 
                 // Load buildings for the project
@@ -832,6 +848,19 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     // Only include sheets that have actual BOQ data populated (matching budget BOQ behavior)
                     const hasBoqData = sheet.boqItemCount && sheet.boqItemCount > 0;
 
+                    // 🔍 DEBUG: Log all sheets and their BOQ status, especially "Earth Works"
+                    if (sheet.name === "Earth Works") {
+                        console.log("🌍 EARTH WORKS SHEET DEBUG:", {
+                            sheetName: sheet.name,
+                            sheetId: sheet.id,
+                            buildingName: building.name,
+                            buildingId: building.id,
+                            boqItemCount: sheet.boqItemCount,
+                            hasBoqData,
+                            willBeIncludedInTrades: hasBoqData
+                        });
+                    }
+
                     if (sheet.name && sheet.name.trim() && hasBoqData) {
                         const sheetName = sheet.name.trim();
                         const existingTrade = tradesMap.get(sheetName);
@@ -849,10 +878,100 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 });
             });
 
-            const finalTrades = Array.from(tradesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+            let finalTrades = Array.from(tradesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+            // 🔧 EDIT MODE FIX: Ensure existing contract's trade is always available for editing
+            // This handles cases where:
+            // 1. Contract was created when trade had BOQ data
+            // 2. BOQ data was later removed from project sheets
+            // 3. Contract still needs to be editable
+            if (originalContractData && originalContractData.buildings && originalContractData.buildings.length > 0) {
+                const existingSheetName = originalContractData.buildings[0]?.sheetName;
+                if (existingSheetName && !finalTrades.some(trade => trade.name === existingSheetName)) {
+                    console.warn("⚠️ EDIT MODE - Contract uses trade with no current BOQ data:", existingSheetName);
+                    console.warn("⚠️ This suggests the BOQ data was removed after contract creation");
+                    console.log("🔧 EDIT MODE - Adding missing contract trade for editing:", existingSheetName);
+                    
+                    // Find the first sheet with this name to get an ID (even if boqItemCount = 0)
+                    let sheetId = 0;
+                    let foundSheet = false;
+                    allBuildings.forEach(building => {
+                        building.sheets.forEach(sheet => {
+                            if (sheet.name === existingSheetName && sheetId === 0) {
+                                sheetId = sheet.id;
+                                foundSheet = true;
+                            }
+                        });
+                    });
+                    
+                    if (foundSheet) {
+                        // Add the missing trade (marked as legacy/empty)
+                        finalTrades.push({
+                            id: sheetId,
+                            name: existingSheetName,
+                            code: existingSheetName,
+                            buildingCount: 1 // At least the buildings in the contract
+                        });
+                        
+                        // Re-sort after adding
+                        finalTrades = finalTrades.sort((a, b) => a.name.localeCompare(b.name));
+                        console.log("🔧 EDIT MODE - Updated trades list now includes:", finalTrades.map(t => t.name));
+                    } else {
+                        console.error("🚨 CRITICAL - Contract trade doesn't exist in project:", existingSheetName);
+                    }
+                }
+            }
+
             setTrades(finalTrades);
+
+            // 🔧 FIX: Set tradeId based on existing contract data
+            // If we have existing contract data and haven't set tradeId yet, match by sheet name
+            if (originalContractData && !formData.tradeId && originalContractData.buildings && originalContractData.buildings.length > 0) {
+                const existingSheetName = originalContractData.buildings[0]?.sheetName;
+                const existingBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
+                
+                console.log("🔍 TRADE MATCHING DEBUG:", {
+                    existingSheetName,
+                    finalTradesCount: finalTrades.length,
+                    finalTradesNames: finalTrades.map(t => t.name),
+                    originalContractDataExists: !!originalContractData,
+                    currentTradeId: formData.tradeId,
+                    existingBuildingIds
+                });
+                
+                if (existingSheetName) {
+                    // ONLY exact match - no fuzzy matching
+                    const matchingTrade = finalTrades.find(trade => trade.name === existingSheetName);
+                    
+                    console.log("🔍 TRADE MATCHING RESULT:", {
+                        searchingFor: existingSheetName,
+                        matchingTrade,
+                        found: !!matchingTrade,
+                        availableTradesWithBoqData: finalTrades.map(t => t.name)
+                    });
+                    
+                    if (matchingTrade) {
+                        console.log(`🔧 EDIT MODE - Setting tradeId to ${matchingTrade.id} for sheet "${existingSheetName}" with buildingIds:`, existingBuildingIds);
+                        // Set both tradeId AND preserve buildingIds in one update to avoid race condition
+                        setFormDataState(prev => ({ 
+                            ...prev, 
+                            tradeId: matchingTrade.id,
+                            buildingIds: existingBuildingIds // Ensure building IDs are preserved
+                        }));
+                    } else {
+                        console.error("🚨 EDIT MODE - No EXACT match found for sheet:", existingSheetName);
+                        console.error("🚨 This means 'Earth Works' sheet either:");
+                        console.error("   1. Has no BOQ items (boqItemCount = 0)");
+                        console.error("   2. Doesn't exist in current project buildings");
+                        console.error("   3. Sheet name changed after contract was created");
+                        console.error("🚨 Available trades (sheets with BOQ data):", finalTrades.map(t => t.name));
+                    }
+                } else {
+                    console.warn("🚨 EDIT MODE - No sheetName found in existing contract data");
+                }
+            }
         }
-    }, [formData.projectId, allBuildings]); // Remove allCostCodes dependency
+    }, [formData.projectId, allBuildings, originalContractData]); // Add originalContractData dependency
 
     // Fetch buildings with sheets when project changes
     useEffect(() => {
@@ -883,14 +1002,39 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
                 console.log(`🔍 EDIT Filtered buildings for trade "${selectedTrade.name}":`, filteredBuildings);
                 setBuildings(filteredBuildings);
-                // Clear building selection when trade changes
-                setFormData({ buildingIds: [] });
+                
+                // 🔍 DEBUG: Log building IDs state during filtering
+                console.log("🏢 BUILDING FILTER - Current state:", {
+                    selectedTradeId: formData.tradeId,
+                    selectedTradeName: selectedTrade.name,
+                    currentBuildingIds: formData.buildingIds,
+                    filteredBuildingIds: filteredBuildings.map(b => b.id),
+                    buildingIdsStillValid: formData.buildingIds.filter(id => 
+                        filteredBuildings.some(b => b.id === id)
+                    ),
+                    hasOriginalContractData: !!originalContractData
+                });
+                
+                // 🔧 FIX: Only clear building selection if this is NOT from loading existing contract data
+                // If we have existing contract data, preserve the building selections
+                if (!originalContractData) {
+                    // Clear building selection when trade changes (only for new contracts)
+                    setFormData({ buildingIds: [] });
+                } else {
+                    // For edit mode, ensure we don't accidentally clear building IDs
+                    // If building IDs are empty but we have original data, restore them
+                    if (formData.buildingIds.length === 0 && originalContractData.buildings) {
+                        const restoredBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
+                        console.log("🔧 EDIT MODE - Restoring building IDs during filter:", restoredBuildingIds);
+                        setFormDataState(prev => ({ ...prev, buildingIds: restoredBuildingIds }));
+                    }
+                }
             }
         } else if (!formData.tradeId) {
             // Reset to all buildings when no trade selected
             setBuildings(allBuildings);
         }
-    }, [formData.tradeId, allBuildings, trades]);
+    }, [formData.tradeId, allBuildings, trades, originalContractData]); // Add originalContractData dependency
 
     // Context value
     const contextValue: EditWizardContextType = {

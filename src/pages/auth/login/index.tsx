@@ -25,14 +25,11 @@ const LoginPage = () => {
     return (
         <>
             <MetaData title="Login" />
-            {/* Outer container with responsive padding and full viewport height */}
-            <div className="flex items-center justify-center px-4 py-12 lg:px-6">
-                {/* Card container: full width on mobile, with a responsive max-width */}
-                <div className="px-6">
-                    <h3 className="text-center text-xl font-semibold">Login</h3>
-                    <p className="text-base-content/70 mx-6 mt-2 text-center text-sm">
-                        Seamless Access: Your Gateway to your Portal!
-                    </p>
+            <div className="w-full px-8 py-6">
+                <h3 className="text-center text-xl font-semibold">Login</h3>
+                <p className="text-base-content/70 mt-2 text-center text-sm">
+                    Seamless Access: Your Gateway to your Portal!
+                </p>
                     <form
                         className="mt-8 space-y-4"
                         onSubmit={(e) => {
@@ -155,7 +152,6 @@ const LoginPage = () => {
                         </p>
                     </form>
                 </div>
-            </div>
         </>
     );
 };
