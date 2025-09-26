@@ -1,10 +1,11 @@
 import { useState } from "react";
 
-import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+import { ipcApiService } from "@/api/services/ipc-api";
+import type { IpcListItem } from "@/types/ipc";
 
 const useIPCsDatabase = () => {
-    const [tableData, setTableData] = useState<any[]>([]);
+    const [tableData, setTableData] = useState<IpcListItem[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
 
     const { getToken } = useAuth();
@@ -132,14 +133,10 @@ const useIPCsDatabase = () => {
         setLoading(true);
 
         try {
-            const data = await apiRequest({
-                endpoint: "Ipc/GetIpcsList",
-                method: "GET",
-                token: token ?? "",
-            });
-            if (data) {
+            const response = await ipcApiService.getIpcsList(token ?? "");
+            if (response.success && response.data) {
                 const VAT_RATE = 0.18; // 18% VAT rate, adjust as needed
-                const formattedData = data.map((ipc: any) => ({
+                const formattedData = response.data.map((ipc: IpcListItem) => ({
                     ...ipc,
                     // Handle empty contract field - use contractsDatasetId as fallback for now
                     contract: (ipc.contract && ipc.contract.trim() !== "") 
@@ -151,15 +148,17 @@ const useIPCsDatabase = () => {
                     totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)),
                     retention: formatCurrency(ipc.retention),
                     status: formatStatusBadge(ipc.status),
-                    type: formatTypeBadge(ipc.type),
+                    type: formatTypeBadge(ipc.type || ""),
                 }));
                 // Reverse the order to show newest first (inverse order from backend)
                 setTableData(formattedData.reverse());
             } else {
+                console.error("Failed to fetch IPCs:", response.error);
                 setTableData([]);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Error fetching IPCs:", error);
+            setTableData([]);
         } finally {
             setLoading(false);
         }
@@ -167,39 +166,21 @@ const useIPCsDatabase = () => {
 
     const previewIpc = async (ipcId: string) => {
         try {
-            const response = await apiRequest({
-                endpoint: `Ipc/ExportIpcPdf/${ipcId}`,
-                method: "GET",
-                token: token ?? "",
-                responseType: "blob",
-            });
-            
-            if (response instanceof Blob) {
-                return { success: true, blob: response };
-            }
-            return { success: false, blob: null };
+            const response = await ipcApiService.exportIpcPdf(parseInt(ipcId), token ?? "");
+            return response;
         } catch (error) {
             console.error("Error fetching IPC PDF:", error);
-            return { success: false, blob: null };
+            return { success: false, error: "Failed to fetch IPC PDF" };
         }
     };
 
     const downloadIpcExcel = async (ipcId: string) => {
         try {
-            const response = await apiRequest({
-                endpoint: `Ipc/ExportIpcExcel/${ipcId}`,
-                method: "GET",
-                token: token ?? "",
-                responseType: "blob",
-            });
-            
-            if (response instanceof Blob) {
-                return { success: true, blob: response };
-            }
-            return { success: false, blob: null };
+            const response = await ipcApiService.exportIpcExcel(parseInt(ipcId), token ?? "");
+            return response;
         } catch (error) {
             console.error("Error fetching IPC Excel:", error);
-            return { success: false, blob: null };
+            return { success: false, error: "Failed to fetch IPC Excel" };
         }
     };
 
@@ -207,20 +188,11 @@ const useIPCsDatabase = () => {
 
     const exportIpcZip = async (ipcId: string) => {
         try {
-            const response = await apiRequest({
-                endpoint: `Ipc/ExportIpc/${ipcId}`,
-                method: "GET",
-                token: token ?? "",
-                responseType: "blob",
-            });
-            
-            if (response instanceof Blob) {
-                return { success: true, blob: response };
-            }
-            return { success: false, blob: null };
+            const response = await ipcApiService.exportIpcZip(parseInt(ipcId), token ?? "");
+            return response;
         } catch (error) {
             console.error("Error fetching IPC ZIP:", error);
-            return { success: false, blob: null };
+            return { success: false, error: "Failed to fetch IPC ZIP" };
         }
     };
 

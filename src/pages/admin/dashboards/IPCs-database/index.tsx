@@ -97,6 +97,11 @@ const IPCsDatabase = () => {
         }
     };
 
+    const handleEditIpc = (row: any) => {
+        // Navigate to IPC edit page with enhanced penalty and summary features
+        navigate(`/admin/dashboard/IPCs-database/edit/${row.id}`);
+    };
+
     const handleBackToTable = () => {
         setViewMode('table');
         setPreviewData(null);
@@ -206,6 +211,9 @@ const IPCsDatabase = () => {
                             openStaticDialog={(type, data) => {
                                 if (type === "Preview" && data) {
                                     return handlePreviewIpc(data);
+                                }
+                                if (type === "Edit" && data) {
+                                    return handleEditIpc(data);
                                 }
                             }}
                         />

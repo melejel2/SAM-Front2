@@ -67,6 +67,10 @@ const dashboardRoutes: IRoutesProps[] = [
         element: cw(lazy(() => import("@/pages/admin/dashboards/IPCs-database"))),
     },
     {
+        path: "/dashboard/IPCs-database/edit/:id",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/IPCs-database/edit"))),
+    },
+    {
         path: "/dashboard/reports",
         element: cw(lazy(() => import("@/pages/admin/dashboards/reports"))),
     },
