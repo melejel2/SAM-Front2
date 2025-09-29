@@ -499,25 +499,14 @@ const TableComponent: React.FC<TableProps> = ({
     };
 
     const openPreviewDialog = async (row: any) => {
-        setDialogType("Preview");
-        setCurrentRow(row);
-        
-        // Set loading state for this specific row
-        const rowId = row.id || row.contractId || row.projectId || String(row);
-        setInternalPreviewLoadingRowId(rowId);
-        
-        if (dynamicDialog) {
-            handleShow();
-            // Clear loading state after dialog opens
-            setInternalPreviewLoadingRowId(null);
-        } else {
-            if (openStaticDialog) {
-                try {
-                    await openStaticDialog("Preview", row);
-                } finally {
-                    // Clear loading state after preview is handled
-                    setInternalPreviewLoadingRowId(null);
-                }
+        // This action is now hardcoded to use the static dialog for navigation purposes.
+        if (openStaticDialog) {
+            const rowId = row.id || row.contractId || row.projectId || String(row);
+            setInternalPreviewLoadingRowId(rowId);
+            try {
+                await openStaticDialog("Preview", row);
+            } finally {
+                setInternalPreviewLoadingRowId(null);
             }
         }
     };

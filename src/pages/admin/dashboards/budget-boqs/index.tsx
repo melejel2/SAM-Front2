@@ -42,7 +42,7 @@ const BudgetBOQs = () => {
         }
 
         // Navigate to edit page for Edit action using project code instead of ID
-        if (type === "Edit" && data) {
+        if ((type === "Edit" || type === "Preview") && data) {
             const projectCode = data.code || data.id; // fallback to ID if no code
             navigate(`/dashboard/budget-BOQs/edit/${projectCode}`, {
                 state: { projectId: data.id }, // Keep actual ID for API calls
@@ -121,6 +121,7 @@ const BudgetBOQs = () => {
                     actions
                     editAction
                     deleteAction
+                    previewAction
                     title={"Budget BOQs"}
                     loading={loading}
                     addBtn
@@ -128,6 +129,7 @@ const BudgetBOQs = () => {
                     createEndPoint="Project/CreateProject"
                     editEndPoint="Project/UpdateProject"
                     deleteEndPoint="Project/DeleteProject/{id}"
+                    openStaticDialog={openCreateDialog}
                 />
             </div>
 
