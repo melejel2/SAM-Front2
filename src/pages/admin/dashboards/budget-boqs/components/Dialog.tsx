@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import CloseBtn from "@/components/CloseBtn";
 import { Button, Select, SelectOption } from "@/components/daisyui";
@@ -13,34 +13,37 @@ interface BudgetBOQDialogProps {
     dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
     selectedProject: any;
     onSuccess: () => void;
+    onCreate?: (formData: any) => void;
 }
 
-const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({ 
-    handleHide, 
-    dialogRef, 
-    dialogType, 
+const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
+    handleHide,
+    dialogRef,
+    dialogType,
     selectedProject,
-    onSuccess 
+    onSuccess,
+    onCreate,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const { 
-        setSelectedTrade, 
+    const {
+        setSelectedTrade,
         buildings,
         setBuildings,
         projectData,
         setProjectData,
         saveProject,
         getBuildingsList,
-        openProject
+        openProject,
     } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
 
     const handleSubmit = async () => {
         setIsLoading(true);
-
         try {
-            if (projectData) {
+            if (dialogType === "Add" && onCreate) {
+                await onCreate(projectData);
+            } else if (projectData) {
                 const result = await saveProject(projectData);
                 if (result.success) {
                     toaster.success("Project saved successfully!");
@@ -69,18 +72,25 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
     };
 
     useEffect(() => {
-        if (selectedProject && (dialogType === "Edit" || dialogType === "Select")) {
+        if (dialogType === "Add") {
+            setProjectData({
+                name: "",
+                code: "",
+                acronym: "",
+                city: "",
+            });
+        } else if (selectedProject && (dialogType === "Edit" || dialogType === "Select")) {
             // Clear existing state first
             setProjectData(null);
             setBuildings([]);
             setSelectedTrade(null);
-            
+
             // Load project data and buildings with error handling
             const loadProjectData = async () => {
                 try {
                     // Load buildings first
                     await getBuildingsList(selectedProject.id);
-                    
+
                     // Then load project data
                     const data = await openProject(selectedProject.id);
                     if (data) {
@@ -90,7 +100,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                         setProjectData({
                             id: selectedProject.id,
                             currencyId: 1,
-                            buildings: []
+                            buildings: [],
                         });
                     }
                 } catch (error) {
@@ -99,12 +109,14 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                     setProjectData({
                         id: selectedProject.id,
                         currencyId: 1,
-                        buildings: []
+                        buildings: [],
                     });
-                    toaster.warning("Project data loaded with basic structure. You can still create buildings and import BOQ data.");
+                    toaster.warning(
+                        "Project data loaded with basic structure. You can still create buildings and import BOQ data.",
+                    );
                 }
             };
-            
+
             loadProjectData();
         } else {
             // Clear state when not editing
@@ -125,9 +137,9 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                                 <CloseBtn handleClose={handleClose} />
                             </div>
                             <div className="h-full">
-                                <BOQStep 
-                                    dialogType={dialogType} 
-                                    buildings={buildings} 
+                                <BOQStep
+                                    dialogType={dialogType}
+                                    buildings={buildings}
                                     selectedProject={selectedProject}
                                     projectData={projectData}
                                     setProjectData={setProjectData}
