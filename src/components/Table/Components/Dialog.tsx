@@ -85,8 +85,14 @@ const DialogComponent: React.FC<DialogProps> = ({
                 ...prevData,
                 ...current,
             }));
+        } else if (dialogType === "Add") {
+            const initialData: Record<string, any> = {};
+            inputFields?.forEach((field) => {
+                initialData[field.name] = field.value !== undefined ? field.value : "";
+            });
+            setFormData(initialData);
         }
-    }, [current, dialogType]);
+    }, [current, dialogType, inputFields]);
 
     const handleRowSelect = (costCode: any) => {
         if (onSelect) {

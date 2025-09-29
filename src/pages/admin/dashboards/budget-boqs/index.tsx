@@ -126,6 +126,7 @@ const BudgetBOQs = () => {
                     addBtn
                     onSuccess={handleSuccess}
                     createEndPoint="Project/CreateProject"
+                    editEndPoint="Project/UpdateProject"
                     deleteEndPoint="Project/DeleteProject/{id}"
                 />
             </div>
