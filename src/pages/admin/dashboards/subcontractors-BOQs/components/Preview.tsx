@@ -162,27 +162,46 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                 remarkCP: formData.remarkCP || "",
                 contractDatasetStatus: "Editable",
                 isGenerated: false,
-                buildings: formData.boqData.map((building: any) => ({
-                    id: building.buildingId, // Use actual building ID from selected building
-                    buildingName: building.buildingName,
-                    sheetId: 0,
-                    sheetName: building.sheetName || "", // Use empty string if no sheet specified
-                    replaceAllItems: true,
-                    boqsContract: building.items.map((item: any) => ({
-                        id: 0, // Use 0 for preview (not saving to DB, just generating document)
-                        no: item.no,
-                        key: item.key,
-                        unite: item.unite,
-                        qte: item.qte,
-                        pu: item.pu,
-                        costCode: item.costCode || '',
-                        costCodeId: null,
-                        boqtype: "Subcontractor",
-                        boqSheetId: 0,
-                        sheetName: building.sheetName || "", // Use empty string if no sheet specified
-                        orderBoq: 0,
-                        totalPrice: item.qte * item.pu
-                    }))
+                buildings: await Promise.all(formData.boqData.map(async (building: any) => {
+                    // Get the actual sheet ID from the backend
+                    let actualSheetId = 0;
+                    try {
+                        const buildingData = await apiRequest({
+                            endpoint: `Building/GetBuildingSheets/${building.buildingId}`,
+                            method: "GET",
+                            token: token ?? "",
+                        });
+                        
+                        const sheet = buildingData?.find((s: any) => s.name === building.sheetName);
+                        actualSheetId = sheet?.id || 0;
+                        
+                        console.log(`🔍 [Live Preview] Building ${building.buildingId} sheet "${building.sheetName}" resolved to ID: ${actualSheetId}`);
+                    } catch (error) {
+                        console.warn(`⚠️ [Live Preview] Could not resolve sheet ID for building ${building.buildingId}, using 0`);
+                    }
+                    
+                    return {
+                        id: building.buildingId,
+                        buildingName: building.buildingName,
+                        sheetId: actualSheetId, // ✅ Use actual sheet ID
+                        sheetName: building.sheetName || "",
+                        replaceAllItems: true,
+                        boqsContract: building.items.map((item: any) => ({
+                            id: 0,
+                            no: item.no,
+                            key: item.key,
+                            unite: item.unite,
+                            qte: item.qte,
+                            pu: item.pu,
+                            costCode: item.costCode || '',
+                            costCodeId: null,
+                            boqtype: "Subcontractor",
+                            boqSheetId: actualSheetId, // ✅ Use actual sheet ID
+                            sheetName: building.sheetName || "",
+                            orderBoq: 0,
+                            totalPrice: item.qte * item.pu
+                        }))
+                    };
                 }))
             };
 

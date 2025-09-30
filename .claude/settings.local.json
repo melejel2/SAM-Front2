@@ -19,7 +19,8 @@
       "Read(//Users/melejel/SAMWEB/SAMBACK/SAMBackend.Application/Services/ContractsDataset/**)",
       "Read(//Users/melejel/SAMWEB/SAMBACK/**)",
       "Read(//c/Users/engme/OneDrive/Pictures/Screenshots/**)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Read(//c/Users/engme/source/repos/SAMWEB/SAMBACK/**)"
     ],
     "deny": []
   }

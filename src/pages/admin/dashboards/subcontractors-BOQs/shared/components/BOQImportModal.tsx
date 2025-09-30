@@ -133,8 +133,13 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
     };
 
     const handlePreview = async () => {
-        if (!excelFile || selectedBuildingId === 0 || !selectedSheetName) {
-            toaster.error("Please select file, building, and sheet");
+        if (!excelFile) {
+            toaster.error("Please select an Excel file");
+            return;
+        }
+        
+        if (selectedBuildingId === 0 || !selectedSheetName) {
+            toaster.error("Building and trade information is required");
             return;
         }
 
@@ -287,13 +292,25 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             setShowPreview(true);
             
             if (items.length === 0) {
-                toaster.info("No BOQ items found in the Excel file");
+                // Provide specific guidance when no items are found
+                toaster.error(
+                    `No BOQ items found. Please check:\n` +
+                    `• Excel worksheet tab name must be "${selectedSheetName}"\n` +
+                    `• Data must start from row 2 with item numbers in Column A\n` +
+                    `• File format must match the requirements above`
+                );
             } else {
                 toaster.success(`Preview loaded: ${items.length} BOQ items found`);
             }
         } catch (error) {
             console.error("Preview error:", error);
-            toaster.error("Failed to preview BOQ items from Excel file");
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            toaster.error(
+                `Failed to preview BOQ items: ${errorMessage}\n\n` +
+                `Please verify:\n` +
+                `• Excel worksheet tab is named "${selectedSheetName}"\n` +
+                `• File follows the format requirements above`
+            );
         } finally {
             setIsPreviewing(false);
         }
@@ -379,7 +396,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* Building and Sheet Selection */}
+                            {/* Building and Trade Selection */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="form-control">
                                     <label className="label">
@@ -388,11 +405,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                     <select
                                         className="select select-sm bg-base-100 border-base-300 w-full"
                                         value={selectedBuildingId}
-                                        onChange={(e) => {
-                                            setSelectedBuildingId(Number(e.target.value));
-                                            setSelectedSheetName(''); // Reset sheet selection
-                                        }}
-                                        disabled={isPreviewing || isUploading}
+                                        disabled
                                     >
                                         <option value={0}>Select building...</option>
                                         {availableBuildings.map((building) => (
@@ -405,15 +418,14 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
 
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text font-medium">Target Sheet *</span>
+                                        <span className="label-text font-medium">Target Trade *</span>
                                     </label>
                                     <select
                                         className="select select-sm bg-base-100 border-base-300 w-full"
                                         value={selectedSheetName}
-                                        onChange={(e) => setSelectedSheetName(e.target.value)}
-                                        disabled={selectedBuildingId === 0 || isPreviewing || isUploading}
+                                        disabled
                                     >
-                                        <option value="">Select sheet...</option>
+                                        <option value="">Select trade...</option>
                                         {getAvailableSheets().map((sheet) => (
                                             <option key={sheet.id} value={sheet.name}>
                                                 {sheet.name}
@@ -489,7 +501,11 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                         <div>• Data starts from <strong>row 2</strong></div>
                                         <div>• <strong>Cost codes (Column D) are optional</strong></div>
                                         <div>• Use "<strong>-</strong>" for empty quantities/prices</div>
-                                        <div>• Sheet name must match selected trade</div>
+                                        {selectedSheetName && (
+                                            <div className="col-span-2 mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                                <strong>⚠️ Important:</strong> Excel worksheet tab name must be <strong>"{selectedSheetName}"</strong>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -558,7 +574,7 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                             size="sm"
                             className="btn-info"
                             onClick={handlePreview}
-                            disabled={!excelFile || selectedBuildingId === 0 || !selectedSheetName || isPreviewing}
+                            disabled={!excelFile || isPreviewing}
                         >
                             {isPreviewing ? (
                                 <>

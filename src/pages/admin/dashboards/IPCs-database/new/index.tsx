@@ -3,9 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { IPCWizardProvider, useIPCWizardContext } from "./context/IPCWizardContext";
 import { IPCStepIndicator } from "./components/IPCStepIndicator";
 import useToast from "@/hooks/use-toast";
-import { UnsavedChangesDialog } from "../../shared/components/UnsavedChangesDialog";
+import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 import { IPCStepRenderer } from "./components/IPCStepRenderer";
 import { Loader } from "@/components/Loader";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
+import eyeIcon from "@iconify/icons-lucide/eye";
+import checkIcon from "@iconify/icons-lucide/check";
 
 // Inner component that uses the context
 const NewIPCWizardContent: React.FC = () => {
@@ -96,7 +101,7 @@ const NewIPCWizardContent: React.FC = () => {
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                 >
-                    <span className="iconify lucide--arrow-left size-4"></span>
+                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
                     <span>Back</span>
                 </button>
                 
@@ -135,12 +140,12 @@ const NewIPCWizardContent: React.FC = () => {
                             {currentStep === 3 ? (
                                 <>
                                     <span>Review</span>
-                                    <span className="iconify lucide--eye size-4"></span>
+                                    <Icon icon={eyeIcon} className="w-4 h-4" />
                                 </>
                             ) : (
                                 <>
                                     <span>Next</span>
-                                    <span className="iconify lucide--arrow-right size-4"></span>
+                                    <Icon icon={arrowRightIcon} className="w-4 h-4" />
                                 </>
                             )}
                         </button>
@@ -158,7 +163,7 @@ const NewIPCWizardContent: React.FC = () => {
                             ) : (
                                 <>
                                     <span>Create IPC</span>
-                                    <span className="iconify lucide--check size-4"></span>
+                                    <Icon icon={checkIcon} className="w-4 h-4" />
                                 </>
                             )}
                         </button>

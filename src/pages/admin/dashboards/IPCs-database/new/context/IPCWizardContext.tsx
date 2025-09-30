@@ -89,29 +89,34 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
     
-    // Load contracts on mount
-    useEffect(() => {
-        loadContracts();
-    }, []);
-    
     // Load contracts from API
     const loadContracts = useCallback(async () => {
         setLoadingContracts(true);
         try {
+            const token = getToken();
+            if (!token) {
+                toaster.error("Authentication required");
+                return;
+            }
+
             const response = await apiRequest({
-                url: "/ContractsDataset",
-                method: "GET"
+                endpoint: "ContractsDatasets/GetContractsDatasetsList/0",
+                method: "GET",
+                token: token
             });
+            
+            console.log("🔍 Contract API Response:", response);
             
             if (response.isSuccess && response.data) {
                 // Transform contracts data to include building information
                 const contractsWithBuildings = await Promise.all(
                     response.data.map(async (contract: any) => {
                         try {
-                            // Load building data for each contract
+                            // Load building data for each contract using IPC API
                             const buildingResponse = await apiRequest({
-                                url: `/ContractsDataset/${contract.id}/buildings`,
-                                method: "GET"
+                                endpoint: `Ipc/GetContractBuildings/${contract.id}`,
+                                method: "GET",
+                                token: token
                             });
                             
                             return {
@@ -122,7 +127,8 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                                 tradeName: contract.trade?.name || contract.tradeName || 'Unknown Trade',
                                 totalAmount: contract.amount || 0,
                                 status: contract.status || 'Active',
-                                buildings: buildingResponse.isSuccess ? buildingResponse.data : []
+                                buildings: (buildingResponse && Array.isArray(buildingResponse)) ? buildingResponse : 
+                                          (buildingResponse?.data && Array.isArray(buildingResponse.data)) ? buildingResponse.data : []
                             };
                         } catch (error) {
                             // If building data fails, return contract without buildings
@@ -148,7 +154,12 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         } finally {
             setLoadingContracts(false);
         }
-    }, [toaster]);
+    }, [getToken, toaster]);
+    
+    // Load contracts on mount
+    useEffect(() => {
+        loadContracts();
+    }, [loadContracts]);
     
     // Form data setter with unsaved changes tracking
     const setFormData = useCallback((data: Partial<IpcWizardFormData>) => {
