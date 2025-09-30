@@ -380,25 +380,14 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     };
 
     const openPreviewDialog = async (data: any) => {
-        setDialogType("Preview");
-        setCurrentRow(data);
-        
-        // Set loading state for this specific row
-        const rowId = data.id || data.contractId || data.projectId || String(data);
-        setInternalPreviewLoadingRowId(rowId);
-        
-        if (dynamicDialog) {
-            handleShow();
-            // Clear loading state after dialog opens
-            setInternalPreviewLoadingRowId(null);
-        } else {
-            if (openStaticDialog) {
-                try {
-                    await openStaticDialog("Preview", data);
-                } finally {
-                    // Clear loading state after preview is handled
-                    setInternalPreviewLoadingRowId(null);
-                }
+        // This action is now hardcoded to use the static dialog for navigation purposes.
+        if (openStaticDialog) {
+            const rowId = data.id || data.contractId || data.projectId || String(data);
+            setInternalPreviewLoadingRowId(rowId);
+            try {
+                await openStaticDialog("Preview", data);
+            } finally {
+                setInternalPreviewLoadingRowId(null);
             }
         }
     };

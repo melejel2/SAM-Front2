@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
@@ -14,21 +14,24 @@ const BudgetBOQs = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const { 
-        columns, 
-        tableData, 
-        inputFields, 
+    const {
+        columns,
+        tableData,
+        inputFields,
         loading,
         getProjectsList,
         createProject,
         updateProject,
         deleteProject,
-        setSelectedProject: setSelectedProjectInHook
+        setSelectedProject: setSelectedProjectInHook,
     } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
     const { toaster } = useToast();
 
-    const openCreateDialog = async (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select", data?: any) => {
+    const openCreateDialog = async (
+        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select",
+        data?: any,
+    ) => {
         setDialogType(type);
         if (data) {
             setSelectedProject(data);
@@ -37,21 +40,21 @@ const BudgetBOQs = () => {
             setSelectedProject(null);
             setSelectedProjectInHook(null);
         }
-        
+
         // Navigate to edit page for Edit action using project code instead of ID
-        if (type === "Edit" && data) {
+        if ((type === "Edit" || type === "Preview") && data) {
             const projectCode = data.code || data.id; // fallback to ID if no code
             navigate(`/dashboard/budget-BOQs/edit/${projectCode}`, {
-                state: { projectId: data.id } // Keep actual ID for API calls
+                state: { projectId: data.id }, // Keep actual ID for API calls
             });
             return;
         }
-        
+
         handleShow();
     };
 
     const handleBackToDashboard = () => {
-        navigate('/dashboard');
+        navigate("/dashboard");
     };
 
     const handleSuccess = async () => {
@@ -91,7 +94,7 @@ const BudgetBOQs = () => {
 
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
-        if (location.pathname === '/dashboard/budget-BOQs') {
+        if (location.pathname === "/dashboard/budget-BOQs") {
             getProjectsList();
         }
     }, [location.pathname]);
@@ -99,12 +102,11 @@ const BudgetBOQs = () => {
     return (
         <div key={location.pathname}>
             {/* Header with Back Button */}
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBackToDashboard}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
                         <span className="iconify lucide--arrow-left size-4"></span>
                         <span>Back</span>
                     </button>
@@ -119,11 +121,14 @@ const BudgetBOQs = () => {
                     actions
                     editAction
                     deleteAction
+                    previewAction
                     title={"Budget BOQs"}
                     loading={loading}
                     addBtn
                     onSuccess={handleSuccess}
-                    dynamicDialog={false}
+                    createEndPoint="Project/CreateProject"
+                    editEndPoint="Project/UpdateProject"
+                    deleteEndPoint="Project/DeleteProject/{id}"
                     openStaticDialog={openCreateDialog}
                 />
             </div>
@@ -134,6 +139,7 @@ const BudgetBOQs = () => {
                 dialogType={dialogType}
                 selectedProject={selectedProject}
                 onSuccess={handleSuccess}
+                onCreate={handleCreate}
             />
         </div>
     );
