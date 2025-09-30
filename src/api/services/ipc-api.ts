@@ -79,7 +79,7 @@ class IpcApiService {
         endpoint: "Ipc/CreateIpc",
         method: "POST",
         token,
-        body: request
+        body: request as unknown as Record<string, unknown>
       });
       
       return {
@@ -105,7 +105,7 @@ class IpcApiService {
         endpoint: "Ipc/UpdateIpc",
         method: "PUT",
         token,
-        body: request
+        body: request as unknown as Record<string, unknown>
       });
       
       return {

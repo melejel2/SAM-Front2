@@ -97,6 +97,7 @@ interface TableProps {
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
+    detailsAction?: boolean;
     exportAction?: boolean;
     generateAction?: boolean;
 
@@ -146,6 +147,7 @@ const TableComponent: React.FC<TableProps> = ({
     previewAction,
     deleteAction,
     editAction,
+    detailsAction,
     generateAction,
     exportAction,
     rowActions,
@@ -1052,6 +1054,21 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             openPreviewDialog(row);
                                                                         }}>
                                                                         <span className={`iconify ${previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--eye'} text-base-content/70 size-4`}></span>
+                                                                    </Button>
+                                                                )}
+                                                                {detailsAction && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        shape="square"
+                                                                        className="tooltip"
+                                                                        aria-label="View Details"
+                                                                        data-tip="Details"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openStaticDialog?.("Details", row);
+                                                                        }}>
+                                                                        <span className="iconify lucide--info text-base-content/70 size-4"></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.editAction || editAction) && (

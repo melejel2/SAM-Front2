@@ -6,6 +6,10 @@ import { useIpcEdit } from "@/hooks/use-ipc-edit";
 import { Loader } from "@/components/Loader";
 import PenaltyForm from "../components/PenaltyForm";
 import IpcSummary from "../components/IpcSummary";
+import { ipcApiService } from "@/api/services/ipc-api";
+import PDFViewer from "@/components/ExcelPreview/PDFViewer";
+import SAMTable from "@/components/Table";
+import type { SaveIPCVM, ContractBuildingsVM } from "@/types/ipc";
 
 interface IPCEditProps {}
 
@@ -13,7 +17,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toaster } = useToast();
-  const { user } = useAuth();
+  const { authState } = useAuth();
   
   const {
     loading,
@@ -32,7 +36,17 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     clearData
   } = useIpcEdit();
 
-  const [activeTab, setActiveTab] = useState<'details' | 'summary' | 'boq'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'boq' | 'financial' | 'documents'>('details');
+  const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
+  const [editingQuantities, setEditingQuantities] = useState<Set<string>>(new Set());
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
+  const [generatingIpc, setGeneratingIpc] = useState(false);
+  const [calculatedTotals, setCalculatedTotals] = useState({ totalAmount: 0, actualAmount: 0, retentionAmount: 0, advanceDeduction: 0, netPayment: 0 });
   const [formData, setFormData] = useState({
     ipcNumber: '',
     dateIpc: '',
@@ -40,7 +54,11 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     toDate: '',
     retention: 0,
     advance: 0,
-    remarks: ''
+    remarks: '',
+    retentionPercentage: 0,
+    advancePaymentPercentage: 0,
+    penalty: 0,
+    previousPenalty: 0
   });
 
   // Load IPC data on mount
@@ -64,16 +82,39 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
   useEffect(() => {
     if (ipcData) {
       setFormData({
-        ipcNumber: ipcData.ipcNumber || '',
+        ipcNumber: ipcData.number?.toString() || '',
         dateIpc: ipcData.dateIpc || '',
         fromDate: ipcData.fromDate || '',
         toDate: ipcData.toDate || '',
-        retention: ipcData.retention || 0,
-        advance: ipcData.advance || 0,
-        remarks: ipcData.remarks || ''
+        retention: ipcData.retention || ipcData.retentionAmount || 0,
+        advance: ipcData.advance || ipcData.advancePaymentAmount || 0,
+        remarks: ipcData.remarks || '',
+        retentionPercentage: ipcData.retentionPercentage || 0,
+        advancePaymentPercentage: ipcData.advancePaymentPercentage || 0,
+        penalty: ipcData.penalty || 0,
+        previousPenalty: ipcData.previousPenalty || 0
       });
     }
   }, [ipcData]);
+
+  // Calculate totals when buildings or form data changes
+  useEffect(() => {
+    const totalIPCAmount = buildings.reduce((sum, building) => 
+      sum + building.boqs.reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+    );
+    
+    const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
+    const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
+    const netPayment = totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty;
+    
+    setCalculatedTotals({
+      totalAmount: totalIPCAmount,
+      actualAmount: totalIPCAmount,
+      retentionAmount,
+      advanceDeduction,
+      netPayment
+    });
+  }, [buildings, formData.retentionPercentage, formData.advancePaymentPercentage, formData.penalty]);
 
   const handleSave = async () => {
     if (!ipcData) return;
@@ -82,12 +123,24 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
       const success = await updateIpc({
         id: ipcData.id,
         contractsDatasetId: ipcData.contractsDatasetId,
-        ...formData,
+        ipcNumber: formData.ipcNumber,
+        dateIpc: formData.dateIpc,
+        fromDate: formData.fromDate,
+        toDate: formData.toDate,
+        retention: formData.retention,
+        advance: formData.advance,
+        remarks: formData.remarks,
+        retentionPercentage: formData.retentionPercentage,
+        advancePaymentPercentage: formData.advancePaymentPercentage,
+        penalty: formData.penalty,
+        previousPenalty: formData.previousPenalty,
         buildings: buildings
       });
 
       if (success) {
         toaster.success("IPC updated successfully");
+        // Reload data to reflect changes
+        loadIpcForEdit(parseInt(id!));
       } else {
         toaster.error("Failed to update IPC");
       }
@@ -104,6 +157,167 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
 
   const handleBack = () => {
     navigate('/admin/dashboards/IPCs-database');
+  };
+
+  // Enhanced functionality for BOQ editing
+  const handleBOQQuantityChange = (buildingId: number, boqId: number, actualQte: number) => {
+    setBuildings(prevBuildings => 
+      prevBuildings.map(building => {
+        if (building.id === buildingId) {
+          return {
+            ...building,
+            boqs: building.boqs.map(boq => {
+              if (boq.id === boqId) {
+                const actualAmount = actualQte * boq.unitPrice;
+                const newCumulQte = (boq.precedQte || 0) + actualQte;
+                const newCumulAmount = newCumulQte * boq.unitPrice;
+                const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
+                
+                return {
+                  ...boq,
+                  actualQte,
+                  actualAmount,
+                  cumulQte: newCumulQte,
+                  cumulAmount: newCumulAmount,
+                  cumulPercent: newCumulPercent
+                };
+              }
+              return boq;
+            })
+          };
+        }
+        return building;
+      })
+    );
+  };
+
+  const toggleBuildingExpansion = (buildingId: number) => {
+    const newExpanded = new Set(expandedBuildings);
+    if (newExpanded.has(buildingId)) {
+      newExpanded.delete(buildingId);
+    } else {
+      newExpanded.add(buildingId);
+    }
+    setExpandedBuildings(newExpanded);
+  };
+
+  // Document generation functions
+  const handlePreviewIpc = async () => {
+    if (!ipcData || !id) return;
+    
+    setLoadingPreview(true);
+    try {
+      const result = await ipcApiService.exportIpcPdf(parseInt(id), user?.token ?? "");
+      
+      if (result.success && result.blob) {
+        setPreviewData({
+          blob: result.blob,
+          fileName: `IPC_${ipcData.ipcNumber || id}.pdf`
+        });
+        setShowPreview(true);
+      } else {
+        toaster.error("Failed to generate IPC preview");
+      }
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!id || exportingPDF) return;
+    
+    setExportingPDF(true);
+    try {
+      const result = await ipcApiService.exportIpcPdf(parseInt(id), user?.token ?? "");
+      
+      if (result.success && result.blob) {
+        const url = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `IPC_${ipcData?.ipcNumber || id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toaster.success("IPC exported as PDF successfully!");
+      } else {
+        toaster.error("Failed to export IPC as PDF");
+      }
+    } catch (error) {
+      toaster.error("PDF Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (!id || exportingExcel) return;
+    
+    setExportingExcel(true);
+    try {
+      const result = await ipcApiService.exportIpcExcel(parseInt(id), user?.token ?? "");
+      
+      if (result.success && result.blob) {
+        const url = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `IPC_${ipcData?.ipcNumber || id}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toaster.success("IPC exported as Excel successfully!");
+      } else {
+        toaster.error("Failed to export IPC as Excel");
+      }
+    } catch (error) {
+      toaster.error("Excel Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportZip = async () => {
+    if (!id || exportingZip) return;
+    
+    setExportingZip(true);
+    try {
+      const result = await ipcApiService.exportIpcZip(parseInt(id), user?.token ?? "");
+      
+      if (result.success && result.blob) {
+        const url = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `IPC_${ipcData?.ipcNumber || id}_Documents.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toaster.success("IPC documents exported as ZIP successfully!");
+      } else {
+        toaster.error("Failed to export IPC documents as ZIP");
+      }
+    } catch (error) {
+      toaster.error("ZIP Export error: " + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setExportingZip(false);
+    }
+  };
+
+  const handleGenerateIpc = async () => {
+    if (!id) return;
+    
+    setGeneratingIpc(true);
+    try {
+      const result = await ipcApiService.generateIpc(parseInt(id), user?.token ?? "");
+      if (result.success) {
+        toaster.success("IPC generated successfully!");
+        // Reload IPC data to get updated status
+        loadIpcForEdit(parseInt(id));
+      }
+    } finally {
+      setGeneratingIpc(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -160,21 +374,110 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePreviewIpc}
+            disabled={loadingPreview}
+            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+          >
+            {loadingPreview ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <span className="iconify lucide--eye size-4"></span>
+                <span>Preview</span>
+              </>
+            )}
+          </button>
+          
+          <div className="dropdown dropdown-end">
+            <button 
+              tabIndex={0} 
+              className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+              disabled={exportingPDF || exportingExcel || exportingZip}
+            >
+              {(exportingPDF || exportingExcel || exportingZip) ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <span className="iconify lucide--download size-4"></span>
+                  <span>Export</span>
+                  <span className="iconify lucide--chevron-down size-3"></span>
+                </>
+              )}
+            </button>
+            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              <li>
+                <a onClick={handleExportPDF}>
+                  <span className="iconify lucide--file-text size-4"></span>
+                  Export as PDF
+                </a>
+              </li>
+              <li>
+                <a onClick={handleExportExcel}>
+                  <span className="iconify lucide--file-spreadsheet size-4"></span>
+                  Export as Excel
+                </a>
+              </li>
+              <li>
+                <a onClick={handleExportZip}>
+                  <span className="iconify lucide--archive size-4"></span>
+                  Export as ZIP
+                </a>
+              </li>
+            </ul>
+          </div>
+
           <button
             onClick={() => openPenaltyForm(ipcData.penalty || 0, ipcData.previousPenalty || 0)}
-            className="btn btn-sm bg-red-600 text-white hover:bg-red-700"
+            className="btn btn-sm bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
           >
             <span className="iconify lucide--alert-triangle size-4"></span>
-            Manage Penalties
+            Penalties
           </button>
+          
+          {ipcData.status === 'Editable' && (
+            <button
+              onClick={handleGenerateIpc}
+              disabled={generatingIpc}
+              className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+            >
+              {generatingIpc ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <span className="iconify lucide--check-circle size-4"></span>
+                  <span>Generate</span>
+                </>
+              )}
+            </button>
+          )}
+          
           <button
             onClick={handleSave}
             disabled={saving}
-            className="btn btn-sm btn-primary"
+            className="btn btn-sm btn-primary flex items-center gap-2"
           >
-            {saving && <span className="loading loading-spinner loading-sm"></span>}
-            Save Changes
+            {saving ? (
+              <>
+                <span className="loading loading-spinner loading-sm"></span>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <span className="iconify lucide--save size-4"></span>
+                <span>Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -188,7 +491,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         />
       </div>
 
-      {/* Tabs */}
+      {/* Enhanced Tabs */}
       <div className="tabs tabs-lifted tabs-lg mb-6">
         <button 
           className={`tab tab-lifted ${activeTab === 'details' ? 'tab-active' : ''}`}
@@ -198,18 +501,25 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
           IPC Details
         </button>
         <button 
-          className={`tab tab-lifted ${activeTab === 'summary' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('summary')}
-        >
-          <span className="iconify lucide--calculator size-4 mr-2"></span>
-          Financial Summary
-        </button>
-        <button 
           className={`tab tab-lifted ${activeTab === 'boq' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('boq')}
         >
-          <span className="iconify lucide--table size-4 mr-2"></span>
+          <span className="iconify lucide--building size-4 mr-2"></span>
           BOQ Progress
+        </button>
+        <button 
+          className={`tab tab-lifted ${activeTab === 'financial' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('financial')}
+        >
+          <span className="iconify lucide--calculator size-4 mr-2"></span>
+          Financial Calculations
+        </button>
+        <button 
+          className={`tab tab-lifted ${activeTab === 'documents' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('documents')}
+        >
+          <span className="iconify lucide--file-text size-4 mr-2"></span>
+          Documents
         </button>
       </div>
 
@@ -498,6 +808,192 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             )}
           </div>
         )}
+
+        {activeTab === 'documents' && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg dark:bg-green-900/30">
+                <span className="iconify lucide--file-text text-green-600 dark:text-green-400 size-5"></span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-base-content">Documents & Actions</h2>
+                <p className="text-sm text-base-content/70">Generate documents, export data, and manage IPC status</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Document Generation */}
+              <div className="space-y-4">
+                <h5 className="font-semibold text-base-content">Generate Documents</h5>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleExportPDF}
+                    disabled={exportingPDF || exportingExcel || exportingZip}
+                    className="btn btn-sm bg-red-600 text-white hover:bg-red-700 w-full flex items-center gap-2"
+                  >
+                    {exportingPDF ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs"></span>
+                        <span>Generating PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="iconify lucide--file-text size-4"></span>
+                        <span>Generate PDF</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={exportingPDF || exportingExcel || exportingZip}
+                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700 w-full flex items-center gap-2"
+                  >
+                    {exportingExcel ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs"></span>
+                        <span>Generating Excel...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="iconify lucide--file-spreadsheet size-4"></span>
+                        <span>Generate Excel</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={handleExportZip}
+                    disabled={exportingPDF || exportingExcel || exportingZip}
+                    className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 w-full flex items-center gap-2"
+                  >
+                    {exportingZip ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs"></span>
+                        <span>Generating ZIP...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="iconify lucide--archive size-4"></span>
+                        <span>Generate ZIP Package</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {/* IPC Actions */}
+              <div className="space-y-4">
+                <h5 className="font-semibold text-base-content">IPC Actions</h5>
+                <div className="space-y-3">
+                  <button
+                    onClick={handlePreviewIpc}
+                    disabled={loadingPreview}
+                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 w-full flex items-center gap-2"
+                  >
+                    {loadingPreview ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs"></span>
+                        <span>Loading Preview...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="iconify lucide--eye size-4"></span>
+                        <span>Preview IPC</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => navigate(`/admin/dashboards/IPCs-database/details/${id}`)}
+                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 w-full flex items-center gap-2"
+                  >
+                    <span className="iconify lucide--info size-4"></span>
+                    <span>View Details</span>
+                  </button>
+                  
+                  {ipcData.status === 'Editable' && (
+                    <button
+                      onClick={handleGenerateIpc}
+                      disabled={generatingIpc}
+                      className="btn btn-sm bg-green-600 text-white hover:bg-green-700 w-full flex items-center gap-2"
+                    >
+                      {generatingIpc ? (
+                        <>
+                          <span className="loading loading-spinner loading-xs"></span>
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="iconify lucide--check-circle size-4"></span>
+                          <span>Generate IPC</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Status Information */}
+            <div className="divider"></div>
+            <div className="space-y-4">
+              <h5 className="font-semibold text-base-content">IPC Status Information</h5>
+              <div className="bg-base-200 p-4 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-base-content/70 text-sm">Current Status:</span>
+                    <p className="font-semibold mt-1">
+                      <span className={`badge badge-sm ${
+                        ipcData.status === 'Editable' ? 'badge-warning' :
+                        ipcData.status === 'PendingApproval' ? 'badge-info' :
+                        ipcData.status === 'Issued' ? 'badge-success' :
+                        'badge-neutral'
+                      }`}>
+                        {ipcData.status || 'Editable'}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-base-content/70 text-sm">Generated:</span>
+                    <p className="font-semibold mt-1">
+                      {ipcData.isGenerated ? (
+                        <span className="badge badge-sm badge-success">Yes</span>
+                      ) : (
+                        <span className="badge badge-sm badge-warning">No</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-base-content/70 text-sm">IPC Type:</span>
+                    <p className="font-semibold mt-1">
+                      <span className={`badge badge-sm ${
+                        ipcData.type?.includes('interim') || ipcData.type?.includes('Interim') ? 'badge-primary' :
+                        ipcData.type?.includes('final') || ipcData.type?.includes('Final') ? 'badge-success' :
+                        ipcData.type?.includes('retention') || ipcData.type?.includes('Retention') ? 'badge-warning' :
+                        ipcData.type?.includes('advance') || ipcData.type?.includes('Advance') ? 'badge-info' :
+                        'badge-neutral'
+                      }`}>
+                        {ipcData.type || 'Not Set'}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-base-content/70 text-sm">Contract Activated:</span>
+                    <p className="font-semibold mt-1">
+                      {ipcData.contractActivated ? (
+                        <span className="badge badge-sm badge-success">Active</span>
+                      ) : (
+                        <span className="badge badge-sm badge-neutral">Inactive</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Penalty Form Modal */}
@@ -508,7 +1004,34 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         initialData={penaltyData}
         loading={saving}
       />
+
+      {/* Preview Modal */}
+      {showPreview && previewData && (
+        <dialog className="modal modal-open">
+          <div className="modal-box max-w-7xl h-[90vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg">IPC Preview</h3>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="btn btn-ghost btn-sm"
+              >
+                <span className="iconify lucide--x size-5"></span>
+              </button>
+            </div>
+            <div className="h-[calc(100%-60px)]">
+              <PDFViewer
+                fileBlob={previewData.blob}
+                fileName={previewData.fileName}
+              />
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setShowPreview(false)}>close</button>
+          </form>
+        </dialog>
+      )}
     </div>
+
   );
 };
 

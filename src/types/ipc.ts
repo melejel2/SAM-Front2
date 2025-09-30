@@ -1,5 +1,15 @@
 // IPC API Types - Synchronized with SAMBACK DTOs
 
+// Financial Constants
+export const FINANCIAL_CONSTANTS = {
+  DEFAULT_VAT_RATE: 0.18, // 18% VAT rate
+  DEFAULT_RETENTION_RATE: 0.10, // 10% retention
+  MAX_ADVANCE_PAYMENT: 0.30, // 30% maximum advance payment
+  MIN_PERCENTAGE: 0,
+  MAX_PERCENTAGE: 100,
+  WIZARD_PERSISTENCE_HOURS: 24 // Extended from 1 hour to 24 hours
+} as const;
+
 // Enums
 export enum IpcStatus {
   Editable = "Editable",
@@ -18,7 +28,10 @@ export interface BoqIpcVM {
   id: number;
   no?: string;
   key?: string;
+  itemCode?: string; // BOQ item code/reference
+  description?: string; // BOQ item description
   unite?: string;
+  unit?: string; // Alternative unit field name
   qte: number;
   unitPrice: number;
   orderBoq: number;
@@ -35,8 +48,8 @@ export interface BoqIpcVM {
 export interface ContractBuildingsVM {
   id: number;
   buildingName: string;
-  sheetId: number;
-  sheetName: string;
+  sheetId?: number; // Optional - may not be present in all API responses
+  sheetName?: string; // Optional - may not be present in all API responses
   boqs: BoqIpcVM[];
 }
 
@@ -272,3 +285,4 @@ export const IpcStatusOptions: IpcTypeOption[] = [
   { value: "Pending Approval", label: "Pending Approval" },
   { value: "Issued", label: "Issued" }
 ];
+

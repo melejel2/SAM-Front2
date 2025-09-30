@@ -21,6 +21,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
     const [loading, setLoading] = useState(false);
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingWord, setExportingWord] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     
     const { getToken } = useAuth();
     const { toaster } = useToast();
@@ -55,6 +56,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
 
             if (contractResponse && contractResponse.success !== false) {
                 console.log('Generating PDF preview...');
+                console.log('Contract ContractId:', contractResponse.contractId);
                 
                 // Then use the contract data to generate PDF preview
                 const livePreviewResponse = await apiRequest({
@@ -73,7 +75,8 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     const errorObj = livePreviewResponse as any;
                     if (errorObj.success === false || errorObj.isSuccess === false) {
                         const errorMessage = errorObj.message || errorObj.error || 'Failed to generate PDF preview';
-                        toaster.error(errorMessage);
+                        console.error('Live preview error:', errorMessage);
+                        setError(errorMessage);
                         return;
                     }
                 }
@@ -457,7 +460,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
                     <div className="text-base-content/70 mb-4">
                         <span className="iconify lucide--alert-circle size-16 mx-auto mb-4 block"></span>
                         <h3 className="text-lg font-semibold mb-2">Preview Not Available</h3>
-                        <p>Unable to load contract preview.</p>
+                        <p>{error || 'Unable to load contract preview.'}</p>
                         <button 
                             className="btn btn-primary btn-sm mt-4"
                             onClick={contractId ? loadContractPreview : generateLivePreview}

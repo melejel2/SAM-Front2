@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useVOWizardContext } from "../context/VOWizardContext";
 import { Button } from "@/components/daisyui";
-import useMultiBuildingVO from "../../components/MultiBuildingSelector/use-multi-building-vo";
-import MultiBuildingVOProgressModal from "../../components/MultiBuildingSelector/MultiBuildingVOProgressModal";
+import useMultiBuildingVO from "../../components/MultiBuildingVO/use-multi-building-vo";
+import MultiBuildingVOProgressModal from "../../components/MultiBuildingVO/components/MultiBuildingVOProgressModal";
 import useVariationOrders from "../../use-variation-orders";
 import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
 import SAMTable from "@/components/Table";
@@ -10,7 +10,7 @@ import VOTemplatesManager from "../../components/VOTemplates";
 
 export const VOStep3_MultiBuildingGeneration: React.FC = () => {
     const { formData } = useVOWizardContext();
-    const { isGenerating, generationProgress, generateVOForBuildings, resetProgress } = useMultiBuildingVO();
+    const { loading, multiBuildingProgress, generateMultiBuildingVOs, resetProgress } = useMultiBuildingVO();
     const { tableData: subcontractors, getSubcontractors } = useSubcontractors();
     const [showProgressModal, setShowProgressModal] = useState(false);
     const [selectedSubcontractor, setSelectedSubcontractor] = useState<any>(null);
@@ -263,12 +263,7 @@ export const VOStep3_MultiBuildingGeneration: React.FC = () => {
             <MultiBuildingVOProgressModal
                 isOpen={showProgressModal}
                 onClose={handleProgressModalClose}
-                progress={generationProgress}
-                isGenerating={isGenerating}
-                onViewResults={() => {
-                    // Navigate to VO dashboard or results page
-                    console.log('View results clicked');
-                }}
+                progress={multiBuildingProgress}
             />
         </div>
     );

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 import { Select, SelectOption } from "@/components/daisyui";
 
-import useParticularConditions from "./use-particulatr-conditions";
+import useParticularConditions from "./use-particular-conditions";
 
 interface InputField {
     name: string;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useWizardContext } from "../context/WizardContext";
-import { AttachmentsDialog, AttachmentsType } from "../components/AttachmentsDialog";
+import { AttachmentsDialog, AttachmentsType } from "../../shared/components/AttachmentsDialog";
 
 // Define the floating label input component for reusability
 const FloatingLabelInput: React.FC<{

@@ -1,32 +1,31 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { EditWizardProvider, useEditWizardContext } from "./context/EditWizardContext";
-import { StepIndicator } from "../shared/components/StepIndicator";
+import { IPCWizardProvider, useIPCWizardContext } from "./context/IPCWizardContext";
+import { IPCStepIndicator } from "./components/IPCStepIndicator";
 import useToast from "@/hooks/use-toast";
-import { UnsavedChangesDialog } from "../shared/components/UnsavedChangesDialog";
-import { EditStepRenderer } from "./components/EditStepRenderer";
+import { UnsavedChangesDialog } from "../../shared/components/UnsavedChangesDialog";
+import { IPCStepRenderer } from "./components/IPCStepRenderer";
 import { Loader } from "@/components/Loader";
 
 // Inner component that uses the context
-const EditSubcontractWizardContent: React.FC = () => {
+const NewIPCWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
-                        const { toaster } = useToast();
+    const { toaster } = useToast();
     
     const {
         currentStep,
         hasUnsavedChanges,
         loading,
-        initialDataLoading,
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
         handleSubmit
-    } = useEditWizardContext();
+    } = useIPCWizardContext();
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate('/dashboard/subcontractors-boqs');
+        navigate('/dashboard/IPCs-database');
     };
 
     const handleCancelBack = () => {
@@ -34,103 +33,23 @@ const EditSubcontractWizardContent: React.FC = () => {
     };
 
     const handleSubmitAndNavigate = async () => {
-        await handleSubmit();
-        // If submission was successful, navigate back to the list
-        if (!loading) {
-            navigate('/dashboard/subcontractors-boqs');
+        const result = await handleSubmit();
+        if (result.success) {
+            toaster.success("IPC created successfully");
+            navigate('/dashboard/IPCs-database');
+        } else {
+            toaster.error(result.error || "Failed to create IPC");
         }
     };
 
-    if (initialDataLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <Loader />
-                    <p className="mt-4 text-base-content/70">Loading contract data...</p>
-                </div>
-            </div>
-        );
+    if (loading && currentStep === 1) {
+        return <Loader />;
     }
 
     return (
         <div>
-            {/* Custom styles for FilePond and other components */}
+            {/* Custom styles for floating labels and other components */}
             <style>{`
-                .filepond-wrapper .filepond--root {
-                    font-family: inherit;
-                }
-                
-                .filepond-wrapper .filepond--drop-label {
-                    color: var(--fallback-bc, oklch(var(--bc)));
-                    font-size: 0.875rem;
-                }
-                
-                .filepond-wrapper .filepond--label-action {
-                    text-decoration: underline;
-                    color: var(--fallback-p, oklch(var(--p)));
-                    cursor: pointer;
-                }
-                
-                .filepond-wrapper .filepond--panel-root {
-                    background-color: var(--fallback-b2, oklch(var(--b2)));
-                    border: 2px dashed var(--fallback-bc, oklch(var(--bc) / 0.2));
-                    border-radius: var(--rounded-btn, 0.5rem);
-                }
-                
-                .filepond-wrapper .filepond--item-panel {
-                    background-color: var(--fallback-b1, oklch(var(--b1)));
-                    border-radius: var(--rounded-btn, 0.5rem);
-                }
-                
-                .filepond-wrapper .filepond--drip {
-                    background-color: var(--fallback-p, oklch(var(--p) / 0.1));
-                    border-color: var(--fallback-p, oklch(var(--p)));
-                }
-                
-                .filepond-wrapper .filepond--item {
-                    margin-bottom: 0.5rem;
-                }
-                
-                .filepond-wrapper .filepond--file-action-button {
-                    color: var(--fallback-bc, oklch(var(--bc)));
-                    background-color: var(--fallback-b3, oklch(var(--b3)));
-                    border-radius: 50%;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                
-                .filepond-wrapper .filepond--file-action-button:hover {
-                    background-color: var(--fallback-er, oklch(var(--er)));
-                    color: white;
-                }
-                
-                .filepond-wrapper .filepond--file-info {
-                    color: var(--fallback-bc, oklch(var(--bc) / 0.7));
-                    font-size: 0.75rem;
-                }
-                
-                .filepond-wrapper .filepond--file-status {
-                    color: var(--fallback-bc, oklch(var(--bc) / 0.6));
-                    font-size: 0.75rem;
-                }
-                
-                /* Hide FilePond status indicators to prevent duplicate feedback */
-                .filepond-wrapper .filepond--file-status-main {
-                    display: none !important;
-                }
-                
-                .filepond-wrapper .filepond--file-status-sub {
-                    display: none !important;
-                }
-                
-                .filepond-wrapper .filepond--load-indicator {
-                    display: none !important;
-                }
-                
-                .filepond-wrapper .filepond--progress-indicator {
-                    display: none !important;
-                }
-                
                 /* Custom styles for floating labels */
                 .floating-label-group {
                     position: relative;
@@ -172,7 +91,7 @@ const EditSubcontractWizardContent: React.FC = () => {
                     onClick={currentStep === 1 && hasUnsavedChanges 
                         ? () => setShowBackConfirmDialog(true) 
                         : currentStep === 1 
-                            ? () => navigate('/dashboard/subcontractors-boqs')
+                            ? () => navigate('/dashboard/IPCs-database')
                             : goToPreviousStep
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
@@ -183,12 +102,12 @@ const EditSubcontractWizardContent: React.FC = () => {
                 
                 {/* Timeline in the center */}
                 <div className="flex-1 flex justify-center">
-                    <StepIndicator currentStep={currentStep} />
+                    <IPCStepIndicator currentStep={currentStep} />
                 </div>
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 8 ? (
+                    {currentStep < 4 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -198,19 +117,13 @@ const EditSubcontractWizardContent: React.FC = () => {
                                     // Show validation errors based on current step
                                     switch (currentStep) {
                                         case 1:
-                                            toaster.error("Please select a project");
+                                            toaster.error("Please select a contract and configure IPC type");
                                             break;
                                         case 2:
-                                            toaster.error("Please select at least one building");
+                                            toaster.error("Please set work period, select buildings and update BOQ progress");
                                             break;
                                         case 3:
-                                            toaster.error("Please select a subcontractor");
-                                            break;
-                                        case 4:
-                                            toaster.error("Please fill in all required contract details");
-                                            break;
-                                        case 5:
-                                            toaster.error("Please add at least one BOQ item");
+                                            toaster.error("Please review deductions and financial calculations");
                                             break;
                                         default:
                                             toaster.error("Please complete all required fields");
@@ -219,9 +132,9 @@ const EditSubcontractWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 7 ? (
+                            {currentStep === 3 ? (
                                 <>
-                                    <span>Preview</span>
+                                    <span>Review</span>
                                     <span className="iconify lucide--eye size-4"></span>
                                 </>
                             ) : (
@@ -233,18 +146,18 @@ const EditSubcontractWizardContent: React.FC = () => {
                         </button>
                     ) : (
                         <button
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                            className="btn btn-sm border border-base-300 bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
                             onClick={handleSubmitAndNavigate}
                             disabled={loading}
                         >
                             {loading ? (
                                 <>
                                     <span className="loading loading-spinner loading-sm"></span>
-                                    Updating...
+                                    Creating IPC...
                                 </>
                             ) : (
                                 <>
-                                    <span>Save</span>
+                                    <span>Create IPC</span>
                                     <span className="iconify lucide--check size-4"></span>
                                 </>
                             )}
@@ -254,7 +167,7 @@ const EditSubcontractWizardContent: React.FC = () => {
             </div>
 
             {/* Step Content */}
-            <EditStepRenderer />
+            <IPCStepRenderer />
 
             {/* Unsaved Changes Dialog */}
             <UnsavedChangesDialog
@@ -267,12 +180,12 @@ const EditSubcontractWizardContent: React.FC = () => {
 };
 
 // Main component that provides the context
-const EditSubcontractWizard: React.FC = () => {
+const NewIPCWizard: React.FC = () => {
     return (
-        <EditWizardProvider>
-            <EditSubcontractWizardContent />
-        </EditWizardProvider>
+        <IPCWizardProvider>
+            <NewIPCWizardContent />
+        </IPCWizardProvider>
     );
 };
 
-export default EditSubcontractWizard;
+export default NewIPCWizard;

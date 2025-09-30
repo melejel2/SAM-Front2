@@ -5,7 +5,7 @@ import useBuildings from "@/hooks/use-buildings";
 import useSheets from "@/hooks/use-sheets";
 import SAMTable from "@/components/Table";
 import { Button } from "@/components/daisyui";
-import MultiBuildingSelector from "../../components/MultiBuildingSelector";
+import MultiBuildingSelector from "../../components/MultiBuildingVO/components/MultiBuildingSelector";
 
 interface Project {
     id: number;

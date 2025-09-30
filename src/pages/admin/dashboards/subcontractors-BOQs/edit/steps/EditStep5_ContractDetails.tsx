@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
-import { AttachmentsDialog, AttachmentsType } from "../components/AttachmentsDialog";
+import { AttachmentsDialog, AttachmentsType } from "../../shared/components/AttachmentsDialog";
 
 
 export const EditStep5_ContractDetails: React.FC = () => {

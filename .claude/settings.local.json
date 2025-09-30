@@ -17,7 +17,9 @@
       "Read(c:\\Users\\engme\\OneDrive\\Pictures\\Screenshots/**)",
       "Bash(rg:*)",
       "Read(//Users/melejel/SAMWEB/SAMBACK/SAMBackend.Application/Services/ContractsDataset/**)",
-      "Read(//Users/melejel/SAMWEB/SAMBACK/**)"
+      "Read(//Users/melejel/SAMWEB/SAMBACK/**)",
+      "Read(//c/Users/engme/OneDrive/Pictures/Screenshots/**)",
+      "Bash(git fetch:*)"
     ],
     "deny": []
   }

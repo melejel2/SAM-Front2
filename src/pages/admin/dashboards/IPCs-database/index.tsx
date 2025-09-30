@@ -99,7 +99,22 @@ const IPCsDatabase = () => {
 
     const handleEditIpc = (row: any) => {
         // Navigate to IPC edit page with enhanced penalty and summary features
-        navigate(`/admin/dashboard/IPCs-database/edit/${row.id}`);
+        navigate(`/dashboard/IPCs-database/edit/${row.id}`);
+    };
+
+    const handleViewIpcDetails = (row: any) => {
+        // Navigate to IPC details page
+        navigate(`/dashboard/IPCs-database/details/${row.id}`, {
+            state: {
+                ipcNumber: row.number,
+                contractNumber: row.contract,
+                projectName: row.projectName,
+                subcontractorName: row.subcontractorName,
+                tradeName: row.tradeName,
+                amount: row.totalAmount,
+                status: row.status
+            }
+        });
     };
 
     const handleBackToTable = () => {
@@ -192,6 +207,16 @@ const IPCsDatabase = () => {
                                 <span>Back</span>
                             </button>
                         </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => navigate('/dashboard/IPCs-database/new')}
+                                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                            >
+                                <span className="iconify lucide--plus size-4"></span>
+                                <span>Create IPC</span>
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -204,6 +229,7 @@ const IPCsDatabase = () => {
                             actions
                             previewAction
                             editAction
+                            detailsAction
                             title={"IPC"}
                             loading={false}
                             onSuccess={getIPCs}
@@ -214,6 +240,9 @@ const IPCsDatabase = () => {
                                 }
                                 if (type === "Edit" && data) {
                                     return handleEditIpc(data);
+                                }
+                                if (type === "Details" && data) {
+                                    return handleViewIpcDetails(data);
                                 }
                             }}
                         />
