@@ -34,6 +34,11 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         saveProject,
         getBuildingsList,
         openProject,
+        createBuildings,
+        uploadBoq,
+        getBoqPreview,
+        clearBoq,
+        selectedTrade,
     } = useBudgetBOQsDialog();
 
     const { toaster } = useToast();
@@ -143,6 +148,11 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                                     selectedProject={selectedProject}
                                     projectData={projectData}
                                     setProjectData={setProjectData}
+                                    createBuildings={createBuildings}
+                                    uploadBoq={uploadBoq}
+                                    getBoqPreview={getBoqPreview}
+                                    clearBoq={clearBoq}
+                                    selectedTrade={selectedTrade}
                                 />
                             </div>
                             <div>

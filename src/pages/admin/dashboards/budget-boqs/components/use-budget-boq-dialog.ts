@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 
@@ -90,11 +90,26 @@ const useBudgetBOQsDialog = () => {
                 token: token ?? "",
                 body: buildingData,
             });
-            
+
+            if (result && (result as any).value) {
+                const newBuildings = Array.isArray((result as any).value)
+                    ? (result as any).value
+                    : [(result as any).value];
+                setBuildings((prev) => [...prev, ...newBuildings]);
+                setProjectData((prev) => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        buildings: [...(prev.buildings || []), ...newBuildings],
+                    };
+                });
+                return { success: true, data: newBuildings };
+            }
+
             if (result && (result as any).success !== false) {
                 return { success: true };
             }
-            return { success: false, message: "Failed to create buildings" };
+            return { success: false, message: (result as any)?.message || "Failed to create buildings" };
         } catch (error) {
             console.error("Error creating buildings:", error);
             return { success: false, message: "Error creating buildings" };
@@ -245,7 +260,7 @@ const useBudgetBOQsDialog = () => {
         }));
     };
 
-    const getBuildingsList = async (projectId: number) => {
+    const getBuildingsList = useCallback(async (projectId: number) => {
         try {
             const data = await apiRequest<Building[]>({
                 endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
@@ -269,9 +284,9 @@ const useBudgetBOQsDialog = () => {
             console.error("Error fetching buildings:", error);
             setBuildings([]);
         }
-    };
+    }, [token]);
 
-    const openProject = async (projectId: number) => {
+    const openProject = useCallback(async (projectId: number) => {
         try {
             const data = await apiRequest({
                 endpoint: `Project/OpenProject/${projectId}`,
@@ -310,7 +325,7 @@ const useBudgetBOQsDialog = () => {
                 buildings: []
             };
         }
-    };
+    }, [token]);
 
 
     return {

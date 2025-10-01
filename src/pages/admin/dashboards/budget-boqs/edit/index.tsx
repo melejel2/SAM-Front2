@@ -26,15 +26,20 @@ const BudgetBOQEdit = () => {
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     
     const { tableData: projects, getProjectsList } = useBudgetBOQs();
-    const { 
-        getBuildingsList, 
-        buildings, 
-        openProject, 
-        saveProject 
+    const {
+        getBuildingsList,
+        buildings,
+        openProject,
+        saveProject,
+        createBuildings,
+        uploadBoq,
+        getBoqPreview,
+        clearBoq,
+        selectedTrade,
     } = useBudgetBOQsDialog();
-    
-    const selectedProject = projects?.find(p => p.id === parseInt(projectId || "0"));
-    
+
+    const selectedProject = projects?.find((p) => p.id === parseInt(projectId || "0"));
+
     useEffect(() => {
         // Load projects list first if not already loaded
         if (!projectsLoaded && (!projects || projects.length === 0)) {
@@ -45,7 +50,7 @@ const BudgetBOQEdit = () => {
             setProjectsLoaded(true);
         }
     }, [projects, projectsLoaded]);
-    
+
     useEffect(() => {
         if (projectsLoaded && projectId) {
             if (selectedProject) {
@@ -53,7 +58,7 @@ const BudgetBOQEdit = () => {
             } else if (projectIdentifier) {
                 // If we have a project code but no ID, show error and redirect
                 toaster.error("Project not found. Please navigate from the projects list.");
-                navigate('/dashboard/budget-BOQs');
+                navigate("/dashboard/budget-BOQs");
                 return;
             } else {
                 // Project not found, stop loading
@@ -61,20 +66,20 @@ const BudgetBOQEdit = () => {
             }
         }
     }, [projectsLoaded, projectId, projectIdentifier, selectedProject]);
-    
+
     const loadProjectData = async () => {
         if (!selectedProject) return;
-        
+
         setLoading(true);
         try {
             // Load buildings list
             await getBuildingsList(selectedProject.id);
-            
+
             // Load project data
             const data = await openProject(selectedProject.id);
             setProjectData(data);
             setOriginalProjectData(JSON.parse(JSON.stringify(data))); // Deep copy
-            
+
             console.log("BudgetBOQEdit - Loaded project data:", data);
         } catch (error) {
             console.error("Error loading project data:", error);
@@ -83,12 +88,12 @@ const BudgetBOQEdit = () => {
             setLoading(false);
         }
     };
-    
+
     const hasUnsavedChanges = () => {
         if (!projectData || !originalProjectData) return false;
         return JSON.stringify(projectData) !== JSON.stringify(originalProjectData);
     };
-    
+
     const handleBack = () => {
         if (hasUnsavedChanges()) {
             setShowUnsavedDialog(true);
@@ -96,10 +101,10 @@ const BudgetBOQEdit = () => {
             navigate("/dashboard/budget-BOQs");
         }
     };
-    
+
     const handleSave = async () => {
         if (!projectData) return;
-        
+
         setSaving(true);
         try {
             const result = await saveProject(projectData);
@@ -116,24 +121,24 @@ const BudgetBOQEdit = () => {
             setSaving(false);
         }
     };
-    
+
     const handleSaveAndExit = async () => {
         await handleSave();
         navigate("/dashboard/budget-BOQs");
     };
-    
+
     const handleExitWithoutSaving = () => {
         navigate("/dashboard/budget-BOQs");
     };
-    
+
     const handleCancelExit = () => {
         setShowUnsavedDialog(false);
     };
-    
+
     if (loading || !projectsLoaded) {
         return <Loader />;
     }
-    
+
     if (!selectedProject) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -146,7 +151,7 @@ const BudgetBOQEdit = () => {
             </div>
         );
     }
-    
+
     return (
         <div>
             <BOQStep
@@ -159,6 +164,11 @@ const BudgetBOQEdit = () => {
                 onSave={handleSave}
                 saving={saving}
                 hasUnsavedChanges={hasUnsavedChanges()}
+                createBuildings={createBuildings}
+                uploadBoq={uploadBoq}
+                getBoqPreview={getBoqPreview}
+                clearBoq={clearBoq}
+                selectedTrade={selectedTrade}
             />
             
             {/* Unsaved Changes Dialog */}

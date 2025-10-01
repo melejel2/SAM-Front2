@@ -16,18 +16,28 @@ interface BOQStepProps {
     onSave?: () => void;
     saving?: boolean;
     hasUnsavedChanges?: boolean;
+    createBuildings: (buildingData: any) => Promise<any>;
+    uploadBoq: (importData: any) => Promise<any>;
+    getBoqPreview: (importData: any) => Promise<any>;
+    clearBoq: (clearData: any) => Promise<any>;
+    selectedTrade: any;
 }
 
-const BOQStep: React.FC<BOQStepProps> = ({ 
-    dialogType, 
-    buildings, 
-    selectedProject, 
-    projectData, 
+const BOQStep: React.FC<BOQStepProps> = ({
+    dialogType,
+    buildings,
+    selectedProject,
+    projectData,
     setProjectData,
     onBack,
     onSave,
     saving,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    createBuildings,
+    uploadBoq,
+    getBoqPreview,
+    clearBoq,
+    selectedTrade,
 }) => {
     const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
     const [showCreateBuildings, setShowCreateBuildings] = useState(false);
@@ -40,15 +50,6 @@ const BOQStep: React.FC<BOQStepProps> = ({
     const [currentSheetForVO, setCurrentSheetForVO] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const {
-        createBuildings,
-        previewBuildings,
-        uploadBoq,
-        getBoqPreview,
-        clearBoq,
-        selectedTrade
-    } = useBudgetBOQsDialog();
-    
     const { toaster } = useToast();
 
     // Auto-select first building when buildings are loaded
@@ -137,6 +138,9 @@ const BOQStep: React.FC<BOQStepProps> = ({
             setShowCreateBuildings(false);
             setBuildingName("");
             setBuildingCount(1);
+            if (result.data && result.data.length > 0) {
+                setSelectedBuilding(result.data[0]);
+            }
         } else {
             toaster.error(result.message || "Failed to create buildings");
         }
