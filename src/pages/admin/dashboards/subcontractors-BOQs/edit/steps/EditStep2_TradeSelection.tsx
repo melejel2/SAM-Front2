@@ -7,32 +7,27 @@ import checkIcon from "@iconify/icons-lucide/check";
 import { useEditWizardContext } from "../context/EditWizardContext";
 
 export const EditStep2_TradeSelection: React.FC = () => {
-    const { formData, setFormData, projects, trades, allBuildings, loading } = useEditWizardContext();
+    const { formData, setFormData, projects, trades, loading } = useEditWizardContext();
 
-    const selectedProject = projects.find(p => p.id === formData.projectId);
+    const selectedProject = projects.find((p: any) => p.id === formData.projectId);
 
     const handleTradeSelection = (tradeId: number) => {
         setFormData({ tradeId });
     };
 
     // Enhanced trade data - only showing trades with actual BOQ data (matching budget BOQ behavior)
-    const enhancedTrades = trades.map(trade => {
-        const buildingsWithTrade = (allBuildings || []).filter(building =>
-            building.sheets && building.sheets.some(sheet =>
-                sheet.name === trade.name && // Match sheet name with trade name
-                sheet.boqItemCount && sheet.boqItemCount > 0 // Only sheets with actual BOQ data
-            )
-        );
+    const enhancedTrades = trades.map((trade: any) => {
+        const buildingsWithTrade: any[] = [];
 
         return {
             ...trade,
             buildings: buildingsWithTrade,
-            buildingNames: buildingsWithTrade.map(b => b.name).join(", "),
-            totalSheets: buildingsWithTrade.reduce((sum, building) =>
-                sum + (building.sheets || []).filter(sheet =>
+            buildingNames: buildingsWithTrade.map((b: any) => b.name).join(", "),
+            totalSheets: buildingsWithTrade.reduce((sum: number, building: any) =>
+                sum + ((building.sheets || []).filter((sheet: any) =>
                     sheet.name === trade.name &&
-                    sheet.boqItemCount && sheet.boqItemCount > 0 // Only count sheets with BOQ data
-                ).length, 0
+                    sheet.boqItemCount && sheet.boqItemCount > 0
+                ).length), 0
             )
         };
     }); // Trades already filtered in EditWizardContext to only include those with BOQ data

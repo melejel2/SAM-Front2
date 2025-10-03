@@ -139,19 +139,19 @@ const useIPCsDatabase = () => {
                 const formattedData = response.data.map((ipc: IpcListItem) => ({
                     ...ipc,
                     // Handle empty contract field - use contractsDatasetId as fallback for now
-                    contract: (ipc.contract && ipc.contract.trim() !== "") 
-                        ? ipc.contract 
-                        : ipc.contractsDatasetId 
-                            ? `Contract-${ipc.contractsDatasetId}` 
+                    contract: (ipc.contract && ipc.contract.trim() !== "")
+                        ? ipc.contract
+                        : ipc.contractsDatasetId
+                            ? `Contract-${ipc.contractsDatasetId}`
                             : "-",
-                    totalAmount: formatCurrency(ipc.totalAmount),
+                    totalAmount: formatCurrency(ipc.totalAmount) as any,
                     totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)),
-                    retention: formatCurrency(ipc.retention),
-                    status: formatStatusBadge(ipc.status),
-                    type: formatTypeBadge(ipc.type || ""),
+                    retention: formatCurrency(ipc.retention) as any,
+                    status: formatStatusBadge(ipc.status) as any,
+                    type: formatTypeBadge(ipc.type || "") as any,
                 }));
                 // Reverse the order to show newest first (inverse order from backend)
-                setTableData(formattedData.reverse());
+                setTableData(formattedData.reverse() as any);
             } else {
                 console.error("Failed to fetch IPCs:", response.error);
                 setTableData([]);

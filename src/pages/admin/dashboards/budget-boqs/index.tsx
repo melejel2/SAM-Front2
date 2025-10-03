@@ -29,10 +29,10 @@ const BudgetBOQs = () => {
     const { toaster } = useToast();
 
     const openCreateDialog = async (
-        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select",
+        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details",
         data?: any,
     ) => {
-        setDialogType(type);
+        setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select");
         if (data) {
             setSelectedProject(data);
             setSelectedProjectInHook(data);
@@ -42,7 +42,7 @@ const BudgetBOQs = () => {
         }
 
         // Navigate to edit page for Edit action using project code instead of ID
-        if ((type === "Edit" || type === "Preview") && data) {
+        if ((type === "Edit" || type === "Preview" || type === "Details") && data) {
             const projectCode = data.code || data.id; // fallback to ID if no code
             navigate(`/dashboard/budget-BOQs/edit/${projectCode}`, {
                 state: { projectId: data.id }, // Keep actual ID for API calls

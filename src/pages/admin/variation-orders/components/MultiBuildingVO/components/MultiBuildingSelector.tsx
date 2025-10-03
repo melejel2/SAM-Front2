@@ -10,14 +10,18 @@ interface BuildingVOConfig {
 }
 
 interface MultiBuildingSelectorProps {
-    buildings: any[];
+    buildings?: any[];
     projectId?: number;
     onSelectionChange?: (configs: BuildingVOConfig[]) => void;
+    onConfirm?: (configs: BuildingVOConfig[]) => void;
+    onClose?: () => void;
+    isOpen?: boolean;
+    initialSelectedBuildings?: number[];
     disabled?: boolean;
 }
 
 const MultiBuildingSelector: React.FC<MultiBuildingSelectorProps> = ({
-    buildings,
+    buildings = [],
     onSelectionChange,
     disabled = false
 }) => {
@@ -25,7 +29,7 @@ const MultiBuildingSelector: React.FC<MultiBuildingSelectorProps> = ({
 
     useEffect(() => {
         // Initialize building configurations
-        const initialConfigs = buildings.map(building => ({
+        const initialConfigs = (buildings || []).map(building => ({
             buildingId: building.id,
             buildingName: building.name,
             voLevel: 1,

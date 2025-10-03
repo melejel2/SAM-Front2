@@ -78,6 +78,8 @@ export interface BOQItem {
     unite: string;
     qte: number;
     pu: number;
+    _budgetBOQSource?: string; // Internal flag for UI purposes
+    _readonly?: boolean; // Internal flag for UI purposes
 }
 
 interface WizardFormData {

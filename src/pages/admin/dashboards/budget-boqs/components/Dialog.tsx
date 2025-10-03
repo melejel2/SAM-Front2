@@ -79,6 +79,9 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
     useEffect(() => {
         if (dialogType === "Add") {
             setProjectData({
+                id: 0,
+                currencyId: 0,
+                buildings: [],
                 name: "",
                 code: "",
                 acronym: "",

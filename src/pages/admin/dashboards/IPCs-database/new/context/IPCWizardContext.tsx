@@ -74,7 +74,7 @@ const IPC_TYPES: IpcTypeOption[] = [
 ];
 
 export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { authState } = useAuth();
     const { toaster } = useToast();
     const { getToken } = useAuth();
     
@@ -233,18 +233,18 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, [formData, setFormData]);
     
     // Step validation for 4-step workflow
-    const validateCurrentStep = useCallback(() => {
+    const validateCurrentStep = useCallback((): boolean => {
         switch (currentStep) {
             case 1:
                 // Contract Selection + IPC Type
-                return formData.contractsDatasetId > 0 && formData.type && formData.dateIpc;
+                return !!(formData.contractsDatasetId > 0 && formData.type && formData.dateIpc);
             case 2:
                 // Period + Building + BOQ Progress
-                return formData.fromDate && formData.toDate && 
+                return !!(formData.fromDate && formData.toDate &&
                        formData.buildings.length > 0 &&
-                       formData.buildings.some(building => 
+                       formData.buildings.some(building =>
                            building.boqs.some(boq => (boq.actualQte || 0) > 0)
-                       );
+                       ));
             case 3:
                 // Deductions - Financial calculations are automatic
                 return true;

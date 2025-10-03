@@ -120,7 +120,7 @@ interface TableProps {
     addBtn?: boolean;
     addBtnText?: string;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate", Data?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details", Data?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;

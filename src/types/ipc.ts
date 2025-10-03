@@ -159,18 +159,18 @@ export interface IpcVM {
 export interface SaveIPCVM extends IpcVM {
   // NEW: Summary data for IPC edit forms
   ipcSummaryData?: IpcSummaryData;
-  
+
   advancePayment: number;
   retentionPercentage: number;
   advancePaymentPercentage: number;
   retentionAmount: number;
   advancePaymentAmount: number;
-  
+
   // NEW: Enhanced penalty management
   penalty: number;
   openPenaltyForm: boolean; // NEW: Flag to conditionally open penalty modal
   previousPenalty: number; // NEW: Previous penalty amount for calculations
-  
+
   contractActivated: boolean;
   retention: number;
   advancePaymentAmountCumul: number;
@@ -180,7 +180,12 @@ export interface SaveIPCVM extends IpcVM {
   fromDate?: string;
   toDate?: string;
   dateIpc?: string;
-  
+
+  // Additional fields
+  advance?: number;
+  remarks?: string;
+  contractsDataset?: any;
+
   // Collections
   buildings: ContractBuildingsVM[];
   vos: Vos[];

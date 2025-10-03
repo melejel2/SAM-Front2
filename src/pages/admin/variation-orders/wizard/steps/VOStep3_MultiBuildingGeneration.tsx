@@ -16,6 +16,18 @@ export const VOStep3_MultiBuildingGeneration: React.FC = () => {
     const [selectedSubcontractor, setSelectedSubcontractor] = useState<any>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [generationResults, setGenerationResults] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const generateVOForBuildings = async (configs: any[], baseData: any) => {
+        setIsGenerating(true);
+        try {
+            // Extract projectId from formData
+            const projectId = formData.projectId || 0;
+            return await generateMultiBuildingVOs(projectId, configs);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     // Basic VO form data
     const [voBasicData, setVoBasicData] = useState({

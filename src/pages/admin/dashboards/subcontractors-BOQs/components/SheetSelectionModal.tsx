@@ -242,11 +242,6 @@ const SheetSelectionModal: React.FC<SheetSelectionModalProps> = ({
                                                     <h4 className={`font-medium text-sm ${isCurrentSheet ? 'text-primary' : 'text-base-content'}`}>
                                                         {sheet.name}
                                                     </h4>
-                                                    {sheet.nameFr && (
-                                                        <p className="text-xs text-base-content/60 mt-1">
-                                                            {sheet.nameFr}
-                                                        </p>
-                                                    )}
                                                 </div>
                                                 
                                                 {/* Status Indicators */}
@@ -261,10 +256,10 @@ const SheetSelectionModal: React.FC<SheetSelectionModalProps> = ({
                                             </div>
                                             
                                             {/* Cost Code Info */}
-                                            {sheet.costCode && (
+                                            {sheet.costCodeId && (
                                                 <div className="mt-2 pt-2 border-t border-base-200">
                                                     <p className="text-xs text-base-content/60">
-                                                        Cost Code: <span className="font-mono">{sheet.costCode}</span>
+                                                        Cost Code ID: <span className="font-mono">{sheet.costCodeId}</span>
                                                     </p>
                                                 </div>
                                             )}

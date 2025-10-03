@@ -81,6 +81,8 @@ export interface BOQItem {
     qte: number;
     pu: number;
     totalPrice?: number;
+    _budgetBOQSource?: string; // Internal flag for UI purposes
+    _readonly?: boolean; // Internal flag for UI purposes
 }
 
 interface EditWizardFormData {

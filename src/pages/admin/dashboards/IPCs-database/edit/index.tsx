@@ -17,7 +17,8 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toaster } = useToast();
-  const { authState } = useAuth();
+  const { authState, getToken } = useAuth();
+  const token = getToken();
   
   const {
     loading,
@@ -26,6 +27,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     ipcData,
     summaryData,
     buildings,
+    setBuildings,
     showPenaltyForm,
     penaltyData,
     loadIpcForEdit,
@@ -36,7 +38,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     clearData
   } = useIpcEdit();
 
-  const [activeTab, setActiveTab] = useState<'details' | 'boq' | 'financial' | 'documents'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'boq' | 'financial' | 'documents' | 'summary'>('details');
   const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
   const [editingQuantities, setEditingQuantities] = useState<Set<string>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
@@ -121,9 +123,8 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
 
     try {
       const success = await updateIpc({
-        id: ipcData.id,
-        contractsDatasetId: ipcData.contractsDatasetId,
-        ipcNumber: formData.ipcNumber,
+        ...ipcData, // Spread all existing IPC data
+        number: Number(formData.ipcNumber) || ipcData.number,
         dateIpc: formData.dateIpc,
         fromDate: formData.fromDate,
         toDate: formData.toDate,
@@ -207,12 +208,12 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     
     setLoadingPreview(true);
     try {
-      const result = await ipcApiService.exportIpcPdf(parseInt(id), user?.token ?? "");
+      const result = await ipcApiService.exportIpcPdf(parseInt(id), token ?? "");
       
       if (result.success && result.blob) {
         setPreviewData({
           blob: result.blob,
-          fileName: `IPC_${ipcData.ipcNumber || id}.pdf`
+          fileName: `IPC_${ipcData.number || id}.pdf`
         });
         setShowPreview(true);
       } else {
@@ -228,13 +229,13 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     
     setExportingPDF(true);
     try {
-      const result = await ipcApiService.exportIpcPdf(parseInt(id), user?.token ?? "");
+      const result = await ipcApiService.exportIpcPdf(parseInt(id), token ?? "");
       
       if (result.success && result.blob) {
         const url = window.URL.createObjectURL(result.blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `IPC_${ipcData?.ipcNumber || id}.pdf`;
+        link.download = `IPC_${ipcData?.number || id}.pdf`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -255,13 +256,13 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     
     setExportingExcel(true);
     try {
-      const result = await ipcApiService.exportIpcExcel(parseInt(id), user?.token ?? "");
+      const result = await ipcApiService.exportIpcExcel(parseInt(id), token ?? "");
       
       if (result.success && result.blob) {
         const url = window.URL.createObjectURL(result.blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `IPC_${ipcData?.ipcNumber || id}.xlsx`;
+        link.download = `IPC_${ipcData?.number || id}.xlsx`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -282,13 +283,13 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     
     setExportingZip(true);
     try {
-      const result = await ipcApiService.exportIpcZip(parseInt(id), user?.token ?? "");
+      const result = await ipcApiService.exportIpcZip(parseInt(id), token ?? "");
       
       if (result.success && result.blob) {
         const url = window.URL.createObjectURL(result.blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `IPC_${ipcData?.ipcNumber || id}_Documents.zip`;
+        link.download = `IPC_${ipcData?.number || id}_Documents.zip`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -309,7 +310,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     
     setGeneratingIpc(true);
     try {
-      const result = await ipcApiService.generateIpc(parseInt(id), user?.token ?? "");
+      const result = await ipcApiService.generateIpc(parseInt(id), token ?? "");
       if (result.success) {
         toaster.success("IPC generated successfully!");
         // Reload IPC data to get updated status
@@ -366,7 +367,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-base-content">
-              Edit IPC {ipcData.ipcNumber || `#${ipcData.id}`}
+              Edit IPC {ipcData.number || `#${ipcData.id}`}
             </h1>
             <p className="text-sm text-base-content/70">
               Contract: {ipcData.contractsDataset?.contractNumber || 'N/A'} | 
@@ -704,7 +705,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-base-content/70">IPC Number:</span>
-                      <span className="font-medium">{ipcData.ipcNumber || 'N/A'}</span>
+                      <span className="font-medium">{ipcData.number || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-base-content/70">Status:</span>

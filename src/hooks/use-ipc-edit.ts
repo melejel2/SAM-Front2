@@ -260,6 +260,7 @@ export const useIpcEdit = () => {
     ipcData,
     summaryData, // NEW: Summary data with amount/previous/remaining
     buildings,
+    setBuildings, // Allow external updates to buildings
     showPenaltyForm, // NEW: Penalty form visibility
     penaltyData, // NEW: Penalty form data
 
@@ -270,7 +271,7 @@ export const useIpcEdit = () => {
     updateIpc,
     updateBoqQuantities,
     calculateIpcTotals,
-    
+
     // NEW: Penalty form actions
     openPenaltyForm,
     closePenaltyForm,
