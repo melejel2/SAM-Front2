@@ -41,37 +41,29 @@ const BOQTable: React.FC<BOQTableProps> = ({
 
     // Create enhanced sheets with data indicators and auto-select first sheet with data
     useEffect(() => {
-        const building = selectedBuilding && projectData?.buildings?.find((b: any) => b.id === selectedBuilding.id);
-
-        if (building && building.boqSheets && Array.isArray(building.boqSheets) && building.boqSheets.length > 0) {
-            // Case 1: The building has BOQ sheets from an import/load. Use them as the source for the tabs.
-            const enhanced = building.boqSheets.map((sheet: any) => ({
-                id: sheet.id,
-                name: sheet.name,
-                hasData: sheet.boqItems && sheet.boqItems.length > 0,
-                itemCount: sheet.boqItems?.length || 0,
-                buildingSheetId: sheet.id,
-            }));
+        if (sheets && sheets.length > 0) {
+            const building = selectedBuilding && projectData?.buildings?.find((b: any) => b.id === selectedBuilding.id);
+            
+            const enhanced = sheets.map((sheet: any) => {
+                // For each master trade sheet, find the corresponding data sheet in the building's data.
+                const buildingSheet = building?.boqSheets?.find((s: any) => s.name === sheet.name);
+                const hasData = !!(buildingSheet && buildingSheet.boqItems && buildingSheet.boqItems.length > 0);
+                
+                return {
+                    ...sheet,
+                    hasData,
+                    itemCount: buildingSheet?.boqItems?.length || 0,
+                    buildingSheetId: buildingSheet?.id
+                };
+            });
 
             setEnhancedSheets(enhanced);
-
-            const isSelectedTradeStillPresent = enhanced.some(s => s.id === selectedTrade?.id);
-            if (!isSelectedTradeStillPresent) {
+            
+            // Auto-select a sheet.
+            const isSelectedTradeStillValid = enhanced.some(s => s.id === selectedTrade?.id);
+            if (!isSelectedTradeStillValid) {
                 const firstSheetWithData = enhanced.find(s => s.hasData);
                 setSelectedTrade(firstSheetWithData || enhanced[0] || null);
-            }
-        } else if (sheets && sheets.length > 0) {
-            // Case 2: No BOQ sheets for the building, so show the master list of trades.
-            const enhanced = sheets.map((sheet: any) => ({
-                ...sheet,
-                hasData: false,
-                itemCount: 0,
-            }));
-            setEnhancedSheets(enhanced);
-
-            const isSelectedTradeStillPresent = enhanced.some(s => s.id === selectedTrade?.id);
-            if (!isSelectedTradeStillPresent) {
-                setSelectedTrade(enhanced[0] || null);
             }
         } else {
             setEnhancedSheets([]);
