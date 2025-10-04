@@ -42,15 +42,17 @@ interface ImportBoqRequest {
     excelFile: File;
 }
 
+interface BuildingSaveModel {
+    id: number;
+    name: string;
+    type: string;
+    boqSheets: BOQSheet[];
+}
+
 interface ProjectSaveModel {
     id: number;
     currencyId: number;
-    buildings: {
-        id: number;
-        name: string;
-        type: string;
-        boqSheets: BOQSheet[];
-    }[];
+    buildings: BuildingSaveModel[];
     [key: string]: any;
 }
 

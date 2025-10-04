@@ -137,6 +137,7 @@ interface TableProps {
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
     selectedRowId?: number | string | null;
+    onItemUpdate?: (item: any) => void;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -174,6 +175,7 @@ const TableComponent: React.FC<TableProps> = ({
     rowsPerPage = 10,
     previewLoadingRowId: externalPreviewLoadingRowId,
     selectedRowId,
+    onItemUpdate,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -1325,6 +1327,7 @@ const TableComponent: React.FC<TableProps> = ({
                     editEndPoint={editEndPoint}
                     createEndPoint={createEndPoint}
                     deleteEndPoint={deleteEndPoint}
+                    onItemUpdate={onItemUpdate}
                 />
             )}
         </>

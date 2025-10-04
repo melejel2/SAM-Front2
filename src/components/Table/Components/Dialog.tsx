@@ -38,6 +38,7 @@ interface DialogProps {
     editEndPoint?: string;
     createEndPoint?: string;
     deleteEndPoint?: string;
+    onItemUpdate?: (item: any) => void;
 }
 
 const DialogComponent: React.FC<DialogProps> = ({
@@ -55,6 +56,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     editEndPoint,
     createEndPoint,
     deleteEndPoint,
+    onItemUpdate,
 }) => {
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -148,6 +150,12 @@ const DialogComponent: React.FC<DialogProps> = ({
             }
 
             if (dialogType === "Edit" && current) {
+                if (onItemUpdate) {
+                    onItemUpdate(formData);
+                    toaster.success("Updated successfully.");
+                    onSuccess();
+                    return;
+                }
                 try {
                     const response = await apiRequest({
                         endpoint: editEndPoint ?? "",

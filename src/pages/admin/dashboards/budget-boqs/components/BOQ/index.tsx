@@ -147,8 +147,8 @@ const BOQStep: React.FC<BOQStepProps> = ({
     };
 
     const handleImportBoq = () => {
-        if (!selectedProject) {
-            toaster.error("Please select a project first");
+        if (!selectedProject || !selectedBuilding) {
+            toaster.error("Please select a project and a building first");
             return;
         }
         fileInputRef.current?.click();
@@ -158,37 +158,48 @@ const BOQStep: React.FC<BOQStepProps> = ({
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (!selectedProject) {
-            toaster.error("Please select a project first");
+        if (!selectedProject || !selectedBuilding) {
+            toaster.error("Please select a project and a building first");
             return;
         }
 
-        const buildingId = selectedBuilding?.id || 0;
-        const buildingName = selectedBuilding?.name || "New Building";
+        const buildingId = selectedBuilding.id;
 
         try {
-            // First get preview
-            const previewData = await getBoqPreview({
+            const buildingSaveModel = await getBoqPreview({
                 projectId: selectedProject.id,
                 buildingId: buildingId,
-                name: buildingName,
                 excelFile: file
             });
 
-            if (previewData) {
-                // For now, directly upload - in a real app you might want to show preview first
-                const result = await uploadBoq({
-                    projectId: selectedProject.id,
-                    buildingId: buildingId,
-                    name: buildingName,
-                    excelFile: file
+            if (buildingSaveModel && buildingSaveModel.boqSheets && Array.isArray(buildingSaveModel.boqSheets) && buildingSaveModel.boqSheets.length > 0) {
+                // Only update state if the preview contains valid sheets
+                setProjectData((prevData: any) => {
+                    if (!prevData) return null;
+
+                    let buildingExists = false;
+                    const updatedBuildings = prevData.buildings.map((b: any) => {
+                        if (b.id === buildingSaveModel.id) {
+                            buildingExists = true;
+                            return buildingSaveModel; // Replace the existing building
+                        }
+                        return b;
+                    });
+
+                    if (!buildingExists) {
+                        updatedBuildings.push(buildingSaveModel); // Add the new building
+                    }
+
+                    return { ...prevData, buildings: updatedBuildings };
                 });
 
-                if (result.success) {
-                    toaster.success("BOQ imported successfully");
-                } else {
-                    toaster.error(result.message || "Failed to import BOQ");
-                }
+                toaster.success(`BOQ preview loaded successfully!`);
+            } else if (buildingSaveModel) {
+                // Handle case where import is valid but results in no sheets
+                toaster.info("The imported file did not contain any valid BOQ sheets. The existing data remains unchanged.");
+            } else {
+                // Handle case where the API fails to return a model
+                toaster.error("Failed to get BOQ preview.");
             }
         } catch (error) {
             toaster.error("Error importing BOQ file");
@@ -275,7 +286,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     <button
                         type="button" 
                         onClick={handleImportBoq}
-                        disabled={!selectedProject}
+                        disabled={!selectedProject || !selectedBuilding}
                         className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
                     >
                         Import BOQ

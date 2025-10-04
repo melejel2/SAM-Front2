@@ -54,6 +54,7 @@ interface SAMTableProps {
     customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
+    onItemUpdate?: (item: any) => void;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -88,6 +89,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     rowsPerPage,
     previewLoadingRowId,
     selectedRowId,
+    onItemUpdate,
 }) => {
     return (
         <div className="mt-5">
@@ -129,6 +131,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             rowActions={rowActions}
                             previewLoadingRowId={previewLoadingRowId}
                             selectedRowId={selectedRowId}
+                            onItemUpdate={onItemUpdate}
                         />
                     </div>
 
