@@ -27,6 +27,7 @@ interface BOQStepProps {
     selectedTrade: any;
     currencies: Currency[];
     onCurrencyChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    onDataRefresh: () => void;
 }
 
 const BOQStep: React.FC<BOQStepProps> = ({
@@ -45,6 +46,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
     selectedTrade,
     currencies,
     onCurrencyChange,
+    onDataRefresh,
 }) => {
     const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
     const [showCreateBuildings, setShowCreateBuildings] = useState(false);
@@ -106,16 +108,20 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
         switch (clearScope) {
             case "trade":
-                clearData.scope = "Sheet";
+                if (!selectedTrade) {
+                    toaster.error("Please select a trade/sheet first.");
+                    return;
+                }
+                clearData.scope = 0; // Sheet
                 clearData.buildingId = selectedBuilding.id;
-                // We need to get the current selected trade/sheet ID
+                clearData.sheetId = (selectedTrade as any).buildingSheetId;
                 break;
             case "building":
-                clearData.scope = "Building";
+                clearData.scope = 1; // Building
                 clearData.buildingId = selectedBuilding.id;
                 break;
             case "all":
-                clearData.scope = "Project";
+                clearData.scope = 2; // Project
                 break;
         }
 
@@ -123,6 +129,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
         if (result.success) {
             toaster.success("BOQ cleared successfully");
+            onDataRefresh();
         } else {
             toaster.error(result.message || "Failed to clear BOQ");
         }

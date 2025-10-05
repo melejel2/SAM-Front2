@@ -220,6 +220,7 @@ const BudgetBOQEdit = () => {
                 selectedTrade={selectedTrade}
                 currencies={currencies as Currency[]}
                 onCurrencyChange={handleCurrencyChange}
+                onDataRefresh={loadProjectData}
             />
             
             {/* Unsaved Changes Dialog */}
