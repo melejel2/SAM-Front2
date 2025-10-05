@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
@@ -7,6 +7,11 @@ import { Loader } from "@/components/Loader";
 import BOQStep from "../components/BOQ";
 import useBudgetBOQsDialog from "../components/use-budget-boq-dialog";
 import useBudgetBOQs from "../use-budget-boqs";
+
+interface Building {
+    id: number;
+    [key: string]: any;
+}
 
 const BudgetBOQEdit = () => {
     const navigate = useNavigate();
@@ -32,7 +37,6 @@ const BudgetBOQEdit = () => {
         openProject,
         saveProject,
         createBuildings,
-        uploadBoq,
         getBoqPreview,
         clearBoq,
         selectedTrade,
@@ -108,8 +112,8 @@ const BudgetBOQEdit = () => {
         setSaving(true);
         try {
             // Find changed buildings by comparing with original data
-            const changedBuildings = projectData.buildings.filter(building => {
-                const originalBuilding = originalProjectData.buildings.find(b => b.id === building.id);
+            const changedBuildings = projectData.buildings.filter((building: Building) => {
+                const originalBuilding = originalProjectData.buildings.find((b: Building) => b.id === building.id);
                 // If building is new or has changed, include it.
                 return !originalBuilding || JSON.stringify(building) !== JSON.stringify(originalBuilding);
             });
@@ -192,7 +196,6 @@ const BudgetBOQEdit = () => {
                 saving={saving}
                 hasUnsavedChanges={hasUnsavedChanges()}
                 createBuildings={createBuildings}
-                uploadBoq={uploadBoq}
                 getBoqPreview={getBoqPreview}
                 clearBoq={clearBoq}
                 selectedTrade={selectedTrade}

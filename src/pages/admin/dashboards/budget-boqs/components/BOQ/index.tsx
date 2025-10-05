@@ -17,7 +17,6 @@ interface BOQStepProps {
     saving?: boolean;
     hasUnsavedChanges?: boolean;
     createBuildings: (buildingData: any) => Promise<any>;
-    uploadBoq: (importData: any) => Promise<any>;
     getBoqPreview: (importData: any) => Promise<any>;
     clearBoq: (clearData: any) => Promise<any>;
     selectedTrade: any;
@@ -34,7 +33,6 @@ const BOQStep: React.FC<BOQStepProps> = ({
     saving,
     hasUnsavedChanges,
     createBuildings,
-    uploadBoq,
     getBoqPreview,
     clearBoq,
     selectedTrade,

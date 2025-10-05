@@ -134,33 +134,6 @@ const useBudgetBOQsDialog = () => {
         }
     };
 
-    const uploadBoq = async (importData: ImportBoqRequest) => {
-        try {
-            const formData = new FormData();
-            formData.append('ProjectId', importData.projectId.toString());
-            formData.append('BuildingId', importData.buildingId.toString());
-            if (importData.name) {
-                formData.append('Name', importData.name);
-            }
-            formData.append('excelFile', importData.excelFile);
-
-            const result = await apiRequest({
-                endpoint: "Project/UploadBoq",
-                method: "POST",
-                token: token ?? "",
-                body: formData,
-            });
-            
-            if (result && (result as any).success !== false) {
-                return { success: true };
-            }
-            return { success: false, message: "Failed to upload BOQ" };
-        } catch (error) {
-            console.error("Error uploading BOQ:", error);
-            return { success: false, message: "Error uploading BOQ" };
-        }
-    };
-
     const getBoqPreview = async (importData: ImportBoqRequest) => {
         try {
             const formData = new FormData();
@@ -345,7 +318,6 @@ const useBudgetBOQsDialog = () => {
         setProjectData,
         createBuildings,
         previewBuildings,
-        uploadBoq,
         getBoqPreview,
         saveProject,
         clearBoq,
