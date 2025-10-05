@@ -47,7 +47,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
         getTrades();
     }, []);
 
-    // Create enhanced sheets with data indicators and auto-select first sheet with data
+
     useEffect(() => {
         if (sheets && sheets.length > 0) {
             const building = selectedBuilding && projectData?.buildings?.find((b: any) => b.id === selectedBuilding.id);
@@ -66,18 +66,27 @@ const BOQTable: React.FC<BOQTableProps> = ({
             });
 
             setEnhancedSheets(enhanced);
+
+            let newSelectedTrade = null;
+            const selectedTradeStillExists = enhanced.some(s => s.id === selectedTrade?.id);
+
+            if (selectedTradeStillExists) {
+                // If it still exists, get the updated version from the new enhanced list
+                newSelectedTrade = enhanced.find(s => s.id === selectedTrade.id);
+            } else {
+                // If not, find the first one with data
+                newSelectedTrade = enhanced.find(s => s.hasData) || enhanced[0] || null;
+            }
             
-            // Auto-select a sheet.
-            const isSelectedTradeStillValid = enhanced.some(s => s.id === selectedTrade?.id);
-            if (!isSelectedTradeStillValid) {
-                const firstSheetWithData = enhanced.find(s => s.hasData);
-                setSelectedTrade(firstSheetWithData || enhanced[0] || null);
+            // Only update if the trade object has actually changed to avoid loops
+            if (JSON.stringify(newSelectedTrade) !== JSON.stringify(selectedTrade)) {
+                setSelectedTrade(newSelectedTrade);
             }
         } else {
             setEnhancedSheets([]);
             setSelectedTrade(null);
         }
-    }, [sheets, selectedBuilding, projectData, selectedTrade]);
+    }, [sheets, selectedBuilding, projectData]);
 
     useEffect(() => {
         if (selectedBuilding && projectData && selectedTrade) {

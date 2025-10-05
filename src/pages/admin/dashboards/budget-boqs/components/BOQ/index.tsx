@@ -180,35 +180,35 @@ const BOQStep: React.FC<BOQStepProps> = ({
         const buildingId = selectedBuilding.id;
 
         try {
-            const buildingSaveModel = await getBoqPreview({
+            const buildingSaveModels = await getBoqPreview({
                 projectId: selectedProject.id,
                 buildingId: buildingId,
                 excelFile: file
             });
 
-            if (buildingSaveModel && buildingSaveModel.boqSheets && Array.isArray(buildingSaveModel.boqSheets) && buildingSaveModel.boqSheets.length > 0) {
-                // Only update state if the preview contains valid sheets
+            if (buildingSaveModels && Array.isArray(buildingSaveModels) && buildingSaveModels.length > 0) {
                 setProjectData((prevData: any) => {
                     if (!prevData) return null;
 
-                    let buildingExists = false;
-                    const updatedBuildings = prevData.buildings.map((b: any) => {
-                        if (b.id === buildingSaveModel.id) {
-                            buildingExists = true;
-                            return buildingSaveModel; // Replace the existing building
-                        }
-                        return b;
-                    });
+                    const updatedBuildings = [...prevData.buildings];
 
-                    if (!buildingExists) {
-                        updatedBuildings.push(buildingSaveModel); // Add the new building
-                    }
+                    buildingSaveModels.forEach((buildingModel: any) => {
+                        const existingBuildingIndex = updatedBuildings.findIndex(b => b.id === buildingModel.id);
+
+                        if (existingBuildingIndex !== -1) {
+                            // Replace existing building
+                            updatedBuildings[existingBuildingIndex] = buildingModel;
+                        } else {
+                            // Add new building
+                            updatedBuildings.push(buildingModel);
+                        }
+                    });
 
                     return { ...prevData, buildings: updatedBuildings };
                 });
 
-                toaster.success(`BOQ preview loaded successfully!`);
-            } else if (buildingSaveModel) {
+                toaster.success(`BOQ preview loaded successfully for ${buildingSaveModels.length} building(s)!`);
+            } else if (buildingSaveModels) {
                 // Handle case where import is valid but results in no sheets
                 toaster.info("The imported file did not contain any valid BOQ sheets. The existing data remains unchanged.");
             } else {
