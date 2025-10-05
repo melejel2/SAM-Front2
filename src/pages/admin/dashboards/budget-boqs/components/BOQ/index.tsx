@@ -1,10 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 
 import BOQTable from "./components/boqTable";
 import VODialog from "../VOManagement/VODialog";
-import useBudgetBOQsDialog from "../use-budget-boq-dialog";
+
+interface Currency {
+    id: number;
+    name: string;
+    currencies: string;
+}
 
 interface BOQStepProps {
     dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
@@ -20,6 +25,8 @@ interface BOQStepProps {
     getBoqPreview: (importData: any) => Promise<any>;
     clearBoq: (clearData: any) => Promise<any>;
     selectedTrade: any;
+    currencies: Currency[];
+    onCurrencyChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 const BOQStep: React.FC<BOQStepProps> = ({
@@ -36,6 +43,8 @@ const BOQStep: React.FC<BOQStepProps> = ({
     getBoqPreview,
     clearBoq,
     selectedTrade,
+    currencies,
+    onCurrencyChange,
 }) => {
     const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
     const [showCreateBuildings, setShowCreateBuildings] = useState(false);
@@ -225,6 +234,21 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         </button>
                     )}
                     
+                    <Select
+                        className="w-48"
+                        value={projectData?.currencyId || ''}
+                        onChange={onCurrencyChange}
+                    >
+                        <SelectOption value="" disabled>
+                            Select Currency
+                        </SelectOption>
+                        {(currencies || []).map((currency) => (
+                            <SelectOption key={currency.id} value={currency.id}>
+                                {currency.currencies}
+                            </SelectOption>
+                        ))}
+                    </Select>
+
                     {/* Clear BOQ Button */}
                     <button
                         type="button" 

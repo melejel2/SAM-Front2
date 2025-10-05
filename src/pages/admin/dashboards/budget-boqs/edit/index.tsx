@@ -7,10 +7,17 @@ import { Loader } from "@/components/Loader";
 import BOQStep from "../components/BOQ";
 import useBudgetBOQsDialog from "../components/use-budget-boq-dialog";
 import useBudgetBOQs from "../use-budget-boqs";
+import useCurrencies from "@/pages/admin/adminTools/currencies/use-currencies";
 
 interface Building {
     id: number;
     [key: string]: any;
+}
+
+interface Currency {
+    id: number;
+    name: string;
+    currencies: string;
 }
 
 const BudgetBOQEdit = () => {
@@ -31,6 +38,7 @@ const BudgetBOQEdit = () => {
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     
     const { tableData: projects, getProjectsList } = useBudgetBOQs();
+    const { tableData: currencies, getCurrencies } = useCurrencies();
     const {
         getBuildingsList,
         buildings,
@@ -43,6 +51,10 @@ const BudgetBOQEdit = () => {
     } = useBudgetBOQsDialog();
 
     const selectedProject = projects?.find((p) => p.id === parseInt(projectId || "0"));
+
+    useEffect(() => {
+        getCurrencies();
+    }, []);
 
     useEffect(() => {
         // Load projects list first if not already loaded
@@ -103,6 +115,13 @@ const BudgetBOQEdit = () => {
             setShowUnsavedDialog(true);
         } else {
             navigate("/dashboard/budget-BOQs");
+        }
+    };
+
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCurrencyId = parseInt(e.target.value);
+        if (projectData) {
+            setProjectData({ ...projectData, currencyId: newCurrencyId });
         }
     };
 
@@ -199,6 +218,8 @@ const BudgetBOQEdit = () => {
                 getBoqPreview={getBoqPreview}
                 clearBoq={clearBoq}
                 selectedTrade={selectedTrade}
+                currencies={currencies as Currency[]}
+                onCurrencyChange={handleCurrencyChange}
             />
             
             {/* Unsaved Changes Dialog */}
