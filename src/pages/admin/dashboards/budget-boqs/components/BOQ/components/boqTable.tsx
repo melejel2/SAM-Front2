@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import SAMTable from "@/components/Table";
 import useTrades from "@/pages/admin/adminTools/trades/use-trades";
+import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
 
 import useBudgetBOQsDialog from "../../use-budget-boq-dialog";
 
@@ -14,26 +15,33 @@ interface BOQTableProps {
     onBuildingChange?: (building: any) => void;
 }
 
-const BOQTable: React.FC<BOQTableProps> = ({ 
-    selectedBuilding, 
-    projectData, 
+const BOQTable: React.FC<BOQTableProps> = ({
+    selectedBuilding,
+    projectData,
     setProjectData,
     buildings,
     selectedProject,
     onBuildingChange
 }) => {
     const { getTrades, sheets } = useTrades();
-    const { 
-        columns, 
-        formatCurrency, 
+    const {
+        columns,
         processBoqData,
         selectedTrade,
         setSelectedTrade
     } = useBudgetBOQsDialog();
+    const { units } = useBOQUnits();
     
     const [tableData, setTableData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [enhancedSheets, setEnhancedSheets] = useState<any[]>([]);
+
+    const inputFields = [
+        { name: 'key', label: 'Item', type: 'text', required: true },
+        { name: 'unite', label: 'Unit', type: 'select', required: true, options: units.map(u => u.name) },
+        { name: 'qte', label: 'Quantity', type: 'number', required: true },
+        { name: 'pu', label: 'Unit Price', type: 'number', required: true }
+    ];
 
     useEffect(() => {
         getTrades();
@@ -90,15 +98,11 @@ const BOQTable: React.FC<BOQTableProps> = ({
             } else {
                 setTableData([]);
             }
-        } else {
-            setTableData([]);
         }
     }, [selectedBuilding, projectData, selectedTrade]);
 
     const handleSheetSelect = (sheetId: number) => {
-        console.log("handleSheetSelect called with sheetId:", sheetId);
         const sheet = enhancedSheets.find((s: any) => s.id === sheetId);
-        console.log("Found sheet:", sheet);
         if (sheet) {
             setSelectedTrade(sheet);
         }
@@ -111,13 +115,20 @@ const BOQTable: React.FC<BOQTableProps> = ({
         const building = updatedProjectData.buildings?.find((b: any) => b.id === selectedBuilding.id);
         
         if (building) {
-            const sheet = building.boqSheets?.find((s: any) => s.id === selectedTrade.id);
+            const sheet = building.boqSheets?.find((s: any) => s.id === (selectedTrade as any).buildingSheetId || s.name === selectedTrade.name);
             if (sheet) {
                 const itemIndex = sheet.boqItems.findIndex((item: any) => item.id === updatedItem.id);
                 if (itemIndex !== -1) {
-                    sheet.boqItems[itemIndex] = updatedItem;
-                } else {
-                    sheet.boqItems.push(updatedItem);
+                    const qte = parseFloat(updatedItem.qte);
+                    const pu = parseFloat(updatedItem.pu);
+
+                    const newItem = { 
+                        ...sheet.boqItems[itemIndex], 
+                        ...updatedItem,
+                        qte: isNaN(qte) ? sheet.boqItems[itemIndex].qte : qte,
+                        pu: isNaN(pu) ? sheet.boqItems[itemIndex].pu : pu,
+                    };
+                    sheet.boqItems[itemIndex] = newItem;
                 }
                 setProjectData(updatedProjectData);
             }
@@ -151,7 +162,9 @@ const BOQTable: React.FC<BOQTableProps> = ({
                     className="select select-sm bg-base-100 border-base-300 text-base-content min-w-48"
                     onChange={(e) => {
                         const building = buildings.find(b => b.id === parseInt(e.target.value));
-                        onBuildingChange(building);
+                        if (building) {
+                            onBuildingChange(building);
+                        }
                     }}
                     value={selectedBuilding?.id || ""}
                 >
@@ -187,6 +200,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
                 deleteAction
                 rowsPerPage={15}
                 onItemUpdate={handleItemUpdate}
+                inputFields={inputFields}
             />
         </div>
     );
