@@ -103,11 +103,38 @@ const BudgetBOQEdit = () => {
     };
 
     const handleSave = async () => {
-        if (!projectData) return;
+        if (!projectData || !originalProjectData) return;
 
         setSaving(true);
         try {
-            const result = await saveProject(projectData);
+            // Find changed buildings by comparing with original data
+            const changedBuildings = projectData.buildings.filter(building => {
+                const originalBuilding = originalProjectData.buildings.find(b => b.id === building.id);
+                // If building is new or has changed, include it.
+                return !originalBuilding || JSON.stringify(building) !== JSON.stringify(originalBuilding);
+            });
+
+            let payload;
+            if (changedBuildings.length > 0) {
+                // If there are changed buildings, send only them.
+                // This assumes the backend will correctly merge/update.
+                payload = {
+                    ...projectData,
+                    buildings: changedBuildings
+                };
+            } else if (hasUnsavedChanges()) {
+                // This handles cases where project-level properties might have changed, but no specific building.
+                // Or if a building was deleted.
+                // In this case, we send the full projectData as before.
+                payload = projectData;
+            } else {
+                // No changes, no need to save.
+                toaster.info("No changes to save.");
+                setSaving(false);
+                return;
+            }
+
+            const result = await saveProject(payload);
             if (result.success) {
                 toaster.success("Project saved successfully");
                 setOriginalProjectData(JSON.parse(JSON.stringify(projectData))); // Update original data
