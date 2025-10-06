@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import CloseBtn from "@/components/CloseBtn";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
+import useCurrencies from "@/pages/admin/adminTools/currencies/use-currencies";
 
 import BOQStep from "./BOQ";
 import useBudgetBOQsDialog from "./use-budget-boq-dialog";
@@ -35,13 +36,17 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         getBuildingsList,
         openProject,
         createBuildings,
-        uploadBoq,
         getBoqPreview,
         clearBoq,
         selectedTrade,
     } = useBudgetBOQsDialog();
 
+    const { tableData: currencies, getCurrencies } = useCurrencies();
     const { toaster } = useToast();
+
+    useEffect(() => {
+        getCurrencies();
+    }, []);
 
     const handleSubmit = async () => {
         setIsLoading(true);
@@ -74,6 +79,24 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         setBuildings([]);
         setProjectData(null);
         handleHide();
+    };
+
+    const handleDataRefresh = async () => {
+        if (selectedProject) {
+            await getBuildingsList(selectedProject.id);
+            const data = await openProject(selectedProject.id);
+            if (data) {
+                setProjectData(data);
+            }
+        }
+    };
+
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const currencyId = parseInt(e.target.value);
+        setProjectData((prev: any) => ({
+            ...prev,
+            currencyId,
+        }));
     };
 
     useEffect(() => {
@@ -152,10 +175,12 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                                     projectData={projectData}
                                     setProjectData={setProjectData}
                                     createBuildings={createBuildings}
-                                    uploadBoq={uploadBoq}
                                     getBoqPreview={getBoqPreview}
                                     clearBoq={clearBoq}
                                     selectedTrade={selectedTrade}
+                                    currencies={currencies || []}
+                                    onCurrencyChange={handleCurrencyChange}
+                                    onDataRefresh={handleDataRefresh}
                                 />
                             </div>
                             <div>

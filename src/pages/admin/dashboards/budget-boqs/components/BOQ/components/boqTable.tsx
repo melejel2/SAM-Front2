@@ -72,7 +72,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
 
             if (selectedTradeStillExists) {
                 // If it still exists, get the updated version from the new enhanced list
-                newSelectedTrade = enhanced.find(s => s.id === selectedTrade.id);
+                newSelectedTrade = enhanced.find(s => s.id === selectedTrade?.id);
             } else {
                 // If not, find the first one with data
                 newSelectedTrade = enhanced.find(s => s.hasData) || enhanced[0] || null;
