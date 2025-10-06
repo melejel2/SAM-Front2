@@ -39,6 +39,8 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         getBoqPreview,
         clearBoq,
         selectedTrade,
+        columns,
+        processBoqData,
     } = useBudgetBOQsDialog();
 
     const { tableData: currencies, getCurrencies } = useCurrencies();
@@ -178,6 +180,9 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                                     getBoqPreview={getBoqPreview}
                                     clearBoq={clearBoq}
                                     selectedTrade={selectedTrade}
+                                    setSelectedTrade={setSelectedTrade}
+                                    columns={columns}
+                                    processBoqData={processBoqData}
                                     currencies={currencies || []}
                                     onCurrencyChange={handleCurrencyChange}
                                     onDataRefresh={handleDataRefresh}

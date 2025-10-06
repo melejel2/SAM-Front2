@@ -138,6 +138,7 @@ interface TableProps {
     previewLoadingRowId?: string | null;
     selectedRowId?: number | string | null;
     onItemUpdate?: (item: any) => void;
+    onItemDelete?: (item: any) => void;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -176,6 +177,7 @@ const TableComponent: React.FC<TableProps> = ({
     previewLoadingRowId: externalPreviewLoadingRowId,
     selectedRowId,
     onItemUpdate,
+    onItemDelete,
 }) => {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -892,7 +894,7 @@ const TableComponent: React.FC<TableProps> = ({
                                             Select
                                         </th>
                                     )}
-                                    {Object.entries(columns).map(([columnKey, columnLabel], index) => (
+                                    {columns && Object.entries(columns).map(([columnKey, columnLabel], index) => (
                                         <th
                                             key={columnKey}
                                             className={cn(
@@ -934,7 +936,7 @@ const TableComponent: React.FC<TableProps> = ({
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                            colSpan={(columns ? Object.keys(columns).length : 0) + (actions ? 1 : 0) + (select ? 1 : 0)}
                                             className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 text-xs sm:text-sm">
                                             Loading...
                                         </td>
@@ -973,7 +975,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     </td>
                                                 )}
 
-                                                {Object.keys(columns).map((columnKey, colIndex) => {
+                                                {columns && Object.keys(columns).map((columnKey, colIndex) => {
                                                     // For total row, handle special cases
                                                     if (isTotal) {
                                                         // Show "Total" in the first column and merge all except the last column
@@ -1153,7 +1155,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     &nbsp;
                                                 </td>
                                             )}
-                                            {Object.keys(columns).map((columnKey) => (
+                                            {columns && Object.keys(columns).map((columnKey) => (
                                                 <td
                                                     key={columnKey}
                                                     className={cn(
@@ -1177,7 +1179,7 @@ const TableComponent: React.FC<TableProps> = ({
                                         {paginatedData.length === 0 && (
                                             <tr className="hover:bg-base-200">
                                                 <td
-                                                    colSpan={Object.keys(columns).length + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                                    colSpan={(columns ? Object.keys(columns).length : 0) + (actions ? 1 : 0) + (select ? 1 : 0)}
                                                     className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 italic text-xs sm:text-sm">
                                                     No data available
                                                 </td>
@@ -1328,6 +1330,7 @@ const TableComponent: React.FC<TableProps> = ({
                     createEndPoint={createEndPoint}
                     deleteEndPoint={deleteEndPoint}
                     onItemUpdate={onItemUpdate}
+                    onItemDelete={onItemDelete}
                 />
             )}
         </>

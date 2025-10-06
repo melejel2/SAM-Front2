@@ -24,10 +24,13 @@ interface BOQStepProps {
     createBuildings: (buildingData: any) => Promise<any>;
     getBoqPreview: (importData: any) => Promise<any>;
     clearBoq: (clearData: any) => Promise<any>;
-    selectedTrade: any;
     currencies: Currency[];
     onCurrencyChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     onDataRefresh: () => void;
+    columns: Record<string, string>;
+    processBoqData: (data: any) => any;
+    selectedTrade: any;
+    setSelectedTrade: (trade: any) => void;
 }
 
 const BOQStep: React.FC<BOQStepProps> = ({
@@ -43,10 +46,13 @@ const BOQStep: React.FC<BOQStepProps> = ({
     createBuildings,
     getBoqPreview,
     clearBoq,
-    selectedTrade,
     currencies,
     onCurrencyChange,
     onDataRefresh,
+    columns,
+    processBoqData,
+    selectedTrade,
+    setSelectedTrade,
 }) => {
     const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
     const [showCreateBuildings, setShowCreateBuildings] = useState(false);
@@ -379,6 +385,10 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     buildings={buildings}
                     selectedProject={selectedProject}
                     onBuildingChange={setSelectedBuilding}
+                    columns={columns}
+                    processBoqData={processBoqData}
+                    selectedTrade={selectedTrade}
+                    setSelectedTrade={setSelectedTrade}
                 />
             </div>
             

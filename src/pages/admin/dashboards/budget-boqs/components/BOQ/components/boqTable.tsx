@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import SAMTable from "@/components/Table";
 import useTrades from "@/pages/admin/adminTools/trades/use-trades";
 import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
-
-import useBudgetBOQsDialog from "../../use-budget-boq-dialog";
 
 interface BOQTableProps {
     selectedBuilding: any;
@@ -13,6 +11,10 @@ interface BOQTableProps {
     buildings?: any[];
     selectedProject?: any;
     onBuildingChange?: (building: any) => void;
+    columns: Record<string, string>;
+    processBoqData: (data: any) => any;
+    selectedTrade: any;
+    setSelectedTrade: (trade: any) => void;
 }
 
 const BOQTable: React.FC<BOQTableProps> = ({
@@ -21,15 +23,13 @@ const BOQTable: React.FC<BOQTableProps> = ({
     setProjectData,
     buildings,
     selectedProject,
-    onBuildingChange
+    onBuildingChange,
+    columns,
+    processBoqData,
+    selectedTrade,
+    setSelectedTrade,
 }) => {
     const { getTrades, sheets } = useTrades();
-    const {
-        columns,
-        processBoqData,
-        selectedTrade,
-        setSelectedTrade
-    } = useBudgetBOQsDialog();
     const { units } = useBOQUnits();
     
     const [tableData, setTableData] = useState<any[]>([]);
@@ -144,16 +144,16 @@ const BOQTable: React.FC<BOQTableProps> = ({
         }
     };
 
-    const handleItemDelete = (itemId: number) => {
-        if (!projectData || !selectedBuilding || !selectedTrade) return;
+    const handleItemDelete = (itemToDelete: any) => {
+        if (!projectData || !selectedBuilding || !selectedTrade || !itemToDelete) return;
 
         const updatedProjectData = { ...projectData };
         const building = updatedProjectData.buildings?.find((b: any) => b.id === selectedBuilding.id);
         
         if (building) {
-            const sheet = building.boqSheets?.find((s: any) => s.id === selectedTrade.id);
+            const sheet = building.boqSheets?.find((s: any) => s.id === (selectedTrade as any).buildingSheetId || s.name === selectedTrade.name);
             if (sheet) {
-                sheet.boqItems = sheet.boqItems.filter((item: any) => item.id !== itemId);
+                sheet.boqItems = sheet.boqItems.filter((item: any) => item.id !== itemToDelete.id);
                 setProjectData(updatedProjectData);
             }
         }
@@ -209,6 +209,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
                 deleteAction
                 rowsPerPage={15}
                 onItemUpdate={handleItemUpdate}
+                onItemDelete={handleItemDelete}
                 inputFields={inputFields}
             />
         </div>

@@ -39,6 +39,7 @@ interface DialogProps {
     createEndPoint?: string;
     deleteEndPoint?: string;
     onItemUpdate?: (item: any) => void;
+    onItemDelete?: (item: any) => void;
 }
 
 const DialogComponent: React.FC<DialogProps> = ({
@@ -57,6 +58,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     createEndPoint,
     deleteEndPoint,
     onItemUpdate,
+    onItemDelete,
 }) => {
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -301,6 +303,13 @@ const DialogComponent: React.FC<DialogProps> = ({
     };
 
     const handleDelete = async () => {
+        if (onItemDelete && current) {
+            onItemDelete(current);
+            toaster.success("Item removed.");
+            onSuccess();
+            handleClose();
+            return;
+        }
         try {
             const token = getToken();
             if (!token) {

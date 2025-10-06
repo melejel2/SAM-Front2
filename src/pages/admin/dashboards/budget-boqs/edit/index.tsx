@@ -48,6 +48,9 @@ const BudgetBOQEdit = () => {
         getBoqPreview,
         clearBoq,
         selectedTrade,
+        setSelectedTrade,
+        columns,
+        processBoqData,
     } = useBudgetBOQsDialog();
 
     const selectedProject = projects?.find((p) => p.id === parseInt(projectId || "0"));
@@ -218,6 +221,9 @@ const BudgetBOQEdit = () => {
                 getBoqPreview={getBoqPreview}
                 clearBoq={clearBoq}
                 selectedTrade={selectedTrade}
+                setSelectedTrade={setSelectedTrade}
+                columns={columns}
+                processBoqData={processBoqData}
                 currencies={currencies as Currency[]}
                 onCurrencyChange={handleCurrencyChange}
                 onDataRefresh={loadProjectData}
