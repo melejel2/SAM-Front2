@@ -179,6 +179,7 @@ const TableComponent: React.FC<TableProps> = ({
     onItemUpdate,
     onItemDelete,
 }) => {
+    const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -925,7 +926,7 @@ const TableComponent: React.FC<TableProps> = ({
                                             </div>
                                         </th>
                                     ))}
-                                    {actions && (
+                                    {showActionsColumn && (
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
                                             Actions
                                         </th>
@@ -936,7 +937,7 @@ const TableComponent: React.FC<TableProps> = ({
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={(columns ? Object.keys(columns).length : 0) + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                            colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
                                             className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 text-xs sm:text-sm">
                                             Loading...
                                         </td>
@@ -1029,7 +1030,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     );
                                                 })}
 
-                                                {actions && (
+                                                {showActionsColumn && (
                                                     <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                         {!isTotal && (
                                                             <div className="inline-flex w-fit">
@@ -1167,7 +1168,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                     &nbsp;
                                                 </td>
                                             ))}
-                                            {actions && (
+                                            {showActionsColumn && (
                                                 <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                     &nbsp;
                                                 </td>
@@ -1179,7 +1180,7 @@ const TableComponent: React.FC<TableProps> = ({
                                         {paginatedData.length === 0 && (
                                             <tr className="hover:bg-base-200">
                                                 <td
-                                                    colSpan={(columns ? Object.keys(columns).length : 0) + (actions ? 1 : 0) + (select ? 1 : 0)}
+                                                    colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
                                                     className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 italic text-xs sm:text-sm">
                                                     No data available
                                                 </td>
@@ -1315,7 +1316,7 @@ const TableComponent: React.FC<TableProps> = ({
                 )}
             </div>
 
-            {(addBtn || actions) && (
+            {(addBtn || showActionsColumn) && (
                 <DialogComponent
                     handleHide={handleHide}
                     dialogRef={dialogRef}
