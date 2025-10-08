@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/daisyui";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
+import editIcon from "@iconify/icons-lucide/edit";
 import eyeIcon from "@iconify/icons-lucide/eye";
 import fileTextIcon from "@iconify/icons-lucide/file-text";
 import uploadIcon from "@iconify/icons-lucide/upload";
@@ -16,6 +17,7 @@ import {
   uploadBudgetVo,
   type BudgetVO
 } from "@/api/services/budget-vo-api";
+import VOTable from './VOTable';
 
 interface VODialogProps {
   isOpen: boolean;
@@ -43,6 +45,7 @@ const VODialog: React.FC<VODialogProps> = ({
   
   const [vos, setVos] = useState<BudgetVO[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingVO, setEditingVO] = useState<BudgetVO | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [voFile, setVoFile] = useState<File | null>(null);
@@ -169,14 +172,24 @@ const VODialog: React.FC<VODialogProps> = ({
               {totalItems} items • Total: {formatCurrency(totalAmount)}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setSelectedLevel(selectedLevel === vo.voLevel ? null : vo.voLevel)}
-          >
-            <Icon icon={eyeIcon} className="w-4 h-4 mr-1" />
-            {selectedLevel === vo.voLevel ? "Hide Details" : "View Details"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditingVO(vo)}
+            >
+              <Icon icon={editIcon} className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedLevel(selectedLevel === vo.voLevel ? null : vo.voLevel)}
+            >
+              <Icon icon={eyeIcon} className="w-4 h-4 mr-1" />
+              {selectedLevel === vo.voLevel ? "Hide Details" : "View Details"}
+            </Button>
+          </div>
         </div>
         
         {selectedLevel === vo.voLevel && (
@@ -287,6 +300,19 @@ const VODialog: React.FC<VODialogProps> = ({
           )}
         </div>
       </div>
+
+      {editingVO && (
+        <VOTable
+          vo={editingVO}
+          onClose={() => setEditingVO(null)}
+          onSave={() => {
+            loadVOs();
+            setEditingVO(null);
+          }}
+          buildingName={buildingName}
+          tradeName={tradeName}
+        />
+      )}
       
       {/* Create VO Form Dialog */}
       {showCreateForm && (
