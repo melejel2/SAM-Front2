@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/daisyui";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
@@ -45,7 +46,7 @@ const VODialog: React.FC<VODialogProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [voFile, setVoFile] = useState<File | null>(null);
-  const [voLevel, setVoLevel] = useState(projectLevel + 1);
+  const [voLevel, setVoLevel] = useState(1);
   const [isFromBudgetBoq, setIsFromBudgetBoq] = useState(true);
 
   // Number formatting functions
@@ -249,6 +250,7 @@ const VODialog: React.FC<VODialogProps> = ({
                   toaster.error("Please select a trade/sheet first");
                   return;
                 }
+                setVoLevel(vos.length + 1);
                 setShowCreateForm(true);
               }}
             >
@@ -311,11 +313,11 @@ const VODialog: React.FC<VODialogProps> = ({
                   value={voLevel}
                   onChange={(e) => setVoLevel(Number(e.target.value))}
                   min={1}
-                  max={projectLevel + 2}
+                  max={vos.length + 2}
                 />
                 <label className="label">
                   <span className="label-text-alt">
-                    Current project level: {projectLevel}
+                    Current VOs: {vos.length}
                   </span>
                 </label>
               </div>
