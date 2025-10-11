@@ -8,10 +8,11 @@ import React, { useEffect, useRef, useState } from "react";
 
 import { BudgetVO, BudgetVOSheet, BudgetVOItem, ClearBudgetVORequest, BoqDeletionScope } from '@/api/services/budget-vo-api';
 import { saveBudgetVo, uploadBudgetVo, clearBudgetVo } from '@/api/services/budget-vo-api';
-import { Button, Input } from "@/components/daisyui";
+import { Button, Input, Select, SelectOption } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
 import { cn } from "@/helpers/utils/cn";
 import useToast from "@/hooks/use-toast";
+import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
 import { UnsavedChangesDialog } from "@/pages/admin/dashboards/subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 
 interface VOTableProps {
@@ -39,9 +40,9 @@ const VOTable: React.FC<VOTableProps> = (props) => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-  const [showClearScopeDialog, setShowClearScopeDialog] = useState(false);
-    const [clearScope, setClearScope] = useState<BoqDeletionScope>(BoqDeletionScope.Sheet);
-  
+      const [showClearScopeDialog, setShowClearScopeDialog] = useState(false);
+      const [clearScope, setClearScope] = useState<BoqDeletionScope>(BoqDeletionScope.Sheet);
+      const { units } = useBOQUnits();  
     useEffect(() => {        setOriginalVO(JSON.parse(JSON.stringify(vo)));
     }, [vo]);
 
@@ -303,11 +304,18 @@ const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>
                           </td>
                           <td>
                             {isEditing ? (
-                              <Input
-                                className="input-xs w-full"
+                              <Select
+                                className="select-xs w-full"
                                 value={item.unite || ''}
                                 onChange={(e) => handleItemChange(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex, 'unite', e.target.value)}
-                              />
+                              >
+                                <SelectOption value="" disabled>Select Unit</SelectOption>
+                                {units.map(unit => (
+                                  <SelectOption key={unit.id} value={unit.name}>
+                                    {unit.name}
+                                  </SelectOption>
+                                ))}
+                              </Select>
                             ) : (
                               item.unite
                             )}
