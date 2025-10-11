@@ -98,6 +98,13 @@ export interface VoVM {
   voSheets: VOSheetsModel[];
 }
 
+export interface Building {
+  id: number;
+  name: string;
+  projectLevel: number;
+  subContractorLevel: number;
+}
+
 // VO Dataset Types
 export interface VoDatasetVM {
   id: number;
