@@ -4,6 +4,7 @@ import useToast from "@/hooks/use-toast";
 
 import BOQTable from "./components/boqTable";
 import VODialog from "../VOManagement/VODialog";
+import { Building } from "@/types/variation-order";
 
 interface Currency {
     id: number;
@@ -13,7 +14,7 @@ interface Currency {
 
 interface BOQStepProps {
     dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
-    buildings: any[];
+    buildings: Building[];
     selectedProject: any;
     projectData: any;
     setProjectData: (data: any) => void;
@@ -54,7 +55,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
     selectedTrade,
     setSelectedTrade,
 }) => {
-    const [selectedBuilding, setSelectedBuilding] = useState<any>(null);
+    const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
     const [showCreateBuildings, setShowCreateBuildings] = useState(false);
     const [buildingCount, setBuildingCount] = useState(1);
     const [buildingName, setBuildingName] = useState("");
@@ -510,7 +511,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     buildingName={selectedBuilding.name}
                     tradeName={currentSheetForVO.sheet?.name || currentSheetForVO.trade?.name || "Unknown"}
                     sheetId={currentSheetForVO.sheetId}
-                    projectLevel={selectedProject.projectLevel || projectData?.projectLevel || 0}
+                    projectLevel={selectedBuilding?.projectLevel || 0}
                 />
             )}
         </div>

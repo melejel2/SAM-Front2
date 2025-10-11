@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BudgetVO, BudgetVOSheet, BudgetVOItem } from '@/api/services/budget-vo-api';
 import { Button, Input } from '@/components/daisyui';
 import { Icon } from '@iconify/react';
@@ -28,6 +28,19 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [originalVO, setOriginalVO] = useState<BudgetVO | null>(null);
   const [activeSheetId, setActiveSheetId] = useState<number | null>(editedVO.voSheets[0]?.id || null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    setOriginalVO(JSON.parse(JSON.stringify(vo)));
+  }, [vo]);
+
+  useEffect(() => {
+    if (originalVO && JSON.stringify(editedVO) !== JSON.stringify(originalVO)) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [editedVO, originalVO]);
 
   const handleItemChange = (sheetIndex: number, itemIndex: number, field: keyof BudgetVOItem, value: any) => {
     const newVO = { ...editedVO };
@@ -51,8 +64,29 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
       return;
     }
 
+    const payload: BudgetVO = {
+        ...editedVO,
+        voSheets: []
+    };
+
+    let changesDetected = false;
+    editedVO.voSheets.forEach(editedSheet => {
+        const originalSheet = originalVO?.voSheets.find(s => s.id === editedSheet.id);
+        if (!originalSheet || JSON.stringify(editedSheet.voItems) !== JSON.stringify(originalSheet.voItems)) {
+            payload.voSheets.push(editedSheet);
+            changesDetected = true;
+        }
+    });
+
+    if (!changesDetected) {
+        toaster.info("No changes to save.");
+        setLoading(false);
+        onClose();
+        return;
+    }
+
     try {
-      const result = await saveBudgetVo(editedVO, token);
+      const result = await saveBudgetVo(payload, token);
       if (result.isSuccess) {
         toaster.success("Changes saved successfully!");
         onSave();
@@ -85,6 +119,16 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
     }).format(quantity);
   };
 
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   const activeSheet = editedVO.voSheets.find(s => s.id === activeSheetId);
 
   return (
@@ -94,17 +138,17 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
           <div>
             <h3 className="text-xl font-bold">Edit VO Level {vo.voLevel}</h3>
             <p className="text-sm text-base-content/70">
-              {buildingName} {tradeName ? `• ${tradeName}` : ""}
+              {buildingName}
             </p>
           </div>
-          <button onClick={onClose} className="btn btn-sm btn-ghost">
+          <button onClick={handleClose} className="btn btn-sm btn-ghost">
             <Icon icon={xIcon} className="w-4 h-4" />
           </button>
         </div>
         <div className="overflow-y-auto flex-grow">
           {activeSheet ? (
             <div key={activeSheet.id} className="mb-6">
-              <h4 className="font-semibold text-lg mb-2 p-2 bg-base-200 rounded">{activeSheet.sheetName || "Sheet"}</h4>
+              
               <div className="overflow-x-auto">
                 <table className="table table-xs">
                   <thead>
@@ -193,7 +237,6 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
                                 <>
                                   <Button size="xs" color="ghost" onClick={() => {
                                     setEditingItemId(item.id);
-                                    setOriginalVO(JSON.parse(JSON.stringify(editedVO)));
                                   }}>
                                     <Icon icon={editIcon} className="w-4 h-4" />
                                   </Button>
@@ -244,7 +287,7 @@ const VOTable: React.FC<VOTableProps> = ({ vo, onClose, onSave, buildingName, tr
             ))}
         </div>
         <div className="flex justify-end gap-2 mt-4 flex-shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button variant="outline" onClick={handleClose} disabled={loading}>Cancel</Button>
           <Button className="btn-primary" onClick={handleSaveChanges} disabled={loading}>
             {loading ? 'Saving...' : 'Save Changes'}
             {!loading && <Icon icon={checkIcon} className="w-4 h-4 ml-2" />}

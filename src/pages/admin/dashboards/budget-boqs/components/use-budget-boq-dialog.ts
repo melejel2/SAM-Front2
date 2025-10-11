@@ -5,9 +5,8 @@ import { useAuth } from "@/contexts/auth";
 interface Building {
     id: number;
     name: string;
-    type: string;
-    levels?: number;
-    projectId: number;
+    projectLevel: number;
+    subContractorLevel: number;
 }
 
 interface BOQItem {

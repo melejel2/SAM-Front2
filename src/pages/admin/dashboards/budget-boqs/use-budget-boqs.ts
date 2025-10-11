@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 
@@ -71,7 +72,7 @@ const useBudgetBOQs = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             if (data && Array.isArray(data)) {
                 setTableData(data);
             } else {
@@ -92,8 +93,9 @@ const useBudgetBOQs = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             if (data && Array.isArray(data)) {
+                console.log(data);
                 setBuildings(data);
             } else {
                 setBuildings([]);
@@ -112,7 +114,7 @@ const useBudgetBOQs = () => {
                 token: token ?? "",
                 body: projectData,
             });
-            
+
             if (result && (result as any).success !== false) {
                 await getProjectsList();
                 return { success: true };
@@ -132,7 +134,7 @@ const useBudgetBOQs = () => {
                 token: token ?? "",
                 body: projectData,
             });
-            
+
             if (result && (result as any).success !== false) {
                 await getProjectsList();
                 return { success: true };
@@ -151,7 +153,7 @@ const useBudgetBOQs = () => {
                 method: "DELETE",
                 token: token ?? "",
             });
-            
+
             if (result && (result as any).success !== false) {
                 await getProjectsList();
                 return { success: true };
@@ -170,7 +172,7 @@ const useBudgetBOQs = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             return data;
         } catch (error) {
             console.error("Error opening project:", error);

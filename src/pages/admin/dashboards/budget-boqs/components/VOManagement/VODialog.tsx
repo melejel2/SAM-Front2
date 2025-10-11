@@ -310,7 +310,7 @@ const VODialog: React.FC<VODialogProps> = ({
                   toaster.error("Please select a trade/sheet first");
                   return;
                 }
-                setVoLevel(vos.length + 1);
+                setVoLevel(projectLevel + 1);
                 setShowCreateForm(true);
               }}
             >
