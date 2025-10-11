@@ -1,5 +1,36 @@
 import apiRequest from '@/api/api';
-import { VOServiceResult } from '@/types/variation-order';
+import { VOServiceResult, VoVM } from '@/types/variation-order';
+
+/**
+ * Get VO Level Data
+ * @param buildingId Building ID
+ * @param level VO level
+ * @param token Authentication token
+ */
+export const getVoLevelData = async (
+  buildingId: number, 
+  level: number, 
+  token: string
+): Promise<VoVM[]> => {
+  try {
+    const endpoint = `Vo/GetVoLevelData?buildingId=${buildingId}&level=${level}`;
+
+    const response = await apiRequest({
+      endpoint,
+      method: 'GET',
+      token
+    });
+
+    if (response && response.data) {
+      return response.data;
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Get VO Level Data API Error:', error);
+    throw error;
+  }
+};
 
 /**
  * Budget BOQ VO API Service
@@ -71,6 +102,13 @@ export interface BudgetVO {
   voSheets: BudgetVOSheet[];
 }
 
+export interface VosSummary {
+  buildingId: number;
+  voLevel: number;
+  totalPrice: number;
+  itemsCount: number;
+}
+
 /**
  * Get Budget BOQ VOs by building and level
  * @param buildingId Building ID
@@ -81,7 +119,7 @@ export const getBudgetVosByBuilding = async (
   buildingId: number, 
   level: number | null = null, 
   token: string
-): Promise<BudgetVO[]> => {
+): Promise<any> => {
   try {
     const endpoint = level !== null 
       ? `Vo/GetVos?buildingId=${buildingId}&level=${level}`
@@ -156,7 +194,7 @@ export const uploadBudgetVo = async (
  * @param token Authentication token
  */
 export const saveBudgetVo = async (
-  request: SaveBudgetVORequest[], 
+  request: SaveBudgetVORequest, 
   token: string
 ): Promise<VOServiceResult> => {
   try {

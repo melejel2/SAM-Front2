@@ -14,7 +14,9 @@ import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { 
   getBudgetVosByBuilding, 
+  getVoLevelData,
   uploadBudgetVo,
+  type VosSummary,
   type BudgetVO
 } from "@/api/services/budget-vo-api";
 import VOTable from './VOTable';
@@ -43,11 +45,12 @@ const VODialog: React.FC<VODialogProps> = ({
   const { getToken } = useAuth();
   const { toaster } = useToast();
   
-  const [vos, setVos] = useState<BudgetVO[]>([]);
+  const [vos, setVos] = useState<VosSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingVO, setEditingVO] = useState<BudgetVO | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [detailedVO, setDetailedVO] = useState<BudgetVO | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [voFile, setVoFile] = useState<File | null>(null);
   const [voLevel, setVoLevel] = useState(1);
   const [isFromBudgetBoq, setIsFromBudgetBoq] = useState(true);
@@ -105,6 +108,57 @@ const VODialog: React.FC<VODialogProps> = ({
     }
   };
   
+  const handleToggleDetails = async (level: number) => {
+    const currentLevel = selectedLevel;
+    setSelectedLevel(prev => prev === level ? null : level);
+
+    if (currentLevel === level) { // closing details
+        setDetailedVO(null);
+        return;
+    }
+
+    const token = getToken();
+    if (!token) return;
+
+    setLoading(true);
+    try {
+        const voData = await getVoLevelData(buildingId, level, token);
+        if (voData && voData.length > 0) {
+            setDetailedVO(voData[0]);
+        }
+        else {
+            setDetailedVO(null);
+            toaster.error(`Could not find details for VO Level ${level}`);
+        }
+    } catch (error) {
+        console.error(`Error loading details for VO Level ${level}:`, error);
+        toaster.error(`Failed to load details for VO Level ${level}`);
+        setDetailedVO(null);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleEdit = async (vo: VosSummary) => {
+    const token = getToken();
+    if (!token) return;
+
+    setLoading(true);
+    try {
+        const voData = await getVoLevelData(buildingId, vo.voLevel, token);
+        if (voData && voData.length > 0) {
+            setEditingVO(voData[0]);
+        } else {
+            toaster.error(`Could not load VO Level ${vo.voLevel} for editing.`);
+        }
+    } catch (error) {
+        console.error(`Error loading VO for editing (Level ${vo.voLevel}):`, error);
+        toaster.error(`Failed to load VO for editing.`);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleCreateVO = async () => {
     const token = getToken();
     if (!token || !sheetId) {
@@ -153,14 +207,7 @@ const VODialog: React.FC<VODialogProps> = ({
     setIsFromBudgetBoq(true);
   };
   
-  const renderVOLevel = (vo: BudgetVO) => {
-    const totalItems = vo.voSheets.reduce((sum, sheet) => sum + sheet.voItems.length, 0);
-    const totalAmount = vo.voSheets.reduce((sum, sheet) => 
-      sum + sheet.voItems.reduce((sheetSum, item) => 
-        sheetSum + (item.qte * item.pu), 0
-      ), 0
-    );
-    
+  const renderVOLevel = (vo: VosSummary) => {
     return (
       <div key={vo.voLevel} className="border border-base-300 rounded-lg p-4 mb-3">
         <div className="flex justify-between items-center mb-2">
@@ -169,14 +216,14 @@ const VODialog: React.FC<VODialogProps> = ({
               VO Level {vo.voLevel}
             </h4>
             <p className="text-sm text-base-content/70">
-              {totalItems} items • Total: {formatCurrency(totalAmount)}
+              {vo.itemsCount} items • Total: {formatCurrency(vo.totalPrice)}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setEditingVO(vo)}
+              onClick={() => handleEdit(vo)}
             >
               <Icon icon={editIcon} className="w-4 h-4 mr-1" />
               Edit
@@ -184,7 +231,7 @@ const VODialog: React.FC<VODialogProps> = ({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setSelectedLevel(selectedLevel === vo.voLevel ? null : vo.voLevel)}
+              onClick={() => handleToggleDetails(vo.voLevel)}
             >
               <Icon icon={eyeIcon} className="w-4 h-4 mr-1" />
               {selectedLevel === vo.voLevel ? "Hide Details" : "View Details"}
@@ -192,9 +239,9 @@ const VODialog: React.FC<VODialogProps> = ({
           </div>
         </div>
         
-        {selectedLevel === vo.voLevel && (
+        {selectedLevel === vo.voLevel && detailedVO && (
           <div className="mt-3 bg-base-200 rounded p-3">
-            {vo.voSheets.map((sheet) => (
+            {detailedVO.voSheets.map((sheet) => (
               <div key={sheet.id} className="mb-3">
                 <h5 className="font-medium text-sm mb-2">{sheet.sheetName || "Sheet"}</h5>
                 <div className="overflow-x-auto">
@@ -301,6 +348,8 @@ const VODialog: React.FC<VODialogProps> = ({
         </div>
       </div>
 
+      
+      
       {editingVO && (
         <VOTable
           vo={editingVO}
