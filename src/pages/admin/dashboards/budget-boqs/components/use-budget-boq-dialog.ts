@@ -46,6 +46,8 @@ interface BuildingSaveModel {
     name: string;
     type: string;
     boqSheets: BOQSheet[];
+    projectLevel: number;
+    subContractorLevel: number;
 }
 
 interface ProjectSaveModel {

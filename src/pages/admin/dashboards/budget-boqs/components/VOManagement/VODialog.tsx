@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/daisyui";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
@@ -300,8 +299,8 @@ const VODialog: React.FC<VODialogProps> = ({
             </button>
           </div>
           
-          {/* Add New VO Button - Always show */}
-          <div className="mb-4">
+                    {/* Add New VO Button - Always show */}
+          <div className="mb-4 flex items-center gap-2">
             <Button
               size="sm"
               className="btn-primary"
@@ -360,6 +359,10 @@ const VODialog: React.FC<VODialogProps> = ({
           }}
           buildingName={buildingName}
           tradeName={tradeName}
+          projectId={projectId}
+          buildingId={buildingId}
+          sheetId={sheetId}
+          projectLevel={projectLevel}
         />
       )}
       
