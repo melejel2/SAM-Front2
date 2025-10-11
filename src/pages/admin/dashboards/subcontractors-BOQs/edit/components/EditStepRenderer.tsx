@@ -5,7 +5,7 @@ import { EditStep2_TradeSelection } from "../steps/EditStep2_TradeSelection";
 import { EditStep3_BuildingSelection } from "../steps/EditStep3_BuildingSelection";
 import { EditStep4_SubcontractorSelection } from "../steps/EditStep4_SubcontractorSelection";
 import { EditStep5_ContractDetails } from "../steps/EditStep5_ContractDetails";
-import { EditStep6_BOQItems } from "../steps/EditStep6_BoqItems";
+import { EditStep6_BOQItems } from "../steps/EditStep6_BOQItems";
 import { EditStep7_Review } from "../steps/EditStep7_Review";
 import { EditStep8_Preview } from "../steps/EditStep8_Preview";
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/daisyui";
 import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
@@ -276,7 +276,7 @@ const VOWizard: React.FC<VOWizardProps> = ({
 
     // Budget BOQ VO API functions
     const createBudgetVO = async (data: any, token: string) => {
-        const budgetVOData = [{
+        const budgetVOData = {
             buildingId: data.selectedBuildings[0] || 1,
             voLevel: 1, // Default level
             voSheets: data.items?.map((item: any) => ({
@@ -295,14 +295,14 @@ const VOWizard: React.FC<VOWizardProps> = ({
                     costCodeId: item.costCodeId
                 }]
             })) || []
-        }];
+        };
         
         return await saveBudgetVo(budgetVOData, token);
     };
 
     const updateBudgetVO = async (id: number, data: any, token: string) => {
         // Similar to create but with existing ID
-        const budgetVOData = [{
+        const budgetVOData = {
             buildingId: data.selectedBuildings[0] || 1,
             voLevel: 1,
             voSheets: data.items?.map((item: any) => ({
@@ -321,7 +321,7 @@ const VOWizard: React.FC<VOWizardProps> = ({
                     costCodeId: item.costCodeId
                 }]
             })) || []
-        }];
+        };
         
         return await saveBudgetVo(budgetVOData, token);
     };

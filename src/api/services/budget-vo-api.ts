@@ -1,5 +1,6 @@
 import apiRequest from '@/api/api';
-import { VOServiceResult, VoVM } from '@/types/variation-order';
+import { VOServiceResult, VoVM, ClearBoqItemsRequest, BoqDeletionScope } from '@/types/variation-order';
+export { BoqDeletionScope } from '@/types/variation-order';
 
 /**
  * Get VO Level Data
@@ -70,7 +71,7 @@ export interface SaveBudgetVORequest {
 }
 
 export interface ClearBudgetVORequest {
-  scope: 'Sheet' | 'Building';
+  scope: BoqDeletionScope;
   projectId: number;
   buildingId?: number | null;
   sheetId?: number | null;
@@ -232,12 +233,13 @@ export const saveBudgetVo = async (
  * @param token Authentication token
  */
 export const clearBudgetVo = async (
-  request: ClearBudgetVORequest, 
-  token: string
+    request: ClearBudgetVORequest, 
+   voLevel : number,
+   token: string
 ): Promise<VOServiceResult> => {
   try {
     const response = await apiRequest({
-      endpoint: 'Vo/ClearVo',
+      endpoint: `Vo/ClearVo?voLevel=${voLevel}`,
       method: 'POST',
       token,
       body: request as any // Cast to satisfy TypeScript requirements

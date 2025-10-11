@@ -6,8 +6,8 @@ import xIcon from "@iconify/icons-lucide/x";
 import { Icon } from "@iconify/react";
 import React, { useEffect, useRef, useState } from "react";
 
-import { BudgetVO, BudgetVOItem, BudgetVOSheet } from "@/api/services/budget-vo-api";
-import { saveBudgetVo, uploadBudgetVo } from "@/api/services/budget-vo-api";
+import { BudgetVO, BudgetVOSheet, BudgetVOItem, ClearBudgetVORequest, BoqDeletionScope } from '@/api/services/budget-vo-api';
+import { saveBudgetVo, uploadBudgetVo, clearBudgetVo } from '@/api/services/budget-vo-api';
 import { Button, Input } from "@/components/daisyui";
 import { useAuth } from "@/contexts/auth";
 import { cn } from "@/helpers/utils/cn";
@@ -39,9 +39,10 @@ const VOTable: React.FC<VOTableProps> = (props) => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-
-    useEffect(() => {
-        setOriginalVO(JSON.parse(JSON.stringify(vo)));
+  const [showClearScopeDialog, setShowClearScopeDialog] = useState(false);
+    const [clearScope, setClearScope] = useState<BoqDeletionScope>(BoqDeletionScope.Sheet);
+  
+    useEffect(() => {        setOriginalVO(JSON.parse(JSON.stringify(vo)));
     }, [vo]);
 
     useEffect(() => {
@@ -111,85 +112,124 @@ const VOTable: React.FC<VOTableProps> = (props) => {
         }
     };
 
-    const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-        const token = getToken();
-        const currentProjectId = projectId;
-        const currentBuildingId = buildingId;
-        const currentSheetId = sheetId;
+    const token = getToken();
+    const currentProjectId = props.projectId;
+    const currentBuildingId = props.buildingId;
+    const currentSheetId = props.sheetId;
 
-        if (!token || !currentSheetId) {
-            toaster.error("Please select a trade/sheet first");
-            setLoading(false);
-            return;
-        }
+    if (!token || !currentSheetId) {
+        toaster.error("Please select a trade/sheet first");
+        setLoading(false);
+        return;
+    }
 
-        setLoading(true);
-        try {
-            const uploadRequest = {
-                projectId: currentProjectId,
-                buildingId: currentBuildingId,
-                sheetId: currentSheetId,
-                voLevel: vo.voLevel,
-                isFromBudgetBoq: false,
-                excelFile: file,
-            };
-
-            const result = await uploadBudgetVo(uploadRequest, token);
-
-            if (result.isSuccess) {
-                toaster.success("VO uploaded successfully");
-                onSave(); // Refresh the VO page in parent
-            } else {
-                toaster.error(result.error?.message || "Failed to upload VO");
-            }
-        } catch (error) {
-            console.error("Error uploading VO:", error);
-            toaster.error("Failed to upload VO");
-        } finally {
-            setLoading(false);
-            // Reset file input
-            if (event.target) {
-                event.target.value = "";
-            }
-        }
-    };
-
-    const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount) || amount === 0) return "-";
-        const hasDecimals = amount % 1 !== 0;
-        return new Intl.NumberFormat("en-US", {
-            style: "decimal",
-            minimumFractionDigits: hasDecimals ? 2 : 0,
-            maximumFractionDigits: 2,
-        }).format(amount);
-    };
-
-    const formatQuantity = (quantity: number) => {
-        if (!quantity || isNaN(quantity) || quantity === 0) return "-";
-
-        const hasDecimals = quantity % 1 !== 0;
-
-        return new Intl.NumberFormat("en-US", {
-            style: "decimal",
-            minimumFractionDigits: hasDecimals ? 1 : 0,
-            maximumFractionDigits: hasDecimals ? 3 : 0,
-        }).format(quantity);
-    };
-
-    const handleClose = () => {
-        if (hasUnsavedChanges) {
-            setShowUnsavedChangesDialog(true);
+    setLoading(true);
+    try {
+        const uploadRequest = {
+            projectId: currentProjectId,
+            buildingId: currentBuildingId,
+            sheetId: currentSheetId,
+            voLevel: vo.voLevel + 1, // Use current VO level + 1
+            isFromBudgetBoq: false,
+            excelFile: file
+        };
+        
+        const result = await uploadBudgetVo(uploadRequest, token);
+        
+        if (result.isSuccess) {
+            toaster.success("VO uploaded successfully");
+            onSave(); // Refresh the VO page in parent
         } else {
-            onClose();
+            toaster.error(result.error?.message || "Failed to upload VO");
         }
-    };
+    } catch (error) {
+        console.error("Error uploading VO:", error);
+        toaster.error("Failed to upload VO");
+    } finally {
+        setLoading(false);
+        // Reset file input
+        if (event.target) {
+            event.target.value = '';
+        }
+    }
+  };
 
-    const activeSheet = editedVO.voSheets.find((s) => s.id === activeSheetId);
+  const handleClearVo = async () => {
+    setShowClearScopeDialog(true);
+  };
 
-    return (
+  const handleClearVoConfirm = async () => {
+    setShowClearScopeDialog(false); // Close the dialog
+    
+    const token = getToken();
+    const currentProjectId = props.projectId;
+    const currentBuildingId = props.buildingId;
+    const currentSheetId = props.sheetId;
+
+    if (!token || !currentProjectId || !currentBuildingId) { // projectId and buildingId are required
+        toaster.error("Project and Building must be selected.");
+        setLoading(false);
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const clearRequest: ClearBudgetVORequest = {
+            scope: clearScope, // Use the selected scope
+            projectId: currentProjectId,
+            buildingId: currentBuildingId,
+            sheetId: clearScope === BoqDeletionScope.Sheet ? currentSheetId : undefined, // Only send sheetId if scope is Sheet
+        };
+        
+        const result = await clearBudgetVo(clearRequest, vo.voLevel, token);
+        
+        if (result.isSuccess) {
+            toaster.success("VO cleared successfully");
+            onSave(); // Refresh the VO page in parent
+        } else {
+            toaster.error(result.error?.message || "Failed to clear VO");
+        }
+    } catch (error) {
+        console.error("Error clearing VO:", error);
+        toaster.error("Failed to clear VO");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (!amount || isNaN(amount) || amount === 0) return '-';
+    const hasDecimals = amount % 1 !== 0;
+    return new Intl.NumberFormat('en-US', { style: 'decimal', minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 }).format(amount);
+  };
+
+  const formatQuantity = (quantity: number) => {
+    if (!quantity || isNaN(quantity) || quantity === 0) return '-';
+    
+    const hasDecimals = quantity % 1 !== 0;
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'decimal',
+      minimumFractionDigits: hasDecimals ? 1 : 0,
+      maximumFractionDigits: hasDecimals ? 3 : 0
+    }).format(quantity);
+  };
+
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedChangesDialog(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const activeSheet = editedVO.voSheets.find(s => s.id === activeSheetId);
+
+  return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-base-100 mx-4 flex max-h-[90vh] w-full max-w-7xl flex-col rounded-lg p-6 shadow-xl">
                 <div className="mb-4 flex flex-shrink-0 items-center justify-between">
@@ -201,241 +241,242 @@ const VOTable: React.FC<VOTableProps> = (props) => {
                         <Icon icon={xIcon} className="h-4 w-4" />
                     </button>
                 </div>
-                <div className="mb-4 flex items-center gap-2">
-                    <Button size="sm" className="btn-secondary" onClick={() => fileInputRef.current?.click()}>
-                        <Icon icon={uploadIcon} className="mr-1 h-4 w-4" />
-                        Upload VO
-                    </Button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleDirectFileUpload}
-                        accept=".xlsx,.xls"
-                        style={{ display: "none" }}
-                    />
-                </div>
-                <div className="flex-grow overflow-y-auto">
-                    {activeSheet ? (
-                        <div key={activeSheet.id} className="mb-6">
-                            <div className="overflow-x-auto">
-                                <table className="table-xs table">
-                                    <thead>
-                                        <tr>
-                                            <th className="w-12">No</th>
-                                            <th>Description</th>
-                                            <th className="w-20">Unit</th>
-                                            <th className="w-24">Qty</th>
-                                            <th className="w-28">Unit Price</th>
-                                            <th className="w-28">Total</th>
-                                            <th className="w-24">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {activeSheet.voItems.map((item, itemIndex) => {
-                                            const total = (item.qte || 0) * (item.pu || 0);
-                                            const isEditing = editingItemId === item.id;
-                                            return (
-                                                <tr key={item.id}>
-                                                    <td>{item.no}</td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <Input
-                                                                className="input-xs w-full"
-                                                                value={item.key || ""}
-                                                                onChange={(e) =>
-                                                                    handleItemChange(
-                                                                        editedVO.voSheets.findIndex(
-                                                                            (s) => s.id === activeSheetId,
-                                                                        ),
-                                                                        itemIndex,
-                                                                        "key",
-                                                                        e.target.value,
-                                                                    )
-                                                                }
-                                                            />
-                                                        ) : (
-                                                            item.key
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <Input
-                                                                className="input-xs w-full"
-                                                                value={item.unite || ""}
-                                                                onChange={(e) =>
-                                                                    handleItemChange(
-                                                                        editedVO.voSheets.findIndex(
-                                                                            (s) => s.id === activeSheetId,
-                                                                        ),
-                                                                        itemIndex,
-                                                                        "unite",
-                                                                        e.target.value,
-                                                                    )
-                                                                }
-                                                            />
-                                                        ) : (
-                                                            item.unite
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <Input
-                                                                type="number"
-                                                                className="input-xs w-full"
-                                                                value={item.qte || 0}
-                                                                onChange={(e) =>
-                                                                    handleItemChange(
-                                                                        editedVO.voSheets.findIndex(
-                                                                            (s) => s.id === activeSheetId,
-                                                                        ),
-                                                                        itemIndex,
-                                                                        "qte",
-                                                                        parseFloat(e.target.value),
-                                                                    )
-                                                                }
-                                                            />
-                                                        ) : (
-                                                            formatQuantity(item.qte)
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        {isEditing ? (
-                                                            <Input
-                                                                type="number"
-                                                                className="input-xs w-full"
-                                                                value={item.pu || 0}
-                                                                onChange={(e) =>
-                                                                    handleItemChange(
-                                                                        editedVO.voSheets.findIndex(
-                                                                            (s) => s.id === activeSheetId,
-                                                                        ),
-                                                                        itemIndex,
-                                                                        "pu",
-                                                                        parseFloat(e.target.value),
-                                                                    )
-                                                                }
-                                                            />
-                                                        ) : (
-                                                            formatCurrency(item.pu)
-                                                        )}
-                                                    </td>
-                                                    <td>{formatCurrency(total)}</td>
-                                                    <td>
-                                                        <div className="flex items-center gap-1">
-                                                            {isEditing ? (
-                                                                <>
-                                                                    <Button
-                                                                        size="xs"
-                                                                        color="ghost"
-                                                                        onClick={() => setEditingItemId(null)}>
-                                                                        <Icon
-                                                                            icon={checkIcon}
-                                                                            className="text-success h-4 w-4"
-                                                                        />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="xs"
-                                                                        color="ghost"
-                                                                        onClick={() => {
-                                                                            setEditingItemId(null);
-                                                                            if (originalVO) {
-                                                                                setEditedVO(originalVO);
-                                                                                setOriginalVO(null);
-                                                                            }
-                                                                        }}>
-                                                                        <Icon
-                                                                            icon={xIcon}
-                                                                            className="text-error h-4 w-4"
-                                                                        />
-                                                                    </Button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Button
-                                                                        size="xs"
-                                                                        color="ghost"
-                                                                        onClick={() => {
-                                                                            setEditingItemId(item.id);
-                                                                        }}>
-                                                                        <Icon icon={editIcon} className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="xs"
-                                                                        color="ghost"
-                                                                        className="text-error"
-                                                                        onClick={() =>
-                                                                            handleItemDelete(
-                                                                                editedVO.voSheets.findIndex(
-                                                                                    (s) => s.id === activeSheetId,
-                                                                                ),
-                                                                                itemIndex,
-                                                                            )
-                                                                        }>
-                                                                        <Icon icon={trashIcon} className="h-4 w-4" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="py-12 text-center">
-                            <p className="text-error font-semibold">No sheet selected or data is missing.</p>
-                        </div>
-                    )}
-                </div>
-                <div className="bg-base-100 border-base-300 flex w-full flex-shrink-0 overflow-x-auto border-t">
-                    {editedVO.voSheets.map((sheet) => (
-                        <span
-                            key={sheet.id}
-                            className={cn(
-                                "relative min-w-max cursor-pointer border-b-2 px-3 py-2 text-center text-sm transition-all duration-200",
-                                sheet.id === activeSheetId
-                                    ? sheet.voItems.length > 0
-                                        ? "text-primary border-primary bg-primary/5"
-                                        : "text-base-content border-base-content/20 bg-base-200"
-                                    : sheet.voItems.length > 0
-                                      ? "text-base-content hover:text-primary hover:border-primary/30 border-transparent"
-                                      : "text-base-content/50 hover:text-base-content/70 border-transparent",
-                            )}
-                            onClick={() => {
-                                setActiveSheetId(sheet.id);
-                            }}>
-                            {sheet.sheetName}
-                            {sheet.voItems.length > 0 && (
-                                <span className="ml-1 text-xs opacity-60">({sheet.voItems.length})</span>
-                            )}
-                        </span>
-                    ))}
-                </div>
-                <div className="mt-4 flex flex-shrink-0 justify-end gap-2">
-                    <Button variant="outline" onClick={handleClose} disabled={loading}>
-                        Cancel
-                    </Button>
-                    <Button className="btn-primary" onClick={handleSaveChanges} disabled={loading}>
-                        {loading ? "Saving..." : "Save Changes"}
-                        {!loading && <Icon icon={checkIcon} className="ml-2 h-4 w-4" />}
-                    </Button>
-                </div>
-
-                {/* Unsaved Changes Dialog */}
-                <UnsavedChangesDialog
-                    isOpen={showUnsavedChangesDialog}
-                    onConfirm={() => {
-                        setShowUnsavedChangesDialog(false);
-                        onClose();
-                    }}
-                    onCancel={() => setShowUnsavedChangesDialog(false)}
-                />
-            </div>
+        <div className="flex items-center gap-2 mb-4">
+            <Button
+              size="sm"
+              className="btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Icon icon={uploadIcon} className="w-4 h-4 mr-1" />
+              Upload VO
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleDirectFileUpload}
+              accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+            />
+            <Button
+                size="sm"
+                className="btn-error"
+                onClick={() => setShowClearScopeDialog(true)}
+            >
+                <Icon icon={trashIcon} className="w-4 h-4 mr-1" />
+                Clear VO
+            </Button>
         </div>
-    );
+        <div className="overflow-y-auto flex-grow">
+          {activeSheet ? (
+            <div key={activeSheet.id} className="mb-6">
+              
+              <div className="overflow-x-auto">
+                <table className="table table-xs">
+                  <thead>
+                    <tr>
+                      <th className="w-12">No</th>
+                      <th>Description</th>
+                      <th className="w-20">Unit</th>
+                      <th className="w-24">Qty</th>
+                      <th className="w-28">Unit Price</th>
+                      <th className="w-28">Total</th>
+                      <th className="w-24">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeSheet.voItems.map((item, itemIndex) => {
+                      const total = (item.qte || 0) * (item.pu || 0);
+                      const isEditing = editingItemId === item.id;
+                      return (
+                        <tr key={item.id}>
+                          <td>{item.no}</td>
+                          <td>
+                            {isEditing ? (
+                              <Input
+                                className="input-xs w-full"
+                                value={item.key || ''}
+                                onChange={(e) => handleItemChange(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex, 'key', e.target.value)}
+                              />
+                            ) : (
+                              item.key
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <Input
+                                className="input-xs w-full"
+                                value={item.unite || ''}
+                                onChange={(e) => handleItemChange(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex, 'unite', e.target.value)}
+                              />
+                            ) : (
+                              item.unite
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                className="input-xs w-full"
+                                value={item.qte || 0}
+                                onChange={(e) => handleItemChange(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex, 'qte', parseFloat(e.target.value))}
+                              />
+                            ) : (
+                              formatQuantity(item.qte)
+                            )}
+                          </td>
+                          <td>
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                className="input-xs w-full"
+                                value={item.pu || 0}
+                                onChange={(e) => handleItemChange(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex, 'pu', parseFloat(e.target.value))}
+                              />
+                            ) : (
+                              formatCurrency(item.pu)
+                            )}
+                          </td>
+                          <td>{formatCurrency(total)}</td>
+                          <td>
+                            <div className="flex items-center gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button size="xs" color="ghost" onClick={() => setEditingItemId(null)}>
+                                    <Icon icon={checkIcon} className="w-4 h-4 text-success" />
+                                  </Button>
+                                  <Button size="xs" color="ghost" onClick={() => {
+                                    setEditingItemId(null);
+                                    if (originalVO) {
+                                      setEditedVO(originalVO);
+                                      setOriginalVO(null);
+                                    }
+                                  }}>
+                                    <Icon icon={xIcon} className="w-4 h-4 text-error" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="xs" color="ghost" onClick={() => {
+                                    setEditingItemId(item.id);
+                                  }}>
+                                    <Icon icon={editIcon} className="w-4 h-4" />
+                                  </Button>
+                                  <Button size="xs" color="ghost" className="text-error" onClick={() => handleItemDelete(editedVO.voSheets.findIndex(s => s.id === activeSheetId), itemIndex)}>
+                                    <Icon icon={trashIcon} className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-error font-semibold">No sheet selected or data is missing.</p>
+            </div>
+          )}
+        </div>
+        <div className="bg-base-100 flex w-full overflow-x-auto border-t border-base-300 flex-shrink-0">
+            {editedVO.voSheets.map((sheet) => (
+                <span
+                    key={sheet.id}
+                    className={cn(
+                        "min-w-max cursor-pointer px-3 py-2 text-center text-sm transition-all duration-200 relative border-b-2",
+                        sheet.id === activeSheetId
+                            ? sheet.voItems.length > 0
+                                ? "text-primary border-primary bg-primary/5"
+                                : "text-base-content border-base-content/20 bg-base-200"
+                            : sheet.voItems.length > 0
+                                ? "text-base-content hover:text-primary border-transparent hover:border-primary/30"
+                                : "text-base-content/50 border-transparent hover:text-base-content/70",
+                    )}
+                    onClick={() => {
+                        setActiveSheetId(sheet.id);
+                    }}>
+                    {sheet.sheetName}
+                    {sheet.voItems.length > 0 && (
+                        <span className="ml-1 text-xs opacity-60">
+                            ({sheet.voItems.length})
+                        </span>
+                    )}
+                </span>
+            ))}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 flex-shrink-0">
+          <Button variant="outline" onClick={handleClose} disabled={loading}>Cancel</Button>
+          <Button className="btn-primary" onClick={handleSaveChanges} disabled={loading}>
+            {loading ? 'Saving...' : 'Save Changes'}
+            {!loading && <Icon icon={checkIcon} className="w-4 h-4 ml-2" />}
+          </Button>
+        </div>
+
+        {/* Unsaved Changes Dialog */}
+        <UnsavedChangesDialog
+            isOpen={showUnsavedChangesDialog}
+            onConfirm={() => {
+                setShowUnsavedChangesDialog(false);
+                onClose();
+            }}
+            onCancel={() => setShowUnsavedChangesDialog(false)}
+        />
+
+        {/* Clear Scope Dialog */}
+        {showClearScopeDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 className="text-lg font-bold mb-4">Clear VO Scope</h3>
+                    <p className="text-base-content/70 mb-4">
+                        Select the scope for clearing the VO:
+                    </p>
+                    <div className="space-y-2 mb-6">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="clearScope"
+                                value={BoqDeletionScope.Sheet}
+                                checked={clearScope === BoqDeletionScope.Sheet}
+                                onChange={() => setClearScope(BoqDeletionScope.Sheet)}
+                                className="radio radio-primary"
+                            />
+                            <span>Current Sheet only</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="clearScope"
+                                value={BoqDeletionScope.Building}
+                                checked={clearScope === BoqDeletionScope.Building}
+                                onChange={() => setClearScope(BoqDeletionScope.Building)}
+                                className="radio radio-primary"
+                            />
+                            <span>Current Building</span>
+                        </label>
+                    </div>
+                    <div className="flex space-x-2">
+                        <Button
+                            onClick={handleClearVoConfirm}
+                            className="btn btn-sm bg-red-500 border border-red-500 text-white hover:bg-red-600 flex-1"
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            onClick={() => setShowClearScopeDialog(false)}
+                            className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 flex-1"
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default VOTable;
