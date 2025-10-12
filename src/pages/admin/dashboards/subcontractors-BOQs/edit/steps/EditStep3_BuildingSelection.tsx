@@ -10,7 +10,7 @@ export const EditStep3_BuildingSelection: React.FC = () => {
         console.log("🏢 BUILDING SELECTION COMPONENT - Current state:", {
             formDataBuildingIds: formData.buildingIds,
             formDataBuildingIdsCount: formData.buildingIds.length,
-            availableBuildings: buildings.map(b => ({ id: b.id, name: b.name || b.buildingName })),
+            availableBuildings: buildings, // Log full buildings array
             availableBuildingsCount: buildings.length,
             selectedBuildingsCheck: buildings.map(b => ({
                 id: b.id,

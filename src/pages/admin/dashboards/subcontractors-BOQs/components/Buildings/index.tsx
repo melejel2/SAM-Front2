@@ -6,10 +6,11 @@ import useBuildings from "./use-buildings";
 
 interface BuildingsStepProps {
     onSelectBuilding?: (Building: any) => void;
+    projectId: number | null;
 }
 
-const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
-    const { columns, tableData } = useBuildings();
+const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding, projectId }) => {
+    const { columns, tableData, loading } = useBuildings(projectId);
 
     return (
         <div>
@@ -18,7 +19,7 @@ const BuildingsStep: React.FC<BuildingsStepProps> = ({ onSelectBuilding }) => {
                 tableData={tableData}
                 title={"Building"}
                 onRowSelect={onSelectBuilding}
-                loading={false}
+                loading={loading}
                 onSuccess={() => {}}
             />
         </div>

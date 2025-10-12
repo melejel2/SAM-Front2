@@ -44,7 +44,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
         selectedSubcontractor,
     } = useSubcontractorBOQsDialog();
 
-    const { tableData } = useBuildings();
+    const { tableData } = useBuildings(selectedProject ? selectedProject.id : null);
 
     const { toaster } = useToast();
 
@@ -59,6 +59,15 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
     };
 
     const handleSelectProject = (project: any) => {
+        if (selectedProject && selectedProject.id !== project.id) {
+            toaster.info("Project has been changed. Please re-verify the subsequent steps.");
+            // Reset other dependent field
+            setSelectedTrade(null);
+            setSelectedBuilding(null);
+            setSelectedSubcontractor(null);
+            setContractDetails({});
+            setBoqItems([]);
+        }
         setSelectedProject(project);
     };
 
@@ -127,7 +136,7 @@ const SubcontractorsBOQDialog: React.FC<SubcontractorsBOQDialogProps> = ({
             label: "Buildings",
             value: selectedBuilding ? selectedBuilding.name : null,
             symbol: "B",
-            content: <BuildingsStep onSelectBuilding={handleSelectBuilding} />,
+            content: <BuildingsStep onSelectBuilding={handleSelectBuilding} projectId={selectedProject ? selectedProject.id : null} />,
         },
         {
             label: "Subcontractor",

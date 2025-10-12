@@ -313,6 +313,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
     const fetchBuildingsWithSheets = useCallback(
         async (projectId: number) => {
+            console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
             try {
                 setLoadingBuildings(true);
                 // Use OpenProject API to get full project data with BOQ items (matching budget BOQ approach)
@@ -350,6 +351,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         };
                     });
 
+                    console.log("🏢 Fetched new buildings:", buildingsWithSheets);
                     setAllBuildings(buildingsWithSheets);
                     setBuildings(buildingsWithSheets);
                 } else {
@@ -956,7 +958,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 originalContractData &&
                 !formData.tradeId &&
                 originalContractData.buildings &&
-                originalContractData.buildings.length > 0
+                originalContractData.buildings.length > 0 &&
+                formData.projectId === originalContractData.projectId
             ) {
                 const existingSheetName = originalContractData.buildings[0]?.sheetName;
                 const existingBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
@@ -1012,15 +1015,33 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
     // Fetch buildings with sheets when project changes
     useEffect(() => {
+        console.log("🏢 Project changed. Current projectId:", formData.projectId);
+        console.log("🏢 Before clearing, buildings:", buildings);
+        console.log("🏢 Before clearing, allBuildings:", allBuildings);
+        console.log("🏢 Before clearing, trades:", trades);
+
         if (formData.projectId) {
+            // Immediately clear buildings and trades from the old project
+            setBuildings([]);
+            setAllBuildings([]);
+            setTrades([]);
+
             fetchBuildingsWithSheets(formData.projectId);
             // Clear trade and building selections when project changes
             setFormData({ tradeId: null, buildingIds: [] });
+        } else {
+            // If project is cleared, also clear buildings and trades
+            setBuildings([]);
+            setAllBuildings([]);
+            setTrades([]);
         }
     }, [formData.projectId]);
 
     // Filter buildings when trade changes (SIMPLE: based on sheet names)
     useEffect(() => {
+        console.log("🏢 Trade changed or buildings updated. Current tradeId:", formData.tradeId);
+        console.log("🏢 allBuildings at this point:", allBuildings);
+
         if (formData.tradeId && allBuildings.length > 0) {
             // Find the selected trade
             const selectedTrade = trades.find((t) => t.id === formData.tradeId);
@@ -1059,8 +1080,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     setFormData({ buildingIds: [] });
                 } else {
                     // For edit mode, ensure we don't accidentally clear building IDs
-                    // If building IDs are empty but we have original data, restore them
-                    if (formData.buildingIds.length === 0 && originalContractData.buildings) {
+                    if (formData.buildingIds.length === 0 && originalContractData.buildings && formData.projectId === originalContractData.projectId) {
                         const restoredBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
                         console.log("🔧 EDIT MODE - Restoring building IDs during filter:", restoredBuildingIds);
                         setFormDataState((prev) => ({ ...prev, buildingIds: restoredBuildingIds }));
@@ -1068,6 +1088,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 }
             }
         } else if (!formData.tradeId) {
+            console.log("🏢 No trade selected. Setting buildings to allBuildings.");
             // Reset to all buildings when no trade selected
             setBuildings(allBuildings);
         }
