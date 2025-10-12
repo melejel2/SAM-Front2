@@ -200,47 +200,30 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
         }
     };
 
-    const exportContractPdf = async () => {
+    const exportContractPdf = () => {
+        if (!previewData || !previewData.blob) {
+            toaster.error("Cannot export: The PDF preview is not available.");
+            return;
+        }
+
         setExporting(true);
+
         try {
-            const token = getToken();
-            const exportModel = buildContractModel();
-
-            if (!exportModel) {
-                setExporting(false);
-                // Error is already set by buildContractModel
-                toaster.error("Cannot export: form data is incomplete or invalid.");
-                return;
-            }
-
-            const response = await apiRequest({
-                endpoint: "ContractsDatasets/ExportContractPdf",
-                method: "POST",
-                token: token ?? "",
-                body: exportModel,
-                responseType: "blob",
-            });
-
-            if (response && response instanceof Blob && response.size > 0) {
-                const fileName = `contract-${exportModel.contractNumber || contractId}.pdf`;
-                const url = window.URL.createObjectURL(response);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                toaster.success("PDF exported successfully");
-            } else {
-                const errorObj = response as any;
-                throw new Error(errorObj.message || "Failed to export PDF");
-            }
+            const url = window.URL.createObjectURL(previewData.blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = previewData.fileName || "contract.pdf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-            toaster.error(`Failed to export PDF: ${errorMessage}`);
+            console.error("Failed to export PDF from blob:", error);
+            toaster.error("An unexpected error occurred during the export.");
         } finally {
-            setExporting(false);
+            // Set exporting to false after a short delay to allow the download to initiate
+            // and provide visual feedback on the button.
+            setTimeout(() => setExporting(false), 500);
         }
     };
 
