@@ -47,7 +47,6 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
             setError("BOQ data is missing or invalid. Cannot generate preview.");
             return null;
         }
-
         const buildings = formData.boqData
             .map((building: any) => {
                 if (!building || !building.items) {
@@ -59,9 +58,9 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
                     buildingName: building.buildingName,
                     sheetId: 0, // Let backend handle this, consistent with submit logic
                     sheetName: building.sheetName || "",
-                    replaceAllItems: true,
+                    replaceAllItems: building.replaceAllItems || false,
                     boqsContract: building.items.map((item: any) => ({
-                        id: item.id || 0,
+                        id: item.id && item.id > 0 && item.id < 2147483647 ? item.id : 0,
                         no: item.no || item.nb,
                         key: item.key || item.item,
                         unite: item.unite || item.unit,
