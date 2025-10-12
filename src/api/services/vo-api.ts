@@ -827,26 +827,34 @@ export const createContractVO = async (voData: VoDatasetBoqDetailsVM, token: str
  */
 export const getContractVOs = async (contractId: number, token: string): Promise<VoApiResponse<any[]> | VoApiError> => {
   try {
-    // This endpoint doesn't exist yet in backend, so we'll use the general list and filter
-    // TODO: Backend should add GetVoDatasetsByContract endpoint
-    // Using 'All' to get VOs regardless of status - backend now supports this parameter
+    const status = 'All';
+    const queryParams = new URLSearchParams({
+        status: status,
+        contractDataSetId: contractId.toString()
+    });
+
     const response = await apiRequest({
-      endpoint: 'VoDataSet/GetVoDatasetsList/All',
+      endpoint: `VoDataSet/GetVoDatasetsList?${queryParams.toString()}`,
       method: 'GET',
       token
     });
 
     if (response && Array.isArray(response)) {
-      // Filter VOs for this specific contract
-      const contractVOs = response.filter((vo: any) => vo.contractsDatasetId === contractId);
-      
       return {
         success: true,
-        data: contractVOs,
-        message: `Found ${contractVOs.length} VOs for this contract`
+        data: response,
+        message: `Found ${response.length} VOs for this contract`
       };
     }
+
+    if (response && response.success && Array.isArray(response.data)) {
+        return response;
+    }
     
+    if (response && !response.success) {
+        return response;
+    }
+
     return {
       success: true,
       data: [],
