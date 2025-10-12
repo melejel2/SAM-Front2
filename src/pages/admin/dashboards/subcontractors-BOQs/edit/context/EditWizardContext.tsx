@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { replace, useLocation, useParams } from "react-router-dom";
+
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
-import { useContractsApi } from "../../hooks/use-contracts-api";
 import type { SubcontractorBoqVM } from "@/types/contracts";
+
+import { useContractsApi } from "../../hooks/use-contracts-api";
 
 // Types and Interfaces (same as new wizard)
 interface Project {
@@ -127,6 +129,7 @@ interface EditWizardFormData {
         buildingId: number;
         buildingName: string;
         sheetName: string;
+        replaceAllItems?: boolean;
         items: BOQItem[];
     }[];
 }
@@ -151,12 +154,12 @@ interface EditWizardContextType {
     currencies: Currency[];
     allCostCodes: any[];
     originalContractData: SubcontractorBoqVM | null;
-    
+
     // Actions
     setFormData: (data: Partial<EditWizardFormData>) => void;
     setCurrentStep: (step: number) => void;
     setHasUnsavedChanges: (changed: boolean) => void;
-    
+
     // Data fetching
     fetchProjects: () => Promise<void>;
     fetchCostCodes: () => Promise<void>;
@@ -165,12 +168,12 @@ interface EditWizardContextType {
     fetchContracts: () => Promise<void>;
     fetchCurrencies: () => Promise<void>;
     loadExistingData: (id: number) => Promise<void>;
-    
+
     // Validation & Navigation
     validateCurrentStep: () => boolean;
     goToNextStep: () => void;
     goToPreviousStep: () => void;
-    
+
     // Submission
     handleSubmit: () => Promise<void>;
 }
@@ -185,33 +188,33 @@ const initialEditFormData: EditWizardFormData = {
     contractId: null,
     currencyId: null,
     amount: 0, // Add missing amount property
-    contractDate: new Date().toISOString().split('T')[0],
-    completionDate: '',
-    contractNumber: '',
+    contractDate: new Date().toISOString().split("T")[0],
+    completionDate: "",
+    contractNumber: "",
     advancePayment: 0,
     materialSupply: 0,
-    purchaseIncrease: '',
-    latePenalties: '',
-    latePenalityCeiling: '',
-    holdWarranty: '',
-    mintenancePeriod: '',
-    workWarranty: '',
-    termination: '',
-    daysNumber: '',
-    progress: '',
-    holdBack: '',
-    subcontractorAdvancePayee: '',
-    recoverAdvance: '',
-    procurementConstruction: '',
-    prorataAccount: '',
-    managementFees: '',
-    plansExecution: '',
-    subTrade: '',
-    paymentsTerm: '',
-    remark: '',
-    remarkCP: '',
+    purchaseIncrease: "",
+    latePenalties: "",
+    latePenalityCeiling: "",
+    holdWarranty: "",
+    mintenancePeriod: "",
+    workWarranty: "",
+    termination: "",
+    daysNumber: "",
+    progress: "",
+    holdBack: "",
+    subcontractorAdvancePayee: "",
+    recoverAdvance: "",
+    procurementConstruction: "",
+    prorataAccount: "",
+    managementFees: "",
+    plansExecution: "",
+    subTrade: "",
+    paymentsTerm: "",
+    remark: "",
+    remarkCP: "",
     attachments: [],
-    boqData: []
+    boqData: [],
 };
 
 // Create Context
@@ -221,7 +224,7 @@ const EditWizardContext = createContext<EditWizardContextType | undefined>(undef
 export const useEditWizardContext = () => {
     const context = useContext(EditWizardContext);
     if (context === undefined) {
-        throw new Error('useEditWizardContext must be used within an EditWizardProvider');
+        throw new Error("useEditWizardContext must be used within an EditWizardProvider");
     }
     return context;
 };
@@ -238,11 +241,10 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
     const location = useLocation();
     const token = getToken();
-    
+
     // Get actual contract ID from navigation state (for API calls) or try to parse if it's numeric
-    const contractId = location.state?.contractId || 
-        (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
-    
+    const contractId = location.state?.contractId || (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
+
     // State
     const [formData, setFormDataState] = useState<EditWizardFormData>(initialEditFormData);
     const [currentStep, setCurrentStep] = useState(1);
@@ -251,7 +253,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const [initialDataLoading, setInitialDataLoading] = useState(true);
     const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingBuildings, setLoadingBuildings] = useState(false);
-    
+
     // Data arrays
     const [projects, setProjects] = useState<Project[]>([]);
     const [trades, setTrades] = useState<Trade[]>([]);
@@ -262,13 +264,13 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const [currencies, setCurrencies] = useState<Currency[]>([]);
     const [allCostCodes, setAllCostCodes] = useState<any[]>([]);
     const [originalContractData, setOriginalContractData] = useState<SubcontractorBoqVM | null>(null);
-    
+
     // Enhanced form data setter that tracks changes
     const setFormData = useCallback((data: Partial<EditWizardFormData>) => {
-        setFormDataState(prev => ({ ...prev, ...data }));
+        setFormDataState((prev) => ({ ...prev, ...data }));
         setHasUnsavedChanges(true);
     }, []);
-    
+
     // Data fetching functions (same as new wizard)
     const fetchProjects = useCallback(async () => {
         try {
@@ -290,7 +292,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setLoadingProjects(false);
         }
     }, [token]);
-    
+
     const fetchCostCodes = useCallback(async () => {
         try {
             const response = await apiRequest({
@@ -309,60 +311,64 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         }
     }, [token]);
 
-    const fetchBuildingsWithSheets = useCallback(async (projectId: number) => {
-        try {
-            setLoadingBuildings(true);
-            // Use OpenProject API to get full project data with BOQ items (matching budget BOQ approach)
-            const projectData = await apiRequest({
-                method: "GET",
-                endpoint: `Project/OpenProject/${projectId}`,
-                token: token || undefined,
-            });
+    const fetchBuildingsWithSheets = useCallback(
+        async (projectId: number) => {
+            try {
+                setLoadingBuildings(true);
+                // Use OpenProject API to get full project data with BOQ items (matching budget BOQ approach)
+                const projectData = await apiRequest({
+                    method: "GET",
+                    endpoint: `Project/OpenProject/${projectId}`,
+                    token: token || undefined,
+                });
 
-            if (projectData && projectData.buildings && Array.isArray(projectData.buildings)) {
-                const buildingsWithSheets: BuildingWithSheets[] = projectData.buildings.map((building: any) => {
-                    // Extract sheets with actual BOQ data
-                    const sheets = building.boqSheets || [];
-                    const enhancedSheets = sheets.map((sheet: any) => {
-                        const boqItemCount = (sheet.boqItems && Array.isArray(sheet.boqItems)) ? sheet.boqItems.length : 0;
+                if (projectData && projectData.buildings && Array.isArray(projectData.buildings)) {
+                    const buildingsWithSheets: BuildingWithSheets[] = projectData.buildings.map((building: any) => {
+                        // Extract sheets with actual BOQ data
+                        const sheets = building.boqSheets || [];
+                        const enhancedSheets = sheets.map((sheet: any) => {
+                            const boqItemCount =
+                                sheet.boqItems && Array.isArray(sheet.boqItems) ? sheet.boqItems.length : 0;
+
+                            return {
+                                id: sheet.id,
+                                name: sheet.name,
+                                hasVo: sheet.hasVo || false,
+                                isActive: sheet.isActive || true,
+                                costCodeId: sheet.costCodeId,
+                                boqItemCount: boqItemCount,
+                            };
+                        });
 
                         return {
-                            id: sheet.id,
-                            name: sheet.name,
-                            hasVo: sheet.hasVo || false,
-                            isActive: sheet.isActive || true,
-                            costCodeId: sheet.costCodeId,
-                            boqItemCount: boqItemCount
+                            id: building.id,
+                            name: building.name || building.buildingName || `Building ${building.id}`,
+                            buildingName: building.buildingName,
+                            sheets: enhancedSheets,
+                            availableSheets: [],
+                            sheetCount: enhancedSheets.length,
                         };
                     });
 
-                    return {
-                        id: building.id,
-                        name: building.name || building.buildingName || `Building ${building.id}`,
-                        buildingName: building.buildingName,
-                        sheets: enhancedSheets,
-                        availableSheets: [],
-                        sheetCount: enhancedSheets.length
-                    };
-                });
-
-                setAllBuildings(buildingsWithSheets);
-                setBuildings(buildingsWithSheets);
-            } else {
-                console.warn("OpenProject returned no buildings or invalid data");
+                    setAllBuildings(buildingsWithSheets);
+                    setBuildings(buildingsWithSheets);
+                } else {
+                    console.warn("OpenProject returned no buildings or invalid data");
+                    setAllBuildings([]);
+                    setBuildings([]);
+                }
+            } catch (error) {
+                console.error("Error fetching project with BOQ data:", error);
+                toaster.error("Failed to fetch project data");
                 setAllBuildings([]);
                 setBuildings([]);
+            } finally {
+                setLoadingBuildings(false);
             }
-        } catch (error) {
-            console.error("Error fetching project with BOQ data:", error);
-            toaster.error("Failed to fetch project data");
-            setAllBuildings([]);
-            setBuildings([]);
-        } finally {
-            setLoadingBuildings(false);
-        }
-    }, [token]);
-    
+        },
+        [token],
+    );
+
     const fetchSubcontractors = useCallback(async () => {
         try {
             setLoading(true);
@@ -383,7 +389,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setLoading(false);
         }
     }, [token]);
-    
+
     const fetchContracts = useCallback(async () => {
         try {
             setLoading(true);
@@ -404,7 +410,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setLoading(false);
         }
     }, [token]);
-    
+
     const fetchCurrencies = useCallback(async () => {
         try {
             setLoading(true);
@@ -425,127 +431,132 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setLoading(false);
         }
     }, [token]);
-    
+
     // Initialize contracts API hook
     const contractsApi = useContractsApi();
-    
+
     // Load existing data for editing using the new API service
-    const loadExistingData = useCallback(async (contractId: number) => {
-        try {
-            setInitialDataLoading(true);
-            const result = await contractsApi.loadSubcontractorData(contractId);
-            
-            if (result.success && result.data) {
-                const existingData = result.data;
-                
-                // ✅ Store original contract data for project change detection
-                setOriginalContractData(existingData);
+    const loadExistingData = useCallback(
+        async (contractId: number) => {
+            try {
+                setInitialDataLoading(true);
+                const result = await contractsApi.loadSubcontractorData(contractId);
 
-                // 🔍 DEBUGGING: Log buildings and BOQ structure
-                console.log("🔍 EDIT PAGE - Buildings and BOQ Structure:", {
-                    contractId: contractId,
-                    existingDataBuildings: existingData.buildings,
-                    buildingsCount: existingData.buildings?.length || 0,
-                    buildingDetails: existingData.buildings?.map((building: any) => ({
-                        id: building.id,
-                        buildingName: building.buildingName,
-                        sheetName: building.sheetName,
-                        boqsContractCount: building.boqsContract?.length || 0,
-                        boqsContract: building.boqsContract || null,
-                    })),
-                });
+                if (result.success && result.data) {
+                    const existingData = result.data;
 
-                // 🔍 DEBUG: Log building IDs from existing data
-                const extractedBuildingIds = existingData.buildings?.map((b: any) => b.id) || [];
-                console.log("🏢 EDIT MODE - Building IDs from existing data:", {
-                    existingDataBuildings: existingData.buildings,
-                    extractedBuildingIds: extractedBuildingIds,
-                    buildingCount: extractedBuildingIds.length
-                });
+                    // ✅ Store original contract data for project change detection
+                    setOriginalContractData(existingData);
 
-                const newFormData = {
-                    ...initialEditFormData,
-                    id: existingData.id || contractId,
-                    projectId: existingData.projectId,
-                    buildingIds: extractedBuildingIds,
-                    subcontractorId: existingData.subContractorId,
-                    contractId: existingData.contractId,
-                    currencyId: existingData.currencyId,
-                    contractNumber: existingData.contractNumber || '',
-                    contractDate: existingData.contractDate ? existingData.contractDate.split('T')[0] : '',
-                    completionDate: existingData.completionDate ? existingData.completionDate.split('T')[0] : '',
-                    advancePayment: existingData.advancePayment || 0,
-                    materialSupply: existingData.materialSupply || 0,
-                    purchaseIncrease: existingData.purchaseIncrease || '',
-                    latePenalties: existingData.latePenalties || '',
-                    latePenalityCeiling: existingData.latePenalityCeiling || '',
-                    holdWarranty: existingData.holdWarranty || '',
-                    mintenancePeriod: existingData.mintenancePeriod || '',
-                    workWarranty: existingData.workWarranty || '',
-                    termination: existingData.termination || '',
-                    daysNumber: existingData.daysNumber || '',
-                    progress: existingData.progress || '',
-                    holdBack: existingData.holdBack || '',
-                    subcontractorAdvancePayee: existingData.subcontractorAdvancePayee || '',
-                    recoverAdvance: existingData.recoverAdvance || '',
-                    procurementConstruction: existingData.procurementConstraction || '',
-                    prorataAccount: existingData.prorataAccount || '',
-                    managementFees: existingData.managementFees || '',
-                    plansExecution: existingData.plansExecution || '',
-                    subTrade: existingData.subTrade || '',
-                    paymentsTerm: existingData.paymentsTerm || '',
-                    remark: existingData.remark || '',
-                    remarkCP: existingData.remarkCP || '',
-                    attachments: [],
-                    boqData: existingData.buildings?.map((building: any) => ({
-                        buildingId: building.id,
-                        buildingName: building.buildingName,
-                        sheetName: building.sheetName || '', // Use empty string if no sheet specified
-                        items: building.boqsContract?.map((item: any) => ({
-                            id: item.id,
-                            no: item.no,
-                            key: item.key,
-                            costCode: item.costCode || '',
-                            unite: item.unite,
-                            qte: item.qte,
-                            pu: item.pu,
-                            totalPrice: item.totalPrice || (item.qte * item.pu)
-                        })) || []
-                    })) || []
-                };
+                    // 🔍 DEBUGGING: Log buildings and BOQ structure
+                    console.log("🔍 EDIT PAGE - Buildings and BOQ Structure:", {
+                        contractId: contractId,
+                        existingDataBuildings: existingData.buildings,
+                        buildingsCount: existingData.buildings?.length || 0,
+                        buildingDetails: existingData.buildings?.map((building: any) => ({
+                            id: building.id,
+                            buildingName: building.buildingName,
+                            sheetName: building.sheetName,
+                            boqsContractCount: building.boqsContract?.length || 0,
+                            boqsContract: building.boqsContract || null,
+                        })),
+                    });
 
-                setFormDataState(newFormData);
-                
-                // 🔍 DEBUG: Log final form data
-                console.log("🏢 EDIT MODE - Final form data set:", {
-                    buildingIds: newFormData.buildingIds,
-                    buildingCount: newFormData.buildingIds.length,
-                    projectId: newFormData.projectId,
-                    tradeId: newFormData.tradeId
-                });
-                
-                
-                // Load buildings for the project
-                if (existingData.projectId) {
-                    await fetchBuildingsWithSheets(existingData.projectId);
+                    // 🔍 DEBUG: Log building IDs from existing data
+                    const extractedBuildingIds = existingData.buildings?.map((b: any) => b.id) || [];
+                    console.log("🏢 EDIT MODE - Building IDs from existing data:", {
+                        existingDataBuildings: existingData.buildings,
+                        extractedBuildingIds: extractedBuildingIds,
+                        buildingCount: extractedBuildingIds.length,
+                    });
+
+                    const newFormData = {
+                        ...initialEditFormData,
+                        id: existingData.id || contractId,
+                        projectId: existingData.projectId,
+                        buildingIds: extractedBuildingIds,
+                        subcontractorId: existingData.subContractorId,
+                        contractId: existingData.contractId,
+                        currencyId: existingData.currencyId,
+                        contractNumber: existingData.contractNumber || "",
+                        contractDate: existingData.contractDate ? existingData.contractDate.split("T")[0] : "",
+                        completionDate: existingData.completionDate ? existingData.completionDate.split("T")[0] : "",
+                        advancePayment: existingData.advancePayment || 0,
+                        materialSupply: existingData.materialSupply || 0,
+                        purchaseIncrease: existingData.purchaseIncrease || "",
+                        latePenalties: existingData.latePenalties || "",
+                        latePenalityCeiling: existingData.latePenalityCeiling || "",
+                        holdWarranty: existingData.holdWarranty || "",
+                        mintenancePeriod: existingData.mintenancePeriod || "",
+                        workWarranty: existingData.workWarranty || "",
+                        termination: existingData.termination || "",
+                        daysNumber: existingData.daysNumber || "",
+                        progress: existingData.progress || "",
+                        holdBack: existingData.holdBack || "",
+                        subcontractorAdvancePayee: existingData.subcontractorAdvancePayee || "",
+                        recoverAdvance: existingData.recoverAdvance || "",
+                        procurementConstruction: existingData.procurementConstraction || "",
+                        prorataAccount: existingData.prorataAccount || "",
+                        managementFees: existingData.managementFees || "",
+                        plansExecution: existingData.plansExecution || "",
+                        subTrade: existingData.subTrade || "",
+                        paymentsTerm: existingData.paymentsTerm || "",
+                        remark: existingData.remark || "",
+                        remarkCP: existingData.remarkCP || "",
+                        attachments: [],
+                        boqData:
+                            existingData.buildings?.map((building: any) => ({
+                                buildingId: building.id,
+                                buildingName: building.buildingName,
+                                replaceAllItems: building.replaceAllItems || false,
+                                sheetName: building.sheetName || "", // Use empty string if no sheet specified
+                                items:
+                                    building.boqsContract?.map((item: any) => ({
+                                        id: item.id,
+                                        no: item.no,
+                                        key: item.key,
+                                        costCode: item.costCode || "",
+                                        unite: item.unite,
+                                        qte: item.qte,
+                                        pu: item.pu,
+                                        totalPrice: item.totalPrice || item.qte * item.pu,
+                                    })) || [],
+                            })) || [],
+                    };
+
+                    setFormDataState(newFormData);
+
+                    // 🔍 DEBUG: Log final form data
+                    console.log("🏢 EDIT MODE - Final form data set:", {
+                        buildingIds: newFormData.buildingIds,
+                        buildingCount: newFormData.buildingIds.length,
+                        projectId: newFormData.projectId,
+                        tradeId: newFormData.tradeId,
+                    });
+
+                    // Load buildings for the project
+                    if (existingData.projectId) {
+                        await fetchBuildingsWithSheets(existingData.projectId);
+                    }
+
+                    setHasUnsavedChanges(false);
                 }
-                
-                setHasUnsavedChanges(false);
+            } catch (error) {
+                console.error("Error loading existing data:", error);
+                const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+                toaster.error(`Failed to load contract data: ${errorMessage}`);
+            } finally {
+                setInitialDataLoading(false);
             }
-        } catch (error) {
-            console.error("Error loading existing data:", error);
-            const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-            toaster.error(`Failed to load contract data: ${errorMessage}`);
-        } finally {
-            setInitialDataLoading(false);
-        }
-    }, [contractsApi, fetchBuildingsWithSheets]);
-    
+        },
+        [contractsApi, fetchBuildingsWithSheets],
+    );
+
     // Validation functions (same as new wizard)
     const validateStep1 = (): boolean => {
         return formData.projectId !== null;
     };
-    
+
     const validateStep2 = (): boolean => {
         return formData.tradeId !== null;
     };
@@ -562,14 +573,14 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         return (
             formData.contractId !== null &&
             formData.currencyId !== null &&
-            formData.contractNumber.trim() !== '' &&
-            formData.contractDate !== '' &&
-            formData.completionDate !== ''
+            formData.contractNumber.trim() !== "" &&
+            formData.contractDate !== "" &&
+            formData.completionDate !== ""
         );
     };
 
     const validateStep6 = (): boolean => {
-        return formData.boqData.some(building => building.items.length > 0);
+        return formData.boqData.some((building) => building.items.length > 0);
     };
 
     const validateStep7 = (): boolean => {
@@ -579,39 +590,48 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const validateStep8 = (): boolean => {
         return true; // Preview step doesn't require validation
     };
-    
+
     const validateCurrentStep = useCallback((): boolean => {
         switch (currentStep) {
-            case 1: return validateStep1();
-            case 2: return validateStep2();
-            case 3: return validateStep3();
-            case 4: return validateStep4();
-            case 5: return validateStep5();
-            case 6: return validateStep6();
-            case 7: return validateStep7();
-            case 8: return validateStep8();
-            default: return false;
+            case 1:
+                return validateStep1();
+            case 2:
+                return validateStep2();
+            case 3:
+                return validateStep3();
+            case 4:
+                return validateStep4();
+            case 5:
+                return validateStep5();
+            case 6:
+                return validateStep6();
+            case 7:
+                return validateStep7();
+            case 8:
+                return validateStep8();
+            default:
+                return false;
         }
     }, [currentStep, formData]);
-    
+
     // Navigation functions
     const goToNextStep = useCallback(() => {
         if (validateCurrentStep() && currentStep < 8) {
             setCurrentStep(currentStep + 1);
         }
     }, [validateCurrentStep, currentStep]);
-    
+
     const goToPreviousStep = useCallback(() => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
     }, [currentStep]);
-    
+
     // Submission function for updates using the new API service
     const handleSubmit = useCallback(async () => {
         try {
             setLoading(true);
-            
+
             // Prepare JSON data for submission according to SubcontractorBoqVM structure
             const submitData: SubcontractorBoqVM = {
                 id: formData.id, // Existing contract ID
@@ -647,33 +667,33 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 remarkCP: formData.remarkCP,
                 contractDatasetStatus: "Editable",
                 isGenerated: false,
-                buildings: formData.boqData.map(building => ({
+                buildings: formData.boqData.map((building) => ({
                     id: building.buildingId || 0,
                     buildingName: building.buildingName,
                     sheetId: 0, // Will be managed by backend
                     sheetName: building.sheetName || "", // Use empty string if no sheet specified
-                    replaceAllItems: true,
-                    boqsContract: building.items.map(item => ({
+                    replaceAllItems: building.replaceAllItems || false,
+                    boqsContract: building.items.map((item) => ({
                         id: item.id && item.id > 0 && item.id < 2147483647 ? item.id : 0, // Use existing ID if valid, otherwise 0 for new items
                         no: item.no,
                         key: item.key,
                         unite: item.unite,
                         qte: item.qte,
                         pu: item.pu,
-                        costCode: item.costCode || '',
+                        costCode: item.costCode || "",
                         costCodeId: null as number | null,
                         boqtype: "Subcontractor",
                         boqSheetId: 0,
                         sheetName: building.sheetName || "", // Use empty string if no sheet specified
                         orderBoq: 0,
-                        totalPrice: item.qte * item.pu
-                    }))
-                }))
+                        totalPrice: item.qte * item.pu,
+                    })),
+                })),
             };
-            
+
             // Use the new API service
             const result = await contractsApi.saveContract(submitData, false);
-            
+
             if (result.success) {
                 // Upload new documents if any
                 if (formData.attachments.length > 0) {
@@ -681,16 +701,16 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         for (const attachment of formData.attachments) {
                             await contractsApi.attachDocument({
                                 contractsDataSetId: formData.id,
-                                attachmentsType: attachment.type === 'PDF' ? 0 : 1, // AttachmentType enum
-                                wordFile: attachment.file
+                                attachmentsType: attachment.type === "PDF" ? 0 : 1, // AttachmentType enum
+                                wordFile: attachment.file,
                             });
                         }
                     } catch (docError) {
-                        console.warn('Failed to upload some documents:', docError);
-                        toaster.warning('Contract updated but some documents failed to upload');
+                        console.warn("Failed to upload some documents:", docError);
+                        toaster.warning("Contract updated but some documents failed to upload");
                     }
                 }
-                
+
                 toaster.success("Contract updated successfully!");
                 setHasUnsavedChanges(false);
                 // Navigation will be handled by the main component
@@ -705,50 +725,51 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setLoading(false);
         }
     }, [formData, contractsApi, toaster]);
-    
+
     // Initialize data on component mount
     useEffect(() => {
         let isMounted = true; // Prevent state updates if component unmounts
-        
+
         const initializeData = async () => {
             if (token && isMounted) {
                 try {
                     // Inline API calls to avoid dependency issues
                     setLoadingProjects(true);
                     setLoading(true);
-                    
+
                     // First load all master data BEFORE loading existing contract data
-                    const [projectsRes, costCodesRes, subcontractorsRes, contractsRes, currenciesRes] = await Promise.allSettled([
-                        apiRequest({
-                            method: "GET",
-                            endpoint: "Project/GetProjectsList",
-                            token: token,
-                        }),
-                        apiRequest({
-                            method: "GET",
-                            endpoint: "CostCode/GetCodeCostLibrary",
-                            token: token,
-                        }),
-                        apiRequest({
-                            method: "GET",
-                            endpoint: "Subcontractors/GetSubcontractors",
-                            token: token,
-                        }),
-                        apiRequest({
-                            method: "GET",
-                            endpoint: "Templates/GetContracts",
-                            token: token,
-                        }),
-                        apiRequest({
-                            method: "GET",
-                            endpoint: "Currencie/GetCurrencies",
-                            token: token,
-                        })
-                    ]);
-                    
+                    const [projectsRes, costCodesRes, subcontractorsRes, contractsRes, currenciesRes] =
+                        await Promise.allSettled([
+                            apiRequest({
+                                method: "GET",
+                                endpoint: "Project/GetProjectsList",
+                                token: token,
+                            }),
+                            apiRequest({
+                                method: "GET",
+                                endpoint: "CostCode/GetCodeCostLibrary",
+                                token: token,
+                            }),
+                            apiRequest({
+                                method: "GET",
+                                endpoint: "Subcontractors/GetSubcontractors",
+                                token: token,
+                            }),
+                            apiRequest({
+                                method: "GET",
+                                endpoint: "Templates/GetContracts",
+                                token: token,
+                            }),
+                            apiRequest({
+                                method: "GET",
+                                endpoint: "Currencie/GetCurrencies",
+                                token: token,
+                            }),
+                        ]);
+
                     if (isMounted) {
                         // Process projects
-                        if (projectsRes.status === 'fulfilled') {
+                        if (projectsRes.status === "fulfilled") {
                             const response = projectsRes.value;
                             if (Array.isArray(response)) {
                                 setProjects(response);
@@ -761,7 +782,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         }
 
                         // Process cost codes
-                        if (costCodesRes.status === 'fulfilled') {
+                        if (costCodesRes.status === "fulfilled") {
                             const response = costCodesRes.value;
                             if (Array.isArray(response)) {
                                 setAllCostCodes(response);
@@ -774,7 +795,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         }
 
                         // Process subcontractors
-                        if (subcontractorsRes.status === 'fulfilled') {
+                        if (subcontractorsRes.status === "fulfilled") {
                             const response = subcontractorsRes.value;
                             if (Array.isArray(response)) {
                                 setSubcontractors(response);
@@ -785,9 +806,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             console.error("Error fetching subcontractors:", subcontractorsRes.reason);
                             toaster.error("Failed to fetch subcontractors");
                         }
-                        
+
                         // Process contracts
-                        if (contractsRes.status === 'fulfilled') {
+                        if (contractsRes.status === "fulfilled") {
                             const response = contractsRes.value;
                             if (Array.isArray(response)) {
                                 setContracts(response);
@@ -798,9 +819,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             console.error("Error fetching contracts:", contractsRes.reason);
                             toaster.error("Failed to fetch contracts");
                         }
-                        
+
                         // Process currencies
-                        if (currenciesRes.status === 'fulfilled') {
+                        if (currenciesRes.status === "fulfilled") {
                             const response = currenciesRes.value;
                             if (Array.isArray(response)) {
                                 setCurrencies(response);
@@ -811,7 +832,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             console.error("Error fetching currencies:", currenciesRes.reason);
                             toaster.error("Failed to fetch currencies");
                         }
-                        
+
                         // THEN load existing contract data so selectedRowId can find matches
                         if (contractId) {
                             await loadExistingData(parseInt(contractId));
@@ -830,9 +851,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 }
             }
         };
-        
+
         initializeData();
-        
+
         // Cleanup function
         return () => {
             isMounted = false;
@@ -859,7 +880,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                             buildingId: building.id,
                             boqItemCount: sheet.boqItemCount,
                             hasBoqData,
-                            willBeIncludedInTrades: hasBoqData
+                            willBeIncludedInTrades: hasBoqData,
                         });
                     }
 
@@ -873,7 +894,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                                 id: sheet.id,
                                 name: sheetName,
                                 code: sheetName,
-                                buildingCount: 1
+                                buildingCount: 1,
                             });
                         }
                     }
@@ -889,35 +910,38 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             // 3. Contract still needs to be editable
             if (originalContractData && originalContractData.buildings && originalContractData.buildings.length > 0) {
                 const existingSheetName = originalContractData.buildings[0]?.sheetName;
-                if (existingSheetName && !finalTrades.some(trade => trade.name === existingSheetName)) {
+                if (existingSheetName && !finalTrades.some((trade) => trade.name === existingSheetName)) {
                     console.warn("⚠️ EDIT MODE - Contract uses trade with no current BOQ data:", existingSheetName);
                     console.warn("⚠️ This suggests the BOQ data was removed after contract creation");
                     console.log("🔧 EDIT MODE - Adding missing contract trade for editing:", existingSheetName);
-                    
+
                     // Find the first sheet with this name to get an ID (even if boqItemCount = 0)
                     let sheetId = 0;
                     let foundSheet = false;
-                    allBuildings.forEach(building => {
-                        building.sheets.forEach(sheet => {
+                    allBuildings.forEach((building) => {
+                        building.sheets.forEach((sheet) => {
                             if (sheet.name === existingSheetName && sheetId === 0) {
                                 sheetId = sheet.id;
                                 foundSheet = true;
                             }
                         });
                     });
-                    
+
                     if (foundSheet) {
                         // Add the missing trade (marked as legacy/empty)
                         finalTrades.push({
                             id: sheetId,
                             name: existingSheetName,
                             code: existingSheetName,
-                            buildingCount: 1 // At least the buildings in the contract
+                            buildingCount: 1, // At least the buildings in the contract
                         });
-                        
+
                         // Re-sort after adding
                         finalTrades = finalTrades.sort((a, b) => a.name.localeCompare(b.name));
-                        console.log("🔧 EDIT MODE - Updated trades list now includes:", finalTrades.map(t => t.name));
+                        console.log(
+                            "🔧 EDIT MODE - Updated trades list now includes:",
+                            finalTrades.map((t) => t.name),
+                        );
                     } else {
                         console.error("🚨 CRITICAL - Contract trade doesn't exist in project:", existingSheetName);
                     }
@@ -928,37 +952,45 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
             // 🔧 FIX: Set tradeId based on existing contract data
             // If we have existing contract data and haven't set tradeId yet, match by sheet name
-            if (originalContractData && !formData.tradeId && originalContractData.buildings && originalContractData.buildings.length > 0) {
+            if (
+                originalContractData &&
+                !formData.tradeId &&
+                originalContractData.buildings &&
+                originalContractData.buildings.length > 0
+            ) {
                 const existingSheetName = originalContractData.buildings[0]?.sheetName;
                 const existingBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
-                
+
                 console.log("🔍 TRADE MATCHING DEBUG:", {
                     existingSheetName,
                     finalTradesCount: finalTrades.length,
-                    finalTradesNames: finalTrades.map(t => t.name),
+                    finalTradesNames: finalTrades.map((t) => t.name),
                     originalContractDataExists: !!originalContractData,
                     currentTradeId: formData.tradeId,
-                    existingBuildingIds
+                    existingBuildingIds,
                 });
-                
+
                 if (existingSheetName) {
                     // ONLY exact match - no fuzzy matching
-                    const matchingTrade = finalTrades.find(trade => trade.name === existingSheetName);
-                    
+                    const matchingTrade = finalTrades.find((trade) => trade.name === existingSheetName);
+
                     console.log("🔍 TRADE MATCHING RESULT:", {
                         searchingFor: existingSheetName,
                         matchingTrade,
                         found: !!matchingTrade,
-                        availableTradesWithBoqData: finalTrades.map(t => t.name)
+                        availableTradesWithBoqData: finalTrades.map((t) => t.name),
                     });
-                    
+
                     if (matchingTrade) {
-                        console.log(`🔧 EDIT MODE - Setting tradeId to ${matchingTrade.id} for sheet "${existingSheetName}" with buildingIds:`, existingBuildingIds);
+                        console.log(
+                            `🔧 EDIT MODE - Setting tradeId to ${matchingTrade.id} for sheet "${existingSheetName}" with buildingIds:`,
+                            existingBuildingIds,
+                        );
                         // Set both tradeId AND preserve buildingIds in one update to avoid race condition
-                        setFormDataState(prev => ({ 
-                            ...prev, 
+                        setFormDataState((prev) => ({
+                            ...prev,
                             tradeId: matchingTrade.id,
-                            buildingIds: existingBuildingIds // Ensure building IDs are preserved
+                            buildingIds: existingBuildingIds, // Ensure building IDs are preserved
                         }));
                     } else {
                         console.error("🚨 EDIT MODE - No EXACT match found for sheet:", existingSheetName);
@@ -966,7 +998,10 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         console.error("   1. Has no BOQ items (boqItemCount = 0)");
                         console.error("   2. Doesn't exist in current project buildings");
                         console.error("   3. Sheet name changed after contract was created");
-                        console.error("🚨 Available trades (sheets with BOQ data):", finalTrades.map(t => t.name));
+                        console.error(
+                            "🚨 Available trades (sheets with BOQ data):",
+                            finalTrades.map((t) => t.name),
+                        );
                     }
                 } else {
                     console.warn("🚨 EDIT MODE - No sheetName found in existing contract data");
@@ -988,35 +1023,35 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     useEffect(() => {
         if (formData.tradeId && allBuildings.length > 0) {
             // Find the selected trade
-            const selectedTrade = trades.find(t => t.id === formData.tradeId);
+            const selectedTrade = trades.find((t) => t.id === formData.tradeId);
             if (selectedTrade) {
-                const filteredBuildings = allBuildings.map(building => {
-                    // Filter sheets by trade name (sheet name)
-                    const availableSheets = building.sheets.filter(sheet =>
-                        sheet.name === selectedTrade.name
-                    );
-                    return {
-                        ...building,
-                        availableSheets,
-                        sheetCount: availableSheets.length
-                    };
-                }).filter(building => building.sheetCount > 0);
+                const filteredBuildings = allBuildings
+                    .map((building) => {
+                        // Filter sheets by trade name (sheet name)
+                        const availableSheets = building.sheets.filter((sheet) => sheet.name === selectedTrade.name);
+                        return {
+                            ...building,
+                            availableSheets,
+                            sheetCount: availableSheets.length,
+                        };
+                    })
+                    .filter((building) => building.sheetCount > 0);
 
                 console.log(`🔍 EDIT Filtered buildings for trade "${selectedTrade.name}":`, filteredBuildings);
                 setBuildings(filteredBuildings);
-                
+
                 // 🔍 DEBUG: Log building IDs state during filtering
                 console.log("🏢 BUILDING FILTER - Current state:", {
                     selectedTradeId: formData.tradeId,
                     selectedTradeName: selectedTrade.name,
                     currentBuildingIds: formData.buildingIds,
-                    filteredBuildingIds: filteredBuildings.map(b => b.id),
-                    buildingIdsStillValid: formData.buildingIds.filter(id => 
-                        filteredBuildings.some(b => b.id === id)
+                    filteredBuildingIds: filteredBuildings.map((b) => b.id),
+                    buildingIdsStillValid: formData.buildingIds.filter((id) =>
+                        filteredBuildings.some((b) => b.id === id),
                     ),
-                    hasOriginalContractData: !!originalContractData
+                    hasOriginalContractData: !!originalContractData,
                 });
-                
+
                 // 🔧 FIX: Only clear building selection if this is NOT from loading existing contract data
                 // If we have existing contract data, preserve the building selections
                 if (!originalContractData) {
@@ -1028,7 +1063,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     if (formData.buildingIds.length === 0 && originalContractData.buildings) {
                         const restoredBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
                         console.log("🔧 EDIT MODE - Restoring building IDs during filter:", restoredBuildingIds);
-                        setFormDataState(prev => ({ ...prev, buildingIds: restoredBuildingIds }));
+                        setFormDataState((prev) => ({ ...prev, buildingIds: restoredBuildingIds }));
                     }
                 }
             }
@@ -1048,7 +1083,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         initialDataLoading,
         loadingProjects,
         loadingBuildings,
-        
+
         // Data
         projects,
         trades,
@@ -1072,19 +1107,15 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         fetchContracts,
         fetchCurrencies,
         loadExistingData,
-        
+
         // Validation & Navigation
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
-        
+
         // Submission
-        handleSubmit
+        handleSubmit,
     };
-    
-    return (
-        <EditWizardContext.Provider value={contextValue}>
-            {children}
-        </EditWizardContext.Provider>
-    );
+
+    return <EditWizardContext.Provider value={contextValue}>{children}</EditWizardContext.Provider>;
 };
