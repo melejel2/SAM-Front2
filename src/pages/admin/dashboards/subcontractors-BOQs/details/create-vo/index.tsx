@@ -267,7 +267,8 @@ const CreateContractVOContent: React.FC = () => {
 
 // Main component that provides the context
 const CreateContractVO: React.FC = () => {
-    const { id: contractId } = useParams<{ id: string }>();
+    const location = useLocation();
+    const contractId = location.state?.contractId;
     
     if (!contractId) {
         return (
@@ -278,7 +279,7 @@ const CreateContractVO: React.FC = () => {
     }
 
     return (
-        <ContractVOWizardProvider contractId={contractId}>
+        <ContractVOWizardProvider contractId={String(contractId)}>
             <CreateContractVOContent />
         </ContractVOWizardProvider>
     );
