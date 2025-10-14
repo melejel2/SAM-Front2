@@ -203,8 +203,31 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         const existingBuildingIndex = updatedBuildings.findIndex(b => b.id === buildingModel.id);
 
                         if (existingBuildingIndex !== -1) {
-                            // Replace existing building
-                            updatedBuildings[existingBuildingIndex] = buildingModel;
+                            // MERGE sheets instead of replacing entire building
+                            const existingBuilding = updatedBuildings[existingBuildingIndex];
+                            const existingSheets = existingBuilding.boqSheets || [];
+                            const importedSheets = buildingModel.boqSheets || [];
+
+                            // Create a map of existing sheets for quick lookup
+                            const existingSheetsMap = new Map(
+                                existingSheets.map((sheet: any) => [sheet.id || sheet.name, sheet])
+                            );
+
+                            // Merge: Update existing sheets or add new ones from import
+                            importedSheets.forEach((importedSheet: any) => {
+                                const key = importedSheet.id || importedSheet.name;
+                                existingSheetsMap.set(key, importedSheet);
+                            });
+
+                            // Convert map back to array
+                            const mergedSheets = Array.from(existingSheetsMap.values());
+
+                            // Update building with merged sheets, keep all other properties
+                            updatedBuildings[existingBuildingIndex] = {
+                                ...existingBuilding,
+                                ...buildingModel,
+                                boqSheets: mergedSheets
+                            };
                         } else {
                             // Add new building
                             updatedBuildings.push(buildingModel);
