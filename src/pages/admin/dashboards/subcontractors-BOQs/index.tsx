@@ -54,7 +54,7 @@ const SubcontractorsBOQs = () => {
     return (
         <div>
             {/* Header with Back Button */}
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-1">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBackToDashboard}

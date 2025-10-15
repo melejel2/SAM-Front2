@@ -269,9 +269,13 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
             // Handle both wrapped and direct array responses
             if (Array.isArray(response)) {
-                setProjects(response);
+                // Sort by ID descending (latest first)
+                const sortedProjects = [...response].sort((a, b) => b.id - a.id);
+                setProjects(sortedProjects);
             } else if (response.success && Array.isArray(response.data)) {
-                setProjects(response.data);
+                // Sort by ID descending (latest first)
+                const sortedProjects = [...response.data].sort((a, b) => b.id - a.id);
+                setProjects(sortedProjects);
             }
         } catch (error) {
             console.error("Error fetching projects:", error);

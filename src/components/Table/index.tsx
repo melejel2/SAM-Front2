@@ -94,12 +94,12 @@ const SAMTable: React.FC<SAMTableProps> = ({
     onItemDelete,
 }) => {
     return (
-        <div className="mt-5">
+        <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
             {loading ? (
                 <Loader />
             ) : (
                 <>
-                    <div className="hidden md:block">
+                    <div className="hidden w-full md:block" style={{ flex: 1, minHeight: 0 }}>
                         <TableComponent
                             columns={columns}
                             tableData={tableData}

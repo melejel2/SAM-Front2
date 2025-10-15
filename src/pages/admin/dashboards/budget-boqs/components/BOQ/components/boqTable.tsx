@@ -8,9 +8,7 @@ interface BOQTableProps {
     selectedBuilding: any;
     projectData: any;
     setProjectData: (data: any) => void;
-    buildings?: any[];
     selectedProject?: any;
-    onBuildingChange?: (building: any) => void;
     columns: Record<string, string>;
     processBoqData: (data: any) => any;
     selectedTrade: any;
@@ -21,9 +19,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
     selectedBuilding,
     projectData,
     setProjectData,
-    buildings,
     selectedProject,
-    onBuildingChange,
     columns,
     processBoqData,
     selectedTrade,
@@ -159,59 +155,46 @@ const BOQTable: React.FC<BOQTableProps> = ({
         }
     };
 
-    const customHeaderContent = (
+    const customHeaderContent = selectedProject ? (
         <div className="flex items-center gap-4">
-            {selectedProject && (
-                <span className="text-sm text-base-content/70">
-                    {selectedProject.name}
-                </span>
-            )}
-            {buildings && onBuildingChange && (
-                <select
-                    className="select select-sm bg-base-100 border-base-300 text-base-content min-w-48"
-                    onChange={(e) => {
-                        const building = buildings.find(b => b.id === parseInt(e.target.value));
-                        if (building) {
-                            onBuildingChange(building);
-                        }
-                    }}
-                    value={selectedBuilding?.id || ""}
-                >
-                    <option value="" disabled hidden>
-                        {buildings.length === 0 ? "No buildings found" : "Select Building"}
-                    </option>
-                    {buildings.map((building) => (
-                        <option key={building.id} value={building.id}>
-                            {building.name}
-                        </option>
-                    ))}
-                </select>
+            <span className="text-sm text-base-content/70">
+                {selectedProject.name}
+            </span>
+            {selectedBuilding && (
+                <>
+                    <span className="text-base-content/40">•</span>
+                    <span className="text-sm font-medium text-base-content">
+                        {selectedBuilding.name}
+                    </span>
+                </>
             )}
         </div>
-    );
+    ) : null;
 
     return (
-        <div>
+        <div style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Table */}
-            <SAMTable
-                columns={columns}
-                tableData={tableData}
-                title="Budget BOQ"
-                loading={loading}
-                onSuccess={() => {}}
-                hasSheets={true}
-                sheets={enhancedSheets}
-                activeSheetId={selectedTrade?.id}
-                onSheetSelect={handleSheetSelect}
-                customHeaderContent={customHeaderContent}
-                actions
-                editAction
-                deleteAction
-                rowsPerPage={15}
-                onItemUpdate={handleItemUpdate}
-                onItemDelete={handleItemDelete}
-                inputFields={inputFields}
-            />
+            <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
+                <SAMTable
+                    columns={columns}
+                    tableData={tableData}
+                    title="Budget BOQ"
+                    loading={loading}
+                    onSuccess={() => {}}
+                    hasSheets={true}
+                    sheets={enhancedSheets}
+                    activeSheetId={selectedTrade?.id}
+                    onSheetSelect={handleSheetSelect}
+                    customHeaderContent={customHeaderContent}
+                    actions
+                    editAction
+                    deleteAction
+                    rowsPerPage={10000}
+                    onItemUpdate={handleItemUpdate}
+                    onItemDelete={handleItemDelete}
+                    inputFields={inputFields}
+                />
+            </div>
         </div>
     );
 };

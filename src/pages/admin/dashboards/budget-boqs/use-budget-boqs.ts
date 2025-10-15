@@ -74,7 +74,9 @@ const useBudgetBOQs = () => {
             });
 
             if (data && Array.isArray(data)) {
-                setTableData(data);
+                // Sort by ID descending (latest first)
+                const sortedData = [...data].sort((a, b) => b.id - a.id);
+                setTableData(sortedData);
             } else {
                 setTableData([]);
             }

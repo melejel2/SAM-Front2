@@ -38,11 +38,15 @@ const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
         )}
         
         {/* Main content */}
-        <div 
+        <div
           className={`
-            ${isMobile ? 'pt-16 pb-20' : 'pt-20'}
+            ${isMobile ? 'pt-18' : 'pt-18'}
             px-36
           `}
+          style={{
+            height: isMobile ? 'calc(100vh - 4.5rem)' : 'calc(100vh - 4.5rem)',
+            overflow: 'hidden'
+          }}
         >
           {children || <Outlet />}
         </div>

@@ -51,7 +51,7 @@ const BOQTable: React.FC<BOQTableProps> = ({ onBoqItemsChange }) => {
                 onSuccess={() => {}}
                 hasSheets={true}
                 sheets={sheets}
-                rowsPerPage={15}
+                rowsPerPage={10000}
             />
         </div>
     );

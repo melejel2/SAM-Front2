@@ -822,8 +822,11 @@ const TableComponent: React.FC<TableProps> = ({
 
     return (
         <>
-            <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col max-h-[85vh]">
-                <div className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
+            <div
+                className="bg-base-100 rounded-xl border border-base-300"
+                style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+            >
+                <div className="px-2 sm:px-3 lg:px-4 py-2 border-b border-base-300 flex-shrink-0">
                     <div className="flex flex-col items-start justify-start space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         {/* Left side with "New" button and custom content */}
                         <div className="flex items-center space-x-2">
@@ -853,18 +856,24 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
                     </div>
                 </div>
-                <div 
+                <div
                     ref={tableContainerRef}
-                    className={cn(
-                        "overflow-x-auto overflow-y-auto flex-1 min-h-0 relative scrollbar-thin",
-                        "scroll-smooth",
-                        isMouseDown ? "cursor-grabbing select-none" : "cursor-auto"
-                    )}
                     onMouseDown={handleMouseDown}
                     onMouseLeave={handleMouseLeave}
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
+                    className={cn(
+                        "scrollbar-thin scroll-smooth",
+                        isMouseDown ? "cursor-grabbing select-none" : "cursor-auto"
+                    )}
                     style={{
+                        flex: 1,
+                        width: '100%',
+                        minHeight: 0,
+                        maxHeight: '100%',
+                        overflowY: 'auto',
+                        overflowX: 'auto',
+                        position: 'relative',
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
                     }}
@@ -888,10 +897,10 @@ const TableComponent: React.FC<TableProps> = ({
                         style={{
                             userSelect: isMouseDown ? 'none' : 'auto'
                         }}>
-                        <thead className="bg-base-200">
+                        <thead className="bg-base-200 sticky top-0 z-10">
                             <tr>
                                     {select && (
-                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
+                                        <th className="px-2 sm:px-3 lg:px-4 py-1 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
                                             Select
                                         </th>
                                     )}
@@ -899,7 +908,7 @@ const TableComponent: React.FC<TableProps> = ({
                                         <th
                                             key={columnKey}
                                             className={cn(
-                                                "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider",
+                                                "px-2 sm:px-3 lg:px-4 py-1 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider",
                                                 { "pl-4": index === 0 },
                                                 // Add responsive width classes
                                                 columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
@@ -927,7 +936,7 @@ const TableComponent: React.FC<TableProps> = ({
                                         </th>
                                     ))}
                                     {showActionsColumn && (
-                                        <th className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
+                                        <th className="px-2 sm:px-3 lg:px-4 py-1 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
                                             Actions
                                         </th>
                                     )}
@@ -938,7 +947,7 @@ const TableComponent: React.FC<TableProps> = ({
                                     <tr>
                                         <td
                                             colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
-                                            className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 text-xs sm:text-sm">
+                                            className="px-2 sm:px-3 lg:px-4 py-2 text-center text-base-content/60 text-xs sm:text-sm">
                                             Loading...
                                         </td>
                                     </tr>
@@ -984,7 +993,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                             return (
                                                                 <td
                                                                     key={columnKey}
-                                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center"
+                                                                    className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center"
                                                                     colSpan={Object.keys(columns).length - 1}>
                                                                     Total
                                                                 </td>
@@ -994,7 +1003,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                             return (
                                                                 <td
                                                                     key={columnKey}
-                                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
+                                                                    className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
                                                                     {row[columnKey] ?? "-"}
                                                                 </td>
                                                             );
@@ -1009,7 +1018,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                         <td
                                                             key={columnKey}
                                                             className={cn(
-                                                                "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content break-words min-w-0 text-center font-medium",
+                                                                "px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm text-base-content break-words min-w-0 text-center font-medium",
                                                                 columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
                                                                 columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                                 columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
@@ -1031,7 +1040,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 })}
 
                                                 {showActionsColumn && (
-                                                    <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
+                                                    <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                         {!isTotal && (
                                                             <div className="inline-flex w-fit">
                                                                 {previewAction && (
@@ -1147,12 +1156,12 @@ const TableComponent: React.FC<TableProps> = ({
                                             </tr>
                                         );
                                         })}
-                                    
-                                        {/* Fill remaining rows to always show 6 rows */}
-                                        {Array.from({ length: Math.max(0, 6 - paginatedData.length) }).map((_, index) => (
+
+                                        {/* Fill remaining rows to always show at least 5 rows */}
+                                        {Array.from({ length: Math.max(0, 5 - paginatedData.length) }).map((_, index) => (
                                         <tr key={`empty-${index}`} className="hover:bg-base-200">
                                             {select && (
-                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
+                                                <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
                                                     &nbsp;
                                                 </td>
                                             )}
@@ -1160,7 +1169,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 <td
                                                     key={columnKey}
                                                     className={cn(
-                                                        "px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
+                                                        "px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
                                                         columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
                                                         columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                         columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
@@ -1169,19 +1178,19 @@ const TableComponent: React.FC<TableProps> = ({
                                                 </td>
                                             ))}
                                             {showActionsColumn && (
-                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
+                                                <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
                                                     &nbsp;
                                                 </td>
                                             )}
                                         </tr>
                                         ))}
-                                    
+
                                         {/* Show "No data available" message only if there are no rows at all */}
                                         {paginatedData.length === 0 && (
                                             <tr className="hover:bg-base-200">
                                                 <td
                                                     colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
-                                                    className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-center text-base-content/60 italic text-xs sm:text-sm">
+                                                    className="px-2 sm:px-3 lg:px-4 py-2 text-center text-base-content/60 italic text-xs sm:text-sm">
                                                     No data available
                                                 </td>
                                             </tr>
@@ -1192,23 +1201,10 @@ const TableComponent: React.FC<TableProps> = ({
                     </table>
                 </div>
                 {/* Footer with row count and pagination */}
-                {(sortedData.length > 0 || searchQuery || Object.keys(columnFilters).length > 0) && (
-                    <div className="flex items-center justify-between px-2 sm:px-3 lg:px-4 pt-3 sm:pt-4 pb-4 sm:pb-6 flex-shrink-0 border-t border-base-300">
-                        {/* Row count display */}
-                        <div className="text-sm text-base-content/60">
-                            {sortedData.length > 0 ? (
-                                <>
-                                    Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, sortedData.length)} of {sortedData.length} entries
-                                    {(searchQuery || Object.keys(columnFilters).length > 0) && ` (filtered from ${tableData.length} total entries)`}
-                                </>
-                            ) : (
-                                (searchQuery || Object.keys(columnFilters).length > 0) ? `No entries found (filtered from ${tableData.length} total entries)` : 'No entries'
-                            )}
-                        </div>
-                        
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-end px-2 sm:px-3 lg:px-4 py-2 flex-shrink-0 border-t border-base-300 bg-base-100">
                         {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center">
+                        <div className="flex items-center">
                                 <Pagination>
                                 <Button
                                     type="button"
@@ -1281,8 +1277,7 @@ const TableComponent: React.FC<TableProps> = ({
                                 </Button>
                             </Pagination>
                         </div>
-                    )}
-                </div>
+                    </div>
                 )}
                 {/* Sheets */}
                 {hasSheets && (
@@ -1291,7 +1286,7 @@ const TableComponent: React.FC<TableProps> = ({
                             <span
                                 key={sheet.id}
                                 className={cn(
-                                    "min-w-max cursor-pointer px-3 py-2 text-center text-sm transition-all duration-200 relative border-b-2",
+                                    "min-w-max cursor-pointer px-3 py-1.5 text-center text-sm transition-all duration-200 relative border-b-2",
                                     sheet.id === activeSheetId
                                         ? sheet.hasData
                                             ? "text-primary border-primary bg-primary/5"

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
@@ -100,20 +102,23 @@ const BudgetBOQs = () => {
     }, [location.pathname]);
 
     return (
-        <div key={location.pathname}>
+        <div
+            key={location.pathname}
+            style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
             {/* Header with Back Button */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-1 flex items-center justify-between" style={{ flexShrink: 0 }}>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBackToDashboard}
                         className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        <span className="iconify lucide--arrow-left size-4"></span>
+                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
                         <span>Back</span>
                     </button>
                 </div>
             </div>
 
-            <div>
+            <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
                 <SAMTable
                     columns={columns}
                     tableData={tableData}
@@ -130,6 +135,7 @@ const BudgetBOQs = () => {
                     editEndPoint="Project/UpdateProject"
                     deleteEndPoint="Project/DeleteProject/{id}"
                     openStaticDialog={openCreateDialog}
+                    rowsPerPage={10000}
                 />
             </div>
 

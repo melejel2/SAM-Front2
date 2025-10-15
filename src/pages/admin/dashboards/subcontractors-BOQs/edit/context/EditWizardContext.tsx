@@ -281,9 +281,13 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 token: token || undefined,
             });
             if (Array.isArray(response)) {
-                setProjects(response);
+                // Sort by ID descending (latest first)
+                const sortedProjects = [...response].sort((a, b) => b.id - a.id);
+                setProjects(sortedProjects);
             } else if (response.success && Array.isArray(response.data)) {
-                setProjects(response.data);
+                // Sort by ID descending (latest first)
+                const sortedProjects = [...response.data].sort((a, b) => b.id - a.id);
+                setProjects(sortedProjects);
             }
         } catch (error) {
             console.error("Error fetching projects:", error);
@@ -774,9 +778,13 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         if (projectsRes.status === "fulfilled") {
                             const response = projectsRes.value;
                             if (Array.isArray(response)) {
-                                setProjects(response);
+                                // Sort by ID descending (latest first)
+                                const sortedProjects = [...response].sort((a, b) => b.id - a.id);
+                                setProjects(sortedProjects);
                             } else if (response.success && Array.isArray(response.data)) {
-                                setProjects(response.data);
+                                // Sort by ID descending (latest first)
+                                const sortedProjects = [...response.data].sort((a, b) => b.id - a.id);
+                                setProjects(sortedProjects);
                             }
                         } else {
                             console.error("Error fetching projects:", projectsRes.reason);

@@ -206,28 +206,30 @@ const BudgetBOQEdit = () => {
     }
 
     return (
-        <div>
-            <BOQStep
-                dialogType="Edit"
-                buildings={buildings}
-                selectedProject={selectedProject}
-                projectData={projectData}
-                setProjectData={setProjectData}
-                onBack={handleBack}
-                onSave={handleSave}
-                saving={saving}
-                hasUnsavedChanges={hasUnsavedChanges()}
-                createBuildings={createBuildings}
-                getBoqPreview={getBoqPreview}
-                clearBoq={clearBoq}
-                selectedTrade={selectedTrade}
-                setSelectedTrade={setSelectedTrade}
-                columns={columns}
-                processBoqData={processBoqData}
-                currencies={currencies as Currency[]}
-                onCurrencyChange={handleCurrencyChange}
-                onDataRefresh={loadProjectData}
-            />
+        <div style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
+                <BOQStep
+                    dialogType="Edit"
+                    buildings={buildings}
+                    selectedProject={selectedProject}
+                    projectData={projectData}
+                    setProjectData={setProjectData}
+                    onBack={handleBack}
+                    onSave={handleSave}
+                    saving={saving}
+                    hasUnsavedChanges={hasUnsavedChanges()}
+                    createBuildings={createBuildings}
+                    getBoqPreview={getBoqPreview}
+                    clearBoq={clearBoq}
+                    selectedTrade={selectedTrade}
+                    setSelectedTrade={setSelectedTrade}
+                    columns={columns}
+                    processBoqData={processBoqData}
+                    currencies={currencies as Currency[]}
+                    onCurrencyChange={handleCurrencyChange}
+                    onDataRefresh={loadProjectData}
+                />
+            </div>
             
             {/* Unsaved Changes Dialog */}
             {showUnsavedDialog && (
