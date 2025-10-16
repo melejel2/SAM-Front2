@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from "@iconify/react";
-import layersIcon from "@iconify/icons-lucide/layers";
-import editIcon from "@iconify/icons-lucide/edit-2";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import trashIcon from "@iconify/icons-lucide/trash";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
-import xIcon from "@iconify/icons-lucide/x";
 import infoIcon from "@iconify/icons-lucide/info";
 import { useContractVOWizardContext } from '../context/ContractVOWizardContext';
-import { getContractBOQItems } from '@/api/services/vo-api';
+import { getContractBOQItems, copyVoProjectToVoDataSet } from '@/api/services/vo-api';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
 import useBOQUnits from '../../../hooks/use-units';
@@ -42,9 +39,7 @@ export const VOStep4_LineItems: React.FC = () => {
             ? formData.selectedBuildingIds[0].toString() 
             : ""
     );
-    const [showBOQImportModal, setShowBOQImportModal] = useState(false);
 
-    // Load BOQ items when buildings are selected
     useEffect(() => {
         if (formData.selectedBuildingIds.length > 0 && contractData) {
             loadBOQItemsForBuildings();
@@ -57,11 +52,8 @@ export const VOStep4_LineItems: React.FC = () => {
         setLoadingBOQItems(true);
         try {
             const allBOQItems: any[] = [];
-            
-            // Load BOQ items for all selected buildings
             for (const buildingId of formData.selectedBuildingIds) {
                 const response = await getContractBOQItems(contractData.id, buildingId, getToken() || '');
-                
                 if (response.success && response.data) {
                     const itemsWithBuilding = response.data.map((item: any) => ({
                         ...item,
@@ -71,7 +63,6 @@ export const VOStep4_LineItems: React.FC = () => {
                     allBOQItems.push(...itemsWithBuilding);
                 }
             }
-            
             setAvailableBOQItems(allBOQItems);
         } catch (error) {
             console.error('Error loading BOQ items:', error);
@@ -81,87 +72,85 @@ export const VOStep4_LineItems: React.FC = () => {
         }
     };
 
-    // Number formatting function - shows decimals only if needed
-    const formatNumber = (value: number, forceDecimals: boolean = false) => {
-        if (value === 0) return '0';
-        
-        // Check if the number has decimals
-        const hasDecimals = value % 1 !== 0;
-        
-        if (forceDecimals || hasDecimals) {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(value || 0);
-        } else {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(value || 0);
+    const handleImportClick = async () => {
+        if (loadingBOQItems) return;
+        if (!contractData) {
+            toaster.error("Contract data is not available.");
+            return;
+        }
+        if (!selectedBuildingForItems) {
+            toaster.error("Please select a building.");
+            return;
+        }
+    
+        setLoadingBOQItems(true);
+        try {
+            await copyVoProjectToVoDataSet(
+                parseInt(selectedBuildingForItems),
+                1, // Assuming voLevel is 1
+                contractData.id,
+                getToken() || ''
+            );
+    
+            const itemsResponse = await getContractBOQItems(
+                contractData.id,
+                parseInt(selectedBuildingForItems),
+                getToken() || ''
+            );
+    
+            if (itemsResponse.success && itemsResponse.data) {
+                handleBOQImport(itemsResponse.data);
+            } else {
+                toaster.error(itemsResponse.error || "Failed to fetch imported items after import operation.");
+            }
+        } catch (error) {
+            console.error("Error importing from BOQ:", error);
+            toaster.error(error.message || "An error occurred while importing from BOQ.");
+        } finally {
+            setLoadingBOQItems(false);
         }
     };
 
-    // Create empty VO item
-    const createEmptyVOItem = (): VOLineItem => ({
-        id: 0,
-        no: "",
-        description: "",
-        costCode: "",
-        unit: "",
-        quantity: 0,
-        unitPrice: 0,
-        totalPrice: 0
-    });
-
-    // Get building name by ID
-    const getBuildingName = (buildingId: number): string => {
-        const building = contractData?.buildings.find(b => b.id === buildingId);
-        return building?.name || `Building ${buildingId}`;
+    const formatNumber = (value: number, forceDecimals: boolean = false) => {
+        if (value === 0) return '0';
+        const hasDecimals = value % 1 !== 0;
+        if (forceDecimals || hasDecimals) {
+            return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+        } else {
+            return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0);
+        }
     };
 
-    // Add new VO item
+    const createEmptyVOItem = (): VOLineItem => ({ id: 0, no: "", description: "", costCode: "", unit: "", quantity: 0, unitPrice: 0, totalPrice: 0 });
+
     const addNewVOItem = (initialData: Partial<VOLineItem>, fieldName: string) => {
         const buildingId = selectedBuildingForItems ? parseInt(selectedBuildingForItems) : formData.selectedBuildingIds[0];
         const newItem = { ...createEmptyVOItem(), ...initialData, buildingId };
-        
         const updatedItems = [...formData.lineItems, newItem];
         setFormData({ lineItems: updatedItems });
     };
 
-    // Update VO item
     const updateVOItem = (itemIndex: number, field: keyof VOLineItem, value: any) => {
         const updatedItems = [...formData.lineItems];
-        
         if (updatedItems[itemIndex]) {
-            updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                [field]: value
-            };
-            
-            // Recalculate total price
+            updatedItems[itemIndex] = { ...updatedItems[itemIndex], [field]: value };
             if (field === 'quantity' || field === 'unitPrice') {
-                updatedItems[itemIndex].totalPrice = 
-                    (updatedItems[itemIndex].quantity || 0) * (updatedItems[itemIndex].unitPrice || 0);
+                updatedItems[itemIndex].totalPrice = (updatedItems[itemIndex].quantity || 0) * (updatedItems[itemIndex].unitPrice || 0);
             }
         }
-        
         setFormData({ lineItems: updatedItems });
     };
 
-    // Remove VO item
     const deleteVOItem = (itemIndex: number) => {
         const updatedItems = formData.lineItems.filter((_, index) => index !== itemIndex);
         setFormData({ lineItems: updatedItems });
     };
 
-    // Handle BOQ import
     const handleBOQImport = (importedItems: any[]) => {
         if (!importedItems || importedItems.length === 0) {
             toaster.error("No items to import");
             return;
         }
-
-        // Convert imported BOQ items to VO items
         const newVOItems: VOLineItem[] = importedItems.map((item, index) => ({
             id: Date.now() + index,
             no: `VO-${formData.lineItems.length + index + 1}`,
@@ -173,17 +162,12 @@ export const VOStep4_LineItems: React.FC = () => {
             totalPrice: (item.qte || item.quantity || 1) * (item.pu || item.unitPrice || 0),
             buildingId: item.buildingId
         }));
-
-        const updatedItems = [...formData.lineItems, ...newVOItems];
+        const updatedItems = newVOItems; // Overwrite existing items as requested
         setFormData({ lineItems: updatedItems });
-        setShowBOQImportModal(false);
         toaster.success(`Successfully imported ${newVOItems.length} items`);
     };
 
-    // Get selected buildings for the dropdown
-    const selectedBuildings = contractData?.buildings.filter(b => 
-        formData.selectedBuildingIds.includes(b.id)
-    ) || [];
+    const selectedBuildings = contractData?.buildings.filter(b => formData.selectedBuildingIds.includes(b.id)) || [];
 
     if (formData.selectedBuildingIds.length === 0) {
         return (
@@ -195,38 +179,23 @@ export const VOStep4_LineItems: React.FC = () => {
     }
 
     const items = formData.lineItems || [];
-    
-    // Always show at least one empty row for new entries
     const displayItems = [...items];
     if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== '') {
         displayItems.push(createEmptyVOItem());
     }
 
-    // Calculate total based on VO type
     const isAddition = formData.voType === 'Addition';
-    const totalAmount = items.reduce((sum, item) => {
-        const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-        return sum + itemTotal;
-    }, 0);
-    
-    // For display purposes
+    const totalAmount = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
     const netAmount = isAddition ? totalAmount : -totalAmount;
 
-    // Update form data with calculated totals
     useEffect(() => {
-        setFormData({ 
-            totalAdditions: isAddition ? totalAmount : 0,
-            totalDeductions: !isAddition ? totalAmount : 0,
-            totalAmount: netAmount
-        });
+        setFormData({ totalAdditions: isAddition ? totalAmount : 0, totalDeductions: !isAddition ? totalAmount : 0, totalAmount: netAmount });
     }, [items]);
 
     return (
         <div>
-            {/* Building Selection and Import Button */}
             <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    {/* Building Selection */}
                     {selectedBuildings.length > 1 && (
                         <select 
                             className="select select-bordered w-auto max-w-xs"
@@ -241,25 +210,14 @@ export const VOStep4_LineItems: React.FC = () => {
                         </select>
                     )}
                 </div>
-                
                 <button
-                    onClick={() => {
-                        // Quick import from available BOQ items
-                        if (availableBOQItems.length > 0) {
-                            handleBOQImport(availableBOQItems.slice(0, 5)); // Import first 5 items as example
-                        } else {
-                            toaster.error("No BOQ items available to import");
-                        }
-                    }}
+                    onClick={handleImportClick}
                     className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
-                    disabled={loadingBOQItems || availableBOQItems.length === 0}
                 >
                     <Icon icon={uploadIcon} className="w-4 h-4" />
                     Import from BOQ
                 </button>
             </div>
-
-            {/* VO Items Table - Matching BOQ design */}
             <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col">
                 <div className="overflow-x-auto">
                     <table className="w-full table-auto bg-base-100">
@@ -277,12 +235,8 @@ export const VOStep4_LineItems: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-base-300">
                             {displayItems.map((item, index) => {
-                                const isEmptyRow = item.no === '' && item.description === '' && 
-                                    (!item.costCode || item.costCode === '') && 
-                                    (!item.unit || item.unit === '') && 
-                                    item.quantity === 0 && item.unitPrice === 0;
+                                const isEmptyRow = item.no === '' && item.description === '' && (!item.costCode || item.costCode === '') && (!item.unit || item.unit === '') && item.quantity === 0 && item.unitPrice === 0;
                                 const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-                                
                                 return (
                                     <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
                                         <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
@@ -290,13 +244,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                                 type="text"
                                                 className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
                                                 value={item.no}
-                                                onChange={(e) => {
-                                                    if (isEmptyRow && e.target.value) {
-                                                        addNewVOItem({ no: e.target.value }, 'no');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'no', e.target.value);
-                                                    }
-                                                }}
+                                                onChange={(e) => { if (isEmptyRow && e.target.value) { addNewVOItem({ no: e.target.value }, 'no'); } else if (!isEmptyRow) { updateVOItem(index, 'no', e.target.value); }}}
                                                 placeholder="Item No."
                                             />
                                         </td>
@@ -305,13 +253,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                                 type="text"
                                                 className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
                                                 value={item.description}
-                                                onChange={(e) => {
-                                                    if (isEmptyRow && e.target.value) {
-                                                        addNewVOItem({ description: e.target.value }, 'description');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'description', e.target.value);
-                                                    }
-                                                }}
+                                                onChange={(e) => { if (isEmptyRow && e.target.value) { addNewVOItem({ description: e.target.value }, 'description'); } else if (!isEmptyRow) { updateVOItem(index, 'description', e.target.value); }}}
                                                 placeholder="Description"
                                             />
                                         </td>
@@ -320,13 +262,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                                 type="text"
                                                 className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
                                                 value={item.costCode || ''}
-                                                onChange={(e) => {
-                                                    if (isEmptyRow && e.target.value) {
-                                                        addNewVOItem({ costCode: e.target.value }, 'costCode');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'costCode', e.target.value);
-                                                    }
-                                                }}
+                                                onChange={(e) => { if (isEmptyRow && e.target.value) { addNewVOItem({ costCode: e.target.value }, 'costCode'); } else if (!isEmptyRow) { updateVOItem(index, 'costCode', e.target.value); }}}
                                                 placeholder=""
                                             />
                                         </td>
@@ -334,15 +270,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                             <select
                                                 className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 border-0"
                                                 value={item.unit || ''}
-                                                onChange={(e) => {
-                                                    const selectedUnit = units.find(unit => unit.name === e.target.value);
-                                                    const unitName = selectedUnit?.name || e.target.value;
-                                                    if (isEmptyRow && unitName) {
-                                                        addNewVOItem({ unit: unitName }, 'unit');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'unit', unitName);
-                                                    }
-                                                }}
+                                                onChange={(e) => { const selectedUnit = units.find(unit => unit.name === e.target.value); const unitName = selectedUnit?.name || e.target.value; if (isEmptyRow && unitName) { addNewVOItem({ unit: unitName }, 'unit'); } else if (!isEmptyRow) { updateVOItem(index, 'unit', unitName); }}}
                                             >
                                                 <option value=""></option>
                                                 {units.map(unit => (
@@ -357,16 +285,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                                 type="text"
                                                 className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unit && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 value={isEmptyRow ? '' : (item.quantity ? formatNumber(item.quantity) : '')}
-                                                onChange={(e) => {
-                                                    if (!item.unit && !isEmptyRow) return;
-                                                    const cleanValue = e.target.value.replace(/,/g, '');
-                                                    const value = parseFloat(cleanValue) || 0;
-                                                    if (isEmptyRow && value !== 0) {
-                                                        addNewVOItem({ quantity: value }, 'quantity');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'quantity', value);
-                                                    }
-                                                }}
+                                                onChange={(e) => { if (!item.unit && !isEmptyRow) return; const cleanValue = e.target.value.replace(/,/g, ''); const value = parseFloat(cleanValue) || 0; if (isEmptyRow && value !== 0) { addNewVOItem({ quantity: value }, 'quantity'); } else if (!isEmptyRow) { updateVOItem(index, 'quantity', value); }}}
                                                 placeholder=""
                                                 disabled={!item.unit && !isEmptyRow}
                                             />
@@ -376,23 +295,12 @@ export const VOStep4_LineItems: React.FC = () => {
                                                 type="text"
                                                 className={`w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 ${!item.unit && !isEmptyRow ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 value={isEmptyRow ? '' : (item.unitPrice ? formatNumber(item.unitPrice) : '')}
-                                                onChange={(e) => {
-                                                    if (!item.unit && !isEmptyRow) return;
-                                                    const cleanValue = e.target.value.replace(/,/g, '');
-                                                    const value = parseFloat(cleanValue) || 0;
-                                                    if (isEmptyRow && value !== 0) {
-                                                        addNewVOItem({ unitPrice: value }, 'unitPrice');
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, 'unitPrice', value);
-                                                    }
-                                                }}
+                                                onChange={(e) => { if (!item.unit && !isEmptyRow) return; const cleanValue = e.target.value.replace(/,/g, ''); const value = parseFloat(cleanValue) || 0; if (isEmptyRow && value !== 0) { addNewVOItem({ unitPrice: value }, 'unitPrice'); } else if (!isEmptyRow) { updateVOItem(index, 'unitPrice', value); }}}
                                                 placeholder=""
                                                 disabled={!item.unit && !isEmptyRow}
                                             />
                                         </td>
-                                        <td className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-center ${
-                                            isAddition ? 'text-success' : 'text-error'
-                                        }`}>
+                                        <td className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-center ${isAddition ? 'text-success' : 'text-error'}`}>
                                             {isEmptyRow || !item.unit ? '-' : formatNumber(itemTotal)}
                                         </td>
                                         <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
@@ -411,16 +319,10 @@ export const VOStep4_LineItems: React.FC = () => {
                                     </tr>
                                 );
                             })}
-                            
-                            {/* Total Row - Only Net Total */}
                             {items.length > 0 && (
                                 <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
-                                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm" colSpan={6}>
-                                        TOTAL
-                                    </td>
-                                    <td className={`px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold ${
-                                        isAddition ? 'text-primary' : 'text-error'
-                                    }`}>
+                                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm" colSpan={6}>TOTAL</td>
+                                    <td className={`px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold ${isAddition ? 'text-primary' : 'text-error'}`}>
                                         {formatNumber(Math.abs(totalAmount))}
                                     </td>
                                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3"></td>
@@ -430,17 +332,11 @@ export const VOStep4_LineItems: React.FC = () => {
                     </table>
                 </div>
             </div>
-
-            {/* Helper Text */}
             {items.length === 0 && (
                 <div className="text-center py-8 mt-4">
                     <Icon icon={infoIcon} className="w-8 h-8 text-base-content/40 mx-auto mb-2" />
-                    <p className="text-base-content/60 text-sm">
-                        Start adding line items by typing in any field in the empty row above.
-                    </p>
-                    <p className="text-base-content/50 text-xs mt-1">
-                        Items will be automatically marked as additions or deductions based on the VO type.
-                    </p>
+                    <p className="text-base-content/60 text-sm">Start adding line items by typing in any field in the empty row above.</p>
+                    <p className="text-base-content/50 text-xs mt-1">Items will be automatically marked as additions or deductions based on the VO type.</p>
                 </div>
             )}
         </div>
