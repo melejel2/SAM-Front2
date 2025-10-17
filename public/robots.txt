@@ -1,0 +1,32 @@
+# robots.txt for SAM (Subcontractor Administration Module)
+# Prevents search engines from indexing sensitive areas
+
+User-agent: *
+
+# Block all admin and dashboard areas
+Disallow: /dashboard/
+Disallow: /admin/
+
+# Block authentication pages
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Block API documentation (if served from frontend)
+Disallow: /api/
+Disallow: /swagger/
+
+# Block development/test pages
+Disallow: /test/
+Disallow: /staging/
+Disallow: /dev/
+
+# Allow root and public assets
+Allow: /
+Allow: /images/
+Allow: /assets/
+
+# Sitemap (add when available)
+# Sitemap: https://sam.karamentreprises.com/sitemap.xml
