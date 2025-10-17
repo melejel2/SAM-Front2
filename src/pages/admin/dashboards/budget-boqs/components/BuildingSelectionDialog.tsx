@@ -97,7 +97,7 @@ const BuildingSelectionDialog: React.FC<BuildingSelectionDialogProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col animate-in zoom-in duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-base-300">
@@ -118,7 +118,8 @@ const BuildingSelectionDialog: React.FC<BuildingSelectionDialogProps> = ({
                     </div>
                     <button
                         onClick={handleClose}
-                        className="btn btn-sm btn-circle btn-ghost hover:bg-base-200"
+                        className="p-2 rounded-lg bg-base-200 text-base-content/60 hover:bg-error hover:text-error-content transition-colors duration-200"
+                        title="Close"
                     >
                         <Icon icon={xIcon} className="w-4 h-4" />
                     </button>
@@ -294,17 +295,9 @@ const BuildingSelectionDialog: React.FC<BuildingSelectionDialogProps> = ({
 
                 {/* Footer */}
                 <div className="p-6 border-t border-base-300">
-                    <div className="flex items-center justify-between">
-                        <div className="text-sm text-base-content/60">
-                            <Icon icon={infoIcon} className="w-4 h-4 inline mr-2" />
-                            {filteredBuildings.length} {filteredBuildings.length === 1 ? 'building' : 'buildings'} available
-                        </div>
-                        <button
-                            onClick={handleClose}
-                            className="btn btn-ghost btn-sm hover:bg-base-200"
-                        >
-                            Close
-                        </button>
+                    <div className="text-sm text-base-content/60">
+                        <Icon icon={infoIcon} className="w-4 h-4 inline mr-2" />
+                        {filteredBuildings.length} {filteredBuildings.length === 1 ? 'building' : 'buildings'} available
                     </div>
                 </div>
             </div>

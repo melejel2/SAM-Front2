@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -251,11 +251,11 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
     const [currencies, setCurrencies] = useState<Currency[]>([]);
     const [allCostCodes, setAllCostCodes] = useState<any[]>([]);
 
-    // Enhanced form data setter that tracks changes
-    const setFormData = (data: Partial<WizardFormData>) => {
+    // Enhanced form data setter that tracks changes - memoized to prevent re-creation
+    const setFormData = useCallback((data: Partial<WizardFormData>) => {
         setFormDataState((prev) => ({ ...prev, ...data }));
         setHasUnsavedChanges(true);
-    };
+    }, []);
 
     // Data fetching functions
     const fetchProjects = async () => {
@@ -713,8 +713,8 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         }
     }, [formData.tradeId, allBuildings, trades]);
 
-    // Context value
-    const contextValue: WizardContextType = {
+    // Context value - Memoized to prevent unnecessary re-renders
+    const contextValue: WizardContextType = useMemo(() => ({
         // State
         formData,
         currentStep,
@@ -753,7 +753,30 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
         // Submission
         handleSubmit,
-    };
+    }), [
+        formData,
+        currentStep,
+        hasUnsavedChanges,
+        loading,
+        contractsApi.loading,
+        loadingProjects,
+        loadingBuildings,
+        projects,
+        trades,
+        allBuildings,
+        buildings,
+        subcontractors,
+        contracts,
+        currencies,
+        allCostCodes,
+        setFormData,
+        fetchCostCodes,
+        fetchBuildingsWithSheets,
+        validateCurrentStep,
+        goToNextStep,
+        goToPreviousStep,
+        handleSubmit
+    ]);
 
     return <WizardContext.Provider value={contextValue}>{children}</WizardContext.Provider>;
 };

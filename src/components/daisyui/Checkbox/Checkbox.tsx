@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { InputHTMLAttributes, ReactElement, forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { InputHTMLAttributes, ReactElement, forwardRef, useEffect, useImperativeHandle, useRef, memo } from "react";
 import { twMerge } from "tailwind-merge";
 
 import { ComponentColor, ComponentSize, IComponentBaseProps } from "../types";
@@ -11,7 +11,7 @@ export type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> 
         indeterminate?: boolean;
     };
 
-const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
+const CheckboxInner = forwardRef<HTMLInputElement, CheckboxProps>(
     ({ color, size, indeterminate, dataTheme, className, ...props }, ref): ReactElement => {
         const classes = twMerge(
             "checkbox",
@@ -46,6 +46,9 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     },
 );
 
-Checkbox.displayName = "Checkbox";
+CheckboxInner.displayName = "Checkbox";
+
+// Wrap with memo for performance optimization
+const Checkbox = memo(CheckboxInner) as typeof CheckboxInner;
 
 export default Checkbox;

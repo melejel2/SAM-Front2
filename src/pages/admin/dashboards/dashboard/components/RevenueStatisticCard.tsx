@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useCallback, memo, useMemo } from "react";
 
 import { RevenueStatisticChart } from "./RevenueStatisticChart";
 
-export const RevenueStatisticCard = () => {
+export const RevenueStatisticCard = memo(() => {
     const [duration, setDuration] = useState<"day" | "month" | "year">("year");
+
+    // Memoize duration change handlers
+    const handleDayClick = useCallback(() => setDuration("day"), []);
+    const handleMonthClick = useCallback(() => setDuration("month"), []);
+    const handleYearClick = useCallback(() => setDuration("year"), []);
 
     return (
         <div className="card bg-base-100 shadow">
@@ -14,23 +19,23 @@ export const RevenueStatisticCard = () => {
                         <div className="tabs tabs-box tabs-xs hidden sm:block">
                             <div
                                 className={`tab px-3 ${duration === "day" && "tab-active"}`}
-                                onClick={() => setDuration("day")}>
+                                onClick={handleDayClick}>
                                 Day
                             </div>
                             <div
                                 className={`tab px-3 ${duration === "month" && "tab-active"}`}
-                                onClick={() => setDuration("month")}>
+                                onClick={handleMonthClick}>
                                 Month
                             </div>
                             <div
                                 className={`tab px-3 ${duration === "year" && "tab-active"}`}
-                                onClick={() => setDuration("year")}>
+                                onClick={handleYearClick}>
                                 Year
                             </div>
                         </div>
                     </div>
                     <div className="mt-3">
-                        {duration == "day" && (
+                        {duration === "day" && (
                             <>
                                 <div className="flex items-center gap-3">
                                     <span className="text-4xl font-semibold">$627</span>
@@ -39,7 +44,7 @@ export const RevenueStatisticCard = () => {
                                 <span className="text-base-content/60 text-sm">Total income for today</span>
                             </>
                         )}
-                        {duration == "month" && (
+                        {duration === "month" && (
                             <>
                                 <div className="flex items-center gap-3">
                                     <span className="text-4xl font-semibold">$16,421</span>
@@ -48,7 +53,7 @@ export const RevenueStatisticCard = () => {
                                 <span className="text-base-content/60 text-sm">Total income in this month</span>
                             </>
                         )}
-                        {duration == "year" && (
+                        {duration === "year" && (
                             <>
                                 <div className="flex items-center gap-3">
                                     <span className="text-4xl font-semibold">$184.78K</span>
@@ -65,4 +70,6 @@ export const RevenueStatisticCard = () => {
             </div>
         </div>
     );
-};
+});
+
+RevenueStatisticCard.displayName = 'RevenueStatisticCard';

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
@@ -30,7 +30,7 @@ const BudgetBOQs = () => {
     const { dialogRef, handleShow, handleHide } = useDialog();
     const { toaster } = useToast();
 
-    const openCreateDialog = async (
+    const openCreateDialog = useCallback(async (
         type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details",
         data?: any,
     ) => {
@@ -53,37 +53,37 @@ const BudgetBOQs = () => {
         }
 
         handleShow();
-    };
+    }, [navigate, handleShow, setSelectedProjectInHook]);
 
-    const handleBackToDashboard = () => {
+    const handleBackToDashboard = useCallback(() => {
         navigate("/dashboard");
-    };
+    }, [navigate]);
 
-    const handleSuccess = async () => {
-        await getProjectsList();
+    const handleSuccess = useCallback(async () => {
+        await getProjectsList(true); // Force refresh after changes
         handleHide();
         toaster.success("Operation completed successfully!");
-    };
+    }, [getProjectsList, handleHide, toaster]);
 
-    const handleCreate = async (formData: any) => {
+    const handleCreate = useCallback(async (formData: any) => {
         const result = await createProject(formData);
         if (result.success) {
             handleSuccess();
         } else {
             toaster.error(result.message || "Failed to create project");
         }
-    };
+    }, [createProject, handleSuccess, toaster]);
 
-    const handleUpdate = async (formData: any) => {
+    const handleUpdate = useCallback(async (formData: any) => {
         const result = await updateProject({ ...formData, id: selectedProject.id });
         if (result.success) {
             handleSuccess();
         } else {
             toaster.error(result.message || "Failed to update project");
         }
-    };
+    }, [updateProject, selectedProject, handleSuccess, toaster]);
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         if (selectedProject) {
             const result = await deleteProject(selectedProject.id);
             if (result.success) {
@@ -92,7 +92,7 @@ const BudgetBOQs = () => {
                 toaster.error(result.message || "Failed to delete project");
             }
         }
-    };
+    }, [deleteProject, selectedProject, handleSuccess, toaster]);
 
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
@@ -102,12 +102,9 @@ const BudgetBOQs = () => {
     }, [location.pathname]);
 
     return (
-        <div
-            key={location.pathname}
-            style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
-        >
+        <div key={location.pathname}>
             {/* Header with Back Button */}
-            <div className="mb-1 flex items-center justify-between" style={{ flexShrink: 0 }}>
+            <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBackToDashboard}
@@ -118,7 +115,7 @@ const BudgetBOQs = () => {
                 </div>
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div>
                 <SAMTable
                     columns={columns}
                     tableData={tableData}

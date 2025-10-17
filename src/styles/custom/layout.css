@@ -190,7 +190,7 @@ Desktop (≥768px) Horizontal Padding:
 - left-12 (48px) - VerticalAppNav/Sidebar offset from left
 
 Vertical Spacing Values:
-- pb-8     (32px) - Desktop content bottom padding
+- pb-0     (0px)  - Desktop content bottom padding
 - pb-4     (16px) - Mobile content bottom padding (via pb-8 md:pb-0)
 - pb-24    (96px) - Mobile body padding for bottom navigation
 - space-y-4 (16px) - Standard vertical spacing between child elements

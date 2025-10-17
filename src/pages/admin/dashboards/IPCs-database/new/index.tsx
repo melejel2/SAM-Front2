@@ -6,11 +6,6 @@ import useToast from "@/hooks/use-toast";
 import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 import { IPCStepRenderer } from "./components/IPCStepRenderer";
 import { Loader } from "@/components/Loader";
-import { Icon } from "@iconify/react";
-import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
-import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
-import eyeIcon from "@iconify/icons-lucide/eye";
-import checkIcon from "@iconify/icons-lucide/check";
 
 // Inner component that uses the context
 const NewIPCWizardContent: React.FC = () => {
@@ -93,18 +88,18 @@ const NewIPCWizardContent: React.FC = () => {
             {/* Header with Back Button, Timeline, and Navigation */}
             <div className="flex justify-between items-center mb-6">
                 <button
-                    onClick={currentStep === 1 && hasUnsavedChanges 
-                        ? () => setShowBackConfirmDialog(true) 
-                        : currentStep === 1 
+                    onClick={currentStep === 1 && hasUnsavedChanges
+                        ? () => setShowBackConfirmDialog(true)
+                        : currentStep === 1
                             ? () => navigate('/dashboard/IPCs-database')
                             : goToPreviousStep
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                 >
-                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                    <span className="iconify lucide--arrow-left size-4"></span>
                     <span>Back</span>
                 </button>
-                
+
                 {/* Timeline in the center */}
                 <div className="flex-1 flex justify-center">
                     <IPCStepIndicator currentStep={currentStep} />
@@ -139,31 +134,31 @@ const NewIPCWizardContent: React.FC = () => {
                         >
                             {currentStep === 3 ? (
                                 <>
-                                    <span>Review</span>
-                                    <Icon icon={eyeIcon} className="w-4 h-4" />
+                                    <span>Preview</span>
+                                    <span className="iconify lucide--eye size-4"></span>
                                 </>
                             ) : (
                                 <>
                                     <span>Next</span>
-                                    <Icon icon={arrowRightIcon} className="w-4 h-4" />
+                                    <span className="iconify lucide--arrow-right size-4"></span>
                                 </>
                             )}
                         </button>
                     ) : (
                         <button
-                            className="btn btn-sm border border-base-300 bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={handleSubmitAndNavigate}
                             disabled={loading}
                         >
                             {loading ? (
                                 <>
                                     <span className="loading loading-spinner loading-sm"></span>
-                                    Creating IPC...
+                                    Creating...
                                 </>
                             ) : (
                                 <>
-                                    <span>Create IPC</span>
-                                    <Icon icon={checkIcon} className="w-4 h-4" />
+                                    <span>Save</span>
+                                    <span className="iconify lucide--check size-4"></span>
                                 </>
                             )}
                         </button>

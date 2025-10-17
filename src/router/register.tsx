@@ -26,9 +26,33 @@ const dashboardRoutes: IRoutesProps[] = [
         path: "/dashboard/budget-BOQs/edit/:projectIdentifier",
         element: cw(lazy(() => import("@/pages/admin/dashboards/budget-boqs/edit"))),
     },
+    // ========== UNIFIED CONTRACT MANAGEMENT ==========
+    {
+        path: "/dashboard/contracts",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts"))),
+    },
+    {
+        path: "/dashboard/contracts/new",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/new"))),
+    },
+    {
+        path: "/dashboard/contracts/edit/:contractIdentifier",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/edit"))),
+    },
+    {
+        path: "/dashboard/contracts/details/:contractIdentifier",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details"))),
+    },
+    {
+        path: "/dashboard/contracts/details/:contractIdentifier/create-vo",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details/create-vo"))),
+    },
+
+    // ========== LEGACY ROUTES (Redirects to unified page) ==========
+    // Keep for backward compatibility with bookmarks/links
     {
         path: "/dashboard/subcontractors-BOQs",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs"))),
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts"))), // Redirects to unified
     },
     {
         path: "/dashboard/subcontractors-boqs/new",
@@ -48,11 +72,11 @@ const dashboardRoutes: IRoutesProps[] = [
     },
     {
         path: "/dashboard/contracts-database",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database"))),
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts"))), // Redirects to unified
     },
     {
         path: "/dashboard/contracts-database/details/:contractIdentifier",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/contracts-database/details"))),
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details"))),
     },
     {
         path: "/dashboard/contracts-database/details/:contractIdentifier/create-vo",

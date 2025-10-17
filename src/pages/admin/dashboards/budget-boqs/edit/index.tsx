@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { Loader } from "@/components/Loader";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
 
 import BOQStep from "../components/BOQ";
 import useBudgetBOQsDialog from "../components/use-budget-boq-dialog";
@@ -108,27 +109,29 @@ const BudgetBOQEdit = () => {
         }
     };
 
-    const hasUnsavedChanges = () => {
+    // Memoize unsaved changes check to prevent unnecessary re-renders
+    const hasUnsavedChanges = useMemo(() => {
         if (!projectData || !originalProjectData) return false;
         return JSON.stringify(projectData) !== JSON.stringify(originalProjectData);
-    };
+    }, [projectData, originalProjectData]);
 
-    const handleBack = () => {
-        if (hasUnsavedChanges()) {
+    const handleBack = useCallback(() => {
+        if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
             navigate("/dashboard/budget-BOQs");
         }
-    };
+    }, [hasUnsavedChanges, navigate]);
 
-    const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleCurrencyChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCurrencyId = parseInt(e.target.value);
         if (projectData) {
             setProjectData({ ...projectData, currencyId: newCurrencyId });
         }
-    };
+    }, [projectData]);
 
-    const handleSave = async () => {
+    // Debounce save to prevent rapid-fire saves
+    const performSave = useCallback(async () => {
         if (!projectData || !originalProjectData) return;
 
         setSaving(true);
@@ -148,7 +151,7 @@ const BudgetBOQEdit = () => {
                     ...projectData,
                     buildings: changedBuildings
                 };
-            } else if (hasUnsavedChanges()) {
+            } else if (hasUnsavedChanges) {
                 // This handles cases where project-level properties might have changed, but no specific building.
                 // Or if a building was deleted.
                 // In this case, we send the full projectData as before.
@@ -173,7 +176,13 @@ const BudgetBOQEdit = () => {
         } finally {
             setSaving(false);
         }
-    };
+    }, [projectData, originalProjectData, hasUnsavedChanges, saveProject, toaster]);
+
+    const debouncedSave = useDebouncedCallback(performSave, 500);
+
+    const handleSave = useCallback(async () => {
+        await debouncedSave();
+    }, [debouncedSave]);
 
     const handleSaveAndExit = async () => {
         await handleSave();
@@ -206,9 +215,8 @@ const BudgetBOQEdit = () => {
     }
 
     return (
-        <div style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
-                <BOQStep
+        <div style={{ flex: 1, width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <BOQStep
                     dialogType="Edit"
                     buildings={buildings}
                     selectedProject={selectedProject}
@@ -217,7 +225,7 @@ const BudgetBOQEdit = () => {
                     onBack={handleBack}
                     onSave={handleSave}
                     saving={saving}
-                    hasUnsavedChanges={hasUnsavedChanges()}
+                    hasUnsavedChanges={hasUnsavedChanges}
                     createBuildings={createBuildings}
                     getBoqPreview={getBoqPreview}
                     clearBoq={clearBoq}
@@ -229,11 +237,10 @@ const BudgetBOQEdit = () => {
                     onCurrencyChange={handleCurrencyChange}
                     onDataRefresh={loadProjectData}
                 />
-            </div>
-            
+
             {/* Unsaved Changes Dialog */}
             {showUnsavedDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-bold mb-4">Unsaved Changes</h3>
                         <p className="text-base-content/70 mb-6">

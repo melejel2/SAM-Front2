@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { InputHTMLAttributes, ReactElement, forwardRef } from "react";
+import { InputHTMLAttributes, ReactElement, forwardRef, memo } from "react";
 import { twMerge } from "tailwind-merge";
 
 import { ComponentColor, ComponentSize, IComponentBaseProps } from "../types";
@@ -12,7 +12,7 @@ export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "c
         color?: ComponentColor;
     };
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
+const InputInner = forwardRef<HTMLInputElement, InputProps>(
     (
         { value, placeholder, bordered = true, borderOffset, size, color, dataTheme, className, type, ...props },
         ref,
@@ -52,6 +52,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     },
 );
 
-Input.displayName = "Input";
+InputInner.displayName = "Input";
+
+// Wrap with memo for performance optimization
+const Input = memo(InputInner) as typeof InputInner;
 
 export default Input;

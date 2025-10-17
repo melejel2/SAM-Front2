@@ -75,6 +75,7 @@ const IPCsDatabase = () => {
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
+    const [selectedProject, setSelectedProject] = useState<string>("All Projects");
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -192,6 +193,14 @@ const IPCsDatabase = () => {
         }
     };
 
+    // Get unique project names from table data
+    const uniqueProjects = Array.from(new Set(tableData.map((ipc: any) => ipc.projectName).filter(Boolean))).sort();
+
+    // Filter table data by selected project
+    const filteredTableData = selectedProject === "All Projects"
+        ? tableData
+        : tableData.filter((ipc: any) => ipc.projectName === selectedProject);
+
     return (
         <div>
             {viewMode === 'table' ? (
@@ -206,8 +215,54 @@ const IPCsDatabase = () => {
                                 <span className="iconify lucide--arrow-left size-4"></span>
                                 <span>Back</span>
                             </button>
+
+                            {/* Project Filter Dropdown */}
+                            <div className="dropdown">
+                                <div
+                                    tabIndex={0}
+                                    role="button"
+                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--filter size-4"></span>
+                                    <span>{selectedProject}</span>
+                                    <span className="iconify lucide--chevron-down size-3.5"></span>
+                                </div>
+                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
+                                    <li>
+                                        <button
+                                            onClick={() => setSelectedProject("All Projects")}
+                                            className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                                            }`}
+                                        >
+                                            <span className="iconify lucide--list size-4"></span>
+                                            <span>All Projects ({tableData.length})</span>
+                                        </button>
+                                    </li>
+                                    <li className="menu-title">
+                                        <span className="text-xs font-semibold">Projects</span>
+                                    </li>
+                                    {uniqueProjects.map((projectName) => {
+                                        const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
+                                        return (
+                                            <li key={projectName}>
+                                                <button
+                                                    onClick={() => setSelectedProject(projectName as string)}
+                                                    className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                                    }`}
+                                                >
+                                                    <span className="iconify lucide--folder size-4"></span>
+                                                    <span className="truncate flex-1">{projectName}</span>
+                                                    <span className="badge badge-sm badge-ghost">{count}</span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => navigate('/dashboard/IPCs-database/new')}
@@ -224,7 +279,7 @@ const IPCsDatabase = () => {
                     ) : (
                         <SAMTable
                             columns={columns}
-                            tableData={tableData}
+                            tableData={filteredTableData}
                             inputFields={inputFields}
                             actions
                             previewAction
@@ -234,6 +289,7 @@ const IPCsDatabase = () => {
                             loading={false}
                             onSuccess={getIPCs}
                             dynamicDialog={false}
+                            rowsPerPage={10}
                             openStaticDialog={(type, data) => {
                                 if (type === "Preview" && data) {
                                     return handlePreviewIpc(data);

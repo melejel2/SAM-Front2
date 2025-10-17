@@ -60,7 +60,7 @@ export const NavigationButtons: React.FC<NavigationButtonsProps> = ({
             if (hasUnsavedChanges) {
                 onShowBackConfirmDialog();
             } else {
-                navigate('/dashboard/subcontractors-boqs');
+                navigate('/dashboard/contracts');
             }
         } else {
             // If on other steps, go back one step in wizard

@@ -1,47 +1,68 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 
 interface PDFViewerProps {
     fileBlob: Blob;
     fileName: string;
 }
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ fileBlob, fileName }) => {
+const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
     const [pdfUrl, setPdfUrl] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // Create object URL for native browser PDF viewer
     useEffect(() => {
-        if (fileBlob) {
-            // Check if blob is valid and not empty
-            if (!fileBlob || !(fileBlob instanceof Blob)) {
-                setError('Invalid PDF file - not a valid blob');
-                return;
-            }
-            
-            if (fileBlob.size < 1000) {
-                setError('PDF file is empty or corrupted');
-                return;
-            }
-            
-            try {
-                // Create object URL for native browser PDF viewer
-                const objectUrl = URL.createObjectURL(fileBlob);
-                setPdfUrl(objectUrl);
-            } catch (urlError) {
-                setError('Failed to create PDF viewer URL');
-                return;
-            }
+        if (!fileBlob) {
+            setError('No PDF file provided');
+            setIsLoading(false);
+            return;
         }
-    }, [fileBlob]);
 
-    // Cleanup object URL when component unmounts
-    useEffect(() => {
+        // Check if blob is valid and not empty
+        if (!(fileBlob instanceof Blob)) {
+            setError('Invalid PDF file - not a valid blob');
+            setIsLoading(false);
+            return;
+        }
+
+        if (fileBlob.size < 1000) {
+            setError('PDF file is empty or corrupted');
+            setIsLoading(false);
+            return;
+        }
+
+        let objectUrl: string | null = null;
+
+        try {
+            // Create object URL for native browser PDF viewer
+            objectUrl = URL.createObjectURL(fileBlob);
+            setPdfUrl(objectUrl);
+            setIsLoading(false);
+            setError(null);
+        } catch (urlError) {
+            console.error('Failed to create PDF viewer URL:', urlError);
+            setError('Failed to create PDF viewer URL');
+            setIsLoading(false);
+        }
+
+        // Cleanup function to revoke object URL
         return () => {
-            if (pdfUrl && pdfUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(pdfUrl);
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
             }
         };
-    }, [pdfUrl]);
+    }, [fileBlob]);
+
+    // Handle iframe load error
+    const handleIframeError = useCallback(() => {
+        setError('Failed to load PDF document');
+        setIsLoading(false);
+    }, []);
+
+    // Handle iframe load success
+    const handleIframeLoad = useCallback(() => {
+        setIsLoading(false);
+    }, []);
 
     if (error) {
         return (
@@ -59,30 +80,33 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileBlob, fileName }) => {
         <div className="h-full flex flex-col bg-base-100">
             {/* PDF Content */}
             <div className="flex-1 overflow-hidden">
-                {pdfUrl ? (
+                {isLoading && !error && (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                            <span className="loading loading-ring loading-lg text-primary"></span>
+                            <p className="text-base-content font-medium mt-4">Loading PDF...</p>
+                        </div>
+                    </div>
+                )}
+                {pdfUrl && !error && (
                     <iframe
                         src={pdfUrl}
                         className="w-full h-full border-0"
-                        style={{ 
+                        style={{
                             minHeight: '500px',
-                            backgroundColor: '#f0f0f0' 
+                            backgroundColor: 'var(--fallback-b2, oklch(var(--b2)))'
                         }}
                         title={fileName}
-                        onError={() => {
-                            setError('Failed to load PDF document');
-                        }}
+                        onLoad={handleIframeLoad}
+                        onError={handleIframeError}
+                        loading="lazy"
                     />
-                ) : (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/30 border-top-primary mx-auto mb-4"></div>
-                            <p className="text-base-content font-medium">Loading PDF...</p>
-                        </div>
-                    </div>
                 )}
             </div>
         </div>
     );
-};
+});
+
+PDFViewer.displayName = 'PDFViewer';
 
 export default PDFViewer;

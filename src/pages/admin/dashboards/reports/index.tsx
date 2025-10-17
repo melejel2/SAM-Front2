@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useCallback, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
 
 import useReports from "./use-reports";
 
-const Reports = () => {
+const Reports = memo(() => {
     const { columns, tableData, inputFields } = useReports();
     const navigate = useNavigate();
     const location = useLocation();
@@ -15,9 +15,13 @@ const Reports = () => {
         // ensuring fresh data is loaded
     }, [location.pathname]);
 
-    const handleBackToDashboard = () => {
+    const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
-    };
+    }, [navigate]);
+
+    const handleSuccess = useCallback(() => {
+        // Empty success handler
+    }, []);
 
     return (
         <div>
@@ -45,11 +49,13 @@ const Reports = () => {
                     title={"Report"}
                     loading={false}
                     addBtn
-                    onSuccess={() => {}}
+                    onSuccess={handleSuccess}
                 />
             </div>
         </div>
     );
-};
+});
+
+Reports.displayName = 'Reports';
 
 export default Reports;

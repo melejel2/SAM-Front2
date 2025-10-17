@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -12,15 +12,16 @@ const useContractsDatabase = () => {
     const { getToken } = useAuth();
     const token = getToken();
 
-    const formatCurrency = (amount: number) => {
+    // Memoize formatting functions to prevent recreation on every render
+    const formatCurrency = useCallback((amount: number) => {
         if (!amount || isNaN(amount)) return '-';
         return new Intl.NumberFormat('en-US', {
             style: 'decimal',
             maximumFractionDigits: 0
         }).format(amount);
-    };
+    }, []);
 
-    const formatDate = (dateString: string) => {
+    const formatDate = useCallback((dateString: string) => {
         if (!dateString) return '-';
         try {
             // Handle ISO datetime format like "2020-01-27T00:00:00"
@@ -33,9 +34,9 @@ const useContractsDatabase = () => {
         } catch (error) {
             return '-';
         }
-    };
+    }, []);
 
-    const formatStatusBadge = (status: any) => {
+    const formatStatusBadge = useCallback((status: any) => {
         // Convert status to string and handle different types
         const statusStr = status?.toString() || '';
         const statusLower = statusStr.toLowerCase();
@@ -66,23 +67,12 @@ const useContractsDatabase = () => {
         }
 
         return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
-    };
+    }, []);
 
 
 
-    const contractsColumns = {
-        contractNumber: "Number",
-        projectName: "Project",
-        subcontractorName: "Subcontractor",
-        tradeName: "Trade",
-        contractType: "Type",
-        contractDate: "Date of Signature", 
-        completionDate: "End Date",
-        amount: "Amount",
-        status: "Status",
-    };
-
-    const vosColumns = {
+    // Memoize column definitions to prevent recreation
+    const contractsColumns = useMemo(() => ({
         contractNumber: "Number",
         projectName: "Project",
         subcontractorName: "Subcontractor",
@@ -92,9 +82,9 @@ const useContractsDatabase = () => {
         completionDate: "End Date",
         amount: "Amount",
         status: "Status",
-    };
+    }), []);
 
-    const terminatedColumns = {
+    const vosColumns = useMemo(() => ({
         contractNumber: "Number",
         projectName: "Project",
         subcontractorName: "Subcontractor",
@@ -104,13 +94,25 @@ const useContractsDatabase = () => {
         completionDate: "End Date",
         amount: "Amount",
         status: "Status",
-    };
+    }), []);
 
-    const getContractsDatasets = async (status: number = 2) => {
+    const terminatedColumns = useMemo(() => ({
+        contractNumber: "Number",
+        projectName: "Project",
+        subcontractorName: "Subcontractor",
+        tradeName: "Trade",
+        contractType: "Type",
+        contractDate: "Date of Signature",
+        completionDate: "End Date",
+        amount: "Amount",
+        status: "Status",
+    }), []);
+
+    const getContractsDatasets = useCallback(async (status: number = 2) => {
         if (isApiCallInProgress.current) {
             return;
         }
-        
+
         isApiCallInProgress.current = true;
         setLoading(true);
         try {
@@ -119,10 +121,10 @@ const useContractsDatabase = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             // Handle different response structures
             let contractsArray = [];
-            
+
             if (Array.isArray(data)) {
                 contractsArray = data;
             } else if (data && typeof data === 'object') {
@@ -141,8 +143,8 @@ const useContractsDatabase = () => {
             } else {
                 contractsArray = [];
             }
-            
-            
+
+
             // Process the data to format currency and dates
             const processedData = contractsArray.map((contract: any) => ({
                 ...contract,
@@ -154,7 +156,7 @@ const useContractsDatabase = () => {
                 originalStatus: contract.status || '', // Preserve original status for filtering
                 status: formatStatusBadge(contract.status),
             }));
-            
+
             // Reverse the order to show newest first and set to appropriate state based on status
             const reversedData = processedData.reverse();
             if (status === 2) {
@@ -175,9 +177,9 @@ const useContractsDatabase = () => {
             setLoading(false);
             isApiCallInProgress.current = false;
         }
-    };
+    }, [token, formatDate, formatCurrency, formatStatusBadge]);
 
-    const previewContract = async (contractId: string) => {
+    const previewContract = useCallback(async (contractId: string) => {
         try {
             // Use the PDF export endpoint for preview since PreviewContract doesn't exist
             const response = await apiRequest({
@@ -195,9 +197,9 @@ const useContractsDatabase = () => {
             console.error(error);
             return { success: false, blob: null };
         }
-    };
+    }, [token]);
 
-    const terminateContract = async (contractId: string) => {
+    const terminateContract = useCallback(async (contractId: string) => {
         try {
             const response = await apiRequest({
                 endpoint: `ContractsDatasets/TerminateContract/${contractId}`,
@@ -216,9 +218,9 @@ const useContractsDatabase = () => {
             console.error("Error terminating contract:", error);
             return { success: false, error: "An error occurred while terminating the contract" };
         }
-    };
+    }, [token]);
 
-    const generateFinalContract = async (contractId: string) => {
+    const generateFinalContract = useCallback(async (contractId: string) => {
         try {
             const response = await apiRequest({
                 endpoint: `ContractsDatasets/GenerateFinalContract/${contractId}`,
@@ -236,7 +238,7 @@ const useContractsDatabase = () => {
             console.error("Error generating final contract:", error);
             return { success: false, error: "An error occurred while generating the final discharge document" };
         }
-    };
+    }, [token]);
 
     // Each tab has its own data state
     const vosData: any[] = []; // Keep VOs empty for now
@@ -246,14 +248,14 @@ const useContractsDatabase = () => {
     // Use activeContractsData for the contracts tab
     const contractsTabData = activeContractsData;
 
-    const getActiveContracts = async () => {
+    const getActiveContracts = useCallback(async () => {
         try {
             const data = await apiRequest({
                 endpoint: `ContractsDatasets/GetContractsDatasetsList/2`, // Status 2 = Active
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             let contractsArray = [];
             if (Array.isArray(data)) {
                 contractsArray = data;
@@ -272,7 +274,7 @@ const useContractsDatabase = () => {
             } else {
                 contractsArray = [];
             }
-            
+
             const processedData = contractsArray.map((contract: any) => ({
                 ...contract,
                 projectName: contract.projectName || '-',
@@ -283,22 +285,22 @@ const useContractsDatabase = () => {
                 originalStatus: contract.status || '',
                 status: formatStatusBadge(contract.status),
             }));
-            
+
             setActiveContractsData(processedData.reverse());
         } catch (error) {
             console.error("API Error loading active contracts:", error);
             setActiveContractsData([]);
         }
-    };
+    }, [token, formatDate, formatCurrency, formatStatusBadge]);
 
-    const getTerminatedContracts = async () => {
+    const getTerminatedContracts = useCallback(async () => {
         try {
             const data = await apiRequest({
                 endpoint: `ContractsDatasets/GetContractsDatasetsList/1`, // Status 1 = Terminated
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             let contractsArray = [];
             if (Array.isArray(data)) {
                 contractsArray = data;
@@ -317,7 +319,7 @@ const useContractsDatabase = () => {
             } else {
                 contractsArray = [];
             }
-            
+
             const processedData = contractsArray.map((contract: any) => ({
                 ...contract,
                 projectName: contract.projectName || '-',
@@ -328,13 +330,13 @@ const useContractsDatabase = () => {
                 originalStatus: contract.status || '',
                 status: formatStatusBadge(contract.status),
             }));
-            
+
             setTerminatedContractsData(processedData.reverse());
         } catch (error) {
             console.error("API Error loading terminated contracts:", error);
             setTerminatedContractsData([]);
         }
-    };
+    }, [token, formatDate, formatCurrency, formatStatusBadge]);
 
     return {
         contractsColumns,

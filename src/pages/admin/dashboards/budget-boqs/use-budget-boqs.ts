@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -29,6 +29,11 @@ const useBudgetBOQs = () => {
 
     const { getToken } = useAuth();
     const token = getToken();
+
+    // Cache for projects and buildings to avoid redundant API calls
+    const projectsCacheRef = useRef<{ data: Project[] | null; timestamp: number }>({ data: null, timestamp: 0 });
+    const buildingsCacheRef = useRef<Map<number, { data: Building[]; timestamp: number }>>(new Map());
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
     const columns = {
         code: "Code",
@@ -64,7 +69,16 @@ const useBudgetBOQs = () => {
         },
     ];
 
-    const getProjectsList = async () => {
+    const getProjectsList = useCallback(async (forceRefresh = false) => {
+        // Check cache first
+        const now = Date.now();
+        const cache = projectsCacheRef.current;
+
+        if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_DURATION) {
+            setTableData(cache.data);
+            return;
+        }
+
         setLoading(true);
         try {
             const data = await apiRequest<Project[]>({
@@ -77,8 +91,11 @@ const useBudgetBOQs = () => {
                 // Sort by ID descending (latest first)
                 const sortedData = [...data].sort((a, b) => b.id - a.id);
                 setTableData(sortedData);
+                // Update cache
+                projectsCacheRef.current = { data: sortedData, timestamp: now };
             } else {
                 setTableData([]);
+                projectsCacheRef.current = { data: [], timestamp: now };
             }
         } catch (error) {
             console.error("Error fetching projects:", error);
@@ -86,9 +103,18 @@ const useBudgetBOQs = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, CACHE_DURATION]);
 
-    const getBuildingsList = async (projectId: number) => {
+    const getBuildingsList = useCallback(async (projectId: number, forceRefresh = false) => {
+        // Check cache first
+        const now = Date.now();
+        const cache = buildingsCacheRef.current.get(projectId);
+
+        if (!forceRefresh && cache && (now - cache.timestamp) < CACHE_DURATION) {
+            setBuildings(cache.data);
+            return;
+        }
+
         try {
             const data = await apiRequest<Building[]>({
                 endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
@@ -99,16 +125,19 @@ const useBudgetBOQs = () => {
             if (data && Array.isArray(data)) {
                 console.log(data);
                 setBuildings(data);
+                // Update cache
+                buildingsCacheRef.current.set(projectId, { data, timestamp: now });
             } else {
                 setBuildings([]);
+                buildingsCacheRef.current.set(projectId, { data: [], timestamp: now });
             }
         } catch (error) {
             console.error("Error fetching buildings:", error);
             setBuildings([]);
         }
-    };
+    }, [token, CACHE_DURATION]);
 
-    const createProject = async (projectData: Omit<Project, "id">) => {
+    const createProject = useCallback(async (projectData: Omit<Project, "id">) => {
         try {
             const result = await apiRequest({
                 endpoint: "Project/CreateProject",
@@ -118,7 +147,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                await getProjectsList();
+                // Invalidate cache
+                projectsCacheRef.current = { data: null, timestamp: 0 };
+                await getProjectsList(true);
                 return { success: true };
             }
             return { success: false, message: "Failed to create project" };
@@ -126,9 +157,9 @@ const useBudgetBOQs = () => {
             console.error("Error creating project:", error);
             return { success: false, message: "Error creating project" };
         }
-    };
+    }, [token, getProjectsList]);
 
-    const updateProject = async (projectData: Project) => {
+    const updateProject = useCallback(async (projectData: Project) => {
         try {
             const result = await apiRequest({
                 endpoint: "Project/UpdateProject",
@@ -138,7 +169,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                await getProjectsList();
+                // Invalidate cache
+                projectsCacheRef.current = { data: null, timestamp: 0 };
+                await getProjectsList(true);
                 return { success: true };
             }
             return { success: false, message: "Failed to update project" };
@@ -146,9 +179,9 @@ const useBudgetBOQs = () => {
             console.error("Error updating project:", error);
             return { success: false, message: "Error updating project" };
         }
-    };
+    }, [token, getProjectsList]);
 
-    const deleteProject = async (projectId: number) => {
+    const deleteProject = useCallback(async (projectId: number) => {
         try {
             const result = await apiRequest({
                 endpoint: `Project/DeleteProject/${projectId}`,
@@ -157,17 +190,21 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                await getProjectsList();
+                // Invalidate cache
+                projectsCacheRef.current = { data: null, timestamp: 0 };
+                buildingsCacheRef.current.delete(projectId);
+                await getProjectsList(true);
                 return { success: true };
             }
-            return { success: false, message: "Failed to delete project" };
+
+            return { success: false, message: (result as any)?.message || "Failed to delete project" };
         } catch (error) {
             console.error("Error deleting project:", error);
             return { success: false, message: "Error deleting project" };
         }
-    };
+    }, [token, getProjectsList]);
 
-    const openProject = async (projectId: number) => {
+    const openProject = useCallback(async (projectId: number) => {
         try {
             const data = await apiRequest({
                 endpoint: `Project/OpenProject/${projectId}`,
@@ -180,7 +217,7 @@ const useBudgetBOQs = () => {
             console.error("Error opening project:", error);
             return null;
         }
-    };
+    }, [token]);
 
     // Remove automatic token-based fetch to prevent conflicts with location-based fetch
     // useEffect(() => {

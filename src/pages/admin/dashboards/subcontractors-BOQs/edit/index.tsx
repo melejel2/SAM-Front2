@@ -26,7 +26,7 @@ const EditSubcontractWizardContent: React.FC = () => {
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate('/dashboard/subcontractors-boqs');
+        navigate('/dashboard/contracts');
     };
 
     const handleCancelBack = () => {
@@ -37,7 +37,7 @@ const EditSubcontractWizardContent: React.FC = () => {
         await handleSubmit();
         // If submission was successful, navigate back to the list
         if (!loading) {
-            navigate('/dashboard/subcontractors-boqs');
+            navigate('/dashboard/contracts');
         }
     };
 
@@ -169,10 +169,10 @@ const EditSubcontractWizardContent: React.FC = () => {
             {/* Header with Back Button, Timeline, and Navigation */}
             <div className="flex justify-between items-center mb-6">
                 <button
-                    onClick={currentStep === 1 && hasUnsavedChanges 
-                        ? () => setShowBackConfirmDialog(true) 
-                        : currentStep === 1 
-                            ? () => navigate('/dashboard/subcontractors-boqs')
+                    onClick={currentStep === 1 && hasUnsavedChanges
+                        ? () => setShowBackConfirmDialog(true)
+                        : currentStep === 1
+                            ? () => navigate('/dashboard/contracts')
                             : goToPreviousStep
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"

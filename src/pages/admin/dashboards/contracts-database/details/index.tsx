@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -10,8 +10,8 @@ import apiRequest from "@/api/api";
 import { useContractsApi } from "../../subcontractors-BOQs/hooks/use-contracts-api";
 import { getContractVOs as fetchContractVOs } from "@/api/services/vo-api";
 
-// Helper functions
-const formatCurrency = (amount: number | string | undefined) => {
+// Memoized helper functions (created once, reused forever)
+const formatCurrency = (amount: number | string | undefined): string => {
     if (!amount || amount === '-') return '-';
     const numAmount = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
     if (isNaN(numAmount)) return '-';
@@ -21,7 +21,7 @@ const formatCurrency = (amount: number | string | undefined) => {
     }).format(Math.round(numAmount));
 };
 
-const formatDate = (dateString: string | undefined) => {
+const formatDate = (dateString: string | undefined): string => {
     if (!dateString || dateString === '-') return '-';
     try {
         const date = new Date(dateString);
@@ -36,7 +36,7 @@ const formatDate = (dateString: string | undefined) => {
     }
 };
 
-const formatPercentage = (value: number | undefined) => {
+const formatPercentage = (value: number | undefined): string => {
     if (!value || value === 0) return '0%';
     return `${value}%`;
 };
@@ -65,27 +65,27 @@ const ContractDatabaseDetails = () => {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
     const [terminating, setTerminating] = useState(false);
-    // Contract-specific VOs hook
+    // Contract-specific VOs hook (optimized with useMemo and useCallback)
     const useContractVOs = (contractId: string) => {
         const [vos, setVos] = useState<any[]>([]);
         const [loading, setLoading] = useState(false);
         const { getToken } = useAuth();
 
-        const voColumns = {
+        const voColumns = useMemo(() => ({
             voNumber: "VO Number",
-            description: "Description", 
+            description: "Description",
             type: "Type",
             amount: "Amount",
             status: "Status",
             date: "Date Created"
-        };
+        }), []);
 
-    const getContractVOsData = async () => {
+        const getContractVOsData = useCallback(async () => {
             if (!contractId) return;
-            
+
             setLoading(true);
             try {
-        const response = await fetchContractVOs(parseInt(contractId), getToken() ?? '');
+                const response = await fetchContractVOs(parseInt(contractId), getToken() ?? '');
 
                 if (response.success && response.data && Array.isArray(response.data)) {
                     const formattedVos = response.data.map((vo: any) => ({
@@ -107,7 +107,7 @@ const ContractDatabaseDetails = () => {
             } finally {
                 setLoading(false);
             }
-        };
+        }, [contractId, getToken]);
 
         return {
             vos,
@@ -137,16 +137,16 @@ const ContractDatabaseDetails = () => {
         } else if (contractIdentifier) {
             // If we have a contract number but no ID, we need to look it up
             toaster.error("Contract not found. Please navigate from the contracts list.");
-            navigate('/dashboard/contracts-database');
+            navigate('/dashboard/contracts');
         }
     }, [contractId, contractIdentifier]);
 
     // Initialize contracts API
     const contractsApi = useContractsApi();
 
-    const loadContractDetails = async () => {
+    const loadContractDetails = useCallback(async () => {
         if (!contractId) return;
-        
+
         setLoading(true);
         try {
             // Load contract details and reference data in parallel
@@ -168,15 +168,15 @@ const ContractDatabaseDetails = () => {
                     token: getToken() ?? ""
                 })
             ]);
-            
+
             if (contractResult.success && contractResult.data) {
                 setContractData(contractResult.data);
-                
+
                 // Set reference data
                 setProjects(Array.isArray(projectsResponse) ? projectsResponse : (projectsResponse?.data || []));
                 setSubcontractors(Array.isArray(subcontractorsResponse) ? subcontractorsResponse : (subcontractorsResponse?.data || []));
                 setCurrencies(Array.isArray(currenciesResponse) ? currenciesResponse : (currenciesResponse?.data || []));
-                
+
                 // Find and set the correct currency symbol
                 const currencyData = Array.isArray(currenciesResponse) ? currenciesResponse : (currenciesResponse?.data || []);
                 const contractCurrencyId = contractResult.data?.currencyId;
@@ -188,16 +188,16 @@ const ContractDatabaseDetails = () => {
                 }
             } else {
                 toaster.error("Failed to load contract details");
-                navigate('/dashboard/contracts-database');
+                navigate('/dashboard/contracts');
             }
         } catch (error) {
             console.error("Error loading contract:", error);
             toaster.error("An error occurred while loading contract details");
-            navigate('/dashboard/contracts-database');
+            navigate('/dashboard/contracts');
         } finally {
             setLoading(false);
         }
-    };
+    }, [contractId, contractsApi, getToken, navigate, toaster]);
 
 
     const handlePreviewContract = async () => {
@@ -295,7 +295,7 @@ const ContractDatabaseDetails = () => {
         // Navigate to proper contract-specific VO creation wizard
         if (!contractId) return;
         
-        navigate(`/dashboard/contracts-database/details/${contractIdentifier}/create-vo`, {
+        navigate(`/dashboard/contracts/details/${contractIdentifier}/create-vo`, {
             state: {
                 contractId: contractId,
                 contractNumber: contractData?.contractNumber,
@@ -325,7 +325,7 @@ const ContractDatabaseDetails = () => {
                 toaster.success(`Contract ${contractData.contractNumber} has been terminated successfully`);
                 setShowTerminateModal(false);
                 // Navigate back to contracts database
-                navigate('/dashboard/contracts-database');
+                navigate('/dashboard/contracts');
             } else {
                 toaster.error("Failed to terminate contract");
             }
@@ -368,17 +368,16 @@ const ContractDatabaseDetails = () => {
         );
     }
 
-    // Get project, subcontractor and currency data
-    const currentProject = projects.find(p => p.id === contractData?.projectId);
-    const currentSubcontractor = subcontractors.find(s => s.id === contractData?.subContractorId);
-    const currentCurrency = currencies.find(c => c.id === contractData?.currencyId);
-    
-    // Use the amount from contract data or calculate from BOQ
-    const totalAmount = contractData?.amount || contractData?.advancePayment || calculateTotalAmount();
-    
-    // Get advance payment info
-    const advancePercentage = parseFloat(contractData?.subcontractorAdvancePayee || '0') || 0;
-    const advanceAmount = totalAmount * (advancePercentage / 100);
+    // Memoize derived data to prevent recalculations
+    const currentProject = useMemo(() => projects.find(p => p.id === contractData?.projectId), [projects, contractData?.projectId]);
+    const currentSubcontractor = useMemo(() => subcontractors.find(s => s.id === contractData?.subContractorId), [subcontractors, contractData?.subContractorId]);
+    const currentCurrency = useMemo(() => currencies.find(c => c.id === contractData?.currencyId), [currencies, contractData?.currencyId]);
+
+    // Memoize calculated values
+    const totalAmount = useMemo(() => contractData?.amount || contractData?.advancePayment || calculateTotalAmount(), [contractData?.amount, contractData?.advancePayment, contractData]);
+
+    const advancePercentage = useMemo(() => parseFloat(contractData?.subcontractorAdvancePayee || '0') || 0, [contractData?.subcontractorAdvancePayee]);
+    const advanceAmount = useMemo(() => totalAmount * (advancePercentage / 100), [totalAmount, advancePercentage]);
 
     return (
         <div className="space-y-6">
@@ -386,7 +385,7 @@ const ContractDatabaseDetails = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/dashboard/contracts-database')}
+                        onClick={() => navigate('/dashboard/contracts')}
                         className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                     >
                         <span className="iconify lucide--arrow-left size-4"></span>

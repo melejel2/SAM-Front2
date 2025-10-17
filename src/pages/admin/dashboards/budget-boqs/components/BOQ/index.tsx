@@ -1,16 +1,19 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
 import buildingIcon from "@iconify/icons-lucide/building";
 import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 import saveIcon from "@iconify/icons-lucide/save";
 
 import BOQTable from "./components/boqTable";
-import VODialog from "../VOManagement/VODialog";
-import BuildingSelectionDialog from "../BuildingSelectionDialog";
 import { Building } from "@/types/variation-order";
+
+// Lazy load modals for better performance
+const VODialog = lazy(() => import("../VOManagement/VODialog"));
+const BuildingSelectionDialog = lazy(() => import("../BuildingSelectionDialog"));
 
 interface Currency {
     id: number;
@@ -167,21 +170,12 @@ const BOQStep: React.FC<BOQStepProps> = ({
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!selectedProject || !selectedBuilding) {
-            toaster.error("Please select a project and a building first");
-            return;
-        }
-
-        const buildingId = selectedBuilding.id;
-
+    // Debounced file processing to prevent multiple rapid imports
+    const processExcelFile = useCallback(async (file: File, projectId: number, buildingId: number) => {
         try {
             const buildingSaveModels = await getBoqPreview({
-                projectId: selectedProject.id,
-                buildingId: buildingId,
+                projectId,
+                buildingId,
                 excelFile: file
             });
 
@@ -240,17 +234,34 @@ const BOQStep: React.FC<BOQStepProps> = ({
         } catch (error) {
             toaster.error("Error importing BOQ file");
         }
+    }, [getBoqPreview, setProjectData, toaster]);
+
+    const debouncedProcessExcelFile = useDebouncedCallback(processExcelFile, 300);
+
+    const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!selectedProject || !selectedBuilding) {
+            toaster.error("Please select a project and a building first");
+            return;
+        }
+
+        const buildingId = selectedBuilding.id;
+
+        // Use debounced version for file processing
+        await debouncedProcessExcelFile(file, selectedProject.id, buildingId);
 
         // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
-    };
+    }, [selectedProject, selectedBuilding, debouncedProcessExcelFile, toaster]);
 
     return (
         <div style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Top row with Back, Clear, and action buttons */}
-            <div className="flex justify-between items-center mb-1" style={{ flexShrink: 0 }}>
+            <div className="flex justify-between items-center mb-4" style={{ flexShrink: 0 }}>
                 <div className="flex items-center gap-3">
                     {/* Back Button */}
                     {onBack && (
@@ -389,7 +400,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
             
             {/* Clear BOQ Scope Dialog */}
             {showClearDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-bold mb-4">Clear BOQ</h3>
                         <p className="text-base-content/70 mb-4">
@@ -450,7 +461,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
             
             {/* Clear BOQ Confirmation Dialog */}
             {showConfirmDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-bold mb-4 text-red-600">⚠️ Confirm Clear</h3>
                         <p className="text-base-content/70 mb-4">
@@ -484,43 +495,49 @@ const BOQStep: React.FC<BOQStepProps> = ({
                 </div>
             )}
             
-            {/* VO Dialog */}
-            {selectedProject && selectedBuilding && currentSheetForVO && (
-                <VODialog
-                    isOpen={showVODialog}
-                    onClose={() => {
-                        setShowVODialog(false);
-                        setCurrentSheetForVO(null);
-                    }}
-                    projectId={selectedProject.id}
-                    buildingId={selectedBuilding.id}
-                    buildingName={selectedBuilding.name}
-                    tradeName={currentSheetForVO.sheet?.name || currentSheetForVO.trade?.name || "Unknown"}
-                    sheetId={currentSheetForVO.sheetId}
-                    projectLevel={selectedBuilding?.projectLevel || 0}
-                />
+            {/* VO Dialog - Lazy loaded */}
+            {selectedProject && selectedBuilding && currentSheetForVO && showVODialog && (
+                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><div className="loading loading-spinner loading-lg"></div></div>}>
+                    <VODialog
+                        isOpen={showVODialog}
+                        onClose={() => {
+                            setShowVODialog(false);
+                            setCurrentSheetForVO(null);
+                        }}
+                        projectId={selectedProject.id}
+                        buildingId={selectedBuilding.id}
+                        buildingName={selectedBuilding.name}
+                        tradeName={currentSheetForVO.sheet?.name || currentSheetForVO.trade?.name || "Unknown"}
+                        sheetId={currentSheetForVO.sheetId}
+                        projectLevel={selectedBuilding?.projectLevel || 0}
+                    />
+                </Suspense>
             )}
 
-            {/* Building Selection Dialog */}
-            <BuildingSelectionDialog
-                isOpen={showBuildingDialog}
-                onClose={() => setShowBuildingDialog(false)}
-                onBuildingSelect={(building) => {
-                    // Ensure building has required properties for the Building type
-                    const buildingWithLevels: Building = {
-                        ...building,
-                        projectLevel: building.projectLevel ?? 0,
-                        subContractorLevel: building.subContractorLevel ?? 0
-                    };
-                    setSelectedBuilding(buildingWithLevels);
-                    setShowBuildingDialog(false);
-                }}
-                buildings={projectData?.buildings || buildings || []}
-                currentBuilding={selectedBuilding}
-                projectName={selectedProject?.name}
-                projectId={selectedProject?.id}
-                onCreateBuildings={handleCreateBuildings}
-            />
+            {/* Building Selection Dialog - Lazy loaded */}
+            {showBuildingDialog && (
+                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><div className="loading loading-spinner loading-lg"></div></div>}>
+                    <BuildingSelectionDialog
+                        isOpen={showBuildingDialog}
+                        onClose={() => setShowBuildingDialog(false)}
+                        onBuildingSelect={(building) => {
+                            // Ensure building has required properties for the Building type
+                            const buildingWithLevels: Building = {
+                                ...building,
+                                projectLevel: building.projectLevel ?? 0,
+                                subContractorLevel: building.subContractorLevel ?? 0
+                            };
+                            setSelectedBuilding(buildingWithLevels);
+                            setShowBuildingDialog(false);
+                        }}
+                        buildings={projectData?.buildings || buildings || []}
+                        currentBuilding={selectedBuilding}
+                        projectName={selectedProject?.name}
+                        projectId={selectedProject?.id}
+                        onCreateBuildings={handleCreateBuildings}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 };

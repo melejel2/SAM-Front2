@@ -1,5 +1,7 @@
+import { memo, useMemo } from 'react';
 import { IStatItem, StatItem } from "./StatItem";
 
+// Move static data outside component to prevent recreation
 const statItems: IStatItem[] = [
     {
         title: "Revenue",
@@ -31,12 +33,19 @@ const statItems: IStatItem[] = [
     },
 ];
 
-export const StatList = () => {
+export const StatList = memo(() => {
+    // Memoize the rendered items to prevent recalculation
+    const renderedItems = useMemo(() => {
+        return statItems.map((card, index) => (
+            <StatItem {...card} key={index} />
+        ));
+    }, []);
+
     return (
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
-            {statItems.map((card, index) => (
-                <StatItem {...card} key={index} />
-            ))}
+            {renderedItems}
         </div>
     );
-};
+});
+
+StatList.displayName = 'StatList';

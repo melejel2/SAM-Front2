@@ -56,6 +56,8 @@ interface SAMTableProps {
     previewLoadingRowId?: string | null;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
+    inlineEditable?: boolean;
+    onInlineEdit?: (rowId: any, field: string, value: any) => void;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -92,6 +94,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
     selectedRowId,
     onItemUpdate,
     onItemDelete,
+    inlineEditable = false,
+    onInlineEdit,
 }) => {
     return (
         <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
@@ -135,6 +139,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             selectedRowId={selectedRowId}
                             onItemUpdate={onItemUpdate}
                             onItemDelete={onItemDelete}
+                            inlineEditable={inlineEditable}
+                            onInlineEdit={onInlineEdit}
                         />
                     </div>
 

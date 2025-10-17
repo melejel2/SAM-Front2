@@ -156,10 +156,11 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
     }, [getToken, toaster]);
     
-    // Load contracts on mount
+    // Load contracts on mount - empty dependency array to run only once
     useEffect(() => {
         loadContracts();
-    }, [loadContracts]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     
     // Form data setter with unsaved changes tracking
     const setFormData = useCallback((data: Partial<IpcWizardFormData>) => {

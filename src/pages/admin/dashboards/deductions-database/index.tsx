@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
@@ -6,7 +6,7 @@ import { Button, Select, SelectOption } from "@/components/daisyui";
 
 import useDeductionsDatabase from "./use-deductions-database";
 
-const DeductionsDatabase = () => {
+const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
     const navigate = useNavigate();
     const location = useLocation();
@@ -19,7 +19,8 @@ const DeductionsDatabase = () => {
     const { laborColumns, materialsColumns, machinesColumns, laborData, materialsData, machinesData } =
         useDeductionsDatabase();
 
-    const getColumns = () => {
+    // Memoize column and data selection to prevent recalculation
+    const columns = useMemo(() => {
         switch (activeView) {
             case "Materials":
                 return materialsColumns;
@@ -28,9 +29,9 @@ const DeductionsDatabase = () => {
             default:
                 return laborColumns;
         }
-    };
+    }, [activeView, materialsColumns, machinesColumns, laborColumns]);
 
-    const getTableData = () => {
+    const tableData = useMemo(() => {
         switch (activeView) {
             case "Materials":
                 return materialsData;
@@ -39,11 +40,19 @@ const DeductionsDatabase = () => {
             default:
                 return laborData;
         }
-    };
+    }, [activeView, materialsData, machinesData, laborData]);
 
-    const handleBackToDashboard = () => {
+    const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
-    };
+    }, [navigate]);
+
+    const handleSetLabor = useCallback(() => setActiveView("Labor"), []);
+    const handleSetMaterials = useCallback(() => setActiveView("Materials"), []);
+    const handleSetMachines = useCallback(() => setActiveView("Machines"), []);
+
+    const handleSuccess = useCallback(() => {
+        // Empty success handler
+    }, []);
 
     return (
         <div>
@@ -63,35 +72,35 @@ const DeductionsDatabase = () => {
                 <div className="flex items-center gap-2">
                     <button
                         className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeView === "Labor" 
-                                ? "btn-primary" 
+                            activeView === "Labor"
+                                ? "btn-primary"
                                 : "btn-ghost border border-base-300 hover:border-primary/50"
                         }`}
-                        onClick={() => setActiveView("Labor")}
+                        onClick={handleSetLabor}
                     >
                         <span className="iconify lucide--users size-4" />
                         <span>Labor ({laborData.length})</span>
                     </button>
-                    
+
                     <button
                         className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeView === "Materials" 
-                                ? "btn-primary" 
+                            activeView === "Materials"
+                                ? "btn-primary"
                                 : "btn-ghost border border-base-300 hover:border-primary/50"
                         }`}
-                        onClick={() => setActiveView("Materials")}
+                        onClick={handleSetMaterials}
                     >
                         <span className="iconify lucide--package size-4" />
                         <span>Materials ({materialsData.length})</span>
                     </button>
-                    
+
                     <button
                         className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeView === "Machines" 
-                                ? "btn-primary" 
+                            activeView === "Machines"
+                                ? "btn-primary"
                                 : "btn-ghost border border-base-300 hover:border-primary/50"
                         }`}
-                        onClick={() => setActiveView("Machines")}
+                        onClick={handleSetMachines}
                     >
                         <span className="iconify lucide--cog size-4" />
                         <span>Machines ({machinesData.length})</span>
@@ -102,8 +111,8 @@ const DeductionsDatabase = () => {
             <div className="space-y-4">
                 <div className="mt-4">
                     <SAMTable
-                        columns={getColumns()}
-                        tableData={getTableData()}
+                        columns={columns}
+                        tableData={tableData}
                         inputFields={[]}
                         actions={false}
                         editAction={false}
@@ -111,12 +120,14 @@ const DeductionsDatabase = () => {
                         title={activeView}
                         loading={false}
                         addBtn={false}
-                        onSuccess={() => {}}
+                        onSuccess={handleSuccess}
                     />
                 </div>
             </div>
         </div>
     );
-};
+});
+
+DeductionsDatabase.displayName = 'DeductionsDatabase';
 
 export default DeductionsDatabase;

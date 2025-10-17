@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
 
-import { Button, Pagination, useDialog, Checkbox } from "@/components/daisyui";
+import { Button, Pagination, useDialog } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
 import SearchInput from "@/components/SearchInput";
 
 import DialogComponent from "./Dialog";
+import ColumnFilterDropdown from "./ColumnFilterDropdown";
 
 // Badge component for status and type rendering
 const StatusBadge = ({ value, type }: { value: string; type: 'status' | 'type' }) => {
@@ -139,6 +140,8 @@ interface TableProps {
     selectedRowId?: number | string | null;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
+    inlineEditable?: boolean;
+    onInlineEdit?: (rowId: any, field: string, value: any) => void;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -178,6 +181,8 @@ const TableComponent: React.FC<TableProps> = ({
     selectedRowId,
     onItemUpdate,
     onItemDelete,
+    inlineEditable,
+    onInlineEdit,
 }) => {
     const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
     const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -309,27 +314,40 @@ const TableComponent: React.FC<TableProps> = ({
         return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
     }, []);
 
-    // Get unique values for a specific column
-    const getUniqueColumnValues = useCallback((columnKey: string) => {
-        try {
-            if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
+    // Get unique values for a specific column - memoized to prevent recalculation
+    const getUniqueColumnValues = useMemo(() => {
+        // Create a cache of unique values per column
+        const cache: Record<string, string[]> = {};
+
+        return (columnKey: string): string[] => {
+            // Return cached value if available
+            if (cache[columnKey]) {
+                return cache[columnKey];
+            }
+
+            try {
+                if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
+                    return [];
+                }
+
+                const values = tableData.map(row => {
+                    if (!row || typeof row !== 'object') {
+                        return '';
+                    }
+                    const value = row[columnKey];
+                    return getTextContent(value);
+                }).filter(value => value !== null && value !== undefined && value !== '');
+
+                const uniqueValues = [...new Set(values)].sort();
+
+                // Cache the result
+                cache[columnKey] = uniqueValues;
+                return uniqueValues;
+            } catch (error) {
+                console.error(`Error getting unique values for column ${columnKey}:`, error);
                 return [];
             }
-            
-            const values = tableData.map(row => {
-                if (!row || typeof row !== 'object') {
-                    return '';
-                }
-                const value = row[columnKey];
-                return getTextContent(value);
-            }).filter(value => value !== null && value !== undefined && value !== '');
-            
-            const uniqueValues = [...new Set(values)].sort();
-            return uniqueValues;
-        } catch (error) {
-            console.error(`Error getting unique values for column ${columnKey}:`, error);
-            return [];
-        }
+        };
     }, [tableData]);
 
     // Handle column filter changes
@@ -371,9 +389,13 @@ const TableComponent: React.FC<TableProps> = ({
         setCurrentPage(1);
     }, [getUniqueColumnValues]);
 
-    // Filter the data by search and column filters
+    // Filter the data by search and column filters - optimized with proper dependencies
     const filteredData = useMemo(() => {
-        let data = tableData.length > 0 ? tableData : [];
+        if (!tableData || tableData.length === 0) {
+            return [];
+        }
+
+        let data = tableData;
 
         // Apply search filter
         if (searchQuery) {
@@ -387,14 +409,15 @@ const TableComponent: React.FC<TableProps> = ({
         }
 
         // Apply column filters
-        Object.entries(columnFilters).forEach(([columnKey, filterValues]) => {
-            if (filterValues.length > 0) {
-                data = data.filter(row => {
+        const activeFilters = Object.entries(columnFilters).filter(([_, values]) => values.length > 0);
+        if (activeFilters.length > 0) {
+            data = data.filter(row => {
+                return activeFilters.every(([columnKey, filterValues]) => {
                     const cellValue = getTextContent(row[columnKey]);
                     return filterValues.includes(cellValue);
                 });
-            }
-        });
+            });
+        }
 
         return data;
     }, [searchQuery, tableData, columnFilters]);
@@ -437,36 +460,53 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Paginate the data
     const paginatedData = useMemo(() => {
+        if (rowsPerPage === 0) {
+            // If rowsPerPage is 0, show all data without pagination
+            return sortedData;
+        }
         const startIndex = (currentPage - 1) * rowsPerPage;
         const endIndex = startIndex + rowsPerPage;
         return sortedData.slice(startIndex, endIndex);
     }, [sortedData, currentPage, rowsPerPage]);
 
-    const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+    const totalPages = rowsPerPage === 0 ? 1 : Math.ceil(sortedData.length / rowsPerPage);
 
-    // Effects for scroll detection
+    // Effects for scroll detection - optimized to prevent memory leaks
     React.useEffect(() => {
         const container = tableContainerRef.current;
-        if (container) {
-            checkScrollCapability();
-            
-            const handleScroll = () => {
+        if (!container) return;
+
+        // Initial check
+        checkScrollCapability();
+
+        // Throttled scroll handler to reduce performance impact
+        let scrollTimeout: NodeJS.Timeout;
+        const handleScroll = () => {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
                 checkScrollCapability();
-            };
-            
-            const handleResize = () => {
+            }, 50); // Throttle to 50ms
+        };
+
+        // Throttled resize handler
+        let resizeTimeout: NodeJS.Timeout;
+        const handleResize = () => {
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
                 checkScrollCapability();
-            };
-            
-            container.addEventListener('scroll', handleScroll);
-            window.addEventListener('resize', handleResize);
-            
-            return () => {
-                container.removeEventListener('scroll', handleScroll);
-                window.removeEventListener('resize', handleResize);
-            };
-        }
-    }, [paginatedData]);
+            }, 100); // Throttle to 100ms
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleResize, { passive: true });
+
+        return () => {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            container.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [checkScrollCapability]); // Only re-attach when checkScrollCapability changes
 
     // Sorting behavior
     const handleSort = useCallback((column: string) => {
@@ -489,8 +529,13 @@ const TableComponent: React.FC<TableProps> = ({
     const openCreateDialog = async () => {
         setDialogType("Add");
         setCurrentRow(null);
-        // Always use dynamic dialog for Add actions (needed for file uploads)
-        handleShow();
+        // Check if using static dialog for navigation
+        if (!dynamicDialog && openStaticDialog) {
+            await openStaticDialog("Add");
+        } else {
+            // Use dynamic dialog for Add actions (needed for file uploads)
+            handleShow();
+        }
     };
 
     const openEditDialog = (row: any) => {
@@ -530,300 +575,75 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
-    // Column Filter Dropdown Component
-    const ColumnFilterDropdown = React.memo(({ columnKey, columnLabel }: { columnKey: string; columnLabel: string }) => {
-        const inputRef = useRef<HTMLInputElement>(null);
-        
-        const uniqueValues = getUniqueColumnValues(columnKey);
-        const selectedValues = columnFilters[columnKey] || [];
-        const isOpen = openFilterDropdown === columnKey;
-        const searchTerm = filterSearchTerms[columnKey] || '';
+    // Handlers for ColumnFilterDropdown component
+    const handleFilterSearchChange = useCallback((columnKey: string, value: string) => {
+        setFilterSearchTerms(prev => ({
+            ...prev,
+            [columnKey]: value
+        }));
+    }, []);
 
-        // Filter unique values based on search term
-        const filteredValues = useMemo(() => 
-            uniqueValues.filter(value => 
-                value.toLowerCase().includes(searchTerm.toLowerCase())
-            ), [uniqueValues, searchTerm]
-        );
-
-        const handleSearchChange = useCallback((value: string) => {
-            setFilterSearchTerms(prev => ({
-                ...prev,
-                [columnKey]: value
-            }));
-        }, [columnKey]);
-
-        const handleFilterChange = useCallback((value: string, checked: boolean) => {
-            handleColumnFilterChange(columnKey, value, checked);
-            // Close dropdown if unchecking the last item or if this is the first item being checked
-            if (!checked && selectedValues.length === 1) {
-                setOpenFilterDropdown(null);
-            }
-        }, [columnKey, selectedValues.length]);
-
-        const selectedValuesSet = useMemo(() => new Set(selectedValues), [selectedValues]);
-        
-        const allFilteredSelected = useMemo(() => {
-            return filteredValues.length > 0 && filteredValues.every(value => selectedValuesSet.has(value));
-        }, [filteredValues, selectedValuesSet]);
-
-        const handleSelectAll = useCallback(() => {
-            // Select all currently filtered values (visible in dropdown)
-            if (filteredValues.length === 0) {
-                return;
-            }
-            
-            if (allFilteredSelected) {
-                // If all are selected, deselect them
-                setColumnFilters(prev => {
-                    const currentFilters = prev[columnKey] || [];
-                    const newFilters = {
-                        ...prev,
-                        [columnKey]: currentFilters.filter(value => !filteredValues.includes(value))
-                    };
-                    return newFilters;
-                });
-            } else {
-                // If not all are selected, select all
-                setColumnFilters(prev => {
-                    const currentFilters = prev[columnKey] || [];
-                    const newFilters = {
-                        ...prev,
-                        [columnKey]: [...new Set([...currentFilters, ...filteredValues])]
-                    };
-                    return newFilters;
-                });
-            }
-            
-            setCurrentPage(1);
+    const handleFilterDropdownChange = useCallback((columnKey: string, value: string, checked: boolean) => {
+        handleColumnFilterChange(columnKey, value, checked);
+        const currentFilters = columnFilters[columnKey] || [];
+        if (!checked && currentFilters.length === 1) {
             setOpenFilterDropdown(null);
-        }, [columnKey, filteredValues, allFilteredSelected]);
+        }
+    }, [columnFilters, handleColumnFilterChange]);
 
-        const handleClear = useCallback(() => {
-            clearColumnFilter(columnKey);
-            setOpenFilterDropdown(null);
-        }, [columnKey]);
+    const handleFilterSelectAll = useCallback((columnKey: string, filteredValues: string[], allSelected: boolean) => {
+        if (filteredValues.length === 0) return;
 
-        const handleDropdownToggle = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
-            if (isOpen) {
-                // Clear search when closing
-                setFilterSearchTerms(prev => ({
+        setColumnFilters(prev => {
+            const currentFilters = prev[columnKey] || [];
+            if (allSelected) {
+                return {
                     ...prev,
-                    [columnKey]: ''
-                }));
-                setOpenFilterDropdown(null);
-                setFilterDropdownPosition(null);
+                    [columnKey]: currentFilters.filter(value => !filteredValues.includes(value))
+                };
             } else {
-                // Calculate position for dropdown
-                if (event) {
-                    const buttonRect = event.currentTarget.getBoundingClientRect();
-                    setFilterDropdownPosition({
-                        top: buttonRect.bottom + 4,
-                        left: buttonRect.left
-                    });
-                }
-                setOpenFilterDropdown(columnKey);
-                // Focus the search input after opening
-                setTimeout(() => {
-                    inputRef.current?.focus();
-                }, 0);
-            }
-        }, [isOpen, columnKey]);
-
-        // Auto-focus when dropdown opens
-        React.useEffect(() => {
-            if (isOpen && inputRef.current) {
-                inputRef.current.focus();
-            }
-        }, [isOpen]);
-
-        // Handle escape key and click outside to close dropdown
-        React.useEffect(() => {
-            const handleKeyDown = (e: KeyboardEvent) => {
-                if (e.key === 'Escape' && isOpen) {
-                    setOpenFilterDropdown(null);
-                    setFilterDropdownPosition(null);
-                }
-            };
-
-            const handleClickOutside = (e: MouseEvent) => {
-                if (isOpen) {
-                    const target = e.target as HTMLElement;
-                    // Check if click is outside the dropdown and filter button
-                    const dropdownElement = document.querySelector(`[data-filter-dropdown="${columnKey}"]`);
-                    const buttonElement = document.querySelector(`[data-filter-button="${columnKey}"]`);
-                    
-                    if (dropdownElement && buttonElement) {
-                        if (!dropdownElement.contains(target) && !buttonElement.contains(target)) {
-                            setOpenFilterDropdown(null);
-                            setFilterDropdownPosition(null);
-                        }
-                    }
-                }
-            };
-            
-            if (isOpen) {
-                document.addEventListener('keydown', handleKeyDown);
-                document.addEventListener('mousedown', handleClickOutside);
-                return () => {
-                    document.removeEventListener('keydown', handleKeyDown);
-                    document.removeEventListener('mousedown', handleClickOutside);
+                return {
+                    ...prev,
+                    [columnKey]: [...new Set([...currentFilters, ...filteredValues])]
                 };
             }
-        }, [isOpen, columnKey]);
+        });
 
-        try {
+        setCurrentPage(1);
+        setOpenFilterDropdown(null);
+    }, []);
 
-        return (
-            <div className="relative">
-                <button
-                    type="button"
-                    className={cn(
-                        "ml-2 p-1 rounded hover:bg-base-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20",
-                        selectedValues.length > 0 ? "text-primary" : "text-base-content/50"
-                    )}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleDropdownToggle(e);
-                    }}
-                    data-filter-button={columnKey}
-                >
-                    <span className="iconify lucide--filter size-3"></span>
-                </button>
-                
-                {isOpen && (
-                    <>
-                        {/* Backdrop - Invisible overlay to catch clicks outside */}
-                        <div 
-                            className="fixed inset-0 z-40 bg-transparent" 
-                            onClick={() => {
-                                setOpenFilterDropdown(null);
-                                setFilterDropdownPosition(null);
-                            }}
-                        />
-                        
-                        {/* Dropdown */}
-                        <div className="fixed bg-base-100 border border-base-300 rounded-md shadow-lg z-50 min-w-48 max-h-80 overflow-hidden"
-                             style={{
-                                 top: filterDropdownPosition?.top ? `${filterDropdownPosition.top}px` : '0px',
-                                 left: filterDropdownPosition?.left ? `${filterDropdownPosition.left}px` : '0px'
-                             }}
-                             data-filter-dropdown={columnKey}>
-                            <div className="p-3 border-b border-base-300">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium">Filter {columnLabel}</span>
-                                    <button
-                                        type="button"
-                                        className="text-xs text-base-content/60 hover:text-base-content focus:outline-none focus:ring-1 focus:ring-base-content/30 rounded p-1"
-                                        onClick={() => setOpenFilterDropdown(null)}
-                                        aria-label="Close filter"
-                                    >
-                                        <span className="iconify lucide--x size-4"></span>
-                                    </button>
-                                </div>
-                                
-                                {/* Search input */}
-                                <div className="mb-2">
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        placeholder="Search options..."
-                                        value={searchTerm}
-                                        onChange={(e) => handleSearchChange(e.target.value)}
-                                        className="input input-xs w-full bg-base-200 border-base-300 focus:border-primary focus:outline-none"
-                                        onClick={(e) => e.stopPropagation()}
-                                        onFocus={(e) => e.stopPropagation()}
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        className={cn(
-                                            "text-xs focus:outline-none focus:ring-1 focus:ring-primary/30 rounded px-1",
-                                            filteredValues.length > 0 
-                                                ? "text-primary hover:text-primary/80" 
-                                                : "text-base-content/30 cursor-not-allowed"
-                                        )}
-                                        onClick={handleSelectAll}
-                                        disabled={filteredValues.length === 0}
-                                        title={
-                                            filteredValues.length === 0 
-                                                ? 'No items to select'
-                                                : allFilteredSelected 
-                                                    ? `Deselect all ${filteredValues.length} visible items`
-                                                    : `Select all ${filteredValues.length} visible items`
-                                        }
-                                    >
-                                        {allFilteredSelected ? 'Deselect All' : 'Select All'} {filteredValues.length > 0 && `(${filteredValues.length})`}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="text-xs text-base-content/60 hover:text-base-content focus:outline-none focus:ring-1 focus:ring-base-content/30 rounded px-1"
-                                        onClick={handleClear}
-                                    >
-                                        Clear
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="max-h-48 overflow-y-auto">
-                                {filteredValues.length > 0 ? (
-                                    filteredValues.map((value) => (
-                                        <label
-                                            key={value}
-                                            className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 cursor-pointer focus-within:bg-base-200 transition-colors"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <Checkbox
-                                                size="sm"
-                                                checked={selectedValues.includes(value)}
-                                                onChange={(e) => {
-                                                    e.stopPropagation();
-                                                    handleFilterChange(value, e.target.checked);
-                                                }}
-                                                className="focus:ring-2 focus:ring-primary/20"
-                                            />
-                                            <span className="text-sm truncate flex-1" title={value}>
-                                                {value || "(Empty)"}
-                                            </span>
-                                        </label>
-                                    ))
-                                ) : (
-                                    <div className="px-3 py-2 text-sm text-base-content/60">
-                                        {searchTerm ? 'No matching options' : 'No values found'}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
-        } catch (error) {
-            console.error(`Error in ColumnFilterDropdown for column ${columnKey}:`, error);
-            return (
-                <div className="relative">
-                    <button
-                        type="button"
-                        className="ml-2 p-1 rounded hover:bg-base-300 transition-colors text-base-content/50"
-                        disabled
-                        title="Filter temporarily unavailable"
-                    >
-                        <span className="iconify lucide--filter-x size-3"></span>
-                    </button>
-                </div>
-            );
+    const handleFilterDropdownToggle = useCallback((columnKey: string, event?: React.MouseEvent<HTMLButtonElement>) => {
+        const isCurrentlyOpen = openFilterDropdown === columnKey;
+
+        if (isCurrentlyOpen) {
+            setFilterSearchTerms(prev => ({
+                ...prev,
+                [columnKey]: ''
+            }));
+            setOpenFilterDropdown(null);
+            setFilterDropdownPosition(null);
+        } else {
+            if (event) {
+                const buttonRect = event.currentTarget.getBoundingClientRect();
+                setFilterDropdownPosition({
+                    top: buttonRect.bottom + 4,
+                    left: buttonRect.left
+                });
+            }
+            setOpenFilterDropdown(columnKey);
         }
-    });
-    
-    ColumnFilterDropdown.displayName = 'ColumnFilterDropdown';
+    }, [openFilterDropdown]);
+
+    const handleFilterDropdownClose = useCallback(() => {
+        setOpenFilterDropdown(null);
+        setFilterDropdownPosition(null);
+    }, []);
 
     return (
         <>
             <div
-                className="bg-base-100 rounded-xl border border-base-300"
+                className="bg-base-100 rounded-t-xl border-t border-l border-r border-base-300"
                 style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
             >
                 <div className="px-2 sm:px-3 lg:px-4 py-2 border-b border-base-300 flex-shrink-0">
@@ -930,7 +750,28 @@ const TableComponent: React.FC<TableProps> = ({
                                                     )}
                                                 </div>
                                                 <div className="flex-1 flex justify-end">
-                                                    <ColumnFilterDropdown columnKey={columnKey} columnLabel={columnLabel} />
+                                                    <ColumnFilterDropdown
+                                                        columnKey={columnKey}
+                                                        columnLabel={columnLabel}
+                                                        uniqueValues={getUniqueColumnValues(columnKey)}
+                                                        selectedValues={columnFilters[columnKey] || []}
+                                                        isOpen={openFilterDropdown === columnKey}
+                                                        searchTerm={filterSearchTerms[columnKey] || ''}
+                                                        filterDropdownPosition={filterDropdownPosition}
+                                                        onSearchChange={(value) => handleFilterSearchChange(columnKey, value)}
+                                                        onFilterChange={(value, checked) => handleFilterDropdownChange(columnKey, value, checked)}
+                                                        onSelectAll={() => {
+                                                            const filteredValues = getUniqueColumnValues(columnKey).filter(v =>
+                                                                v.toLowerCase().includes((filterSearchTerms[columnKey] || '').toLowerCase())
+                                                            );
+                                                            const allSelected = filteredValues.length > 0 &&
+                                                                filteredValues.every(v => (columnFilters[columnKey] || []).includes(v));
+                                                            handleFilterSelectAll(columnKey, filteredValues, allSelected);
+                                                        }}
+                                                        onClear={() => clearColumnFilter(columnKey)}
+                                                        onToggle={(e) => handleFilterDropdownToggle(columnKey, e)}
+                                                        onClose={handleFilterDropdownClose}
+                                                    />
                                                 </div>
                                             </div>
                                         </th>
@@ -1023,12 +864,10 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                                 columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
                                                             )}>
-                                                            {typeof row[columnKey] === 'string' && row[columnKey]?.includes('<span class="badge') ? (
-                                                                <div dangerouslySetInnerHTML={{ __html: row[columnKey] }} />
-                                                            ) : (columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
-                                                                <StatusBadge 
-                                                                    value={getTextContent(row[columnKey])} 
-                                                                    type={columnKey as 'status' | 'type'} 
+                                                            {(columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
+                                                                <StatusBadge
+                                                                    value={getTextContent(row[columnKey])}
+                                                                    type={columnKey as 'status' | 'type'}
                                                                 />
                                                             ) : (
                                                                 <div className="break-words overflow-wrap-anywhere">
@@ -1156,34 +995,6 @@ const TableComponent: React.FC<TableProps> = ({
                                             </tr>
                                         );
                                         })}
-
-                                        {/* Fill remaining rows to always show at least 5 rows */}
-                                        {Array.from({ length: Math.max(0, 5 - paginatedData.length) }).map((_, index) => (
-                                        <tr key={`empty-${index}`} className="hover:bg-base-200">
-                                            {select && (
-                                                <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
-                                                    &nbsp;
-                                                </td>
-                                            )}
-                                            {columns && Object.keys(columns).map((columnKey) => (
-                                                <td
-                                                    key={columnKey}
-                                                    className={cn(
-                                                        "px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content break-words min-w-0 text-center",
-                                                        columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
-                                                        columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
-                                                        columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
-                                                    )}>
-                                                    &nbsp;
-                                                </td>
-                                            ))}
-                                            {showActionsColumn && (
-                                                <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
-                                                    &nbsp;
-                                                </td>
-                                            )}
-                                        </tr>
-                                        ))}
 
                                         {/* Show "No data available" message only if there are no rows at all */}
                                         {paginatedData.length === 0 && (

@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { GlobalSaleChart } from "./GlobalSaleChart";
 
-export const GlobalSaleCard = () => {
+export const GlobalSaleCard = memo(() => {
     return (
         <div className="card bg-base-100 shadow">
             <div className="card-body gap-0 p-0">
@@ -18,4 +19,6 @@ export const GlobalSaleCard = () => {
             </div>
         </div>
     );
-};
+});
+
+GlobalSaleCard.displayName = 'GlobalSaleCard';

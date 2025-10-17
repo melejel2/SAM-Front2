@@ -1,5 +1,5 @@
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { replace, useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -1102,8 +1102,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         }
     }, [formData.tradeId, allBuildings, trades, originalContractData]); // Add originalContractData dependency
 
-    // Context value
-    const contextValue: EditWizardContextType = {
+    // Context value - Memoized to prevent unnecessary re-renders
+    const contextValue: EditWizardContextType = useMemo(() => ({
         // State
         formData,
         currentStep,
@@ -1144,7 +1144,36 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
         // Submission
         handleSubmit,
-    };
+    }), [
+        formData,
+        currentStep,
+        hasUnsavedChanges,
+        loading,
+        contractsApi.loading,
+        initialDataLoading,
+        loadingProjects,
+        loadingBuildings,
+        projects,
+        trades,
+        buildings,
+        subcontractors,
+        contracts,
+        currencies,
+        allCostCodes,
+        originalContractData,
+        setFormData,
+        fetchProjects,
+        fetchCostCodes,
+        fetchBuildingsWithSheets,
+        fetchSubcontractors,
+        fetchContracts,
+        fetchCurrencies,
+        loadExistingData,
+        validateCurrentStep,
+        goToNextStep,
+        goToPreviousStep,
+        handleSubmit
+    ]);
 
     return <EditWizardContext.Provider value={contextValue}>{children}</EditWizardContext.Provider>;
 };

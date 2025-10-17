@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Icon } from "@iconify/react";
 import layersIcon from "@iconify/icons-lucide/layers";
 import editIcon from "@iconify/icons-lucide/edit-2";
@@ -18,6 +18,257 @@ import CostCodeSelectionModal from "../../components/CostCodeSelectionModal";
 import useCostCodeSelection from "../../hooks/use-cost-code-selection";
 import BudgetBOQSelectionModal from "../../components/BudgetBOQSelectionModal";
 import { useContractsApi } from "../../hooks/use-contracts-api";
+
+// Memoized BOQ Table Row Component for performance
+interface BOQTableRowProps {
+    item: BOQItem;
+    index: number;
+    units: any[];
+    isEmptyRow: boolean;
+    formatNumber: (value: number) => string;
+    handleFieldEdit: (index: number, field: string, value: any, item: any, isEmptyRow: boolean) => void;
+    updateBOQItem: (index: number, field: keyof BOQItem, value: any) => void;
+    addNewBOQItem: (initialData: Partial<BOQItem>, fieldName: string) => void;
+    deleteBOQItem: (index: number) => void;
+    isFieldReadonly: (item: any, fieldName: string) => boolean;
+    handleCostCodeCellDoubleClick: (index: number, currentCostCode?: string) => void;
+    setShowDescriptionModal: (show: boolean) => void;
+    setSelectedDescription: (desc: { itemNo: string; description: string } | null) => void;
+}
+
+const BOQTableRow = memo<BOQTableRowProps>(({
+    item,
+    index,
+    units,
+    isEmptyRow,
+    formatNumber,
+    handleFieldEdit,
+    updateBOQItem,
+    addNewBOQItem,
+    deleteBOQItem,
+    isFieldReadonly,
+    handleCostCodeCellDoubleClick,
+    setShowDescriptionModal,
+    setSelectedDescription
+}) => {
+    const { toaster } = useToast();
+
+    return (
+        <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <input
+                    id={`boq-input-${item.id}-no`}
+                    type="text"
+                    className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                    value={item.no}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'no')) {
+                            e.preventDefault();
+                            toaster.warning('Reference number cannot be modified for Budget BOQ items');
+                            return false;
+                        }
+                        if (isEmptyRow && e.target.value) {
+                            addNewBOQItem({ no: e.target.value }, 'no');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'no', e.target.value);
+                        }
+                    }}
+                    placeholder="Ref#"
+                />
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <input
+                    id={`boq-input-${item.id}-key`}
+                    type="text"
+                    className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5"
+                    value={item.key}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'key')) {
+                            e.preventDefault();
+                            toaster.warning('Description cannot be modified for Budget BOQ items');
+                            return false;
+                        }
+                        if (isEmptyRow && e.target.value) {
+                            addNewBOQItem({ key: e.target.value }, 'key');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'key', e.target.value);
+                        }
+                    }}
+                    onDoubleClick={() => {
+                        if (isFieldReadonly(item, 'key')) {
+                            toaster.warning('Description cannot be modified for Budget BOQ items');
+                            return;
+                        }
+                        if (item.key) {
+                            setSelectedDescription({
+                                itemNo: item.no || `Item ${index + 1}`,
+                                description: item.key
+                            });
+                            setShowDescriptionModal(true);
+                        }
+                    }}
+                    placeholder=""
+                />
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <input
+                    id={`boq-input-${item.id}-costCode`}
+                    type="text"
+                    className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 transition-colors ${
+                        isFieldReadonly(item, 'costCode')
+                            ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
+                            : 'bg-transparent focus:ring-primary/20 cursor-pointer hover:bg-base-200/50'
+                    }`}
+                    value={item.costCode || ''}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'costCode')) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toaster.warning('Cost code cannot be modified for Budget BOQ items');
+                            return false;
+                        }
+
+                        if (isEmptyRow && e.target.value) {
+                            addNewBOQItem({ costCode: e.target.value }, 'costCode');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'costCode', e.target.value);
+                        }
+                    }}
+                    onDoubleClick={() => {
+                        if (isFieldReadonly(item, 'costCode')) {
+                            toaster.warning('Cost code cannot be modified for Budget BOQ items');
+                            return;
+                        }
+                        handleCostCodeCellDoubleClick(index, item.costCode);
+                    }}
+                    placeholder=""
+                    readOnly={isFieldReadonly(item, 'costCode')}
+                    disabled={isFieldReadonly(item, 'costCode')}
+                    title={isFieldReadonly(item, 'costCode') ? 'This field is read-only (loaded from Budget BOQ)' : 'Double-click to select from cost code library'}
+                />
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <select
+                    id={`boq-input-${item.id}-unite`}
+                    className="w-full bg-transparent text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 py-0.5 border-0"
+                    value={item.unite || ''}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'unite')) {
+                            e.preventDefault();
+                            toaster.warning('Unit cannot be modified for Budget BOQ items');
+                            return false;
+                        }
+                        const selectedUnit = units.find(unit => unit.name === e.target.value);
+                        const unitName = selectedUnit?.name || e.target.value;
+                        if (isEmptyRow && unitName) {
+                            addNewBOQItem({ unite: unitName }, 'unite');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'unite', unitName);
+                        }
+                    }}
+                >
+                    <option value=""></option>
+                    {units.map(unit => (
+                        <option key={unit.id} value={unit.name}>
+                            {unit.name}
+                        </option>
+                    ))}
+                </select>
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <input
+                    id={`boq-input-${item.id}-qte`}
+                    type="number"
+                    className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
+                        (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')
+                            ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
+                            : 'bg-transparent focus:ring-primary/20'
+                    }`}
+                    value={item.qte || ''}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'qte')) {
+                            toaster.warning('Quantity cannot be modified for Budget BOQ items with readonly restrictions');
+                            return;
+                        }
+                        if (!item.unite && !isEmptyRow) return;
+                        const value = parseFloat(e.target.value) || 0;
+                        if (isEmptyRow && value > 0) {
+                            addNewBOQItem({ qte: value }, 'qte');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'qte', value);
+                        }
+                    }}
+                    placeholder=""
+                    step="0.01"
+                    disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')}
+                    readOnly={isFieldReadonly(item, 'qte')}
+                    title={isFieldReadonly(item, 'qte') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter quantity'}
+                />
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
+                <input
+                    id={`boq-input-${item.id}-pu`}
+                    type="number"
+                    className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
+                        (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')
+                            ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
+                            : 'bg-transparent focus:ring-primary/20'
+                    }`}
+                    value={item.pu || ''}
+                    onChange={(e) => {
+                        if (isFieldReadonly(item, 'pu')) {
+                            toaster.warning('Unit price cannot be modified for Budget BOQ items with readonly restrictions');
+                            return;
+                        }
+                        if (!item.unite && !isEmptyRow) return;
+                        const value = parseFloat(e.target.value) || 0;
+                        if (isEmptyRow && value > 0) {
+                            addNewBOQItem({ pu: value }, 'pu');
+                        } else if (!isEmptyRow) {
+                            updateBOQItem(index, 'pu', value);
+                        }
+                    }}
+                    placeholder=""
+                    step="0.01"
+                    disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')}
+                    readOnly={isFieldReadonly(item, 'pu')}
+                    title={isFieldReadonly(item, 'pu') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter unit price'}
+                />
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content text-center">
+                {isEmptyRow || !item.unite ? '-' : formatNumber((item.qte || 0) * (item.pu || 0))}
+            </td>
+            <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
+                {!isEmptyRow && (
+                    <div className="inline-flex">
+                        <button
+                            onClick={() => deleteBOQItem(index)}
+                            className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
+                            title="Delete item"
+                        >
+                            <Icon icon={trashIcon} className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </td>
+        </tr>
+    );
+}, (prevProps, nextProps) => {
+    // Custom comparison function - only re-render if relevant props changed
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.no === nextProps.item.no &&
+        prevProps.item.key === nextProps.item.key &&
+        prevProps.item.costCode === nextProps.item.costCode &&
+        prevProps.item.unite === nextProps.item.unite &&
+        prevProps.item.qte === nextProps.item.qte &&
+        prevProps.item.pu === nextProps.item.pu &&
+        prevProps.isEmptyRow === nextProps.isEmptyRow &&
+        prevProps.index === nextProps.index
+    );
+});
+
+BOQTableRow.displayName = 'BOQTableRow';
 
 export const Step6_BOQItems: React.FC = () => {
     const { formData, setFormData, buildings } = useWizardContext();
@@ -62,8 +313,8 @@ export const Step6_BOQItems: React.FC = () => {
         }
     }, [buildingSheets, selectedSheetForBOQ]);
 
-    // Handle imported BOQ items
-    const handleBOQImport = (importedItems: any[]) => {
+    // Handle imported BOQ items - memoized
+    const handleBOQImport = useCallback((importedItems: any[]) => {
         if (!importedItems || importedItems.length === 0) {
             toaster.error("No items to import");
             return;
@@ -126,15 +377,15 @@ export const Step6_BOQItems: React.FC = () => {
         setFormData({ boqData: updatedBOQData });
         setIsImportingBOQ(false);
         toaster.success(`Successfully imported ${newBOQItems.length} BOQ items`);
-    };
+    }, [formData.boqData, selectedBuildingForBOQ, selectedSheetForBOQ, budgetBOQLoaded, buildings, setFormData, toaster]);
 
-    // Number formatting function
-    const formatNumber = (value: number) => {
+    // Number formatting function - memoized
+    const formatNumber = useCallback((value: number) => {
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(value || 0);
-    };
+    }, []);
 
     // Create empty BOQ item
     const createEmptyBOQItem = (): BOQItem => ({
@@ -176,55 +427,56 @@ export const Step6_BOQItems: React.FC = () => {
         return Boolean(buildingBOQ && buildingBOQ.items.length > 0);
     };
 
-    // Add new BOQ item
-    const addNewBOQItem = (initialData: Partial<BOQItem>, fieldName: string) => {
+    // Add new BOQ item - memoized
+    const addNewBOQItem = useCallback((initialData: Partial<BOQItem>, fieldName: string) => {
         const buildingId = parseInt(selectedBuildingForBOQ);
         const newItem = { ...createEmptyBOQItem(), ...initialData };
-        
+
         const updatedBOQData = [...formData.boqData];
         const buildingIndex = updatedBOQData.findIndex(b => b.buildingId === buildingId);
-        
+
         if (buildingIndex >= 0) {
             updatedBOQData[buildingIndex].items.push(newItem as BOQItem);
         } else {
+            const buildingName = buildings.find(b => b.id === buildingId)?.name || `Building ${buildingId}`;
             updatedBOQData.push({
                 buildingId,
-                buildingName: getBuildingName(buildingId),
+                buildingName: buildingName,
                 sheetName: selectedSheetForBOQ || "", // Use selected sheet name
                 items: [newItem as BOQItem]
             });
         }
-        
-        setFormData({ boqData: updatedBOQData });
-    };
 
-    // Update BOQ item
-    const updateBOQItem = (itemIndex: number, field: keyof BOQItem, value: any) => {
+        setFormData({ boqData: updatedBOQData });
+    }, [selectedBuildingForBOQ, selectedSheetForBOQ, formData.boqData, buildings, setFormData]);
+
+    // Update BOQ item - memoized
+    const updateBOQItem = useCallback((itemIndex: number, field: keyof BOQItem, value: any) => {
         const buildingId = parseInt(selectedBuildingForBOQ);
         const updatedBOQData = [...formData.boqData];
         const buildingBOQ = updatedBOQData.find(b => b.buildingId === buildingId);
-        
+
         if (buildingBOQ && buildingBOQ.items[itemIndex]) {
             buildingBOQ.items[itemIndex] = {
                 ...buildingBOQ.items[itemIndex],
                 [field]: value
             };
         }
-        
-        setFormData({ boqData: updatedBOQData });
-    };
 
-    // Remove BOQ item
-    const deleteBOQItem = (itemIndex: number) => {
+        setFormData({ boqData: updatedBOQData });
+    }, [selectedBuildingForBOQ, formData.boqData, setFormData]);
+
+    // Remove BOQ item - memoized
+    const deleteBOQItem = useCallback((itemIndex: number) => {
         const buildingId = parseInt(selectedBuildingForBOQ);
         const updatedBOQData = [...formData.boqData];
         const buildingBOQ = updatedBOQData.find(b => b.buildingId === buildingId);
-        
+
         if (buildingBOQ) {
             buildingBOQ.items.splice(itemIndex, 1);
             setFormData({ boqData: updatedBOQData });
         }
-    };
+    }, [selectedBuildingForBOQ, formData.boqData, setFormData]);
 
     // Get current building BOQ items
     const getCurrentBuildingBOQ = () => {

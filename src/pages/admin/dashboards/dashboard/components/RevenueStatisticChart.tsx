@@ -1,6 +1,10 @@
+import { memo, lazy, Suspense } from 'react';
 import { ApexOptions } from "apexcharts";
-import ApexCharts from "react-apexcharts";
 
+// Lazy load ApexCharts to reduce initial bundle size
+const ApexCharts = lazy(() => import("react-apexcharts"));
+
+// Move static chart options outside component
 const chartOptions: ApexOptions = {
     chart: {
         height: 288,
@@ -105,12 +109,17 @@ const chartOptions: ApexOptions = {
     ],
 };
 
-export const RevenueStatisticChart = () => {
+export const RevenueStatisticChart = memo(() => {
     return (
-        <ApexCharts
-            options={chartOptions}
-            height={chartOptions.chart?.height}
-            type="bar"
-            series={chartOptions.series}></ApexCharts>
+        <Suspense fallback={<div className="h-[288px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+            <ApexCharts
+                options={chartOptions}
+                height={chartOptions.chart?.height}
+                type="bar"
+                series={chartOptions.series}
+            />
+        </Suspense>
     );
-};
+});
+
+RevenueStatisticChart.displayName = 'RevenueStatisticChart';

@@ -14,16 +14,10 @@ export const dashboardMenuItems: ISidebarMenuItem[] = [
         url: "/dashboard/budget-BOQs",
     },
     {
-        id: "dashboard-subcontractors-BOQs",
-        icon: "lucide--hard-hat",
-        label: "Subcontractors BOQs",
-        url: "/dashboard/subcontractors-boqs",
-    },
-    {
-        id: "dashboard-contracts-database",
+        id: "dashboard-contracts",
         icon: "lucide--file-signature",
-        label: "Contracts Database",
-        url: "/dashboard/contracts-database",
+        label: "Contract Management",
+        url: "/dashboard/contracts",
     },
     {
         id: "dashboard-deductions-database",

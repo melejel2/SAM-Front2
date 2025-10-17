@@ -1,8 +1,34 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import type { IpcListItem } from "@/types/ipc";
+
+// Memoized formatter functions (created once, reused forever)
+const formatCurrency = (amount: number): string => {
+    if (amount == null || isNaN(amount) || amount === 0) return "-";
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+};
+
+const getStatusText = (status: string): string => {
+    const statusLower = status?.toLowerCase() || '';
+    if (statusLower.includes('editable')) return 'Editable';
+    if (statusLower.includes('issued')) return 'Issued';
+    if (statusLower.includes('pending')) return 'Pending Approval';
+    return status;
+};
+
+const getTypeText = (type: string): string => {
+    const typeLower = type?.toLowerCase() || '';
+    if (typeLower.includes('provisoire') || typeLower.includes('interim')) return 'Provisoire';
+    if (typeLower.includes('final')) return 'Final';
+    if (typeLower.includes('rg') || typeLower.includes('retention')) return 'Retention';
+    if (typeLower.includes('avance') || typeLower.includes('advance')) return 'Avance';
+    return type;
+};
 
 const useIPCsDatabase = () => {
     const [tableData, setTableData] = useState<IpcListItem[]>([]);
@@ -11,7 +37,8 @@ const useIPCsDatabase = () => {
     const { getToken } = useAuth();
     const token = getToken();
 
-    const columns = {
+    // Memoize static data to prevent recreation on every render
+    const columns = useMemo(() => ({
         contract: "Contract",
         number: "IPC Ref",
         subcontractorName: "Subcontractor",
@@ -21,9 +48,9 @@ const useIPCsDatabase = () => {
         status: "Status",
         type: "Type",
         retention: "Paid TTC",
-    };
+    }), []);
 
-    const inputFields = [
+    const inputFields = useMemo(() => [
         {
             name: "contract",
             label: "Contract",
@@ -74,60 +101,7 @@ const useIPCsDatabase = () => {
             required: true,
             options: ["Provisoire / Interim", "Final / Final", "Rg / Retention", "Avance / Advance Payment"],
         },
-    ];
-
-    const formatCurrency = (amount: number) => {
-        if (amount == null || isNaN(amount) || amount === 0) return "-";
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(Math.round(amount));
-    };
-
-    const formatStatusBadge = (status: string) => {
-        const statusLower = status?.toLowerCase() || '';
-        let badgeClass = '';
-        let displayText = status;
-
-        if (statusLower.includes('editable')) {
-            badgeClass = 'badge-status-editable';
-            displayText = 'Editable';
-        } else if (statusLower.includes('issued')) {
-            badgeClass = 'badge-status-issued';
-            displayText = 'Issued';
-        } else if (statusLower.includes('pending')) {
-            badgeClass = 'badge-status-pending';
-            displayText = 'Pending Approval';
-        } else {
-            badgeClass = 'badge-status-editable';
-        }
-
-        return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
-    };
-
-    const formatTypeBadge = (type: string) => {
-        const typeLower = type?.toLowerCase() || '';
-        let badgeClass = '';
-        let displayText = type;
-
-        if (typeLower.includes('provisoire') || typeLower.includes('interim')) {
-            badgeClass = 'badge-type-provisoire';
-            displayText = 'Provisoire';
-        } else if (typeLower.includes('final')) {
-            badgeClass = 'badge-type-final';
-            displayText = 'Final';
-        } else if (typeLower.includes('rg') || typeLower.includes('retention')) {
-            badgeClass = 'badge-type-rg';
-            displayText = 'Retention';
-        } else if (typeLower.includes('avance') || typeLower.includes('advance')) {
-            badgeClass = 'badge-type-avance';
-            displayText = 'Avance';
-        } else {
-            badgeClass = 'badge-type-provisoire';
-        }
-
-        return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
-    };
+    ], []);
 
     const getIPCs = async () => {
         setLoading(true);
@@ -135,22 +109,35 @@ const useIPCsDatabase = () => {
         try {
             const response = await ipcApiService.getIpcsList(token ?? "");
             if (response.success && response.data) {
-                const VAT_RATE = 0.18; // 18% VAT rate, adjust as needed
+                const VAT_RATE = 0.18; // 18% VAT rate
+
+                // Format data ONCE during fetch - store formatted values directly
                 const formattedData = response.data.map((ipc: IpcListItem) => ({
                     ...ipc,
-                    // Handle empty contract field - use contractsDatasetId as fallback for now
+                    // Store original numeric values for sorting/filtering
+                    _totalAmountRaw: ipc.totalAmount,
+                    _retentionRaw: ipc.retention,
+                    _statusRaw: ipc.status,
+                    _typeRaw: ipc.type || "",
+
+                    // Handle empty contract field
                     contract: (ipc.contract && ipc.contract.trim() !== "")
                         ? ipc.contract
                         : ipc.contractsDatasetId
                             ? `Contract-${ipc.contractsDatasetId}`
                             : "-",
+
+                    // Pre-formatted display values (no recalculation needed on render)
                     totalAmount: formatCurrency(ipc.totalAmount) as any,
-                    totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)),
+                    totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)) as any,
                     retention: formatCurrency(ipc.retention) as any,
-                    status: formatStatusBadge(ipc.status) as any,
-                    type: formatTypeBadge(ipc.type || "") as any,
+
+                    // Store plain text for badges (React components will render them)
+                    status: getStatusText(ipc.status) as any,
+                    type: getTypeText(ipc.type || "") as any,
                 }));
-                // Reverse the order to show newest first (inverse order from backend)
+
+                // Reverse the order to show newest first
                 setTableData(formattedData.reverse() as any);
             } else {
                 console.error("Failed to fetch IPCs:", response.error);

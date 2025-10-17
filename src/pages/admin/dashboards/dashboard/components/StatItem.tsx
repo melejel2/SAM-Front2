@@ -1,3 +1,5 @@
+import { memo, useMemo } from 'react';
+
 export type IStatItem = {
     title: string;
     amount: string;
@@ -6,7 +8,25 @@ export type IStatItem = {
     lastAmount: string;
 };
 
-export const StatItem = ({ title, percent, amount, lastAmount, icon }: IStatItem) => {
+export const StatItem = memo<IStatItem>(({ title, percent, amount, lastAmount, icon }) => {
+    // Memoize badge rendering to prevent recalculation
+    const badgeContent = useMemo(() => {
+        if (percent > 0) {
+            return (
+                <div className="badge badge-soft badge-success badge-sm gap-0.5 px-1 font-medium">
+                    <span className="iconify lucide--arrow-up size-3.5" />
+                    {percent}%
+                </div>
+            );
+        }
+        return (
+            <div className="badge badge-soft badge-error badge-sm gap-0.5 px-1 font-medium">
+                <span className="iconify lucide--arrow-down size-3.5" />
+                {percent}%
+            </div>
+        );
+    }, [percent]);
+
     return (
         <div className="card bg-base-100 shadow">
             <div className="card-body gap-2">
@@ -15,17 +35,7 @@ export const StatItem = ({ title, percent, amount, lastAmount, icon }: IStatItem
                         <p className="text-base-content/80 font-medium">{title}</p>
                         <div className="mt-3 flex items-center gap-2">
                             <p className="text-2xl font-semibold">{amount}</p>
-                            {percent > 0 ? (
-                                <div className="badge badge-soft badge-success badge-sm gap-0.5 px-1 font-medium">
-                                    <span className="iconify lucide--arrow-up size-3.5" />
-                                    {percent}%
-                                </div>
-                            ) : (
-                                <div className="badge badge-soft badge-error badge-sm gap-0.5 px-1 font-medium">
-                                    <span className="iconify lucide--arrow-down size-3.5" />
-                                    {percent}%
-                                </div>
-                            )}
+                            {badgeContent}
                         </div>
                     </div>
                     <div className="bg-base-200 rounded-box flex items-center p-2">
@@ -39,4 +49,6 @@ export const StatItem = ({ title, percent, amount, lastAmount, icon }: IStatItem
             </div>
         </div>
     );
-};
+});
+
+StatItem.displayName = 'StatItem';

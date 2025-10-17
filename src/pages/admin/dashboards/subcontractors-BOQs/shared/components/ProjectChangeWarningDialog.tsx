@@ -122,7 +122,7 @@ export const ProjectChangeWarningDialog: React.FC<ProjectChangeWarningDialogProp
             </div>
             
             {/* Backdrop */}
-            <form method="dialog" className="modal-backdrop bg-black bg-opacity-20 backdrop-blur-sm">
+            <form method="dialog" className="modal-backdrop bg-black/20 backdrop-blur-sm">
                 <button onClick={onCancel} type="button">close</button>
             </form>
         </dialog>

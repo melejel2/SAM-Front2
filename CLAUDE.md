@@ -673,3 +673,241 @@ import calculatorIcon from "@iconify/icons-lucide/calculator";
 - ✅ Consistent icon system across all components
 - ✅ Matches established stepper design language
 - ✅ Improved maintainability and type safety
+
+## Chrome DevTools MCP Server for UI/UX Inspection
+
+### Overview
+The Chrome DevTools MCP (Model Context Protocol) server enables Claude Code to control and inspect a live Chrome browser, providing powerful capabilities for UI/UX debugging, performance analysis, and visual inspection.
+
+### Installation
+
+#### Quick Install (Recommended)
+The Chrome DevTools MCP server is installed via Claude Code CLI:
+
+```bash
+claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
+```
+
+#### Verify Installation
+Check installed MCP servers:
+
+```bash
+claude mcp list
+```
+
+You should see `chrome-devtools` listed. The server connects on-demand when you use browser inspection features.
+
+### Requirements
+
+Before using Chrome DevTools MCP, ensure you have:
+
+- **Node.js**: v20.19 or newer (latest LTS)
+- **Chrome**: Current stable version or newer
+- **npm**: Latest version
+- **Windows**: Port 9222 accessible (not blocked by firewall)
+
+### Configuration
+
+#### Windows-Specific Configuration
+The MCP server is configured in `C:\Users\{username}\.claude.json` with the following settings:
+
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}
+```
+
+#### Advanced Configuration (Optional)
+For custom Chrome locations or extended timeouts, edit `.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "chrome-devtools-mcp@latest"],
+      "env": {
+        "SystemRoot": "C:\\Windows",
+        "PROGRAMFILES": "C:\\Program Files"
+      },
+      "startup_timeout_ms": 20000
+    }
+  }
+}
+```
+
+### Usage for UI/UX Inspection
+
+#### Basic Inspection Prompts
+Use natural language to inspect UI/UX issues:
+
+```
+"Check the visual rendering of https://sam.karamentreprises.com"
+"Analyze the layout and spacing on the dashboard page"
+"Take a screenshot of the current page state"
+"Inspect the network requests for slow API calls"
+"Check console errors on the login page"
+"Analyze the performance of the BOQ table component"
+```
+
+#### Common UI/UX Inspection Tasks
+
+**1. Visual Inspection**
+```
+"Open http://localhost:5173 and take a screenshot of the main dashboard"
+"Check if all icons are displaying correctly (no squares)"
+"Verify the theme colors in both light and dark mode"
+```
+
+**2. Layout & Spacing Analysis**
+```
+"Analyze the padding and margins in the contract details form"
+"Check if the table columns are properly aligned"
+"Verify responsive behavior at 1536px width (125% zoom)"
+```
+
+**3. Performance Analysis**
+```
+"Record a performance trace of loading the BOQ table"
+"Check for layout shifts during page load"
+"Analyze JavaScript execution time on the dashboard"
+```
+
+**4. Console & Network Debugging**
+```
+"Check for any console errors or warnings"
+"Analyze the API calls made when creating a contract"
+"Verify all resources loaded successfully (no 404s)"
+```
+
+**5. Accessibility Checks**
+```
+"Check color contrast ratios for text elements"
+"Verify semantic HTML structure"
+"Check for accessibility violations"
+```
+
+### How It Works
+
+1. **Prompt Claude**: Ask Claude to inspect a webpage or UI element
+2. **Chrome Launches**: MCP server automatically launches Chrome in debugging mode
+3. **Analysis**: Claude uses Chrome DevTools Protocol to inspect the page
+4. **Report**: Claude provides detailed findings and recommendations
+
+### Browser Profile & Data
+
+**Windows User Data Directory**: `%HOMEPATH%/.cache/chrome-devtools-mcp/chrome-profile-stable`
+
+The MCP server uses an isolated Chrome profile to avoid conflicts with your personal browsing data.
+
+### Command-Line Options
+
+When manually testing, you can use these options:
+
+```bash
+npx chrome-devtools-mcp@latest --help
+
+Options:
+  --headless       Run Chrome without UI (default: false)
+  --isolated       Use temporary profile, auto-cleaned (default: false)
+  --channel        Choose Chrome version: stable/canary/beta/dev
+  --viewport       Set initial window size (e.g., 1280x720)
+```
+
+### Troubleshooting
+
+#### MCP Server Not Connecting
+1. **Restart Claude Code session**: Exit and restart `claude` command
+2. **Check Node.js version**: Ensure v20.19 or newer with `node --version`
+3. **Verify Chrome installation**: Ensure Chrome is installed and updated
+4. **Firewall check**: Ensure port 9222 is not blocked
+
+#### Manual Chrome Launch (for testing)
+If needed, manually launch Chrome in remote debugging mode:
+
+**PowerShell**:
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\temp\chrome-debug"
+```
+
+**Command Prompt**:
+```cmd
+start chrome --remote-debugging-port=9222 --user-data-dir="C:\temp\chrome-debug"
+```
+
+#### Port Conflicts
+If port 9222 is already in use:
+1. Close all Chrome instances
+2. Check for processes using port: `netstat -ano | findstr :9222`
+3. Kill the process if needed: `taskkill /PID <process_id> /F`
+
+### Best Practices for UI/UX Inspection
+
+1. **Test Both Environments**:
+   - Local development: `http://localhost:5173`
+   - Production: `https://sam.karamentreprises.com`
+
+2. **Consistent Viewport Testing**:
+   - Standard FullHD: 1920x1080 at 100% zoom
+   - 125% zoom equivalent: ~1536px effective width
+   - Mobile breakpoints: 640px, 768px, 1024px
+
+3. **Theme Testing**:
+   - Always test in both light and dark modes
+   - Verify semantic DaisyUI colors work correctly
+   - Check icon visibility in both themes
+
+4. **Performance Budgets**:
+   - Page load time: < 2 seconds
+   - First Contentful Paint (FCP): < 1 second
+   - Time to Interactive (TTI): < 3 seconds
+   - Cumulative Layout Shift (CLS): < 0.1
+
+5. **Component-Level Inspection**:
+   - SAMTable rendering performance
+   - Modal backdrop blur effects
+   - Icon display (no squares)
+   - Form field floating labels
+   - Button hover states
+
+### Integration with SAM Development Workflow
+
+**When to Use Chrome DevTools MCP:**
+
+1. **Visual Bug Reports**: "The modal backdrop is too dark in production"
+2. **Layout Issues**: "The padding changes when zooming to 125%"
+3. **Icon Problems**: "Icons showing as squares in the trade selector"
+4. **Performance Concerns**: "The BOQ table loads slowly with many rows"
+5. **Responsive Issues**: "Layout breaks at tablet breakpoint"
+6. **Theme Problems**: "Dark mode colors don't match design system"
+7. **Console Errors**: "Check for JavaScript errors during navigation"
+
+**Example Inspection Session:**
+```
+User: "Check if the contract details page has any UI issues"
+
+Claude uses MCP to:
+1. Launch Chrome with the contract details page
+2. Take screenshots of light and dark themes
+3. Check console for errors
+4. Analyze layout spacing and alignment
+5. Verify all icons display correctly
+6. Check color contrast for accessibility
+7. Measure page performance metrics
+
+Claude reports findings with specific recommendations
+```
+
+### Resources
+
+- **GitHub Repository**: https://github.com/ChromeDevTools/chrome-devtools-mcp
+- **Chrome DevTools Protocol**: https://chromedevtools.github.io/devtools-protocol/
+- **Model Context Protocol**: https://modelcontextprotocol.io/
+
+### Last Updated
+January 2025 - Chrome DevTools MCP v1.0+ (latest stable)

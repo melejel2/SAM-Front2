@@ -31,7 +31,7 @@ const SubcontractorsBOQs = () => {
     const handleViewContractDetails = (row: any) => {
         // Navigate to contract details page using contract number (user-friendly) instead of ID
         const contractNumber = row.contractNumber || row.id; // Fallback to ID if no contract number
-        navigate(`/dashboard/subcontractors-boqs/details/${contractNumber}`, {
+        navigate(`/dashboard/contracts/details/${contractNumber}`, {
             state: {
                 contractId: row.id, // Keep actual ID for API calls
                 contractNumber: row.contractNumber,
@@ -68,7 +68,7 @@ const SubcontractorsBOQs = () => {
                 <div className="flex items-center gap-3">
                     <button
                         className="btn btn-sm btn-primary text-white flex items-center gap-2"
-                        onClick={() => navigate('/dashboard/subcontractors-boqs/new')}
+                        onClick={() => navigate('/dashboard/contracts/new')}
                     >
                         <span className="iconify lucide--plus size-4"></span>
                         <span>New Subcontract</span>

@@ -31,7 +31,7 @@ const CreateContractVOContent: React.FC = () => {
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+        navigate(`/dashboard/contracts/details/${contractIdentifier}`, {
             state: { contractId }
         });
     };
@@ -44,7 +44,7 @@ const CreateContractVOContent: React.FC = () => {
         await handleSubmit();
         // If submission was successful, navigate back to contract details
         if (!loading) {
-            navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+            navigate(`/dashboard/contracts/details/${contractIdentifier}`, {
                 state: { contractId }
             });
         }
@@ -172,10 +172,10 @@ const CreateContractVOContent: React.FC = () => {
             {/* Navigation and Timeline */}
             <div className="flex justify-between items-center mb-6">
                 <button
-                    onClick={currentStep === 1 && hasUnsavedChanges 
-                        ? () => setShowBackConfirmDialog(true) 
-                        : currentStep === 1 
-                            ? () => navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}`, {
+                    onClick={currentStep === 1 && hasUnsavedChanges
+                        ? () => setShowBackConfirmDialog(true)
+                        : currentStep === 1
+                            ? () => navigate(`/dashboard/contracts/details/${contractIdentifier}`, {
                                 state: { contractId }
                             })
                             : goToPreviousStep

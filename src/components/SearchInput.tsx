@@ -30,19 +30,25 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({
   
   // Debounce the onChange callback
   useEffect(() => {
+    // Don't debounce if clearing the search
+    if (internalValue === "" && value !== "") {
+      onChange("");
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
       if (internalValue !== value) {
         onChange(internalValue);
       }
     }, debounceMs);
-    
+
     return () => clearTimeout(timeoutId);
   }, [internalValue, debounceMs, onChange, value]);
-  
-  const handleInputChange = useCallback((newValue: string) => {
-    setInternalValue(newValue);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInternalValue(e.target.value);
   }, []);
-  
+
   const handleClear = useCallback(() => {
     setInternalValue("");
     onChange("");
@@ -66,7 +72,7 @@ const SearchInput: React.FC<SearchInputProps> = React.memo(({
         className={`input table-search-input ${sizeClasses[size]} pl-12 pr-11 bg-base-200 text-base-content border border-base-300 focus:border-primary focus:bg-base-200 transition-all duration-200 rounded-xl placeholder:text-base-content/50 hover:border-primary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 sm:placeholder:text-base-content/50 placeholder:text-transparent ${className}`}
         placeholder={placeholder}
         value={internalValue}
-        onChange={(e) => handleInputChange(e.target.value)}
+        onChange={handleInputChange}
         autoComplete="off"
         spellCheck={false}
       />

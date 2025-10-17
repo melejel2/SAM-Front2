@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export interface DashboardCardProps {
@@ -20,7 +20,7 @@ interface IconContainerProps {
   title: string;
 }
 
-const IconContainer: React.FC<IconContainerProps> = ({
+const IconContainer = memo<IconContainerProps>(({
   icon,
   title,
 }) => {
@@ -29,9 +29,11 @@ const IconContainer: React.FC<IconContainerProps> = ({
       <span className={`iconify ${icon} w-7 h-7 text-gray-600 dark:text-gray-400 transition-all duration-200`} />
     </div>
   );
-};
+});
 
-const DashboardCard: React.FC<DashboardCardProps> = ({
+IconContainer.displayName = 'IconContainer';
+
+const DashboardCard = memo<DashboardCardProps>(({
   title,
   icon,
   description,
@@ -45,16 +47,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   count
 }) => {
   const navigate = useNavigate();
-  const isDisabled = status === 'upcoming' || status === 'restricted';
+  const isDisabled = useMemo(() => status === 'upcoming' || status === 'restricted', [status]);
 
-  const handleCardClick = () => {
+  const handleCardClick = useCallback(() => {
     if (isDisabled) return;
     if (handleClick) {
       handleClick();
       return;
     }
     navigate(path);
-  };
+  }, [isDisabled, handleClick, navigate, path]);
 
   return (
     <div
@@ -113,69 +115,92 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       </div>
     </div>
   );
-};
+});
 
 DashboardCard.displayName = 'DashboardCard';
+
+// Memoize dashboard pages data to prevent recreation on every render
+const dashboardPages = [
+  {
+    title: 'Budget BOQs',
+    icon: 'lucide--calculator',
+    description: 'Create and manage project budget bills of quantities. Track cost centers, project details, quantities, unit prices, and total costs across multiple buildings and trades.',
+    path: '/dashboard/budget-BOQs',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 3,
+  },
+  {
+    title: 'Subcontractors BOQs',
+    icon: 'lucide--hard-hat',
+    description: 'Manage subcontractor-specific BOQs and contracts. Handle contract numbers, amounts, trade assignments, and project allocations with detailed quantity breakdowns.',
+    path: '/dashboard/subcontractors-BOQs',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 3,
+  },
+  {
+    title: 'Contracts Database',
+    icon: 'lucide--file-signature',
+    description: 'Comprehensive contract management system. View active contracts, variation orders (VOs), and terminated agreements with amounts, dates, and subcontractor details.',
+    path: '/dashboard/contracts-database',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 12,
+  },
+  {
+    title: 'Deductions Database',
+    icon: 'lucide--minus-circle',
+    description: 'Track and manage project deductions across labor, materials, and machines. Monitor penalties, transferred quantities, and stock levels with detailed reporting.',
+    path: '/dashboard/deductions-database',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 0,
+  },
+  {
+    title: 'IPCs Database',
+    icon: 'lucide--file-bar-chart',
+    description: 'Monitor interim payment certificates and project progress. Handle IPC references, payment amounts, VAT calculations, and approval workflows with PDF export.',
+    path: '/dashboard/IPCs-database',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 8,
+  },
+  {
+    title: 'Reports',
+    icon: 'lucide--file-text',
+    description: 'Generate comprehensive project reports and analytics. Create custom reports for budget analysis, contract summaries, payment tracking, and performance metrics.',
+    path: '/dashboard/reports',
+    status: 'active' as const,
+    colorClass: 'bg-primary',
+    count: 3,
+  },
+];
 
 const DashboardPage = () => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const dashboardPages = [
-    {
-      title: 'Budget BOQs',
-      icon: 'lucide--calculator',
-      description: 'Create and manage project budget bills of quantities. Track cost centers, project details, quantities, unit prices, and total costs across multiple buildings and trades.',
-      path: '/dashboard/budget-BOQs',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 3,
-    },
-    {
-      title: 'Subcontractors BOQs',
-      icon: 'lucide--hard-hat',
-      description: 'Manage subcontractor-specific BOQs and contracts. Handle contract numbers, amounts, trade assignments, and project allocations with detailed quantity breakdowns.',
-      path: '/dashboard/subcontractors-BOQs',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 3,
-    },
-    {
-      title: 'Contracts Database',
-      icon: 'lucide--file-signature',
-      description: 'Comprehensive contract management system. View active contracts, variation orders (VOs), and terminated agreements with amounts, dates, and subcontractor details.',
-      path: '/dashboard/contracts-database',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 12,
-    },
-    {
-      title: 'Deductions Database',
-      icon: 'lucide--minus-circle',
-      description: 'Track and manage project deductions across labor, materials, and machines. Monitor penalties, transferred quantities, and stock levels with detailed reporting.',
-      path: '/dashboard/deductions-database',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 0,
-    },
-    {
-      title: 'IPCs Database',
-      icon: 'lucide--file-bar-chart',
-      description: 'Monitor interim payment certificates and project progress. Handle IPC references, payment amounts, VAT calculations, and approval workflows with PDF export.',
-      path: '/dashboard/IPCs-database',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 8,
-    },
-    {
-      title: 'Reports',
-      icon: 'lucide--file-text',
-      description: 'Generate comprehensive project reports and analytics. Create custom reports for budget analysis, contract summaries, payment tracking, and performance metrics.',
-      path: '/dashboard/reports',
-      status: 'active' as const,
-      colorClass: 'bg-primary',
-      count: 3,
-    },
-  ];
+  // Memoize hover callbacks to prevent recreation on every render
+  const handleMouseEnter = useCallback((title: string) => {
+    setHoveredCard(title);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredCard(null);
+  }, []);
+
+  // Memoize card rendering to prevent unnecessary re-renders
+  const renderedCards = useMemo(() => {
+    return dashboardPages.map((page) => (
+      <DashboardCard
+        key={page.title}
+        {...page}
+        isHovered={hoveredCard === page.title}
+        onMouseEnter={() => handleMouseEnter(page.title)}
+        onMouseLeave={handleMouseLeave}
+      />
+    ));
+  }, [hoveredCard, handleMouseEnter, handleMouseLeave]);
 
   return (
     <div className="space-y-6">
@@ -183,21 +208,13 @@ const DashboardPage = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-base-content">Dashboard</h1>
       </div>
-      
+
       {/* Main content */}
       <div className="space-y-4">
         <div className="relative">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {dashboardPages.map((page) => (
-            <DashboardCard
-              key={page.title}
-              {...page}
-              isHovered={hoveredCard === page.title}
-              onMouseEnter={() => setHoveredCard(page.title)}
-              onMouseLeave={() => setHoveredCard(null)}
-            />
-          ))}
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {renderedCards}
+          </div>
         </div>
       </div>
     </div>

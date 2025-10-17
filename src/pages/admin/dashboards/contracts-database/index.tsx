@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -10,8 +10,8 @@ import apiRequest from "@/api/api";
 
 import useContractsDatabase from "./use-contracts-database";
 
-// Document Type Selection Modal Component
-const DocumentTypeModal = ({
+// Document Type Selection Modal Component (Memoized)
+const DocumentTypeModal = memo(({
     isOpen,
     onClose,
     onSelectDocument,
@@ -130,14 +130,16 @@ const DocumentTypeModal = ({
             </div>
         </div>
     );
-};
+});
 
-// Export Dropdown Component
-const ExportDropdown = ({ 
-    exportingPdf, 
+DocumentTypeModal.displayName = 'DocumentTypeModal';
+
+// Export Dropdown Component (Memoized)
+const ExportDropdown = memo(({
+    exportingPdf,
     exportingWord,
     exportingZip,
-    onExportPdf, 
+    onExportPdf,
     onExportWord,
     onExportZip
 }: {
@@ -203,7 +205,9 @@ const ExportDropdown = ({
             )}
         </div>
     );
-};
+});
+
+ExportDropdown.displayName = 'ExportDropdown';
 
 const ContractsDatabase = () => {
     const { 
@@ -237,6 +241,7 @@ const ContractsDatabase = () => {
     const [generatingFinalId, setGeneratingFinalId] = useState<string | null>(null);
     const [showGenerateFinalModal, setShowGenerateFinalModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
+    const [selectedProject, setSelectedProject] = useState<string>("All Projects");
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -251,7 +256,7 @@ const ContractsDatabase = () => {
 
 
 
-    const handlePreviewContract = async (row: any) => {
+    const handlePreviewContract = useCallback(async (row: any) => {
         // Check if this is a terminated contract
         if (row.originalStatus?.toLowerCase() === 'terminated') {
             // Show document type selection modal for terminated contracts
@@ -272,7 +277,7 @@ const ContractsDatabase = () => {
                 }
             });
         }
-    };
+    }, [navigate]);
 
     const handleDocumentTypeSelect = async (documentType: string) => {
         if (!contractForDocumentSelection) return;
@@ -514,6 +519,26 @@ const ContractsDatabase = () => {
         }
     };
 
+    // Memoize unique projects calculation
+    const allContracts = useMemo(() => [...contractsData, ...terminatedData], [contractsData, terminatedData]);
+
+    const uniqueProjects = useMemo(() => {
+        return Array.from(new Set(allContracts.map((contract: any) => contract.projectName).filter(name => name && name !== '-'))).sort();
+    }, [allContracts]);
+
+    // Memoize filtered data
+    const filteredContractsData = useMemo(() => {
+        return selectedProject === "All Projects"
+            ? contractsData
+            : contractsData.filter((contract: any) => contract.projectName === selectedProject);
+    }, [selectedProject, contractsData]);
+
+    const filteredTerminatedData = useMemo(() => {
+        return selectedProject === "All Projects"
+            ? terminatedData
+            : terminatedData.filter((contract: any) => contract.projectName === selectedProject);
+    }, [selectedProject, terminatedData]);
+
     return (
         <div>
             {viewMode === 'table' ? (
@@ -528,32 +553,78 @@ const ContractsDatabase = () => {
                                 <span className="iconify lucide--arrow-left size-4"></span>
                                 <span>Back</span>
                             </button>
+
+                            {/* Project Filter Dropdown */}
+                            <div className="dropdown">
+                                <div
+                                    tabIndex={0}
+                                    role="button"
+                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--filter size-4"></span>
+                                    <span>{selectedProject}</span>
+                                    <span className="iconify lucide--chevron-down size-3.5"></span>
+                                </div>
+                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
+                                    <li>
+                                        <button
+                                            onClick={() => setSelectedProject("All Projects")}
+                                            className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                                            }`}
+                                        >
+                                            <span className="iconify lucide--list size-4"></span>
+                                            <span>All Projects ({allContracts.length})</span>
+                                        </button>
+                                    </li>
+                                    <li className="menu-title">
+                                        <span className="text-xs font-semibold">Projects</span>
+                                    </li>
+                                    {uniqueProjects.map((projectName) => {
+                                        const count = allContracts.filter((contract: any) => contract.projectName === projectName).length;
+                                        return (
+                                            <li key={projectName}>
+                                                <button
+                                                    onClick={() => setSelectedProject(projectName as string)}
+                                                    className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                                    }`}
+                                                >
+                                                    <span className="iconify lucide--folder size-4"></span>
+                                                    <span className="truncate flex-1">{projectName}</span>
+                                                    <span className="badge badge-sm badge-ghost">{count}</span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
                         </div>
-                        
+
                         {/* Category Selection Cards */}
                         <div className="flex items-center gap-2">
                             <button
                                 className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 0 
-                                        ? "btn-primary" 
+                                    activeTab === 0
+                                        ? "btn-primary"
                                         : "btn-ghost border border-base-300 hover:border-primary/50"
                                 }`}
                                 onClick={() => setActiveTab(0)}
                             >
                                 <span className="iconify lucide--file-text size-4" />
-                                <span>Active Contracts ({contractsData.length})</span>
+                                <span>Active Contracts ({filteredContractsData.length})</span>
                             </button>
-                            
+
                             <button
                                 className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 1 
-                                        ? "btn-primary" 
+                                    activeTab === 1
+                                        ? "btn-primary"
                                         : "btn-ghost border border-base-300 hover:border-primary/50"
                                 }`}
                                 onClick={() => setActiveTab(1)}
                             >
                                 <span className="iconify lucide--x-circle size-4" />
-                                <span>Terminated Contracts ({terminatedData.length})</span>
+                                <span>Terminated Contracts ({filteredTerminatedData.length})</span>
                             </button>
                         </div>
                     </div>
@@ -568,7 +639,7 @@ const ContractsDatabase = () => {
                                 {activeTab === 0 && (
                                     <SAMTable
                                         columns={contractsColumns}
-                                        tableData={contractsData}
+                                        tableData={filteredContractsData}
                                         actions
                                         previewAction
                                         title={"Contract"}
@@ -580,6 +651,7 @@ const ContractsDatabase = () => {
                                             }
                                         }}
                                         dynamicDialog={false}
+                                        rowsPerPage={10}
                                     />
                                 )}
 
@@ -587,7 +659,7 @@ const ContractsDatabase = () => {
                                 {activeTab === 1 && (
                                     <SAMTable
                                         columns={terminatedColumns}
-                                        tableData={terminatedData}
+                                        tableData={filteredTerminatedData}
                                         actions
                                         previewAction
                                         title={"Terminated"}
@@ -602,6 +674,7 @@ const ContractsDatabase = () => {
                                             }
                                         }}
                                         dynamicDialog={false}
+                                        rowsPerPage={10}
                                         rowActions={(row) => ({
                                             generateAction: row.originalStatus?.toLowerCase() === 'terminated',
                                         })}

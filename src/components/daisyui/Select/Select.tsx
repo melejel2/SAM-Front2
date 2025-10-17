@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { ForwardedRef, ReactElement, SelectHTMLAttributes, forwardRef } from "react";
+import { ForwardedRef, ReactElement, SelectHTMLAttributes, forwardRef, memo } from "react";
 import { twMerge } from "tailwind-merge";
 
 import { ComponentColor, ComponentSize, IComponentBaseProps, ListOrItem } from "../types";
@@ -45,5 +45,10 @@ const SelectInner = (props: SelectProps, ref: ForwardedRef<HTMLSelectElement>): 
     );
 };
 
-const Select = forwardRef(SelectInner);
+const SelectWithRef = forwardRef(SelectInner);
+SelectWithRef.displayName = "Select";
+
+// Wrap with memo for performance optimization
+const Select = memo(SelectWithRef);
+
 export default Select;

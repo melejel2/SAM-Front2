@@ -62,7 +62,7 @@ const BudgetBOQSelectionModal: React.FC<BudgetBOQSelectionModalProps> = ({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop with blur effect */}
-            <div className="bg-opacity-20 absolute inset-0 bg-black backdrop-blur-sm" onClick={onClose} />
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
 
             {/* Modal */}
             <div className="bg-base-100 border-base-300 relative mx-4 w-full max-w-2xl rounded-xl border shadow-xl">

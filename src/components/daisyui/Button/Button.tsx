@@ -10,6 +10,7 @@ import {
     ReactElement,
     ReactNode,
     forwardRef,
+    memo,
 } from "react";
 import { twMerge } from "tailwind-merge";
 
@@ -88,7 +89,7 @@ const VoidElementList: ElementType[] = [
     "track",
     "wbr",
 ];
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+const ButtonInner = forwardRef<HTMLButtonElement, ButtonProps>(
     (
         {
             children,
@@ -169,6 +170,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
 );
 
-Button.displayName = "Button";
+ButtonInner.displayName = "Button";
+
+// Wrap with memo for performance optimization
+const Button = memo(ButtonInner) as typeof ButtonInner;
 
 export default Button;

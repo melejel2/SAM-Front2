@@ -65,34 +65,38 @@ const apiRequest = async <T = any>({
     }
 
     try {
-        // DEBUG: Log the HTTP request details - only for save contracts
-        if (url.includes('SaveSubcontractorDataset')) {
-            console.log("🎯💾 === HTTP SAVE REQUEST ===");
-            console.log("🎯💾 URL:", url);
-            console.log("🎯💾 Method:", method);
-            console.log("🎯💾 Headers:", mergedHeaders);
+        // DEBUG: Log the HTTP request details - for save contracts and delete operations
+        if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
+            const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+            const debugTitle = url.includes('DeleteProject') ? "HTTP DELETE REQUEST" : "HTTP SAVE REQUEST";
+            console.log(`${debugPrefix} === ${debugTitle} ===`);
+            console.log(`${debugPrefix} URL:`, url);
+            console.log(`${debugPrefix} Method:`, method);
+            console.log(`${debugPrefix} Headers:`, mergedHeaders);
             if (body) {
                 if (body instanceof FormData) {
-                    console.log("🎯💾 Body: [FormData]");
+                    console.log(`${debugPrefix} Body: [FormData]`);
                 } else if (body instanceof URLSearchParams) {
-                    console.log("🎯💾 Body: [URLSearchParams]");
+                    console.log(`${debugPrefix} Body: [URLSearchParams]`);
                 } else {
-                    console.log("🎯💾 Body (JSON):", JSON.stringify(body, null, 2));
+                    console.log(`${debugPrefix} Body (JSON):`, JSON.stringify(body, null, 2));
                 }
             } else {
-                console.log("🎯💾 Body: No body");
+                console.log(`${debugPrefix} Body: No body`);
             }
         }
         
         const response = await fetch(url, requestOptions);
         
-        // DEBUG: Log the HTTP response summary - only for save contracts
-        if (url.includes('SaveSubcontractorDataset')) {
-            console.log("🎯💾 === HTTP SAVE RESPONSE ===");
-            console.log("🎯💾 Status:", response.status);
-            console.log("🎯💾 Status Text:", response.statusText);
-            console.log("🎯💾 OK:", response.ok);
-            console.log("🎯💾 Headers:", Object.fromEntries(response.headers.entries()));
+        // DEBUG: Log the HTTP response summary - for save contracts and delete operations
+        if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
+            const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+            const debugTitle = url.includes('DeleteProject') ? "HTTP DELETE RESPONSE" : "HTTP SAVE RESPONSE";
+            console.log(`${debugPrefix} === ${debugTitle} ===`);
+            console.log(`${debugPrefix} Status:`, response.status);
+            console.log(`${debugPrefix} Status Text:`, response.statusText);
+            console.log(`${debugPrefix} OK:`, response.ok);
+            console.log(`${debugPrefix} Headers:`, Object.fromEntries(response.headers.entries()));
         }
 
         if (!response.ok) {
@@ -100,34 +104,41 @@ const apiRequest = async <T = any>({
             let errorMessage = `HTTP error! status: ${response.status}`;
             let errorData: any = null;
 
-            // DEBUG: Log the error response details - focus on save contracts
-            if (url.includes('SaveSubcontractorDataset')) {
-                console.error("🎯💾 === SAVE CONTRACT ERROR ===");
-                console.error("🎯💾 Status:", response.status);
-                console.error("🎯💾 Status Text:", response.statusText);
-                console.error("🎯💾 URL:", url);
-                console.error("🎯💾 Error Text:", errorText);
+            // DEBUG: Log the error response details - focus on save contracts and delete operations
+            if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
+                const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+                const debugTitle = url.includes('DeleteProject') ? "DELETE ERROR" : "SAVE CONTRACT ERROR";
+                console.error(`${debugPrefix} === ${debugTitle} ===`);
+                console.error(`${debugPrefix} Status:`, response.status);
+                console.error(`${debugPrefix} Status Text:`, response.statusText);
+                console.error(`${debugPrefix} URL:`, url);
+                console.error(`${debugPrefix} Error Text:`, errorText);
             }
 
             try {
                 errorData = JSON.parse(errorText);
                 errorMessage = errorData.message || errorMessage;
-                if (url.includes('SaveSubcontractorDataset')) {
-                    console.error("🎯💾 PARSED ERROR DATA:", errorData);
+                if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
+                    const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+                    console.error(`${debugPrefix} PARSED ERROR DATA:`, errorData);
                 }
             } catch {
                 // If JSON parsing fails, use the raw error text if available
                 if (errorText && errorText.trim()) {
                     errorMessage = errorText;
                 }
-                if (url.includes('SaveSubcontractorDataset')) {
-                    console.error("🎯💾 COULD NOT PARSE ERROR RESPONSE AS JSON");
+                if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
+                    const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+                    console.error(`${debugPrefix} COULD NOT PARSE ERROR RESPONSE AS JSON`);
                 }
             }
 
             // Provide more user-friendly error messages based on status codes
             if (response.status === 400) {
-                errorMessage = errorData?.message || "Invalid request. Please check your input and try again.";
+                // Keep the actual error message from backend if available
+                if (!errorData?.message) {
+                    errorMessage = "Invalid request. Please check your input and try again.";
+                }
             } else if (response.status === 401) {
                 handleUnauthorized();
                 return {

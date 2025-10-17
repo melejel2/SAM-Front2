@@ -311,6 +311,7 @@ const DialogComponent: React.FC<DialogProps> = ({
             return;
         }
         try {
+            setIsLoading(true);
             const token = getToken();
             if (!token) {
                 toaster.error("Token is missing, unable to save.");
@@ -342,11 +343,36 @@ const DialogComponent: React.FC<DialogProps> = ({
                 onSuccess();
                 handleClose();
             } else {
-                console.error('Delete failed:', response);
-                toaster.error(response.message || "Failed to delete record");
+                // Debug: Log full response
+                console.error('🗑️ Delete failed:', response);
+
+                // Extract error message
+                const errorMessage = response?.message || "Failed to delete record";
+
+                // Provide specific, user-friendly error messages based on error type
+                let userFriendlyMessage = errorMessage;
+
+                // Check for specific error types
+                if (
+                    errorMessage.toLowerCase().includes("project is using in a contract") ||
+                    errorMessage.toLowerCase().includes("inuse")
+                ) {
+                    userFriendlyMessage =
+                        "This project cannot be deleted because it has active contracts. Please delete all contracts associated with this project first.";
+                } else if (
+                    errorMessage.toLowerCase().includes("not found") ||
+                    errorMessage.toLowerCase().includes("notfound")
+                ) {
+                    userFriendlyMessage = "The item could not be found. It may have been deleted by another user.";
+                } else if (errorMessage.toLowerCase().includes("validation")) {
+                    userFriendlyMessage = `Validation error: ${errorMessage}`;
+                }
+
+                toaster.error(userFriendlyMessage);
             }
         } catch (error) {
-            console.error(error);
+            console.error("🗑️ Delete error:", error);
+            toaster.error("An error occurred while deleting. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -548,6 +574,11 @@ const DialogComponent: React.FC<DialogProps> = ({
                 ) : dialogType === "Delete" ? (
                     <div className="space-y-4">
                         <p className="pt-2">This action cannot be undone!</p>
+                        <div className="bg-warning/10 border border-warning rounded p-3 mb-4">
+                            <p className="text-sm text-warning font-medium">
+                                ⚠️ Before deleting, please note: If this {title.toLowerCase().includes('budget') ? 'Budget BOQ' : 'item'} has any active contracts, IPCs, or variation orders linked to it, the deletion will be blocked with a specific error message.
+                            </p>
+                        </div>
                         <div className="flex items-center justify-end space-x-4">
                             <Button
                                 size="sm"

@@ -145,7 +145,7 @@ const ContractDetails = () => {
             // If we have a contract number but no ID, we need to look it up
             // This would require a backend endpoint to find contract by number
             toaster.error("Contract not found. Please navigate from the contracts list.");
-            navigate("/dashboard/subcontractors-boqs");
+            navigate("/dashboard/contracts");
         }
     }, [contractId, contractIdentifier]);
 
@@ -198,12 +198,12 @@ const ContractDetails = () => {
                 }
             } else {
                 toaster.error("Failed to load contract details");
-                navigate("/dashboard/subcontractors-boqs");
+                navigate("/dashboard/contracts");
             }
         } catch (error) {
             console.error("Error loading contract:", error);
             toaster.error("An error occurred while loading contract details");
-            navigate("/dashboard/subcontractors-boqs");
+            navigate("/dashboard/contracts");
         } finally {
             setLoading(false);
         }
@@ -237,7 +237,7 @@ const ContractDetails = () => {
             const result = await contractsApi.deleteContract(parseInt(contractId));
             if (result.success) {
                 toaster.success("Contract deleted successfully!");
-                navigate("/dashboard/subcontractors-boqs");
+                navigate("/dashboard/contracts");
             }
         } finally {
             setDeletingContract(false);
@@ -245,7 +245,7 @@ const ContractDetails = () => {
     };
 
     const handleEditContract = () => {
-        navigate(`/dashboard/subcontractors-boqs/edit/${contractIdentifier}`, {
+        navigate(`/dashboard/contracts/edit/${contractIdentifier}`, {
             state: { contractId },
         });
     };
@@ -436,7 +436,7 @@ const ContractDetails = () => {
         // ✅ Navigate to proper contract-specific VO creation wizard
         if (!contractId) return;
 
-        navigate(`/dashboard/subcontractors-boqs/details/${contractIdentifier}/create-vo`, {
+        navigate(`/dashboard/contracts/details/${contractIdentifier}/create-vo`, {
             state: {
                 contractId: contractId,
                 contractNumber: contractData?.contractNumber,
@@ -502,7 +502,7 @@ const ContractDetails = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate("/dashboard/subcontractors-boqs")}
+                        onClick={() => navigate("/dashboard/contracts")}
                         className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
                         <span className="iconify lucide--arrow-left size-4"></span>
                         Back

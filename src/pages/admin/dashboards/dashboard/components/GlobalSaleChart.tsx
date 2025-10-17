@@ -1,6 +1,10 @@
+import { memo, useMemo, lazy, Suspense } from 'react';
 import { ApexOptions } from "apexcharts";
-import ApexCharts from "react-apexcharts";
 
+// Lazy load ApexCharts to reduce initial bundle size
+const ApexCharts = lazy(() => import("react-apexcharts"));
+
+// Move static data outside component to prevent recreation
 const data = [
     {
         name: "Turkey",
@@ -32,6 +36,7 @@ const data = [
     },
 ];
 
+// Move static chart options outside component
 const chartOptions: ApexOptions = {
     chart: {
         height: 344,
@@ -87,7 +92,6 @@ const chartOptions: ApexOptions = {
     grid: {
         show: false,
     },
-
     tooltip: {
         theme: "dark",
         x: {
@@ -100,13 +104,17 @@ const chartOptions: ApexOptions = {
     colors: ["#7179ff", "#4bcd89", "#ff6c88", "#5cb7ff", "#9071ff", "#ff5892", "#ff8b4b"],
 };
 
-export const GlobalSaleChart = () => {
+export const GlobalSaleChart = memo(() => {
     return (
-        <ApexCharts
-            options={chartOptions}
-            height={chartOptions.chart?.height}
-            type={chartOptions.chart?.type}
-            series={chartOptions.series}
-        />
+        <Suspense fallback={<div className="h-[344px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+            <ApexCharts
+                options={chartOptions}
+                height={chartOptions.chart?.height}
+                type={chartOptions.chart?.type}
+                series={chartOptions.series}
+            />
+        </Suspense>
     );
-};
+});
+
+GlobalSaleChart.displayName = 'GlobalSaleChart';
