@@ -101,11 +101,11 @@ export const VOStep4_LineItems: React.FC = () => {
             if (itemsResponse.success && itemsResponse.data) {
                 handleBOQImport(itemsResponse.data);
             } else {
-                toaster.error(itemsResponse.error || "Failed to fetch imported items after import operation.");
+                toaster.error((itemsResponse as any).error || "Failed to fetch imported items after import operation.");
             }
         } catch (error) {
             console.error("Error importing from BOQ:", error);
-            toaster.error(error.message || "An error occurred while importing from BOQ.");
+            toaster.error((error as any).message || "An error occurred while importing from BOQ.");
         } finally {
             setLoadingBOQItems(false);
         }

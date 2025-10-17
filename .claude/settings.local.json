@@ -20,7 +20,8 @@
       "Read(//Users/melejel/SAMWEB/SAMBACK/**)",
       "Read(//c/Users/engme/OneDrive/Pictures/Screenshots/**)",
       "Bash(git fetch:*)",
-      "Read(//c/Users/engme/source/repos/SAMWEB/SAMBACK/**)"
+      "Read(//c/Users/engme/source/repos/SAMWEB/SAMBACK/**)",
+      "Bash(git mv:*)"
     ],
     "deny": []
   }
