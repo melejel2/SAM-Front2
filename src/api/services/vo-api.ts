@@ -934,7 +934,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
     Date: formData.voDate,
     Status: formData.status || 'Editable',
     Type: formData.voType,
-    ContractId: contractContext.id,
+    ContractId: formData.voContractId,
     ContractsDatasetId: contractContext.id,
     ProjectId: contractContext.projectId,
     SubcontractorId: contractContext.subcontractorId,
@@ -994,6 +994,24 @@ export const getVosBuildings = async (projectId: number, token: string): Promise
       error: error instanceof Error ? error.message : 'Failed to load VOs for buildings',
       message: 'An error occurred while loading VOs for buildings'
     };
+  }
+};
+
+/**
+ * Get VO Contracts by type
+ * @param token Authentication token
+ */
+export const getVoContracts = async (token: string) => {
+  try {
+    const response = await apiRequest({
+      endpoint: 'Templates/GetVOContracts?type=0',
+      method: 'GET',
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Get VO Contracts API Error:', error);
+    throw error;
   }
 };
 

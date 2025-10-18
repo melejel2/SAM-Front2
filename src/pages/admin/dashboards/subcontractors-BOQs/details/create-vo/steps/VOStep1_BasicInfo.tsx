@@ -2,7 +2,7 @@ import React from 'react';
 import { useContractVOWizardContext } from '../context/ContractVOWizardContext';
 
 export const VOStep1_BasicInfo: React.FC = () => {
-    const { formData, setFormData, contractData } = useContractVOWizardContext();
+    const { formData, setFormData, contractData, voContracts, voContractsLoading } = useContractVOWizardContext();
 
     const handleFieldChange = (field: string, value: any) => {
         setFormData({ [field]: value });
@@ -88,6 +88,24 @@ export const VOStep1_BasicInfo: React.FC = () => {
                     <div className="input input-bordered flex items-center bg-base-200">
                         <span className="badge badge-warning badge-sm">Editable</span>
                     </div>
+                </div>
+
+                {/* VO Contract Dropdown */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">VO Contract *</span>
+                    </label>
+                    <select 
+                        className="select select-bordered" 
+                        value={formData.voContractId || ''} 
+                        onChange={(e) => handleFieldChange('voContractId', parseInt(e.target.value))}
+                        disabled={voContractsLoading}
+                    >
+                        <option value="">Select VO contract</option>
+                        {voContracts.map(contract => (
+                            <option key={contract.id} value={contract.id}>{contract.name}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 

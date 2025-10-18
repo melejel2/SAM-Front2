@@ -9,7 +9,8 @@ import {
     createContractVO,
     transformFormDataToVoDataset,
     ContractContext,
-    ContractBuilding
+    ContractBuilding,
+    getVoContracts
 } from "@/api/services/vo-api";
 
 // Types and Interfaces
@@ -38,6 +39,7 @@ interface ContractVOFormData {
     voDate: string;
     voType: 'Addition' | 'Omission';
     description: string;
+    voContractId?: number;
     
     // Step 2: Contract Context (read-only, from contract)
     contractId: number;
@@ -76,6 +78,8 @@ interface ContractVOWizardContextType {
     // API state
     contractLoading: boolean;
     buildingsLoading: boolean;
+    voContracts: any[];
+    voContractsLoading: boolean;
     
     // Actions
     setFormData: (data: Partial<ContractVOFormData>) => void;
@@ -141,6 +145,8 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     const [availableBuildings, setAvailableBuildings] = useState<Building[]>([]);
     const [contractLoading, setContractLoading] = useState(false);
     const [buildingsLoading, setBuildingsLoading] = useState(false);
+    const [voContracts, setVoContracts] = useState<any[]>([]);
+    const [voContractsLoading, setVoContractsLoading] = useState(false);
     
     // Initialize form data with contract context
     const [formData, setFormDataState] = useState<ContractVOFormData>({
@@ -149,6 +155,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         voDate: new Date().toISOString().split('T')[0],
         voType: 'Addition',
         description: '',
+        voContractId: undefined,
         
         // Step 2: Contract Context (will be populated from contract data)
         contractId: parseInt(contractId),
@@ -273,6 +280,22 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         
         if (contractId && token) {
             loadContractData();
+            const loadVoContracts = async () => {
+                setVoContractsLoading(true);
+                try {
+                    const response = await getVoContracts(token);
+                    if (Array.isArray(response)) {
+                        setVoContracts(response);
+                    } else {
+                        toaster.error("Failed to load VO contracts: Invalid response format.");
+                    }
+                } catch (error) {
+                    toaster.error("Failed to load VO contracts.");
+                } finally {
+                    setVoContractsLoading(false);
+                }
+            };
+            loadVoContracts();
         }
     }, [contractId, token]);
     
@@ -422,6 +445,8 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         // API state
         contractLoading,
         buildingsLoading,
+        voContracts,
+        voContractsLoading,
         
         // Actions
         setFormData,
