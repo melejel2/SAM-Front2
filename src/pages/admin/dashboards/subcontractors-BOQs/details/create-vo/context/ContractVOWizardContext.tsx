@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import {
@@ -173,7 +173,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     });
     
     // Enhanced form data setter that tracks changes
-    const setFormData = (data: Partial<ContractVOFormData>) => {
+    const setFormData = useCallback((data: Partial<ContractVOFormData>) => {
         setFormDataState(prev => {
             const updated = { ...prev, ...data };
             
@@ -197,7 +197,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             return updated;
         });
         setHasUnsavedChanges(true);
-    };
+    }, []);
     
     // Load contract data and generate VO number on mount
     useEffect(() => {

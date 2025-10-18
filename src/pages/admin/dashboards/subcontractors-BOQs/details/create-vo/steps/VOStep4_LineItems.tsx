@@ -5,7 +5,7 @@ import trashIcon from "@iconify/icons-lucide/trash";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
 import infoIcon from "@iconify/icons-lucide/info";
 import { useContractVOWizardContext } from '../context/ContractVOWizardContext';
-import { getContractBOQItems, copyVoProjectToVoDataSet } from '@/api/services/vo-api';
+import { getContractBOQItems, copyVoProjectToVoDataSet, getVosBuildings, BuildingsVOs } from '@/api/services/vo-api';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
 import useBOQUnits from '../../../hooks/use-units';
@@ -39,12 +39,92 @@ export const VOStep4_LineItems: React.FC = () => {
             ? formData.selectedBuildingIds[0].toString() 
             : ""
     );
+    const [vos, setVos] = useState<BuildingsVOs[]>([]);
+    const [filteredVOs, setFilteredVOs] = useState<BuildingsVOs[]>([]);
+    const [selectedVO, setSelectedVO] = useState<string>('');
+    const [loadingVOs, setLoadingVOs] = useState(false);
 
     useEffect(() => {
         if (formData.selectedBuildingIds.length > 0 && contractData) {
             loadBOQItemsForBuildings();
         }
-    }, [formData.selectedBuildingIds, contractData]);
+    }, [formData.selectedBuildingIds, contractData?.id]);
+
+    useEffect(() => {
+        if (contractData?.projectId && getToken()) {
+            setLoadingVOs(true);
+            getVosBuildings(contractData.projectId, getToken() || '')
+                .then(response => {
+                    if (response.success && response.data) {
+                        setVos(response.data);
+                    } else {
+                        toaster.error('Failed to load VOs');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading VOs:', error);
+                    toaster.error('Failed to load VOs');
+                })
+                .finally(() => {
+                    setLoadingVOs(false);
+                });
+        }
+    }, [contractData?.projectId]);
+
+    useEffect(() => {
+        if (selectedBuildingForItems) {
+            const buildingId = parseInt(selectedBuildingForItems);
+            const filtered = vos.filter(vo => vo.buildingId === buildingId);
+            setFilteredVOs(filtered);
+            setSelectedVO(''); // Reset selected VO when building changes
+        } else {
+            setFilteredVOs([]);
+        }
+    }, [selectedBuildingForItems, vos]);
+
+    const handleVOSelect = async (selectedVoName: string) => {
+        setSelectedVO(selectedVoName);
+        if (!selectedVoName) return;
+
+        const vo = filteredVOs.find(v => v.vo === selectedVoName);
+        if (!vo) return;
+
+        if (!contractData || !selectedBuildingForItems) {
+            toaster.error("Contract data or building not selected.");
+            return;
+        }
+
+        setLoadingBOQItems(true);
+        try {
+            const response = await copyVoProjectToVoDataSet(
+                parseInt(selectedBuildingForItems),
+                vo.voLevel,
+                contractData.id,
+                getToken() || ''
+            );
+
+            if (response && response.contractVoes) {
+                handleBOQImport(response.contractVoes);
+                toaster.success(`Successfully imported ${response.contractVoes.length} items from ${selectedVoName}`);
+            } else {
+                const itemsResponse = await getContractBOQItems(
+                    contractData.id,
+                    parseInt(selectedBuildingForItems),
+                    getToken() || ''
+                );
+                if (itemsResponse.success && itemsResponse.data) {
+                    handleBOQImport(itemsResponse.data);
+                } else {
+                    toaster.error("Failed to fetch imported items after VO import.");
+                }
+            }
+        } catch (error) {
+            console.error("Error importing from VO:", error);
+            toaster.error((error as any).message || "An error occurred while importing from VO.");
+        } finally {
+            setLoadingBOQItems(false);
+        }
+    };
 
     const loadBOQItemsForBuildings = async () => {
         if (!contractData || !getToken()) return;
@@ -72,44 +152,46 @@ export const VOStep4_LineItems: React.FC = () => {
         }
     };
 
-    const handleImportClick = async () => {
-        if (loadingBOQItems) return;
-        if (!contractData) {
-            toaster.error("Contract data is not available.");
-            return;
-        }
-        if (!selectedBuildingForItems) {
-            toaster.error("Please select a building.");
-            return;
-        }
-    
-        setLoadingBOQItems(true);
-        try {
-            await copyVoProjectToVoDataSet(
-                parseInt(selectedBuildingForItems),
-                1, // Assuming voLevel is 1
-                contractData.id,
-                getToken() || ''
-            );
-    
-            const itemsResponse = await getContractBOQItems(
-                contractData.id,
-                parseInt(selectedBuildingForItems),
-                getToken() || ''
-            );
-    
-            if (itemsResponse.success && itemsResponse.data) {
-                handleBOQImport(itemsResponse.data);
-            } else {
-                toaster.error((itemsResponse as any).error || "Failed to fetch imported items after import operation.");
+        const handleImportClick = async () => {
+            if (loadingBOQItems) return;
+
+            if (!contractData) {
+                toaster.error("Contract data is not available.");
+                return;
             }
-        } catch (error) {
-            console.error("Error importing from BOQ:", error);
-            toaster.error((error as any).message || "An error occurred while importing from BOQ.");
-        } finally {
-            setLoadingBOQItems(false);
-        }
-    };
+
+            if (!selectedBuildingForItems) {
+                toaster.error("Please select a building.");
+                return;
+            }
+
+            setLoadingBOQItems(true);
+            try {
+                await copyVoProjectToVoDataSet(
+                    parseInt(selectedBuildingForItems),
+                    1, // voLevel 1 for main BOQ
+                    contractData.id,
+                    getToken() || ''
+                );
+        
+                const itemsResponse = await getContractBOQItems(
+                    contractData.id,
+                    parseInt(selectedBuildingForItems),
+                    getToken() || ''
+                );
+        
+                if (itemsResponse.success && itemsResponse.data) {
+                    handleBOQImport(itemsResponse.data);
+                } else {
+                    toaster.error((itemsResponse as any).error || "Failed to fetch imported items after BOQ import.");
+                }
+            } catch (error) {
+                console.error("Error importing from BOQ:", error);
+                toaster.error((error as any).message || "An error occurred while importing from BOQ.");
+            } finally {
+                setLoadingBOQItems(false);
+            }
+        };
 
     const formatNumber = (value: number, forceDecimals: boolean = false) => {
         if (value === 0) return '0';
@@ -190,14 +272,14 @@ export const VOStep4_LineItems: React.FC = () => {
 
     useEffect(() => {
         setFormData({ totalAdditions: isAddition ? totalAmount : 0, totalDeductions: !isAddition ? totalAmount : 0, totalAmount: netAmount });
-    }, [items]);
+    }, [isAddition, totalAmount, netAmount, setFormData]);
 
     return (
         <div>
             <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     {selectedBuildings.length > 1 && (
-                        <select 
+                        <select
                             className="select select-bordered w-auto max-w-xs"
                             value={selectedBuildingForItems || ''}
                             onChange={(e) => setSelectedBuildingForItems(e.target.value)}
@@ -209,13 +291,28 @@ export const VOStep4_LineItems: React.FC = () => {
                             ))}
                         </select>
                     )}
+                    {vos.length > 0 && (
+                        <select
+                            className="select select-bordered w-auto max-w-xs"
+                            value={selectedVO}
+                            onChange={(e) => handleVOSelect(e.target.value)}
+                            disabled={loadingVOs}
+                        >
+                            <option value="">Select a VO to import from</option>
+                            {filteredVOs.map(vo => (
+                                <option key={vo.vo} value={vo.vo}>
+                                    {vo.vo}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
                 <button
                     onClick={handleImportClick}
                     className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
                 >
                     <Icon icon={uploadIcon} className="w-4 h-4" />
-                    Import from BOQ
+                    Import Boq
                 </button>
             </div>
             <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col">
@@ -323,7 +420,7 @@ export const VOStep4_LineItems: React.FC = () => {
                                 <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
                                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm" colSpan={6}>TOTAL</td>
                                     <td className={`px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold ${isAddition ? 'text-primary' : 'text-error'}`}>
-                                        {formatNumber(Math.abs(totalAmount))}
+                                        {formatNumber(totalAmount)}
                                     </td>
                                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3"></td>
                                 </tr>

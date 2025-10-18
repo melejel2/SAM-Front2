@@ -83,6 +83,13 @@ export interface ImportContractVoRequest {
   excelFile: File;
 }
 
+export interface BuildingsVOs {
+    buildingId: number;
+    name: string;
+    voLevel: number;
+    vo: string;
+}
+
 // Response types
 interface VoApiResponse<T = any> {
   success: boolean;
@@ -941,6 +948,53 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
     Amount: totalAmount,
     Buildings: buildings
   };
+};
+
+/**
+ * Get available VOs for a project
+ * @param projectId Project ID
+ * @param token Authentication token
+ */
+export const getVosBuildings = async (projectId: number, token: string): Promise<VoApiResponse<BuildingsVOs[]> | VoApiError> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `Building/GetVosBuildings?projectId=${projectId}`,
+      method: 'GET',
+      token
+    });
+
+    // The backend returns data directly, so we wrap it
+    if (response && Array.isArray(response)) {
+      return {
+        success: true,
+        data: response,
+        message: `Found ${response.length} VOs for this project`
+      };
+    }
+
+    // Handle cases where it might be pre-wrapped
+    if (response && response.success && Array.isArray(response.data)) {
+        return response;
+    }
+    
+    if (response && !response.success) {
+        return response;
+    }
+
+    // Default empty success response
+    return {
+      success: true,
+      data: [],
+      message: 'No VOs found for this project'
+    };
+  } catch (error) {
+    console.error('Get VOs Buildings API Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to load VOs for buildings',
+      message: 'An error occurred while loading VOs for buildings'
+    };
+  }
 };
 
 // Export types for use in components
