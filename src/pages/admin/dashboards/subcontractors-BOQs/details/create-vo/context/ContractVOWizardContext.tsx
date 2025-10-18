@@ -297,9 +297,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         return formData.lineItems.length > 0 && 
                formData.lineItems.every(item => 
                    item.no.trim() !== '' && 
-                   item.description.trim() !== '' && 
-                   item.quantity > 0 && 
-                   item.unitPrice !== 0
+                   item.quantity >= 0
                );
     };
     

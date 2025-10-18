@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from "@iconify/react";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import trashIcon from "@iconify/icons-lucide/trash";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
 import infoIcon from "@iconify/icons-lucide/info";
 import { useContractVOWizardContext } from '../context/ContractVOWizardContext';
-import { getContractBOQItems, copyVoProjectToVoDataSet, getVosBuildings, BuildingsVOs } from '@/api/services/vo-api';
+import { getContractBOQItems, copyVoProjectToVoDataSet, getVosBuildings, BuildingsVOs, uploadContractVo } from '@/api/services/vo-api';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
 import useBOQUnits from '../../../hooks/use-units';
@@ -152,46 +152,45 @@ export const VOStep4_LineItems: React.FC = () => {
         }
     };
 
-        const handleImportClick = async () => {
-            if (loadingBOQItems) return;
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-            if (!contractData) {
-                toaster.error("Contract data is not available.");
-                return;
-            }
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
 
-            if (!selectedBuildingForItems) {
-                toaster.error("Please select a building.");
-                return;
-            }
+        if (!contractData) {
+            toaster.error("Contract data is not available.");
+            return;
+        }
 
-            setLoadingBOQItems(true);
-            try {
-                await copyVoProjectToVoDataSet(
-                    parseInt(selectedBuildingForItems),
-                    1, // voLevel 1 for main BOQ
-                    contractData.id,
-                    getToken() || ''
-                );
-        
-                const itemsResponse = await getContractBOQItems(
-                    contractData.id,
-                    parseInt(selectedBuildingForItems),
-                    getToken() || ''
-                );
-        
-                if (itemsResponse.success && itemsResponse.data) {
-                    handleBOQImport(itemsResponse.data);
-                } else {
-                    toaster.error((itemsResponse as any).error || "Failed to fetch imported items after BOQ import.");
-                }
-            } catch (error) {
-                console.error("Error importing from BOQ:", error);
-                toaster.error((error as any).message || "An error occurred while importing from BOQ.");
-            } finally {
-                setLoadingBOQItems(false);
+        setLoadingBOQItems(true);
+        try {
+            const response = await uploadContractVo(
+                contractData.id,
+                file,
+                getToken() || ''
+            );
+
+            if (response && response.contractVoes) {
+                handleBOQImport(response.contractVoes);
+                toaster.success(`Successfully imported ${response.contractVoes.length} items from ${file.name}`);
+            } else {
+                toaster.error("Failed to import from Excel file: Invalid response format.");
             }
-        };
+        } catch (error) {
+            console.error("Error importing from Excel:", error);
+            toaster.error((error as any).message || "An error occurred while importing from Excel.");
+        } finally {
+            setLoadingBOQItems(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+
+    const handleImportButtonClick = () => {
+        fileInputRef.current?.click();
+    };
 
     const formatNumber = (value: number, forceDecimals: boolean = false) => {
         if (value === 0) return '0';
@@ -276,6 +275,13 @@ export const VOStep4_LineItems: React.FC = () => {
 
     return (
         <div>
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+                accept=".xlsx, .xls"
+            />
             <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     {selectedBuildings.length > 1 && (
@@ -308,7 +314,7 @@ export const VOStep4_LineItems: React.FC = () => {
                     )}
                 </div>
                 <button
-                    onClick={handleImportClick}
+                    onClick={handleImportButtonClick}
                     className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
                 >
                     <Icon icon={uploadIcon} className="w-4 h-4" />
