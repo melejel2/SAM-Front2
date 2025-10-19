@@ -233,7 +233,7 @@ export const VOStep4_LineItems: React.FC = () => {
             return;
         }
         const newVOItems: VOLineItem[] = importedItems.map((item, index) => ({
-            id: Date.now() + index,
+            id: 0,
             no: `VO-${formData.lineItems.length + index + 1}`,
             description: item.key || item.description || '',
             costCode: item.costCode || '',

@@ -448,7 +448,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     const addLineItem = (item: Omit<VOLineItem, 'id' | 'totalPrice'>) => {
         const newItem: VOLineItem = {
             ...item,
-            id: Date.now(), // Temporary ID
+            id: 0, // Set to 0 for new items, backend will generate ID
             totalPrice: item.quantity * item.unitPrice
         };
         
