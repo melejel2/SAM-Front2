@@ -269,6 +269,7 @@ const CreateContractVOContent: React.FC = () => {
 const CreateContractVO: React.FC = () => {
     const location = useLocation();
     const contractId = location.state?.contractId;
+    const voDatasetId = location.state?.voDatasetId;
     
     if (!contractId) {
         return (
@@ -279,7 +280,10 @@ const CreateContractVO: React.FC = () => {
     }
 
     return (
-        <ContractVOWizardProvider contractId={String(contractId)}>
+        <ContractVOWizardProvider 
+            contractId={String(contractId)} 
+            voDatasetId={voDatasetId}
+        >
             <CreateContractVOContent />
         </ContractVOWizardProvider>
     );

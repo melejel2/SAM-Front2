@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import {
@@ -10,7 +10,9 @@ import {
     transformFormDataToVoDataset,
     ContractContext,
     ContractBuilding,
-    getVoContracts
+    getVoContracts,
+    getVoDatasetWithBoqs, // Added for fetching VO dataset with BOQs
+    VoDatasetBoqDetailsVM // Added for VO dataset type
 } from "@/api/services/vo-api";
 
 // Types and Interfaces
@@ -112,10 +114,73 @@ export const useContractVOWizardContext = () => {
     return context;
 };
 
+// Helper function to map fetched VO data to form data
+const mapVoDatasetToFormData = (
+    voDataset: any,
+    contractContext: ContractContext
+): ContractVOFormData => {
+    // Flatten all line items from all buildings into a single array
+    const lineItems: VOLineItem[] = [];
+    if (voDataset.buildings) {
+        voDataset.buildings.forEach(building => {
+            if (building.contractVoes) {
+                building.contractVoes.forEach(vo => {
+                    lineItems.push({
+                        id: vo.id,
+                        no: vo.no,
+                        description: vo.key, // 'Key' in backend is 'description' in frontend
+                        unit: vo.unite,
+                        quantity: vo.qte,
+                        unitPrice: vo.pu,
+                        totalPrice: vo.totalPrice,
+                        costCode: vo.costCode,
+                        buildingId: building.id
+                    });
+                });
+            }
+        });
+    }
+
+    const totalAdditions = lineItems
+        .filter(item => item.totalPrice > 0)
+        .reduce((sum, item) => sum + item.totalPrice, 0);
+
+    const totalDeductions = Math.abs(
+        lineItems
+            .filter(item => item.totalPrice < 0)
+            .reduce((sum, item) => sum + item.totalPrice, 0)
+    );
+
+    return {
+        voNumber: voDataset.voNumber,
+        voDate: voDataset.date ? voDataset.date.split('T')[0] : '', // Extract date part only, or default to empty string
+        voType: voDataset.type === 'Addition' ? 'Addition' : 'Omission',
+        description: voDataset.remark, // 'Remark' in backend is 'description' in frontend
+        voContractId: voDataset.contractId,
+
+        // Contract Context (from provided contractContext or fallback)
+        contractId: contractContext.id,
+        contractNumber: contractContext.contractNumber,
+        projectId: contractContext.projectId,
+        projectName: contractContext.projectName,
+        subcontractorId: contractContext.subcontractorId,
+        subcontractorName: contractContext.subcontractorName,
+        currencyId: contractContext.currencyId,
+        currencySymbol: contractContext.currencySymbol,
+
+        selectedBuildingIds: (voDataset.buildings || []).map(b => b.id),
+        lineItems: lineItems,
+        totalAmount: voDataset.amount,
+        totalAdditions: totalAdditions,
+        totalDeductions: totalDeductions
+    };
+};
+
 // Provider Props
 interface ContractVOWizardProviderProps {
     children: ReactNode;
     contractId: string;
+    voDatasetId?: number; // Added for editing existing VO datasets
 }
 
 // Generate VO Number Helper
@@ -129,13 +194,14 @@ const generateVONumberLocal = (): string => {
 };
 
 // Provider Component
-export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> = ({ 
-    children, 
-    contractId 
+export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> = ({
+    children,
+    contractId,
+    voDatasetId // Destructure voDatasetId here
 }) => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
-    const token = getToken();
+    const memoizedToken = useMemo(() => getToken(), [getToken]);
     
     // State
     const [currentStep, setCurrentStep] = useState(1);
@@ -178,7 +244,10 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         totalAdditions: 0,
         totalDeductions: 0
     });
-    
+
+    // State to hold the fetched VO dataset for editing
+    const [initialVoDataset, setInitialVoDataset] = useState<VoDatasetBoqDetailsVM | null>(null);
+
     // Enhanced form data setter that tracks changes
     const setFormData = useCallback((data: Partial<ContractVOFormData>) => {
         setFormDataState(prev => {
@@ -205,99 +274,110 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         });
         setHasUnsavedChanges(true);
     }, []);
-    
-    // Load contract data and generate VO number on mount
-    useEffect(() => {
-        const loadContractData = async () => {
-            try {
-                setContractLoading(true);
-                
-                console.log("🔄 Loading contract data for VO creation:", {
-                    contractId: contractId,
-                    contractIdParsed: parseInt(contractId),
-                    hasToken: !!token,
-                    tokenLength: token?.length || 0
-                });
-                
-                // Load contract details using the new API
-                const contractResponse = await getContractForVO(parseInt(contractId), token || '');
-                
-                console.log("📡 Contract response:", contractResponse);
-                
-                if (contractResponse.success && contractResponse.data) {
-                    const contractContext = contractResponse.data;
-                    
-                    // Transform to local ContractData format
-                    const contractInfo: ContractData = {
-                        ...contractContext,
-                        buildings: contractContext.buildings.map(building => ({
-                            ...building,
-                            selected: false
-                        }))
-                    };
-                    
-                    setContractData(contractInfo);
-                    setAvailableBuildings(contractInfo.buildings);
-                    
-                    // Generate proper VO number
-                    const voNumberResponse = await generateVONumber(parseInt(contractId), token || '');
-                    const finalVoNumber = voNumberResponse.success ? voNumberResponse.data! : generateVONumberLocal();
-                    
-                    // Update form data with contract context
-                    setFormData({
-                        voNumber: finalVoNumber,
-                        contractId: contractInfo.id,
-                        contractNumber: contractInfo.contractNumber,
-                        projectId: contractInfo.projectId,
-                        projectName: contractInfo.projectName,
-                        subcontractorId: contractInfo.subcontractorId,
-                        subcontractorName: contractInfo.subcontractorName,
-                        currencyId: contractInfo.currencyId,
-                        currencySymbol: contractInfo.currencySymbol
-                    });
-                } else {
-                    const errorMsg = (contractResponse as any).error || "Failed to load contract details";
-                    console.error("❌ Contract loading failed:", {
-                        success: contractResponse.success,
-                        error: (contractResponse as any).error,
-                        message: contractResponse.message || 'No message',
-                        contractId: contractId
-                    });
-                    toaster.error(errorMsg);
-                }
-            } catch (error) {
-                console.error("🚨 Exception loading contract data:", {
-                    error: error,
-                    contractId: contractId,
-                    errorMessage: error instanceof Error ? error.message : 'Unknown error',
-                    stack: error instanceof Error ? error.stack : undefined
-                });
-                toaster.error("Failed to load contract information: " + (error instanceof Error ? error.message : 'Unknown error'));
-            } finally {
-                setContractLoading(false);
+
+    // Memoized function to load contract-related data
+    const loadData = useCallback(async () => {
+        setContractLoading(true);
+        setLoading(true); // Set overall loading for initial data fetch
+
+        try {
+            // 1. Load Contract Details
+            console.log("🔄 Loading contract data for VO wizard:", { contractId, voDatasetId });
+            const contractResponse = await getContractForVO(parseInt(contractId), memoizedToken || '');
+
+            if (!contractResponse.success || !contractResponse.data) {
+                throw new Error(contractResponse.message || "Failed to load contract details");
             }
-        };
-        
-        if (contractId && token) {
-            loadContractData();
-            const loadVoContracts = async () => {
-                setVoContractsLoading(true);
-                try {
-                    const response = await getVoContracts(token);
-                    if (Array.isArray(response)) {
-                        setVoContracts(response);
-                    } else {
-                        toaster.error("Failed to load VO contracts: Invalid response format.");
-                    }
-                } catch (error) {
-                    toaster.error("Failed to load VO contracts.");
-                } finally {
-                    setVoContractsLoading(false);
+            const contractContext = contractResponse.data;
+            
+            let initialFormState: Partial<ContractVOFormData> = {};
+            let fetchedVoDataset: VoDatasetBoqDetailsVM | null = null;
+            let selectedBuildingIdsFromVo: number[] = []; // To store selected building IDs from VO dataset
+
+            // 2. If voDatasetId is provided, load existing VO data
+            if (voDatasetId) {
+                console.log("🔄 Loading existing VO dataset for editing:", { voDatasetId, token: memoizedToken });
+                const voDatasetResponse = await getVoDatasetWithBoqs(voDatasetId, memoizedToken || '');
+                console.log("📥 VO dataset response:", voDatasetResponse);
+
+                if (!voDatasetResponse || !voDatasetResponse.id) {
+                    console.error("❌ VO dataset response failed:", voDatasetResponse);
+                    throw new Error(voDatasetResponse.message || "Failed to load existing VO dataset");
                 }
+                fetchedVoDataset = voDatasetResponse;
+                setInitialVoDataset(fetchedVoDataset);
+                initialFormState = mapVoDatasetToFormData(fetchedVoDataset!, contractContext);
+                selectedBuildingIdsFromVo = initialFormState.selectedBuildingIds || []; // Get selected building IDs
+                setHasUnsavedChanges(false); // No unsaved changes initially for edit mode
+                console.log("✅ Successfully loaded VO dataset for editing:", { voDatasetId, initialFormState });
+            } else {
+                // For new VO, generate VO number
+                const voNumberResponse = await generateVONumber(parseInt(contractId), memoizedToken || '');
+                initialFormState.voNumber = voNumberResponse.success ? voNumberResponse.data! : generateVONumberLocal();
+            }
+
+            // 1. Load Contract Details and update building selection based on VO data if in edit mode
+            const contractInfo: ContractData = {
+                ...contractContext,
+                buildings: contractContext.buildings.map(building => ({
+                    ...building,
+                    selected: selectedBuildingIdsFromVo.includes(building.id) // Mark as selected if in VO dataset
+                }))
             };
+            setContractData(contractInfo);
+            setAvailableBuildings(contractInfo.buildings); // Set available buildings with correct selection state
+
+            // 3. Update form data with contract context and (if editing) VO data
+            setFormDataState(prev => {
+                const newState = {
+                    ...prev,
+                    ...initialFormState,
+                    contractId: contractInfo.id,
+                    contractNumber: contractInfo.contractNumber,
+                    projectId: contractInfo.projectId,
+                    projectName: contractInfo.projectName,
+                    subcontractorId: contractInfo.subcontractorId,
+                    subcontractorName: contractInfo.subcontractorName,
+                    currencyId: contractInfo.currencyId,
+                    currencySymbol: contractInfo.currencySymbol
+                };
+                console.log("✅ formData state after update in loadData:", newState);
+                return newState;
+            });
+
+        } catch (error) {
+            console.error("🚨 Exception loading data for VO wizard:", { error });
+            toaster.error("Failed to load wizard information: " + (error instanceof Error ? error.message : 'Unknown error'));
+        } finally {
+            setContractLoading(false);
+            setLoading(false); // End overall loading
+        }
+    }, [contractId, voDatasetId, memoizedToken, toaster]);
+
+    // Memoized function to load VO contracts
+    const loadVoContracts = useCallback(async () => {
+        setVoContractsLoading(true);
+        try {
+            const response = await getVoContracts(memoizedToken || '');
+            if (Array.isArray(response)) {
+                setVoContracts(response);
+            } else {
+                toaster.error("Failed to load VO contracts: Invalid response format.");
+            }
+        } catch (error) {
+            toaster.error("Failed to load VO contracts.");
+        } finally {
+            setVoContractsLoading(false);
+        }
+    }, [memoizedToken, toaster]);
+
+    // Load data on mount and when dependencies change
+    useEffect(() => {
+        if (contractId && memoizedToken) {
+            loadData();
             loadVoContracts();
         }
-    }, [contractId, token]);
+    }, [contractId, memoizedToken, voDatasetId]);
     
     // Validation functions
     const validateStep1 = (): boolean => {
@@ -404,15 +484,17 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             }
             
             // Transform form data to backend format
-            const voDataset = transformFormDataToVoDataset(formData, contractData);
+            const voDataset = transformFormDataToVoDataset(formData, contractData, voDatasetId);
             
             console.log("📤 SUBMITTING CONTRACT VO DATA:", JSON.stringify(voDataset, null, 2));
             
-            // Create VO using proper API
-            const response = await createContractVO(voDataset, token || '');
+            // Determine if we are creating or updating
+            const isUpdate = !!voDatasetId;
+
+            const response = await createContractVO(voDataset, memoizedToken || '');
             
             if (response.success) {
-                toaster.success("Variation Order created successfully!");
+                toaster.success(`Variation Order ${isUpdate ? 'updated' : 'created'} successfully!`);
                 setHasUnsavedChanges(false);
                 
                 // Navigate back to contract details page using contract number

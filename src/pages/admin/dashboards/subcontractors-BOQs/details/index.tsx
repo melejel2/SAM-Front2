@@ -762,9 +762,28 @@ const ContractDetails = () => {
                             editAction
                             title=""
                             loading={false}
-                            onSuccess={() => {}}
-                            openStaticDialog={() => {}}
+                            onSuccess={getContractVOs} // Refresh VOs after any action
+                            openStaticDialog={(type, data, extraData) => {
+                                if (type === "Edit") {
+                                    // Navigate to VO creation wizard for editing
+                                    navigate(`/dashboard/contracts/details/${extraData.contractIdentifier}/create-vo`, {
+                                        state: {
+                                            contractId: extraData.contractId,
+                                            voDatasetId: data.id // Pass the ID of the VO dataset to edit
+                                        }
+                                    });
+                                } else if (type === "Preview") {
+                                    // Handle preview action (e.g., show a modal with PDF viewer)
+                                    // For now, we'll just log it. Implement actual preview logic as needed.
+                                    console.log("Preview VO dataset:", data);
+                                } else if (type === "Delete") {
+                                    // Handle delete action (e.g., show a confirmation dialog)
+                                    console.log("Delete VO dataset:", data);
+                                }
+                            }}
                             dynamicDialog={false}
+                            contractIdentifier={contractIdentifier}
+                            contractId={contractId}
                         />
                     ) : (
                         <div className="py-12 text-center">

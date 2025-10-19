@@ -121,7 +121,7 @@ interface TableProps {
     addBtn?: boolean;
     addBtnText?: string;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details", Data?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details", Data?: any, extraData?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;
@@ -142,6 +142,9 @@ interface TableProps {
     onItemDelete?: (item: any) => void;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
+
+    contractIdentifier?: string; // Added for VO editing navigation
+    contractId?: string; // Added for VO editing navigation
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -183,6 +186,8 @@ const TableComponent: React.FC<TableProps> = ({
     onItemDelete,
     inlineEditable,
     onInlineEdit,
+    contractIdentifier, // Destructure here
+    contractId // Destructure here
 }) => {
     const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
     const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -545,7 +550,7 @@ const TableComponent: React.FC<TableProps> = ({
             handleShow();
         } else {
             if (openStaticDialog) {
-                openStaticDialog("Edit", row);
+                openStaticDialog("Edit", row, { contractIdentifier, contractId }); // Pass contract context
             }
         }
     };

@@ -19,7 +19,7 @@ interface SAMTableProps {
     onSuccess: () => void;
 
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Details" | "Select" | "Terminate", Data?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Details" | "Select" | "Terminate", Data?: any, extraData?: any) => void | Promise<void>;
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
@@ -58,6 +58,10 @@ interface SAMTableProps {
     onItemDelete?: (item: any) => void;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
+
+    // Added for VO editing
+    contractIdentifier?: string; // Identifier for navigation
+    contractId?: string; // Actual contract ID
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -96,6 +100,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
     onItemDelete,
     inlineEditable = false,
     onInlineEdit,
+    contractIdentifier,
+    contractId
 }) => {
     return (
         <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
@@ -141,6 +147,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onItemDelete={onItemDelete}
                             inlineEditable={inlineEditable}
                             onInlineEdit={onInlineEdit}
+                            contractIdentifier={contractIdentifier}
+                            contractId={contractId}
                         />
                     </div>
 

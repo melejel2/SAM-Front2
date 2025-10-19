@@ -232,12 +232,14 @@ export const getVoDatasetsList = async (status: ContractDatasetStatus | 'All', t
  */
 export const getVoDatasetWithBoqs = async (id: number, token: string) => {
   try {
+    console.log("🔍 API Call: GetVoDatasetWithBoqs", { id, token: token ? "provided" : "missing" });
     const response = await apiRequest({
       endpoint: `VoDataSet/GetVoDatasetWithBoqs/${id}`,
       method: 'GET',
       token
     });
-
+    
+    console.log("📥 API Response: GetVoDatasetWithBoqs", response);
     return response;
   } catch (error) {
     console.error('Get VO dataset with BOQs API Error:', error);
@@ -882,7 +884,7 @@ export const getContractVOs = async (contractId: number, token: string): Promise
  * @param formData UI form data from wizard
  * @param contractContext Contract context information
  */
-export const transformFormDataToVoDataset = (formData: any, contractContext: ContractContext): VoDatasetBoqDetailsVM => {
+export const transformFormDataToVoDataset = (formData: any, contractContext: ContractContext, voDatasetId?: number): VoDatasetBoqDetailsVM => {
   // Group line items by building
   const buildingGroups: { [buildingId: number]: any[] } = {};
   
@@ -894,7 +896,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
     }
     
     buildingGroups[targetBuildingId].push({
-      Id: 0, // New item
+      Id: item.id || 0, // Use existing item ID if available, otherwise 0 for new item
       No: item.no,
       Key: item.description,
       Unite: item.unit,
@@ -929,7 +931,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
   );
   
   return {
-    Id: 0, // New VO
+    Id: voDatasetId || 0, // Use provided ID for update, 0 for new VO
     VoNumber: formData.voNumber,
     Date: formData.voDate,
     Status: formData.status || 'Editable',
@@ -944,7 +946,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
     TradeName: contractContext.tradeName || '',
     BuildingId: formData.selectedBuildingIds[0], // Primary building
     SubTrade: formData.description,
-    Remark: formData.reason || '',
+    Remark: formData.description,
     Amount: totalAmount,
     Buildings: buildings
   };
