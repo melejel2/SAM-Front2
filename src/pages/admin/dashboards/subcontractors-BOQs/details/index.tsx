@@ -695,12 +695,14 @@ const ContractDetails = () => {
                         </ul>
                     </div>
 
-                    <button
-                        onClick={handleEditContract}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        <span className="iconify lucide--edit size-4"></span>
-                        <span>Edit</span>
-                    </button>
+                    {(contractData.contractDatasetStatus === "Editable" || contractData.contractDatasetStatus === "Active") && (
+                        <button
+                            onClick={handleEditContract}
+                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
+                            <span className="iconify lucide--edit size-4"></span>
+                            <span>Edit</span>
+                        </button>
+                    )}
 
                     {contractData.contractDatasetStatus === "Editable" && (
                         <button
