@@ -42,6 +42,7 @@ interface ContractVOFormData {
     voType: 'Addition' | 'Omission';
     description: string;
     voContractId?: number;
+    subTrade: string;
     
     // Step 2: Contract Context (read-only, from contract)
     contractId: number;
@@ -157,6 +158,7 @@ const mapVoDatasetToFormData = (
         voType: voDataset.type === 'Addition' ? 'Addition' : 'Omission',
         description: voDataset.remark, // 'Remark' in backend is 'description' in frontend
         voContractId: voDataset.contractId,
+        subTrade: voDataset.subTrade,
 
         // Contract Context (from provided contractContext or fallback)
         contractId: contractContext.id,
@@ -222,6 +224,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         voType: 'Addition',
         description: '',
         voContractId: undefined,
+        subTrade: '',
         
         // Step 2: Contract Context (will be populated from contract data)
         contractId: parseInt(contractId),

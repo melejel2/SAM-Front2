@@ -885,6 +885,7 @@ export const getContractVOs = async (contractId: number, token: string): Promise
  * @param contractContext Contract context information
  */
 export const transformFormDataToVoDataset = (formData: any, contractContext: ContractContext, voDatasetId?: number): VoDatasetBoqDetailsVM => {
+  console.log("🔍 formData.lineItems before transformation:", formData.lineItems);
   // Group line items by building
   const buildingGroups: { [buildingId: number]: any[] } = {};
   
@@ -945,7 +946,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
     SubcontractorName: contractContext.subcontractorName,
     TradeName: contractContext.tradeName || '',
     BuildingId: formData.selectedBuildingIds[0], // Primary building
-    SubTrade: formData.description,
+    SubTrade: formData.subTrade,
     Remark: formData.description,
     Amount: totalAmount,
     Buildings: buildings

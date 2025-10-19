@@ -107,6 +107,20 @@ export const VOStep1_BasicInfo: React.FC = () => {
                         ))}
                     </select>
                 </div>
+
+                {/* SubTrade Input */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Sub Trade</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        className="input input-bordered" 
+                        value={formData.subTrade || ''} 
+                        onChange={(e) => handleFieldChange('subTrade', e.target.value)} 
+                        placeholder="e.g., Electrical, Plumbing" 
+                    />
+                </div>
             </div>
 
             {/* Description Section */}
