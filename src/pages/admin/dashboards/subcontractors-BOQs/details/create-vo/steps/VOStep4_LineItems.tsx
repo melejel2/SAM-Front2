@@ -5,7 +5,7 @@ import trashIcon from "@iconify/icons-lucide/trash";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
 import infoIcon from "@iconify/icons-lucide/info";
 import { useContractVOWizardContext } from '../context/ContractVOWizardContext';
-import { getContractBOQItems, copyVoProjectToVoDataSet, getVosBuildings, BuildingsVOs, uploadContractVo } from '@/api/services/vo-api';
+import { getContractBOQItems, copyVoProjectToVoDataSet, getVosBuildings, BuildingsVOs, uploadContractVo, clearVoContractItems } from '@/api/services/vo-api';
 import { useAuth } from '@/contexts/auth';
 import useToast from '@/hooks/use-toast';
 import useBOQUnits from '../../../hooks/use-units';
@@ -26,7 +26,9 @@ export const VOStep4_LineItems: React.FC = () => {
     const { 
         contractData, 
         formData, 
-        setFormData
+        setFormData,
+        isUpdate,
+        voDatasetId
     } = useContractVOWizardContext();
     
     const { getToken } = useAuth();
@@ -192,6 +194,37 @@ export const VOStep4_LineItems: React.FC = () => {
         fileInputRef.current?.click();
     };
 
+    const handleClearBOQ = async () => {
+        if (!contractData || !getToken()) {
+            toaster.error("Contract data or authentication token is not available.");
+            return;
+        }
+
+        // Check if we're in edit mode (voDatasetId exists)
+        if (!voDatasetId) {
+            toaster.error("No VO dataset ID available for clearing items.");
+            return;
+        }
+
+        setLoadingBOQItems(true);
+        try {
+            const response = await clearVoContractItems(voDatasetId, getToken() || '');
+            
+            if (response.success) {
+                // Clear the line items from the form
+                setFormData({ lineItems: [] });
+                toaster.success("Successfully cleared all BOQ items from the VO dataset.");
+            } else {
+                toaster.error(response.message || "Failed to clear BOQ items.");
+            }
+        } catch (error) {
+            console.error("Error clearing BOQ items:", error);
+            toaster.error((error as any).message || "An error occurred while clearing BOQ items.");
+        } finally {
+            setLoadingBOQItems(false);
+        }
+    };
+
     const formatNumber = (value: number, forceDecimals: boolean = false) => {
         if (value === 0) return '0';
         const hasDecimals = value % 1 !== 0;
@@ -313,13 +346,29 @@ export const VOStep4_LineItems: React.FC = () => {
                         </select>
                     )}
                 </div>
-                <button
-                    onClick={handleImportButtonClick}
-                    className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
-                >
-                    <Icon icon={uploadIcon} className="w-4 h-4" />
-                    Import Boq
-                </button>
+                <div className="flex items-center gap-2">
+                    {isUpdate && voDatasetId && (
+                        <button
+                            onClick={handleClearBOQ}
+                            className="btn btn-error btn-sm hover:btn-error-focus transition-all duration-200 ease-in-out"
+                            disabled={loadingBOQItems}
+                        >
+                            {loadingBOQItems ? (
+                                <span className="loading loading-spinner loading-sm"></span>
+                            ) : (
+                                <Icon icon={trashIcon} className="w-4 h-4" />
+                            )}
+                            Clear BOQ
+                        </button>
+                    )}
+                    <button
+                        onClick={handleImportButtonClick}
+                        className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out"
+                    >
+                        <Icon icon={uploadIcon} className="w-4 h-4" />
+                        Import BOQ
+                    </button>
+                </div>
             </div>
             <div className="bg-base-100 rounded-xl border border-base-300 flex flex-col">
                 <div className="overflow-x-auto">

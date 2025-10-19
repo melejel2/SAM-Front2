@@ -85,6 +85,7 @@ interface ContractVOWizardContextType {
     buildingsLoading: boolean;
     voContracts: any[];
     voContractsLoading: boolean;
+    voDatasetId?: number;
     
     // Actions
     setFormData: (data: Partial<ContractVOFormData>) => void;
@@ -549,6 +550,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         buildingsLoading,
         voContracts,
         voContractsLoading,
+        voDatasetId,
         
         // Actions
         setFormData,

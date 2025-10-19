@@ -11,6 +11,7 @@ import { ContractDatasetStatus, CreateSubcontractorVoRequest } from '@/types/var
 
 // Contract VO Creation Types
 export interface VoDatasetBoqDetailsVM {
+  [key: string]: any;
   Id: number;
   VoNumber: string;
   Date: string;
@@ -573,13 +574,12 @@ export const generateVoDataSet = async (id: number, token: string): Promise<VoAp
  * @param voDataSetId VO dataset ID
  * @param token Authentication token
  */
-export const clearVoContractItems = async (voDataSetId: number, token: string): Promise<VoApiResponse | VoApiError> => {
+export const clearVoContractItems = async (id: number, token: string): Promise<VoApiResponse | VoApiError> => {
   try {
     const response = await apiRequest({
-      endpoint: 'VoDataSet/ClearVoContracItems',
+      endpoint: `VoDataSet/ClearVoContracItems/${id}`,
       method: 'POST',
-      token,
-      body: { VoDataSetId: voDataSetId }
+      token
     });
 
     if (response && typeof response === 'object') {
