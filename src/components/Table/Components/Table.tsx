@@ -121,7 +121,7 @@ interface TableProps {
     addBtn?: boolean;
     addBtnText?: string;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details", Data?: any, extraData?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export", Data?: any, extraData?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;
@@ -943,7 +943,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         data-tip="Export"
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            openEditDialog(row);
+                                                                            openStaticDialog?.("Export", row, { contractIdentifier, contractId });
                                                                         }}>
                                                                         <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
                                                                     </Button>

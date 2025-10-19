@@ -447,6 +447,27 @@ export const previewVoDataSet = async (voDataSetId: number, token: string): Prom
 };
 
 /**
+ * Export VO dataset as Word document
+ * @param voDataSetId VO dataset ID
+ * @param token Authentication token
+ */
+export const exportVoDataSetWord = async (voDataSetId: number, token: string): Promise<Blob> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `VoDataSet/ExportVoDataSet?VoDataSetId=${voDataSetId}`,
+      method: 'GET',
+      token,
+      responseType: 'blob'
+    });
+
+    return response as Blob;
+  } catch (error) {
+    console.error('Export VO dataset Word API Error:', error);
+    throw error;
+  }
+};
+
+/**
  * Copy VO project to VO dataset
  * @param buildingId Building ID
  * @param voLevel VO level

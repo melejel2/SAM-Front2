@@ -36,7 +36,7 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
         try {
             // Create object URL for native browser PDF viewer
             objectUrl = URL.createObjectURL(fileBlob);
-            setPdfUrl(objectUrl);
+            setPdfUrl(`${objectUrl}#zoom=100`); // Add zoom parameter
             setIsLoading(false);
             setError(null);
         } catch (urlError) {

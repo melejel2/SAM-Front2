@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
-import { getContractVOs } from "@/api/services/vo-api";
+import { getContractVOs, previewVoDataSet, exportVoDataSetWord } from "@/api/services/vo-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -119,6 +119,12 @@ const ContractDetails = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
     const [currencies, setCurrencies] = useState<any[]>([]);
+
+    // New state for VO preview and export
+    const [loadingPreviewVO, setLoadingPreviewVO] = useState(false);
+    const [exportingWordVO, setExportingWordVO] = useState(false);
+    const [showVoPreview, setShowVoPreview] = useState(false);
+    const [voPreviewData, setVoPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
 
     // Get data passed from navigation state
     const navigationData = location.state as {
@@ -452,6 +458,60 @@ const ContractDetails = () => {
         });
     };
 
+    const handlePreviewVoDataSet = async (voDataSetId: number, voNumber: string) => {
+        if (!contractId) {
+            toaster.error("Contract ID is missing.");
+            return;
+        }
+        setLoadingPreviewVO(true);
+        try {
+            const result = await previewVoDataSet(voDataSetId, getToken() || "");
+            if (result instanceof Blob && result.size > 0) {
+                setVoPreviewData({
+                    blob: result,
+                    fileName: `VO_Preview_${voNumber}.pdf`,
+                });
+                setShowVoPreview(true);
+            } else {
+                toaster.error("Failed to generate VO preview. Invalid or empty file.");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "An unknown error occurred.";
+            toaster.error(`Error generating VO preview: ${message}`);
+        } finally {
+            setLoadingPreviewVO(false);
+        }
+    };
+
+    const handleExportVoDataSetWord = async (voDataSetId: number, voNumber: string) => {
+        if (!contractId) {
+            toaster.error("Contract ID is missing.");
+            return;
+        }
+        setExportingWordVO(true);
+        try {
+            const result = await exportVoDataSetWord(voDataSetId, getToken() || "");
+            if (result instanceof Blob && result.size > 0) {
+                const url = window.URL.createObjectURL(result);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `VO_${voNumber}.docx`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+                toaster.success("VO exported as Word successfully!");
+            } else {
+                toaster.error("Failed to export VO as Word. Invalid or empty file.");
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "An unknown error occurred.";
+            toaster.error(`Error exporting VO as Word: ${message}`);
+        } finally {
+            setExportingWordVO(false);
+        }
+    };
+
     // Calculate total contract amount from BOQ items (fallback)
     const calculateTotalAmount = () => {
         if (!contractData?.buildings) return 0;
@@ -761,6 +821,7 @@ const ContractDetails = () => {
                             actions
                             previewAction
                             editAction
+                            exportAction // <--- New prop
                             title=""
                             loading={false}
                             onSuccess={getContractVOs} // Refresh VOs after any action
@@ -774,9 +835,9 @@ const ContractDetails = () => {
                                         }
                                     });
                                 } else if (type === "Preview") {
-                                    // Handle preview action (e.g., show a modal with PDF viewer)
-                                    // For now, we'll just log it. Implement actual preview logic as needed.
-                                    console.log("Preview VO dataset:", data);
+                                    handlePreviewVoDataSet(data.id, data.voNumber);
+                                } else if (type === "Export") { // New action type
+                                    handleExportVoDataSetWord(data.id, data.voNumber);
                                 } else if (type === "Delete") {
                                     // Handle delete action (e.g., show a confirmation dialog)
                                     console.log("Delete VO dataset:", data);
@@ -814,6 +875,26 @@ const ContractDetails = () => {
                     </div>
                     <form method="dialog" className="modal-backdrop">
                         <button onClick={() => setShowPreview(false)}>close</button>
+                    </form>
+                </dialog>
+            )}
+
+            {/* VO Preview Modal */}
+            {showVoPreview && voPreviewData && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box h-[90vh] max-w-7xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-bold">VO Preview</h3>
+                            <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
+                                <span className="iconify lucide--x size-5"></span>
+                            </button>
+                        </div>
+                        <div className="h-[calc(100%-60px)]">
+                            <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
+                        </div>
+                    </div>
+                    <form method="dialog" className="modal-backdrop">
+                        <button onClick={() => setShowVoPreview(false)}>close</button>
                     </form>
                 </dialog>
             )}
