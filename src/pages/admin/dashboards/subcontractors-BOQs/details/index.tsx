@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
-import { getContractVOs, previewVoDataSet, exportVoDataSetWord } from "@/api/services/vo-api";
+import { getContractVOs, previewVoDataSet, exportVoDataSetWord, deleteVoDataSet, generateVoDataSet } from "@/api/services/vo-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -512,6 +512,54 @@ const ContractDetails = () => {
         }
     };
 
+    const handleDeleteVO = async (voId: number) => {
+        if (!confirm("Are you sure you want to delete this Variation Order? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const response = await deleteVoDataSet(voId, getToken() ?? "");
+            if (response.success) {
+                toaster.success("Variation Order deleted successfully!");
+                getContractVOs(); // Refresh the list
+            } else {
+                toaster.error(response.message || "Failed to delete Variation Order.");
+            }
+        } catch (error) {
+            console.error("Error deleting VO:", error);
+            toaster.error("An error occurred while deleting the Variation Order.");
+        }
+    };
+
+    const handleGenerateVO = async (voId: number) => {
+        // Find the VO data to get the VO number for confirmation
+        const voData = vos.find(vo => vo.id === voId);
+        const voNumber = voData?.voNumber || `VO-${voId}`;
+        const projectName = currentProject?.name || "Unknown Project";
+        
+        // Show confirmation dialog
+        const confirmMessage = `Are you sure you want to generate VO ${voNumber} for project ${projectName}?\n\nThis will create the final VO document and update its status.`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        console.log("🔄 Generating VO with ID:", voId);
+        try {
+            const response = await generateVoDataSet(voId, getToken() ?? "");
+            console.log("📥 Generate VO response:", response);
+            if (response.success) {
+                toaster.success("VO generated successfully!");
+                getContractVOs(); // Refresh list to show updated status
+            } else {
+                toaster.error(response.message || "Failed to generate VO.");
+            }
+        } catch (error) {
+            console.error("Error generating VO:", error);
+            toaster.error("An error occurred while generating the VO.");
+        }
+    };
+
     // Calculate total contract amount from BOQ items (fallback)
     const calculateTotalAmount = () => {
         if (!contractData?.buildings) return 0;
@@ -822,11 +870,15 @@ const ContractDetails = () => {
                             previewAction
                             editAction
                             exportAction // <--- New prop
+                            deleteAction
+                            generateAction
                             title=""
                             loading={false}
                             onSuccess={getContractVOs} // Refresh VOs after any action
                             openStaticDialog={(type, data, extraData) => {
+                                console.log("🎯 Table action clicked:", { type, data, extraData });
                                 if (type === "Edit") {
+                                    console.log("📝 Edit action - navigating to edit wizard");
                                     // Navigate to VO creation wizard for editing
                                     navigate(`/dashboard/contracts/details/${extraData.contractIdentifier}/edit-vo/${data.id}`, {
                                         state: {
@@ -835,12 +887,19 @@ const ContractDetails = () => {
                                         }
                                     });
                                 } else if (type === "Preview") {
+                                    console.log("👁️ Preview action");
                                     handlePreviewVoDataSet(data.id, data.voNumber);
                                 } else if (type === "Export") { // New action type
+                                    console.log("📤 Export action");
                                     handleExportVoDataSetWord(data.id, data.voNumber);
                                 } else if (type === "Delete") {
-                                    // Handle delete action (e.g., show a confirmation dialog)
-                                    console.log("Delete VO dataset:", data);
+                                    console.log("🗑️ Delete action");
+                                    handleDeleteVO(data.id);
+                                } else if (type === "Generate") {
+                                    console.log("⚡ Generate action - calling generateVoDataSet API");
+                                    handleGenerateVO(data.id);
+                                } else {
+                                    console.log("❓ Unknown action type:", type);
                                 }
                             }}
                             dynamicDialog={false}
