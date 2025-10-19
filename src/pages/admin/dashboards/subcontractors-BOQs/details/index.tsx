@@ -252,9 +252,15 @@ const ContractDetails = () => {
     };
 
     const handleEditContract = () => {
-        navigate(`/dashboard/contracts/edit/${contractIdentifier}`, {
-            state: { contractId },
-        });
+        if (contractData?.contractDatasetStatus === "Active") {
+            navigate(`/dashboard/contracts/particular-conditions/${contractIdentifier}`, {
+                state: { contractId, contractData },
+            });
+        } else {
+            navigate(`/dashboard/contracts/edit/${contractIdentifier}`, {
+                state: { contractId },
+            });
+        }
     };
 
     const handlePreviewContract = async () => {
@@ -534,8 +540,8 @@ const ContractDetails = () => {
     const handleGenerateVO = async (voId: number) => {
         // Find the VO data to get the VO number for confirmation
         const voData = vos.find(vo => vo.id === voId);
-        const voNumber = voData?.voNumber || `VO-${voId}`;
-        const projectName = currentProject?.name || "Unknown Project";
+        const voNumber = (voData && typeof voData.voNumber === 'string') ? voData.voNumber : `VO-${voId}`;
+        const projectName = (currentProject && typeof currentProject.name === 'string') ? currentProject.name : "Unknown Project";
         
         // Show confirmation dialog
         const confirmMessage = `Are you sure you want to generate VO ${voNumber} for project ${projectName}?\n\nThis will create the final VO document and update its status.`;
@@ -876,7 +882,7 @@ const ContractDetails = () => {
                             loading={false}
                             onSuccess={getContractVOs} // Refresh VOs after any action
                             openStaticDialog={(type, data, extraData) => {
-                                console.log("🎯 Table action clicked:", { type, data, extraData });
+                                console.log("🎯 Table action clicked:", type, data?.id, extraData?.contractId);
                                 if (type === "Edit") {
                                     console.log("📝 Edit action - navigating to edit wizard");
                                     // Navigate to VO creation wizard for editing
