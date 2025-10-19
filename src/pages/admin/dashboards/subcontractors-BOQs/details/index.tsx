@@ -19,7 +19,7 @@ const useContractVOs = (contractId: string) => {
 
     const voColumns = {
         voNumber: "VO Number",
-        description: "Description",
+        subTrade: "Sub Trade",
         type: "Type",
         amount: "Amount",
         status: "Status",
@@ -34,10 +34,11 @@ const useContractVOs = (contractId: string) => {
             const response = await getContractVOs(parseInt(contractId), getToken() ?? "");
 
             if (response.success && response.data && Array.isArray(response.data)) {
+                console.log("🔍 getContractVOsData response.data:", response.data);
                 const formattedVos = response.data.map((vo: any) => ({
                     id: vo.id,
                     voNumber: vo.voNumber || vo.VoNumber || "-",
-                    description: vo.subTrade || vo.Description || "-",
+                    subTrade: vo.subTrade || vo.SubTrade || "-",
                     type: vo.type || vo.Type || "-",
                     amount: formatCurrency(vo.amount || vo.Amount),
                     status: vo.status || vo.Status || "-",

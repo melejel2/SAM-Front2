@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import {
@@ -203,6 +204,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
 }) => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
+    const navigate = useNavigate();
     const memoizedToken = useMemo(() => getToken(), [getToken]);
     
     // State
@@ -344,7 +346,6 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                     currencyId: contractInfo.currencyId,
                     currencySymbol: contractInfo.currencySymbol
                 };
-                console.log("✅ formData state after update in loadData:", newState);
                 return newState;
             });
 
@@ -460,9 +461,13 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         const updatedItems = formData.lineItems.map((item, i) => {
             if (i === index) {
                 const updated = { ...item, ...updatedItem };
+                // Ensure quantity and unitPrice are numbers for calculation
+                const quantity = Number(updated.quantity) || 0;
+                const unitPrice = Number(updated.unitPrice) || 0;
+
                 // Recalculate total price if quantity or unit price changed
                 if ('quantity' in updatedItem || 'unitPrice' in updatedItem) {
-                    updated.totalPrice = updated.quantity * updated.unitPrice;
+                    updated.totalPrice = quantity * unitPrice;
                 }
                 return updated;
             }
@@ -502,7 +507,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 
                 // Navigate back to contract details page using contract number
                 const contractNumber = formData.contractNumber || contractId;
-                window.location.href = `/dashboard/subcontractors-boqs/details/${contractNumber}`;
+                navigate(`/dashboard/subcontractors-boqs/details/${contractNumber}`);
             } else {
                 throw new Error((response as any).error || "Failed to create VO");
             }
