@@ -74,6 +74,7 @@ interface ContractVOWizardContextType {
     currentStep: number;
     hasUnsavedChanges: boolean;
     loading: boolean;
+    isUpdate: boolean;
     
     // Contract data
     contractData: ContractData | null;
@@ -217,6 +218,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     const [buildingsLoading, setBuildingsLoading] = useState(false);
     const [voContracts, setVoContracts] = useState<any[]>([]);
     const [voContractsLoading, setVoContractsLoading] = useState(false);
+    const isUpdate = !!voDatasetId;
     
     // Initialize form data with contract context
     const [formData, setFormDataState] = useState<ContractVOFormData>({
@@ -358,6 +360,14 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         }
     }, [contractId, voDatasetId, memoizedToken, toaster]);
 
+    useEffect(() => {
+        console.log("🔄 ContractVOWizardProvider - formData changed:", formData);
+    }, [formData]);
+
+    useEffect(() => {
+        console.log("🔄 ContractVOWizardProvider - contractData changed:", contractData);
+    }, [contractData]);
+
     // Memoized function to load VO contracts
     const loadVoContracts = useCallback(async () => {
         setVoContractsLoading(true);
@@ -418,7 +428,8 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             case 2: return validateStep2();
             case 3: return validateStep3();
             case 4: return validateStep4();
-            case 5: return validateStep5();
+            case 5: return true; // Review step doesn't require validation
+            case 6: return true; // Preview step doesn't require validation
             default: return false;
         }
     };
@@ -429,7 +440,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             if (currentStep === 1) {
                 // Skip step 2 (contract review) since we're already in contract context
                 setCurrentStep(3);
-            } else if (currentStep < 5) {
+            } else if (currentStep < 6) {
                 setCurrentStep(currentStep + 1);
             }
         }
@@ -527,6 +538,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         currentStep,
         hasUnsavedChanges,
         loading,
+        isUpdate,
         
         // Contract data
         contractData,

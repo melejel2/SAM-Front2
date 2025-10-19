@@ -26,7 +26,8 @@ const CreateContractVOContent: React.FC = () => {
         goToNextStep,
         goToPreviousStep,
         handleSubmit,
-        contractData
+        contractData,
+        isUpdate
     } = useContractVOWizardContext();
 
     const handleConfirmBack = () => {
@@ -193,7 +194,7 @@ const CreateContractVOContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 5 ? (
+                    {currentStep < 6 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -211,6 +212,9 @@ const CreateContractVOContent: React.FC = () => {
                                         case 4:
                                             toaster.error("Please add at least one VO line item");
                                             break;
+                                        case 5:
+                                            toaster.error("Please review the VO details before proceeding.");
+                                            break;
                                         default:
                                             toaster.error("Please complete all required fields");
                                     }
@@ -218,9 +222,9 @@ const CreateContractVOContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 4 ? (
+                            {currentStep === 5 ? (
                                 <>
-                                    <span>Review</span>
+                                    <span>Preview</span>
                                     <span className="iconify lucide--eye size-4"></span>
                                 </>
                             ) : (
@@ -239,7 +243,7 @@ const CreateContractVOContent: React.FC = () => {
                             {loading ? (
                                 <>
                                     <span className="loading loading-spinner loading-sm"></span>
-                                    Creating VO...
+                                    {isUpdate ? "Saving VO..." : "Creating VO..."}
                                 </>
                             ) : (
                                 <>
@@ -268,8 +272,9 @@ const CreateContractVOContent: React.FC = () => {
 // Main component that provides the context
 const CreateContractVO: React.FC = () => {
     const location = useLocation();
+    const { voDatasetId: voDatasetIdParam } = useParams<{ voDatasetId: string }>(); // Get from URL params
     const contractId = location.state?.contractId;
-    const voDatasetId = location.state?.voDatasetId;
+    const voDatasetId = voDatasetIdParam ? parseInt(voDatasetIdParam) : undefined; // Convert to number
     
     if (!contractId) {
         return (

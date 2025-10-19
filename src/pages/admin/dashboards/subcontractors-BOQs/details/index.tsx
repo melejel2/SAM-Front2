@@ -767,7 +767,7 @@ const ContractDetails = () => {
                             openStaticDialog={(type, data, extraData) => {
                                 if (type === "Edit") {
                                     // Navigate to VO creation wizard for editing
-                                    navigate(`/dashboard/contracts/details/${extraData.contractIdentifier}/create-vo`, {
+                                    navigate(`/dashboard/contracts/details/${extraData.contractIdentifier}/edit-vo/${data.id}`, {
                                         state: {
                                             contractId: extraData.contractId,
                                             voDatasetId: data.id // Pass the ID of the VO dataset to edit

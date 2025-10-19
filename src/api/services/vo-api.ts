@@ -382,6 +382,50 @@ export const livePreviewVO = async (model: any, token: string): Promise<Blob> =>
 };
 
 /**
+ * Generate a live preview PDF of a VO contract from a model
+ * @param model VoDatasetBoqDetailsVM containing the dataset to preview
+ * @param token Authentication token
+ */
+export const livePreviewVoPdf = async (model: VoDatasetBoqDetailsVM, token: string): Promise<Blob> => {
+  try {
+    const response = await apiRequest({
+      endpoint: 'VoDataSet/LivePreviewVoPdf',
+      method: 'POST',
+      token,
+      body: model,
+      responseType: 'blob'
+    });
+
+    return response as Blob;
+  } catch (error) {
+    console.error('Live preview VO PDF API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate a live preview Word document of a VO contract from a model
+ * @param model VoDatasetBoqDetailsVM containing the dataset to preview
+ * @param token Authentication token
+ */
+export const livePreviewVoWord = async (model: VoDatasetBoqDetailsVM, token: string): Promise<Blob> => {
+  try {
+    const response = await apiRequest({
+      endpoint: 'VoDataSet/LivePreviewVOWord',
+      method: 'POST',
+      token,
+      body: model,
+      responseType: 'blob'
+    });
+
+    return response as Blob;
+  } catch (error) {
+    console.error('Live preview VO Word API Error:', error);
+    throw error;
+  }
+};
+
+/**
  * Preview VO dataset (saved)
  * @param voDataSetId VO dataset ID
  * @param token Authentication token

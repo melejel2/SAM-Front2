@@ -47,6 +47,10 @@ const dashboardRoutes: IRoutesProps[] = [
         path: "/dashboard/contracts/details/:contractIdentifier/create-vo",
         element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details/create-vo"))),
     },
+    {
+        path: "/dashboard/contracts/details/:contractIdentifier/edit-vo/:voDatasetId",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/subcontractors-BOQs/details/create-vo"))),
+    },
 
     // ========== LEGACY ROUTES (Redirects to unified page) ==========
     // Keep for backward compatibility with bookmarks/links
