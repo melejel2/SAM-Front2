@@ -11,129 +11,89 @@ interface InputField {
 const useParticularConditions = () => {
     const inputFields: InputField[] = [
         {
-            name: "contractType",
-            label: "Type of contract",
-            type: "select",
-            required: true,
-            options: ["Lump Sum", "Remeasured", "Cost Plus"],
-        },
-        {
-            name: "contractNumber",
-            label: "Contract Number",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "contractDate",
-            label: "Contract Date (mm/dd/yyyy)",
-            type: "date",
-            required: true,
-        },
-        {
-            name: "completionDate",
-            label: "Completion Date (mm/dd/yyyy)",
-            type: "date",
-            required: true,
-        },
-        {
-            name: "retention",
+            name: "holdWarranty",
             label: "Retention (%)",
-            type: "number",
-        },
-        {
-            name: "latePenalty",
-            label: "Late penalty (‰)",
-            type: "number",
-        },
-        {
-            name: "maxPenalty",
-            label: "Maximum penalty (%)",
-            type: "number",
-        },
-        {
-            name: "vat",
-            label: "VAT (%)",
-            type: "number",
-        },
-        {
-            name: "contract",
-            label: "Contract",
-            type: "select",
-            required: true,
-            options: ["Mesure Lab - NLOGO (Supply Apply)", "Mesure N (Supply Apply)", "Remesure - New (Supply Apply)"],
-        },
-        {
-            name: "paymentsTerms",
-            label: "Payments Terms",
-            type: "select",
-            required: true,
-            options: [
-                "Effet / Trade Bill",
-                "Chèque ou effet / Check or Bill",
-                "Chèque ou virement / Check or Transfer",
-                "Paiement en Espèces / Cash Payment",
-            ],
-        },
-        {
-            name: "maintenancePeriod",
-            label: "Maintenance period (months)",
-            type: "number",
-        },
-        {
-            name: "warranty",
-            label: "Warranty (months)",
-            type: "number",
-        },
-        {
-            name: "performanceBond",
-            label: "Performance bond (%)",
-            type: "number",
-        },
-        {
-            name: "ipcPaymentDue",
-            label: "IPC Payment due in (Days)",
-            type: "number",
-        },
-        {
-            name: "maxDeductions",
-            label: "Max. deductions over progress (%)",
-            type: "number",
-        },
-        {
-            name: "contractNumber",
-            label: "Number",
             type: "text",
-            prefix: "CS-RIV-",
         },
         {
-            name: "advancePayment",
-            label: "Advance payment (%)",
+            name: "latePenalties",
+            label: "Late Penalty (‰)",
+            type: "text",
+        },
+        {
+            name: "latePenalityCeiling",
+            label: "Max Penalty (%)",
+            type: "text",
+        },
+        {
+            name: "purchaseIncrease",
+            label: "Interest (%)",
+            type: "text",
+        },
+        {
+            name: "holdBack",
+            label: "Hold Back (%)",
+            type: "text",
+        },
+        {
+            name: "paymentsTerm",
+            label: "Payment Terms",
+            type: "text",
+        },
+        {
+            name: "mintenancePeriod",
+            label: "Maintenance (months)",
+            type: "text",
+        },
+        {
+            name: "workWarranty",
+            label: "Warranty (months)",
+            type: "text",
+        },
+        {
+            name: "termination",
+            label: "Performance Bond (%)",
+            type: "text",
+        },
+        {
+            name: "daysNumber",
+            label: "Payment Due (days)",
+            type: "text",
+        },
+        {
+            name: "progress",
+            label: "Max Progress (%)",
+            type: "text",
+        },
+        {
+            name: "subcontractorAdvancePayee",
+            label: "Advance Payment Eligible (%)",
             type: "number",
         },
         {
-            name: "advanceRecovery",
+            name: "recoverAdvance",
             label: "Advance recovery per progress (%)",
+            type: "text",
+        },
+        {
+            name: "materialSupply",
+            label: "Material Supply (%)",
             type: "number",
         },
         {
-            name: "maxMaterialSupply",
-            label: "Max. Material Supply (%)",
-            type: "number",
-        },
-        {
-            name: "prorata",
+            name: "prorataAccount",
             label: "Prorata (%)",
-            type: "number",
+            type: "text",
         },
         {
             name: "managementFees",
-            label: "Management fees (%)",
-            type: "number",
+            label: "Management Fees (%)",
+            type: "text",
         },
         {
-            name: "executionPlans",
+            name: "plansExecution",
             label: "Plans Execution (%)",
-            type: "number",
+            type: "text",
         },
     ];
 
