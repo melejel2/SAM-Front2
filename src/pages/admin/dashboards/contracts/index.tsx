@@ -5,6 +5,8 @@ import { Icon } from "@iconify/react";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 
+import useToast from "@/hooks/use-toast";
+
 import useContractManagement from "./use-contract-management";
 
 // Import icons
@@ -20,6 +22,7 @@ type TabType = 'drafts' | 'active' | 'terminated';
 const ContractsManagement = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { toaster } = useToast();
 
     const {
         columns,
@@ -35,6 +38,7 @@ const ContractsManagement = memo(() => {
         terminateContract,
         generateFinalContract,
         exportContractDocument,
+        exportContractWord,
     } = useContractManagement();
 
     const [activeTab, setActiveTab] = useState<TabType>('drafts');
@@ -47,6 +51,8 @@ const ContractsManagement = memo(() => {
     const [showFinalDischargeModal, setShowFinalDischargeModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
+    const [exportingWord, setExportingWord] = useState(false);
+
 
     // Load all contracts on mount
     useEffect(() => {
@@ -198,6 +204,34 @@ const ContractsManagement = memo(() => {
             console.error("Export error:", error);
         }
     }, [exportContractDocument]);
+
+    // Handle Export Word action (for active and terminated contracts)
+    const handleExportWordFile = useCallback(async (row: any) => {
+        console.log("handleExportWordFile called with row:", row); // Added for debugging
+        setExportingWord(true);
+        try {
+            const result = await exportContractWord(Number(row.id)); // Use the exposed exportContractWord from the hook
+            if (result.success && result.blob) {
+                const contractRef = row.contractNumber || row.id;
+                const fileName = `contract-${contractRef}-${row.projectName || 'document'}.docx`; // .docx for Word
+                const url = window.URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                toaster.error("Failed to export Word document.");
+            }
+        } catch (error) {
+            console.error("Export Word error:", error);
+            toaster.error("An error occurred while exporting the Word document.");
+        } finally {
+            setExportingWord(false);
+        }
+    }, [exportContractWord, toaster]);
 
     // Handle Create VO action (only for active contracts)
     const handleCreateVO = useCallback((row: any) => {
@@ -360,16 +394,16 @@ const ContractsManagement = memo(() => {
                                 tableData={activeData}
                                 actions
                                 previewAction
-                                exportAction
+                                exportAction // Keep this if it's for the ZIP export
                                 title="Active Contract"
                                 loading={false}
                                 onSuccess={getActiveContracts}
                                 openStaticDialog={(type, data) => {
+                                    console.log("openStaticDialog called with type:", type, "and data:", data); // Added for debugging
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Edit" && data) {
-                                        // Edit action used for Export in active contracts
-                                        return handleExport(data);
+                                    } else if (type === "Export" && data) { // Modified to handle generic "Export" type
+                                        return handleExportWordFile(data); // Call Word export
                                     } else if ((type as any) === "CreateVO" && data) {
                                         return handleCreateVO(data);
                                     } else if ((type as any) === "Terminate" && data) {
