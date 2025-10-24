@@ -15,7 +15,7 @@
         "node": ">=20.9.0"
     },
     "dependencies": {
-        "@azure/msal-browser": "^4.25.0",
+        "@azure/msal-browser": "^4.25.1",
         "@azure/msal-react": "^3.0.20",
         "@iconify/icons-lucide": "^1.2.135",
         "@iconify/react": "^6.0.2",
@@ -35,27 +35,27 @@
         "tailwind-merge": "^3.3.1"
     },
     "devDependencies": {
-        "@eslint/js": "^9.37.0",
-        "@iconify-json/lucide": "^1.2.69",
+        "@eslint/js": "^9.38.0",
+        "@iconify-json/lucide": "^1.2.70",
         "@iconify/tailwind": "^1.2.0",
-        "@tailwindcss/vite": "^4.1.14",
+        "@tailwindcss/vite": "^4.1.16",
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-        "@types/node": "^24.8.1",
+        "@types/node": "^24.9.1",
         "@types/react": "^19.2.2",
         "@types/react-dom": "^19.2.2",
-        "@typescript-eslint/parser": "^8.46.1",
+        "@typescript-eslint/parser": "^8.46.2",
         "@vitejs/plugin-react": "^5.0.4",
-        "daisyui": "^5.3.7",
-        "eslint": "^9.37.0",
+        "daisyui": "^5.3.8",
+        "eslint": "^9.38.0",
         "eslint-plugin-react-hooks": "^7.0.0",
         "eslint-plugin-react-refresh": "^0.4.24",
         "globals": "^16.4.0",
         "path": "^0.12.7",
         "prettier": "^3.6.2",
-        "prettier-plugin-tailwindcss": "^0.7.0",
-        "tailwindcss": "^4.1.14",
+        "prettier-plugin-tailwindcss": "^0.7.1",
+        "tailwindcss": "^4.1.16",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.46.1",
-        "vite": "^7.1.10"
+        "typescript-eslint": "^8.46.2",
+        "vite": "^7.1.12"
     }
 }

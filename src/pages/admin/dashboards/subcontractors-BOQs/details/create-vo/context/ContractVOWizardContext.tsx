@@ -126,9 +126,9 @@ const mapVoDatasetToFormData = (
     // Flatten all line items from all buildings into a single array
     const lineItems: VOLineItem[] = [];
     if (voDataset.buildings) {
-        voDataset.buildings.forEach(building => {
+        voDataset.buildings.forEach((building: any) => {
             if (building.contractVoes) {
-                building.contractVoes.forEach(vo => {
+                building.contractVoes.forEach((vo: any) => {
                     lineItems.push({
                         id: vo.id,
                         no: vo.no,
@@ -173,7 +173,7 @@ const mapVoDatasetToFormData = (
         currencyId: contractContext.currencyId,
         currencySymbol: contractContext.currencySymbol,
 
-        selectedBuildingIds: (voDataset.buildings || []).map(b => b.id),
+        selectedBuildingIds: (voDataset.buildings || []).map((b: any) => b.id),
         lineItems: lineItems,
         totalAmount: voDataset.amount,
         totalAdditions: totalAdditions,
