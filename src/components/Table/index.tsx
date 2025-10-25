@@ -32,6 +32,7 @@ interface SAMTableProps {
         editAction?: boolean;
         deleteAction?: boolean;
         terminateAction?: boolean;
+        exportAction?: boolean;
     };
 
     addBtn?: boolean;
@@ -54,6 +55,7 @@ interface SAMTableProps {
     customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
+    exportingRowId?: string | null;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
     inlineEditable?: boolean;
@@ -95,6 +97,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     customHeaderContent,
     rowsPerPage,
     previewLoadingRowId,
+    exportingRowId,
     selectedRowId,
     onItemUpdate,
     onItemDelete,
@@ -142,6 +145,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             generateAction={generateAction}
                             rowActions={rowActions}
                             previewLoadingRowId={previewLoadingRowId}
+                            exportingRowId={exportingRowId}
                             selectedRowId={selectedRowId}
                             onItemUpdate={onItemUpdate}
                             onItemDelete={onItemDelete}

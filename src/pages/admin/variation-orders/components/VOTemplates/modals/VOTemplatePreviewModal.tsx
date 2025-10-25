@@ -32,8 +32,8 @@ const VOTemplatePreviewModal: React.FC<VOTemplatePreviewModalProps> = ({
                 URL.revokeObjectURL(previewUrl);
                 setPreviewUrl(null);
             }
-        };
-    }, [isOpen, template]);
+        }
+    }, [isOpen, template, previewUrl]);
 
     const loadPreview = async () => {
         if (!template) return;

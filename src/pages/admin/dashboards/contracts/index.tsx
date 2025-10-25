@@ -39,6 +39,7 @@ const ContractsManagement = memo(() => {
         generateFinalContract,
         exportContractDocument,
         exportContractWord,
+        exportTerminatedContract,
     } = useContractManagement();
 
     const [activeTab, setActiveTab] = useState<TabType>('drafts');
@@ -183,14 +184,15 @@ const ContractsManagement = memo(() => {
         await deleteContract(row.id);
     }, [deleteContract]);
 
-    // Handle Export action (for active and terminated contracts)
-    const handleExport = useCallback(async (row: any) => {
+    // Handle Export Word action (for active and terminated contracts)
+    const handleExportTerminated = useCallback(async (row: any) => {
+        console.log("handleExportTerminated called with row:", row); // Added for debugging
+        setExportingWord(true);
         try {
-            // Export as ZIP (contains both PDF and Word)
-            const result = await exportContractDocument(Number(row.id));
+            const result = await exportTerminatedContract(Number(row.id)); // Use the exposed exportTerminatedContract from the hook
             if (result.success && result.blob) {
                 const contractRef = row.contractNumber || row.id;
-                const fileName = `contract-${contractRef}-${row.projectName || 'document'}.zip`;
+                const fileName = `contract-${contractRef}-${row.projectName || 'document'}.docx`; // .docx for Word
                 const url = window.URL.createObjectURL(result.blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -199,15 +201,18 @@ const ContractsManagement = memo(() => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+            } else {
+                toaster.error("Failed to export Word document.");
             }
         } catch (error) {
-            console.error("Export error:", error);
+            console.error("Export Word error:", error);
+            toaster.error("An error occurred while exporting the Word document.");
+        } finally {
+            setExportingWord(false);
         }
-    }, [exportContractDocument]);
+    }, [exportTerminatedContract, toaster]);
 
-    // Handle Export Word action (for active and terminated contracts)
     const handleExportWordFile = useCallback(async (row: any) => {
-        console.log("handleExportWordFile called with row:", row); // Added for debugging
         setExportingWord(true);
         try {
             const result = await exportContractWord(Number(row.id)); // Use the exposed exportContractWord from the hook
@@ -424,16 +429,15 @@ const ContractsManagement = memo(() => {
                                 tableData={terminatedData}
                                 actions
                                 previewAction
-                                exportAction
                                 title="Terminated Contract"
                                 loading={false}
                                 onSuccess={getTerminatedContracts}
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Edit" && data) {
-                                        // Edit action used for Export in terminated contracts
-                                        return handleExport(data);
+                                    } else if (type === "Export" && data) {
+                                        // Export action for terminated contracts
+                                        return handleExportTerminated(data);
                                     } else if ((type as any) === "Generate" && data) {
                                         return handleGenerateFinalClick(data);
                                     }
@@ -441,6 +445,7 @@ const ContractsManagement = memo(() => {
                                 dynamicDialog={false}
                                 rowActions={(row) => ({
                                     generateAction: true,
+                                    exportAction: true, // Show export action
                                 })}
                             />
                         )}

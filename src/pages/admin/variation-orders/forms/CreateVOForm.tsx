@@ -64,7 +64,7 @@ const CreateVOForm = () => {
         if (formData.projectId) {
             getBuildingsByProject(formData.projectId);
         }
-    }, [formData.projectId]);
+    }, [formData.projectId, getBuildingsByProject]);
 
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -320,7 +320,7 @@ const CreateVOForm = () => {
                     </div>
                 );
                 
-            case 3:
+            case 3: {
                 const selectedProject = projects.find((p: any) => p.id === formData.projectId);
                 const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
                 const selectedSubcontractor = subcontractors.find((s: any) => s.id === formData.subcontractorId);
@@ -382,11 +382,10 @@ const CreateVOForm = () => {
                         </div>
                     </div>
                 );
-                
-            default:
-                return null;
+            }
+
         }
-    };
+    }
 
     return (
         <div className="max-w-4xl mx-auto">

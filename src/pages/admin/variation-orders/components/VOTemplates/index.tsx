@@ -34,13 +34,13 @@ const VOTemplatesManager: React.FC<VOTemplatesManagerProps> = ({
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
-    useEffect(() => {
-        loadTemplates();
-    }, [selectedType]);
-
     const loadTemplates = async () => {
         await getVoTemplates(selectedType);
     };
+
+    useEffect(() => {
+        loadTemplates();
+    }, [selectedType, getVoTemplates]);
 
     const handleTemplateSelect = (template: any) => {
         setSelectedTemplate(template);

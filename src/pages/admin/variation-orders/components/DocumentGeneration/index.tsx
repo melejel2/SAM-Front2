@@ -40,7 +40,7 @@ const DocumentGeneration: React.FC<DocumentGenerationProps> = ({
     useEffect(() => {
         // Load available templates
         getVoTemplates();
-    }, []);
+    }, [getVoTemplates]);
 
     const handleTemplateSelect = (templateId: string) => {
         const template = templates.find(t => t.id === parseInt(templateId));

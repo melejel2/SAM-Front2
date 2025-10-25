@@ -652,6 +652,30 @@ export const saveParticularConditions = async (model: ParticularConditionVM, tok
   }
 };
 
+/**
+ * Export terminated contract as Word file only
+ * @param id Contract dataset ID
+ * @param token Authentication token
+ */
+export const exportTerminatedContractFile = async (
+  id: number,
+  token: string
+): Promise<Blob> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `ContractsDatasets/ExportTerminateFile/${id}`,
+      method: 'GET',
+      token,
+      responseType: 'blob'
+    });
+
+    return response as Blob;
+  } catch (error) {
+    console.error('Export terminated contract Word API Error:', error);
+    throw error;
+  }
+};
+
 // Export all functions for easy importing
 export {
   ContractDatasetStatus,

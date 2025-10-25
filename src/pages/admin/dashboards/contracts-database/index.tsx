@@ -242,6 +242,7 @@ const ContractsDatabase = () => {
     const [showGenerateFinalModal, setShowGenerateFinalModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [selectedProject, setSelectedProject] = useState<string>("All Projects");
+    const [exportingRowId, setExportingRowId] = useState<string | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -354,6 +355,42 @@ const ContractsDatabase = () => {
             }
         } finally {
             setLoadingDocumentType(null);
+        }
+    };
+
+    const handleExportTerminate = async (row: any) => {
+        setExportingRowId(row.id); 
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/ExportTerminateFile/${row.id}`,
+                method: "GET",
+                responseType: "blob",
+                token: getToken() ?? ""
+            });
+
+            if (response instanceof Blob) {
+                const contractRef = row.contractNumber || row.id;
+                const fileName = `termination-${contractRef}-${row.projectName || 'document'}.docx`;
+                const url = window.URL.createObjectURL(response);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                toaster.success("Termination letter downloaded successfully");
+            } else {
+                toaster.error("Failed to download termination letter");
+            }
+        } catch (error: any) {
+            if (error?.response?.status === 404) {
+                toaster.error("Termination letter has not been generated yet. Please terminate the contract first.");
+            } else {
+                toaster.error("Failed to download termination letter");
+            }
+        } finally {
+            setExportingRowId(null);
         }
     };
 
@@ -662,6 +699,7 @@ const ContractsDatabase = () => {
                                         tableData={filteredTerminatedData}
                                         actions
                                         previewAction
+                                        exportAction
                                         title={"Terminated"}
                                         loading={false}
                                         onSuccess={() => {}}
@@ -671,13 +709,17 @@ const ContractsDatabase = () => {
                                             } else if ((type as any) === "Generate" && data) {
                                                 setContractToGenerateFinal(data);
                                                 setShowGenerateFinalModal(true);
+                                            } else if (type === "Export" && data) {
+                                                return handleExportTerminate(data);
                                             }
                                         }}
                                         dynamicDialog={false}
                                         rowsPerPage={10}
                                         rowActions={(row) => ({
                                             generateAction: row.originalStatus?.toLowerCase() === 'terminated',
+                                            exportAction: true,
                                         })}
+                                        exportingRowId={exportingRowId}
                                     />
                                 )}
                             </div>

@@ -41,7 +41,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 setPreviewUrl(null);
             }
         };
-    }, [isOpen, previewData]);
+    }, [isOpen, previewData, previewUrl]);
 
     const handleDownload = async () => {
         if (!previewData) return;

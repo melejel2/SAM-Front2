@@ -227,6 +227,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
 
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/rules-of-hooks, react-hooks/set-state-in-effect
         if (sheets && sheets.length > 0) {
             const building = selectedBuilding && projectData?.buildings?.find((b: any) => b.id === selectedBuilding.id);
             

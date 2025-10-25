@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button, Select, SelectOption } from "@/components/daisyui";
 
 interface BuildingVOConfig {
@@ -26,17 +26,40 @@ const MultiBuildingSelector: React.FC<MultiBuildingSelectorProps> = ({
     disabled = false
 }) => {
     const [buildingConfigs, setBuildingConfigs] = useState<BuildingVOConfig[]>([]);
+    const isInitialMount = useRef(true);
 
     useEffect(() => {
-        // Initialize building configurations
-        const initialConfigs = (buildings || []).map(building => ({
-            buildingId: building.id,
-            buildingName: building.name,
-            voLevel: 1,
-            replaceAllItems: true,
-            selected: false
-        }));
-        setBuildingConfigs(initialConfigs);
+        if (isInitialMount.current) {
+            // Initial mount: set configs based on buildings prop
+            const initialConfigs = (buildings || []).map(building => ({
+                buildingId: building.id,
+                buildingName: building.name,
+                voLevel: 1,
+                replaceAllItems: true,
+                selected: false
+            }));
+            setBuildingConfigs(initialConfigs);
+            isInitialMount.current = false;
+        } else {
+            // Subsequent renders: update configs only if buildings prop changes significantly
+            setBuildingConfigs(currentConfigs => {
+                const newConfigs = (buildings || []).map(building => {
+                    const existingConfig = currentConfigs.find(c => c.buildingId === building.id);
+                    return {
+                        buildingId: building.id,
+                        buildingName: building.name,
+                        voLevel: existingConfig ? existingConfig.voLevel : 1,
+                        replaceAllItems: existingConfig ? existingConfig.replaceAllItems : true,
+                        selected: existingConfig ? existingConfig.selected : false
+                    };
+                });
+                // Deep comparison to avoid unnecessary re-renders
+                if (JSON.stringify(newConfigs) !== JSON.stringify(currentConfigs)) {
+                    return newConfigs;
+                }
+                return currentConfigs;
+            });
+        }
     }, [buildings]);
 
     useEffect(() => {

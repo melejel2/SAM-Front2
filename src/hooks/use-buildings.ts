@@ -66,7 +66,7 @@ const useBuildings = () => {
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, toaster]);
 
   const getBuildingSheets = useCallback(async (buildingId: number): Promise<BuildingSheet[]> => {
     setSheetsLoading(true);

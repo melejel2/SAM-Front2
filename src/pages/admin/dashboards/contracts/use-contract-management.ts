@@ -18,12 +18,12 @@ import {
   exportContract,
   exportContractPdf,
   exportContractWord,
+  exportTerminatedContractFile,
   livePreview,
   livePreviewPdf,
   livePreviewWord,
   ContractDatasetStatus,
-  type SubcontractorBoqVM,
-  type ContractDatasetListItem,
+  type SubcontractorBoqVM,  type ContractDatasetListItem,
   type CopyBoqItemsRequest,
   type ImportContractBoqsRequest,
   type ClearContractBoqItemsRequest,
@@ -717,53 +717,85 @@ const useContractManagement = () => {
    * Export contract as Word document
    * @param contractId Contract ID to export
    */
-  const exportContractWordDocument = async (contractId: number) => {
-    if (!token) {
-      toaster.error('Authentication required');
-      return { success: false, blob: null };
-    }
-
-    try {
-      setLoading(true);
-      const response = await exportContractWord(contractId, token);
-
-      if (!(response instanceof Blob)) {
-        toaster.error('Invalid response from server');
+    const exportContractWordDocument = async (contractId: number) => {
+      if (!token) {
+        toaster.error('Authentication required');
         return { success: false, blob: null };
       }
-
-      return { success: true, blob: response };
-    } catch (error) {
-      console.error('Export contract Word error:', error);
-      toaster.error('An error occurred while exporting the contract Word document');
-      return { success: false, blob: null };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Export contract as both PDF and Word (ZIP)
-   * @param contractId Contract ID to export
-   */
-  const exportContractDocument = async (contractId: number) => {
-    if (!token) {
-      toaster.error('Authentication required');
-      return { success: false, blob: null };
-    }
-
-    try {
-      setLoading(true);
-      const response = await exportContract(contractId, token);
-      return { success: true, blob: response };
-    } catch (error) {
-      console.error('Export contract error:', error);
-      toaster.error('An error occurred while exporting the contract');
-      return { success: false, blob: null };
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+      try {
+        setLoading(true);
+        const response = await exportContractWord(contractId, token);
+  
+        if (!(response instanceof Blob)) {
+          toaster.error('Invalid response from server');
+          return { success: false, blob: null };
+        }
+  
+        return { success: true, blob: response };
+      } catch (error) {
+        console.error('Export contract Word error:', error);
+        toaster.error('An error occurred while exporting the contract Word document');
+        return { success: false, blob: null };
+      }
+      finally {
+        setLoading(false);
+      }
+    };
+  
+    /**
+     * Export terminated contract as Word document
+     * @param contractId Contract ID to export
+     */
+    const exportTerminatedContract = async (contractId: number) => {
+      if (!token) {
+        toaster.error('Authentication required');
+        return { success: false, blob: null };
+      }
+  
+      try {
+        setLoading(true);
+        const response = await exportTerminatedContractFile(contractId, token);
+  
+        if (!(response instanceof Blob)) {
+          toaster.error('Invalid response from server');
+          return { success: false, blob: null };
+        }
+  
+        return { success: true, blob: response };
+      } catch (error) {
+        console.error('Export terminated contract Word error:', error);
+        toaster.error('An error occurred while exporting the terminated contract Word document');
+        return { success: false, blob: null };
+      }
+      finally {
+        setLoading(false);
+      }
+    };
+  
+    /**
+     * Export contract as both PDF and Word (ZIP)
+     * @param contractId Contract ID to export
+     */
+    const exportContractDocument = async (contractId: number) => {
+      if (!token) {
+        toaster.error('Authentication required');
+        return { success: false, blob: null };
+      }
+  
+      try {
+        setLoading(true);
+        const response = await exportContract(contractId, token);
+        return { success: true, blob: response };
+      } catch (error) {
+        console.error('Export contract error:', error);
+        toaster.error('An error occurred while exporting the contract');
+        return { success: false, blob: null };
+      }
+      finally {
+        setLoading(false);
+      }
+    };
 
   // ============================================================================
   // Live Preview Functions
@@ -948,6 +980,7 @@ const useContractManagement = () => {
 
     // Export functions
     exportContractDocument,
+    exportTerminatedContract,
     exportContractPdf: exportContractPdfDocument,
     exportContractWord: exportContractWordDocument,
 

@@ -107,6 +107,7 @@ interface TableProps {
         editAction?: boolean;
         deleteAction?: boolean;
         terminateAction?: boolean;
+        exportAction?: boolean;
     };
 
     title: string;
@@ -137,6 +138,7 @@ interface TableProps {
     customHeaderContent?: React.ReactNode;
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
+    exportingRowId?: string | null;
     selectedRowId?: number | string | null;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
@@ -181,6 +183,7 @@ const TableComponent: React.FC<TableProps> = ({
     customHeaderContent,
     rowsPerPage = 10,
     previewLoadingRowId: externalPreviewLoadingRowId,
+    exportingRowId,
     selectedRowId,
     onItemUpdate,
     onItemDelete,
@@ -933,7 +936,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
                                                                     </Button>
                                                                 )}
-                                                                {exportAction && (
+                                                                {(rowAction?.exportAction || exportAction) && (
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
@@ -941,11 +944,12 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         className="tooltip"
                                                                         aria-label="Export"
                                                                         data-tip="Export"
+                                                                        disabled={exportingRowId === (row.id || row.contractId || row.projectId || String(row))}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             openStaticDialog?.("Export", row, { contractIdentifier, contractId });
                                                                         }}>
-                                                                        <span className="iconify lucide--arrow-up-from-line text-base-content/70 text-info size-4"></span>
+                                                                        <span className={`iconify ${exportingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--arrow-up-from-line'} text-base-content/70 text-info size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.generateAction || generateAction) && (

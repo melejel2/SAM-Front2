@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useContractsApi } from "./hooks/use-contracts-api";
 import { ContractDatasetStatus } from "@/api/services/contracts-api";
 
@@ -115,8 +115,8 @@ const useSubcontractorsBOQs = () => {
         return result;
     };
 
-    const getContractsDatasets = async () => {
-        const result = await contractsApi.fetchContractsDatasets(ContractDatasetStatus.Editable);
+    const getContractsDatasets = useCallback(async () => {
+        const result = await contractsApi.fetchContractsDatasets(ContractDatasetStatus.Active);
         
         if (result.success && result.data) {
             // Process the data to format currency and dates
@@ -138,7 +138,7 @@ const useSubcontractorsBOQs = () => {
         } else {
             setTableData([]);
         }
-    };
+    }, [contractsApi, formatDate, formatCurrency, formatStatusBadge, setTableData]);
 
     const previewContract = async (contractData: any) => {
         // For editable contracts, use live preview instead of export

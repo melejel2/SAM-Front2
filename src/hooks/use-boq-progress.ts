@@ -62,10 +62,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     setUnsavedChanges(prev => new Set(prev.add(changeKey)));
   }, []);
 
-  /**
-   * Calculate BOQ amounts based on quantities and unit price
-   */
-  const calculateBoqAmounts = useCallback((boq: BoqIpcVM): BoqIpcVM => {
+  const calculateBoqAmounts = (boq: BoqIpcVM): BoqIpcVM => {
     const unitPrice = boq.unitPrice || 0;
     
     return {
@@ -74,8 +71,12 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
       cumulAmount: boq.cumulQte * unitPrice,
       actualAmount: boq.actualQte * unitPrice,
       precedAmount: boq.precedQte * unitPrice,
-      cumulPercent: boq.qte === 0 ? 0 : (boq.cumulQte / boq.qte) * 100
+      cumulPercent: calculateCumulPercent(boq.qte, boq.cumulQte)
     };
+  };
+
+  const calculateCumulPercent = useCallback((qte: number, cumulQte: number) => {
+    return qte === 0 ? 0 : (cumulQte / qte) * 100;
   }, []);
 
   /**
