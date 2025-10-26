@@ -1,20 +1,22 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import {
+    ContractBuilding,
+    ContractContext,
+    // Added for fetching VO dataset with BOQs
+    VoDatasetBoqDetailsVM, // Added for VO dataset type
+    createContractVO,
+    generateVONumber,
+    getContractBOQItems,
+    getContractBuildings,
+    getContractForVO,
+    getVoContracts,
+    getVoDatasetWithBoqs,
+    transformFormDataToVoDataset,
+} from "@/api/services/vo-api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
-import {
-    getContractForVO,
-    getContractBuildings,
-    getContractBOQItems,
-    generateVONumber,
-    createContractVO,
-    transformFormDataToVoDataset,
-    ContractContext,
-    ContractBuilding,
-    getVoContracts,
-    getVoDatasetWithBoqs, // Added for fetching VO dataset with BOQs
-    VoDatasetBoqDetailsVM // Added for VO dataset type
-} from "@/api/services/vo-api";
 
 // Types and Interfaces
 // Re-export types from VO API for backward compatibility
@@ -22,7 +24,7 @@ type ContractData = ContractContext & {
     buildings: (ContractBuilding & { selected: boolean })[];
 };
 
-type Building = ContractBuilding & { selected: boolean; };
+type Building = ContractBuilding & { selected: boolean };
 
 interface VOLineItem {
     id?: number;
@@ -33,6 +35,7 @@ interface VOLineItem {
     unitPrice: number;
     totalPrice: number;
     costCode?: string;
+    costCodeId?: number;
     buildingId?: number;
 }
 
@@ -40,11 +43,11 @@ interface ContractVOFormData {
     // Step 1: VO Basic Information
     voNumber: string;
     voDate: string;
-    voType: 'Addition' | 'Omission';
+    voType: "Addition" | "Omission";
     description: string;
     voContractId?: number;
     subTrade: string;
-    
+
     // Step 2: Contract Context (read-only, from contract)
     contractId: number;
     contractNumber: string;
@@ -54,13 +57,13 @@ interface ContractVOFormData {
     subcontractorName: string;
     currencyId: number;
     currencySymbol: string;
-    
+
     // Step 3: Building Selection
     selectedBuildingIds: number[];
-    
+
     // Step 4: VO Line Items
     lineItems: VOLineItem[];
-    
+
     // Calculated values
     totalAmount: number;
     totalAdditions: number;
@@ -75,33 +78,33 @@ interface ContractVOWizardContextType {
     hasUnsavedChanges: boolean;
     loading: boolean;
     isUpdate: boolean;
-    
+
     // Contract data
     contractData: ContractData | null;
     availableBuildings: Building[];
-    
+
     // API state
     contractLoading: boolean;
     buildingsLoading: boolean;
     voContracts: any[];
     voContractsLoading: boolean;
     voDatasetId?: number;
-    
+
     // Actions
     setFormData: (data: Partial<ContractVOFormData>) => void;
     setCurrentStep: (step: number) => void;
     setHasUnsavedChanges: (changed: boolean) => void;
-    
+
     // Validation & Navigation
     validateCurrentStep: () => boolean;
     goToNextStep: () => void;
     goToPreviousStep: () => void;
-    
+
     // VO Line Items Management
-    addLineItem: (item: Omit<VOLineItem, 'id' | 'totalPrice'>) => void;
+    addLineItem: (item: Omit<VOLineItem, "id" | "totalPrice">) => void;
     updateLineItem: (index: number, item: Partial<VOLineItem>) => void;
     removeLineItem: (index: number) => void;
-    
+
     // Submission
     handleSubmit: () => Promise<void>;
 }
@@ -113,16 +116,13 @@ const ContractVOWizardContext = createContext<ContractVOWizardContextType | unde
 export const useContractVOWizardContext = () => {
     const context = useContext(ContractVOWizardContext);
     if (context === undefined) {
-        throw new Error('useContractVOWizardContext must be used within a ContractVOWizardProvider');
+        throw new Error("useContractVOWizardContext must be used within a ContractVOWizardProvider");
     }
     return context;
 };
 
 // Helper function to map fetched VO data to form data
-const mapVoDatasetToFormData = (
-    voDataset: any,
-    contractContext: ContractContext
-): ContractVOFormData => {
+const mapVoDatasetToFormData = (voDataset: any, contractContext: ContractContext): ContractVOFormData => {
     // Flatten all line items from all buildings into a single array
     const lineItems: VOLineItem[] = [];
     if (voDataset.buildings) {
@@ -138,7 +138,8 @@ const mapVoDatasetToFormData = (
                         unitPrice: vo.pu,
                         totalPrice: vo.totalPrice,
                         costCode: vo.costCode,
-                        buildingId: building.id
+                        costCodeId: vo.costCodeId,
+                        buildingId: building.id,
                     });
                 });
             }
@@ -146,19 +147,17 @@ const mapVoDatasetToFormData = (
     }
 
     const totalAdditions = lineItems
-        .filter(item => item.totalPrice > 0)
+        .filter((item) => item.totalPrice > 0)
         .reduce((sum, item) => sum + item.totalPrice, 0);
 
     const totalDeductions = Math.abs(
-        lineItems
-            .filter(item => item.totalPrice < 0)
-            .reduce((sum, item) => sum + item.totalPrice, 0)
+        lineItems.filter((item) => item.totalPrice < 0).reduce((sum, item) => sum + item.totalPrice, 0),
     );
 
     return {
         voNumber: voDataset.voNumber,
-        voDate: voDataset.date ? voDataset.date.split('T')[0] : '', // Extract date part only, or default to empty string
-        voType: voDataset.type === 'Addition' ? 'Addition' : 'Omission',
+        voDate: voDataset.date ? voDataset.date.split("T")[0] : "", // Extract date part only, or default to empty string
+        voType: voDataset.type === "Addition" ? "Addition" : "Omission",
         description: voDataset.remark, // 'Remark' in backend is 'description' in frontend
         voContractId: voDataset.contractId,
         subTrade: voDataset.subTrade,
@@ -177,7 +176,7 @@ const mapVoDatasetToFormData = (
         lineItems: lineItems,
         totalAmount: voDataset.amount,
         totalAdditions: totalAdditions,
-        totalDeductions: totalDeductions
+        totalDeductions: totalDeductions,
     };
 };
 
@@ -192,8 +191,8 @@ interface ContractVOWizardProviderProps {
 const generateVONumberLocal = (): string => {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
     const time = date.getTime().toString().slice(-4);
     return `VO-${year}${month}${day}-${time}`;
 };
@@ -202,13 +201,13 @@ const generateVONumberLocal = (): string => {
 export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> = ({
     children,
     contractId,
-    voDatasetId // Destructure voDatasetId here
+    voDatasetId, // Destructure voDatasetId here
 }) => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
     const memoizedToken = useMemo(() => getToken(), [getToken]);
-    
+
     // State
     const [currentStep, setCurrentStep] = useState(1);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -220,37 +219,37 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     const [voContracts, setVoContracts] = useState<any[]>([]);
     const [voContractsLoading, setVoContractsLoading] = useState(false);
     const isUpdate = !!voDatasetId;
-    
+
     // Initialize form data with contract context
     const [formData, setFormDataState] = useState<ContractVOFormData>({
         // Step 1: VO Basic Information
         voNumber: generateVONumberLocal(),
-        voDate: new Date().toISOString().split('T')[0],
-        voType: 'Addition',
-        description: '',
+        voDate: new Date().toISOString().split("T")[0],
+        voType: "Addition",
+        description: "",
         voContractId: undefined,
-        subTrade: '',
-        
+        subTrade: "",
+
         // Step 2: Contract Context (will be populated from contract data)
         contractId: parseInt(contractId),
-        contractNumber: '',
+        contractNumber: "",
         projectId: 0,
-        projectName: '',
+        projectName: "",
         subcontractorId: 0,
-        subcontractorName: '',
+        subcontractorName: "",
         currencyId: 0,
-        currencySymbol: '$',
-        
+        currencySymbol: "$",
+
         // Step 3: Building Selection
         selectedBuildingIds: [],
-        
+
         // Step 4: VO Line Items
         lineItems: [],
-        
+
         // Calculated values
         totalAmount: 0,
         totalAdditions: 0,
-        totalDeductions: 0
+        totalDeductions: 0,
     });
 
     // State to hold the fetched VO dataset for editing
@@ -258,26 +257,26 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
 
     // Enhanced form data setter that tracks changes
     const setFormData = useCallback((data: Partial<ContractVOFormData>) => {
-        setFormDataState(prev => {
+        setFormDataState((prev) => {
             const updated = { ...prev, ...data };
-            
+
             // Recalculate totals when line items change
             if (data.lineItems) {
                 const additions = data.lineItems
-                    .filter(item => item.totalPrice > 0)
+                    .filter((item) => item.totalPrice > 0)
                     .reduce((sum, item) => sum + item.totalPrice, 0);
-                    
+
                 const deductions = Math.abs(
                     data.lineItems
-                        .filter(item => item.totalPrice < 0)
-                        .reduce((sum, item) => sum + item.totalPrice, 0)
+                        .filter((item) => item.totalPrice < 0)
+                        .reduce((sum, item) => sum + item.totalPrice, 0),
                 );
-                
+
                 updated.totalAdditions = additions;
                 updated.totalDeductions = deductions;
                 updated.totalAmount = additions - deductions;
             }
-            
+
             return updated;
         });
         setHasUnsavedChanges(true);
@@ -291,13 +290,13 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         try {
             // 1. Load Contract Details
             console.log("🔄 Loading contract data for VO wizard:", { contractId, voDatasetId });
-            const contractResponse = await getContractForVO(parseInt(contractId), memoizedToken || '');
+            const contractResponse = await getContractForVO(parseInt(contractId), memoizedToken || "");
 
             if (!contractResponse.success || !contractResponse.data) {
                 throw new Error(contractResponse.message || "Failed to load contract details");
             }
             const contractContext = contractResponse.data;
-            
+
             let initialFormState: Partial<ContractVOFormData> = {};
             let fetchedVoDataset: VoDatasetBoqDetailsVM | null = null;
             let selectedBuildingIdsFromVo: number[] = []; // To store selected building IDs from VO dataset
@@ -305,7 +304,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             // 2. If voDatasetId is provided, load existing VO data
             if (voDatasetId) {
                 console.log("🔄 Loading existing VO dataset for editing:", { voDatasetId, token: memoizedToken });
-                const voDatasetResponse = await getVoDatasetWithBoqs(voDatasetId, memoizedToken || '');
+                const voDatasetResponse = await getVoDatasetWithBoqs(voDatasetId, memoizedToken || "");
                 console.log("📥 VO dataset response:", voDatasetResponse);
 
                 if (!voDatasetResponse || !voDatasetResponse.id) {
@@ -320,23 +319,23 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 console.log("✅ Successfully loaded VO dataset for editing:", { voDatasetId, initialFormState });
             } else {
                 // For new VO, generate VO number
-                const voNumberResponse = await generateVONumber(parseInt(contractId), memoizedToken || '');
+                const voNumberResponse = await generateVONumber(parseInt(contractId), memoizedToken || "");
                 initialFormState.voNumber = voNumberResponse.success ? voNumberResponse.data! : generateVONumberLocal();
             }
 
             // 1. Load Contract Details and update building selection based on VO data if in edit mode
             const contractInfo: ContractData = {
                 ...contractContext,
-                buildings: contractContext.buildings.map(building => ({
+                buildings: contractContext.buildings.map((building) => ({
                     ...building,
-                    selected: selectedBuildingIdsFromVo.includes(building.id) // Mark as selected if in VO dataset
-                }))
+                    selected: selectedBuildingIdsFromVo.includes(building.id), // Mark as selected if in VO dataset
+                })),
             };
             setContractData(contractInfo);
             setAvailableBuildings(contractInfo.buildings); // Set available buildings with correct selection state
 
             // 3. Update form data with contract context and (if editing) VO data
-            setFormDataState(prev => {
+            setFormDataState((prev) => {
                 const newState = {
                     ...prev,
                     ...initialFormState,
@@ -347,14 +346,15 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                     subcontractorId: contractInfo.subcontractorId,
                     subcontractorName: contractInfo.subcontractorName,
                     currencyId: contractInfo.currencyId,
-                    currencySymbol: contractInfo.currencySymbol
+                    currencySymbol: contractInfo.currencySymbol,
                 };
                 return newState;
             });
-
         } catch (error) {
             console.error("🚨 Exception loading data for VO wizard:", { error });
-            toaster.error("Failed to load wizard information: " + (error instanceof Error ? error.message : 'Unknown error'));
+            toaster.error(
+                "Failed to load wizard information: " + (error instanceof Error ? error.message : "Unknown error"),
+            );
         } finally {
             setContractLoading(false);
             setLoading(false); // End overall loading
@@ -373,7 +373,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     const loadVoContracts = useCallback(async () => {
         setVoContractsLoading(true);
         try {
-            const response = await getVoContracts(memoizedToken || '');
+            const response = await getVoContracts(memoizedToken || "");
             if (Array.isArray(response)) {
                 setVoContracts(response);
             } else {
@@ -393,48 +393,50 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             loadVoContracts();
         }
     }, [contractId, memoizedToken, voDatasetId]);
-    
+
     // Validation functions
     const validateStep1 = (): boolean => {
-        return (
-            formData.voNumber.trim() !== '' &&
-            formData.voDate !== '' &&
-            formData.description.trim() !== ''
-        );
+        return formData.voNumber.trim() !== "" && formData.voDate !== "" && formData.description.trim() !== "";
     };
-    
+
     const validateStep2 = (): boolean => {
         return true; // Contract context is read-only, always valid
     };
-    
+
     const validateStep3 = (): boolean => {
         return formData.selectedBuildingIds.length > 0;
     };
-    
+
     const validateStep4 = (): boolean => {
-        return formData.lineItems.length > 0 && 
-               formData.lineItems.every(item => 
-                   item.no.trim() !== '' && 
-                   item.quantity >= 0
-               );
+        return (
+            formData.lineItems.length > 0 &&
+            formData.lineItems.every((item) => item.no.trim() !== "" && item.quantity >= 0)
+        );
     };
-    
+
     const validateStep5 = (): boolean => {
         return true; // Review step doesn't require validation
     };
-    
+
     const validateCurrentStep = (): boolean => {
         switch (currentStep) {
-            case 1: return validateStep1();
-            case 2: return validateStep2();
-            case 3: return validateStep3();
-            case 4: return validateStep4();
-            case 5: return true; // Review step doesn't require validation
-            case 6: return true; // Preview step doesn't require validation
-            default: return false;
+            case 1:
+                return validateStep1();
+            case 2:
+                return validateStep2();
+            case 3:
+                return validateStep3();
+            case 4:
+                return validateStep4();
+            case 5:
+                return true; // Review step doesn't require validation
+            case 6:
+                return true; // Preview step doesn't require validation
+            default:
+                return false;
         }
     };
-    
+
     // Navigation functions
     const goToNextStep = () => {
         if (validateCurrentStep()) {
@@ -446,7 +448,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             }
         }
     };
-    
+
     const goToPreviousStep = () => {
         if (currentStep === 3) {
             // Skip step 2 when going back from step 3
@@ -455,20 +457,20 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             setCurrentStep(currentStep - 1);
         }
     };
-    
+
     // VO Line Items Management
-    const addLineItem = (item: Omit<VOLineItem, 'id' | 'totalPrice'>) => {
+    const addLineItem = (item: Omit<VOLineItem, "id" | "totalPrice">) => {
         const newItem: VOLineItem = {
             ...item,
             id: 0, // Set to 0 for new items, backend will generate ID
-            totalPrice: item.quantity * item.unitPrice
+            totalPrice: item.quantity * item.unitPrice,
         };
-        
+
         setFormData({
-            lineItems: [...formData.lineItems, newItem]
+            lineItems: [...formData.lineItems, newItem],
         });
     };
-    
+
     const updateLineItem = (index: number, updatedItem: Partial<VOLineItem>) => {
         const updatedItems = formData.lineItems.map((item, i) => {
             if (i === index) {
@@ -478,45 +480,45 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 const unitPrice = Number(updated.unitPrice) || 0;
 
                 // Recalculate total price if quantity or unit price changed
-                if ('quantity' in updatedItem || 'unitPrice' in updatedItem) {
+                if ("quantity" in updatedItem || "unitPrice" in updatedItem) {
                     updated.totalPrice = quantity * unitPrice;
                 }
                 return updated;
             }
             return item;
         });
-        
+
         setFormData({ lineItems: updatedItems });
     };
-    
+
     const removeLineItem = (index: number) => {
         const updatedItems = formData.lineItems.filter((_, i) => i !== index);
         setFormData({ lineItems: updatedItems });
     };
-    
+
     // Submission function with proper API integration
     const handleSubmit = async () => {
         try {
             setLoading(true);
-            
+
             if (!contractData) {
-                throw new Error('Contract context not loaded');
+                throw new Error("Contract context not loaded");
             }
-            
+
             // Transform form data to backend format
             const voDataset = transformFormDataToVoDataset(formData, contractData, voDatasetId);
-            
+
             console.log("📤 SUBMITTING CONTRACT VO DATA:", JSON.stringify(voDataset, null, 2));
-            
+
             // Determine if we are creating or updating
             const isUpdate = !!voDatasetId;
 
-            const response = await createContractVO(voDataset, memoizedToken || '');
-            
+            const response = await createContractVO(voDataset, memoizedToken || "");
+
             if (response.success) {
-                toaster.success(`Variation Order ${isUpdate ? 'updated' : 'created'} successfully!`);
+                toaster.success(`Variation Order ${isUpdate ? "updated" : "created"} successfully!`);
                 setHasUnsavedChanges(false);
-                
+
                 // Navigate back to contract details page using contract number
                 const contractNumber = formData.contractNumber || contractId;
                 navigate(`/dashboard/subcontractors-boqs/details/${contractNumber}`);
@@ -531,7 +533,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
             setLoading(false);
         }
     };
-    
+
     // Context value
     const contextValue: ContractVOWizardContextType = {
         // State
@@ -540,40 +542,36 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         hasUnsavedChanges,
         loading,
         isUpdate,
-        
+
         // Contract data
         contractData,
         availableBuildings,
-        
+
         // API state
         contractLoading,
         buildingsLoading,
         voContracts,
         voContractsLoading,
         voDatasetId,
-        
+
         // Actions
         setFormData,
         setCurrentStep,
         setHasUnsavedChanges,
-        
+
         // Validation & Navigation
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
-        
+
         // VO Line Items Management
         addLineItem,
         updateLineItem,
         removeLineItem,
-        
+
         // Submission
-        handleSubmit
+        handleSubmit,
     };
-    
-    return (
-        <ContractVOWizardContext.Provider value={contextValue}>
-            {children}
-        </ContractVOWizardContext.Provider>
-    );
+
+    return <ContractVOWizardContext.Provider value={contextValue}>{children}</ContractVOWizardContext.Provider>;
 };

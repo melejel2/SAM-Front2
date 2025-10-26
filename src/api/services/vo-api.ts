@@ -968,7 +968,7 @@ export const transformFormDataToVoDataset = (formData: any, contractContext: Con
       Qte: item.quantity,
       Pu: item.unitPrice,
       CostCode: item.costCode,
-      CostCodeId: null,
+      CostCodeId: item.costCodeId,
       Boqtype: 'VO',
       BoqSheetId: 0,
       SheetName: 'VO Items',
