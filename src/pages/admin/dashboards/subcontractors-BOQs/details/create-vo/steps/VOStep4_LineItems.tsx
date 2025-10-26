@@ -107,7 +107,6 @@ export const VOStep4_LineItems: React.FC = () => {
 
             if (response && response.contractVoes) {
                 handleBOQImport(response.contractVoes);
-                toaster.success(`Successfully imported ${response.contractVoes.length} items from ${selectedVoName}`);
             } else {
                 const itemsResponse = await getContractBOQItems(
                     contractData.id,
@@ -206,6 +205,10 @@ export const VOStep4_LineItems: React.FC = () => {
             return;
         }
 
+        if (!confirm("Are you sure you want to clear all BOQ items? This action cannot be undone.")) {
+            return;
+        }
+
         setLoadingBOQItems(true);
         try {
             const response = await clearVoContractItems(voDatasetId, getToken() || '');
@@ -283,15 +286,6 @@ export const VOStep4_LineItems: React.FC = () => {
 
     const selectedBuildings = contractData?.buildings.filter(b => formData.selectedBuildingIds.includes(b.id)) || [];
 
-    if (formData.selectedBuildingIds.length === 0) {
-        return (
-            <div className="text-center py-8">
-                <Icon icon={calculatorIcon} className="w-12 h-12 text-base-content/40 mx-auto mb-2" />
-                <p className="text-base-content/60">Please select buildings first</p>
-            </div>
-        );
-    }
-
     const items = formData.lineItems || [];
     const displayItems = [...items];
     if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== '') {
@@ -305,6 +299,15 @@ export const VOStep4_LineItems: React.FC = () => {
     useEffect(() => {
         setFormData({ totalAdditions: isAddition ? totalAmount : 0, totalDeductions: !isAddition ? totalAmount : 0, totalAmount: netAmount });
     }, [isAddition, totalAmount, netAmount, setFormData]);
+
+    if (formData.selectedBuildingIds.length === 0) {
+        return (
+            <div className="text-center py-8">
+                <Icon icon={calculatorIcon} className="w-12 h-12 text-base-content/40 mx-auto mb-2" />
+                <p className="text-base-content/60">Please select buildings first</p>
+            </div>
+        );
+    }
 
     return (
         <div>
