@@ -102,20 +102,29 @@ const BudgetBOQs = () => {
     }, [location.pathname]);
 
     return (
-        <div key={location.pathname}>
-            {/* Header with Back Button */}
-            <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBackToDashboard}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                        <span>Back</span>
-                    </button>
+        <div key={location.pathname} style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            {/* Fixed Header Section */}
+            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                {/* Header with Back Button */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleBackToDashboard}
+                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
+                            <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                            <span>Back</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div>
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
                 <SAMTable
                     columns={columns}
                     tableData={tableData}

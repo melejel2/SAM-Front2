@@ -298,61 +298,69 @@ const ContractsManagement = memo(() => {
     }, [contractToGenerateFinal, generateFinalContract]);
 
     return (
-        <div>
-            {/* Header with Back Button and Tab Cards */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBackToDashboard}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <Icon icon={arrowLeftIcon} className="size-4" />
-                        <span>Back</span>
-                    </button>
-                </div>
+        <div style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            {/* Fixed Header Section */}
+            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                {/* Header with Back Button and Tab Cards */}
+                <div className="flex justify-between items-center mb-0">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleBackToDashboard}
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        >
+                            <Icon icon={arrowLeftIcon} className="size-4" />
+                            <span>Back</span>
+                        </button>
+                    </div>
 
-                {/* Category Selection Cards */}
-                <div className="flex items-center gap-2">
-                    <button
-                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeTab === 'drafts'
-                                ? "btn-primary"
-                                : "btn-ghost border border-base-300 hover:border-primary/50"
-                        }`}
-                        onClick={() => handleTabChange('drafts')}
-                    >
-                        <Icon icon={fileTextIcon} className="size-4" />
-                        <span>Drafts ({draftsData.length})</span>
-                    </button>
+                    {/* Category Selection Cards */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                activeTab === 'drafts'
+                                    ? "btn-primary"
+                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                            }`}
+                            onClick={() => handleTabChange('drafts')}
+                        >
+                            <Icon icon={fileTextIcon} className="size-4" />
+                            <span>Drafts ({draftsData.length})</span>
+                        </button>
 
-                    <button
-                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeTab === 'active'
-                                ? "btn-primary"
-                                : "btn-ghost border border-base-300 hover:border-primary/50"
-                        }`}
-                        onClick={() => handleTabChange('active')}
-                    >
-                        <Icon icon={checkCircleIcon} className="size-4" />
-                        <span>Active Contracts ({activeData.length})</span>
-                    </button>
+                        <button
+                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                activeTab === 'active'
+                                    ? "btn-primary"
+                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                            }`}
+                            onClick={() => handleTabChange('active')}
+                        >
+                            <Icon icon={checkCircleIcon} className="size-4" />
+                            <span>Active Contracts ({activeData.length})</span>
+                        </button>
 
-                    <button
-                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                            activeTab === 'terminated'
-                                ? "btn-primary"
-                                : "btn-ghost border border-base-300 hover:border-primary/50"
-                        }`}
-                        onClick={() => handleTabChange('terminated')}
-                    >
-                        <Icon icon={xCircleIcon} className="size-4" />
-                        <span>Terminated Contracts ({terminatedData.length})</span>
-                    </button>
+                        <button
+                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                activeTab === 'terminated'
+                                    ? "btn-primary"
+                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                            }`}
+                            onClick={() => handleTabChange('terminated')}
+                        >
+                            <Icon icon={xCircleIcon} className="size-4" />
+                            <span>Terminated Contracts ({terminatedData.length})</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Table Content */}
-            <div>
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
                 {loading ? (
                     <Loader />
                 ) : (

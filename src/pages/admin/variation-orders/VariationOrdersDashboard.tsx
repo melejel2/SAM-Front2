@@ -120,88 +120,97 @@ const VariationOrdersDashboard = () => {
     };
 
     return (
-        <div>
-            {/* Header with Back Button and Category Cards */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBackToDashboard}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--arrow-left size-4"></span>
-                        <span>Back</span>
-                    </button>
+        <div style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            {/* Fixed Header Section */}
+            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                {/* Header with Back Button and Title */}
+                <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900/30">
-                            <span className="iconify lucide--file-plus text-purple-600 dark:text-purple-400 size-5"></span>
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-semibold text-base-content">Variation Orders</h1>
-                            <p className="text-sm text-base-content/70">Manage project variation orders and changes</p>
+                        <button
+                            onClick={handleBackToDashboard}
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--arrow-left size-4"></span>
+                            <span>Back</span>
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900/30">
+                                <span className="iconify lucide--file-plus text-purple-600 dark:text-purple-400 size-5"></span>
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-semibold text-base-content">Variation Orders</h1>
+                                <p className="text-sm text-base-content/70">Manage project variation orders and changes</p>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleUploadVO}
+                            className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--upload size-4"></span>
+                            <span>Upload VO</span>
+                        </button>
+                        <button
+                            onClick={handleCreateVO}
+                            className="btn btn-sm btn-primary flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--plus size-4"></span>
+                            <span>Create VO</span>
+                        </button>
+                    </div>
                 </div>
-                
-                {/* Action Buttons */}
+
+                {/* Status Tabs */}
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={handleUploadVO}
-                        className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                            activeTab === 0
+                                ? "btn-primary"
+                                : "btn-ghost border border-base-300 hover:border-primary/50"
+                        }`}
+                        onClick={() => setActiveTab(0)}
                     >
-                        <span className="iconify lucide--upload size-4"></span>
-                        <span>Upload VO</span>
+                        <span className="iconify lucide--check-circle size-4" />
+                        <span>Active VOs ({activeVoDatasets.length})</span>
                     </button>
+
                     <button
-                        onClick={handleCreateVO}
-                        className="btn btn-sm btn-primary flex items-center gap-2"
+                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                            activeTab === 1
+                                ? "btn-primary"
+                                : "btn-ghost border border-base-300 hover:border-primary/50"
+                        }`}
+                        onClick={() => setActiveTab(1)}
                     >
-                        <span className="iconify lucide--plus size-4"></span>
-                        <span>Create VO</span>
+                        <span className="iconify lucide--edit size-4" />
+                        <span>Editable VOs ({editableVoDatasets.length})</span>
+                    </button>
+
+                    <button
+                        className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                            activeTab === 2
+                                ? "btn-primary"
+                                : "btn-ghost border border-base-300 hover:border-primary/50"
+                        }`}
+                        onClick={() => setActiveTab(2)}
+                    >
+                        <span className="iconify lucide--x-circle size-4" />
+                        <span>Terminated VOs ({terminatedVoDatasets.length})</span>
                     </button>
                 </div>
             </div>
 
-            {/* Status Tabs */}
-            <div className="flex items-center gap-2 mb-6">
-                <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 0 
-                            ? "btn-primary" 
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => setActiveTab(0)}
-                >
-                    <span className="iconify lucide--check-circle size-4" />
-                    <span>Active VOs ({activeVoDatasets.length})</span>
-                </button>
-                
-                <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 1 
-                            ? "btn-primary" 
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => setActiveTab(1)}
-                >
-                    <span className="iconify lucide--edit size-4" />
-                    <span>Editable VOs ({editableVoDatasets.length})</span>
-                </button>
-                
-                <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 2 
-                            ? "btn-primary" 
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => setActiveTab(2)}
-                >
-                    <span className="iconify lucide--x-circle size-4" />
-                    <span>Terminated VOs ({terminatedVoDatasets.length})</span>
-                </button>
-            </div>
-
-            {/* Table Content */}
-            <div>
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                {/* Table Content */}
                 {loading ? (
                     <Loader />
                 ) : (

@@ -356,63 +356,70 @@ const Templates = () => {
     };
 
     return (
-        <div>
+        <div style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
             {viewMode === 'table' ? (
-                <div>
-                    {/* Header with Back Button and Category Cards */}
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBackToAdminTools}
-                                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--arrow-left size-4"></span>
-                                <span>Back</span>
-                            </button>
-                        </div>
-                        
-                        {/* Category Selection Cards */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 0 
-                                        ? "btn-primary" 
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(0)}
-                            >
-                                <span className="iconify lucide--file-text size-4" />
-                                <span>Contract Templates ({contractData.length})</span>
-                            </button>
-                            
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 1 
-                                        ? "btn-primary" 
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(1)}
-                            >
-                                <span className="iconify lucide--file-plus size-4" />
-                                <span>VO Templates ({voData.length})</span>
-                            </button>
-                            
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 2 
-                                        ? "btn-primary" 
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(2)}
-                            >
-                                <span className="iconify lucide--file-plus-2 size-4" />
-                                <span>Other Templates ({otherTemplatesData.length})</span>
-                            </button>
+                <>
+                    {/* Fixed Header Section */}
+                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBackToAdminTools}
+                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--arrow-left size-4"></span>
+                                    <span>Back</span>
+                                </button>
+                            </div>
+
+                            {/* Category Selection Cards */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                        activeTab === 0
+                                            ? "btn-primary"
+                                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    }`}
+                                    onClick={() => setActiveTab(0)}
+                                >
+                                    <span className="iconify lucide--file-text size-4" />
+                                    <span>Contract Templates ({contractData.length})</span>
+                                </button>
+
+                                <button
+                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                        activeTab === 1
+                                            ? "btn-primary"
+                                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    }`}
+                                    onClick={() => setActiveTab(1)}
+                                >
+                                    <span className="iconify lucide--file-plus size-4" />
+                                    <span>VO Templates ({voData.length})</span>
+                                </button>
+
+                                <button
+                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                        activeTab === 2
+                                            ? "btn-primary"
+                                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    }`}
+                                    onClick={() => setActiveTab(2)}
+                                >
+                                    <span className="iconify lucide--file-plus-2 size-4" />
+                                    <span>Other Templates ({otherTemplatesData.length})</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Tab Content */}
-                    <div>
+                    {/* Scrollable Content */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
                         {loading ? (
                             <Loader />
                         ) : (
@@ -509,58 +516,62 @@ const Templates = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </>
             ) : (
-                <div>
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBackToTable}
-                                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--arrow-left size-4"></span>
-                                <span>Back</span>
-                            </button>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                            <ExportDropdown 
-                                exportingPdf={exportingPdf}
-                                exportingWord={exportingWord}
-                                onExportPdf={handleExportPdf}
-                                onExportWord={handleExportWord}
-                            />
+                <>
+                    {/* Fixed Header Section */}
+                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBackToTable}
+                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--arrow-left size-4"></span>
+                                    <span>Back</span>
+                                </button>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <ExportDropdown
+                                    exportingPdf={exportingPdf}
+                                    exportingWord={exportingWord}
+                                    onExportPdf={handleExportPdf}
+                                    onExportWord={handleExportWord}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Preview Card */}
-                    <div className="card bg-base-100 shadow-sm p-4">
-                        <div className="flex items-center space-x-3 mb-4">
-                            <div className="p-2 bg-primary/20 rounded-lg">
-                                <span className="iconify lucide--file-text text-primary size-5"></span>
+                    {/* Scrollable Content */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                        <div className="card bg-base-100 shadow-sm p-4">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className="p-2 bg-primary/20 rounded-lg">
+                                    <span className="iconify lucide--file-text text-primary size-5"></span>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-base-content">Template Preview</h3>
+                                    <p className="text-sm text-base-content/60">
+                                        {previewData?.fileName} • Template #{previewData?.id}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-base-content">Template Preview</h3>
-                                <p className="text-sm text-base-content/60">
-                                    {previewData?.fileName} • Template #{previewData?.id}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        {/* Template Preview Content */}
-                        <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
-                            <div className="h-[calc(100vh-200px)]">
-                                {previewData && (
-                                    <PDFViewer
-                                        fileBlob={previewData.blob}
-                                        fileName={previewData.fileName}
-                                    />
-                                )}
+
+                            {/* Template Preview Content */}
+                            <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
+                                <div className="h-[calc(100vh-300px)]">
+                                    {previewData && (
+                                        <PDFViewer
+                                            fileBlob={previewData.blob}
+                                            fileName={previewData.fileName}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
             
             {/* Delete Confirmation Modal */}

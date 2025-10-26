@@ -452,10 +452,14 @@ const ContractDatabaseDetails = () => {
                         <span>Terminate</span>
                     </button>
                 </div>
+                </div>
             </div>
 
-            {/* Contract Information Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6 pb-6">
+                <div className="space-y-6">
+                    {/* Contract Information Cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Contract Info */}
                 <div className="card bg-base-100 shadow-sm border border-base-300">
                     <div className="card-body">
@@ -692,6 +696,8 @@ const ContractDatabaseDetails = () => {
                     </div>
                 </div>
             )}
+                </div>
+            </div>
         </div>
     );
 };

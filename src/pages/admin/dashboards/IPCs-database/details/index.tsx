@@ -352,32 +352,39 @@ const IPCDetails = () => {
     const netPayment = ipcData.totalAmount - ipcData.retentionAmount - ipcData.advancePaymentAmount + (ipcData.penalty || 0);
 
     return (
-        <div className="space-y-6">
-            {/* Header with Back Button */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/dashboard/IPCs-database')}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--arrow-left size-4"></span>
-                        Back
-                    </button>
-                    
-                    {/* Page Header */}
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900/30">
-                            <span className="iconify lucide--file-text text-blue-600 dark:text-blue-400 size-5"></span>
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-base-content">IPC Details</h2>
-                            <p className="text-sm text-base-content/70">View IPC information and progress</p>
+        <div style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            {/* Fixed Header Section */}
+            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                {/* Header with Back Button */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/dashboard/IPCs-database')}
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--arrow-left size-4"></span>
+                            Back
+                        </button>
+
+                        {/* Page Header */}
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900/30">
+                                <span className="iconify lucide--file-text text-blue-600 dark:text-blue-400 size-5"></span>
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-base-content">IPC Details</h2>
+                                <p className="text-sm text-base-content/70">View IPC information and progress</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="flex items-center gap-3">
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3">
                     <button
                         onClick={handlePreviewIpc}
                         disabled={loadingPreview}
@@ -501,10 +508,14 @@ const IPCDetails = () => {
                         )}
                     </button>
                 </div>
+                </div>
             </div>
 
-            {/* Information Cards Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Scrollable Content */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6 pb-6">
+                <div className="space-y-6">
+                    {/* Information Cards Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* IPC Information */}
                 <div className="card bg-base-100 shadow-sm border border-base-300">
                     <div className="card-body">
@@ -1080,6 +1091,8 @@ const IPCDetails = () => {
                     </form>
                 </dialog>
             )}
+                </div>
+            </div>
         </div>
     );
 };

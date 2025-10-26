@@ -202,159 +202,176 @@ const IPCsDatabase = () => {
         : tableData.filter((ipc: any) => ipc.projectName === selectedProject);
 
     return (
-        <div>
+        <div style={{
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
             {viewMode === 'table' ? (
-                <div>
-                    {/* Header with Back Button */}
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBackToDashboard}
-                                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--arrow-left size-4"></span>
-                                <span>Back</span>
-                            </button>
-
-                            {/* Project Filter Dropdown */}
-                            <div className="dropdown">
-                                <div
-                                    tabIndex={0}
-                                    role="button"
+                <>
+                    {/* Fixed Header Section */}
+                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                        {/* Header with Back Button */}
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBackToDashboard}
                                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                                 >
-                                    <span className="iconify lucide--filter size-4"></span>
-                                    <span>{selectedProject}</span>
-                                    <span className="iconify lucide--chevron-down size-3.5"></span>
+                                    <span className="iconify lucide--arrow-left size-4"></span>
+                                    <span>Back</span>
+                                </button>
+
+                                {/* Project Filter Dropdown */}
+                                <div className="dropdown">
+                                    <div
+                                        tabIndex={0}
+                                        role="button"
+                                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                    >
+                                        <span className="iconify lucide--filter size-4"></span>
+                                        <span>{selectedProject}</span>
+                                        <span className="iconify lucide--chevron-down size-3.5"></span>
+                                    </div>
+                                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
+                                        <li>
+                                            <button
+                                                onClick={() => setSelectedProject("All Projects")}
+                                                className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                    selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                                                }`}
+                                            >
+                                                <span className="iconify lucide--list size-4"></span>
+                                                <span>All Projects ({tableData.length})</span>
+                                            </button>
+                                        </li>
+                                        <li className="menu-title">
+                                            <span className="text-xs font-semibold">Projects</span>
+                                        </li>
+                                        {uniqueProjects.map((projectName) => {
+                                            const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
+                                            return (
+                                                <li key={projectName}>
+                                                    <button
+                                                        onClick={() => setSelectedProject(projectName as string)}
+                                                        className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                            selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                                        }`}
+                                                    >
+                                                        <span className="iconify lucide--folder size-4"></span>
+                                                        <span className="truncate flex-1">{projectName}</span>
+                                                        <span className="badge badge-sm badge-ghost">{count}</span>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
                                 </div>
-                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
-                                    <li>
-                                        <button
-                                            onClick={() => setSelectedProject("All Projects")}
-                                            className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
-                                            }`}
-                                        >
-                                            <span className="iconify lucide--list size-4"></span>
-                                            <span>All Projects ({tableData.length})</span>
-                                        </button>
-                                    </li>
-                                    <li className="menu-title">
-                                        <span className="text-xs font-semibold">Projects</span>
-                                    </li>
-                                    {uniqueProjects.map((projectName) => {
-                                        const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
-                                        return (
-                                            <li key={projectName}>
-                                                <button
-                                                    onClick={() => setSelectedProject(projectName as string)}
-                                                    className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
-                                                    }`}
-                                                >
-                                                    <span className="iconify lucide--folder size-4"></span>
-                                                    <span className="truncate flex-1">{projectName}</span>
-                                                    <span className="badge badge-sm badge-ghost">{count}</span>
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
                             </div>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => navigate('/dashboard/IPCs-database/new')}
-                                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--plus size-4"></span>
-                                <span>Create IPC</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate('/dashboard/IPCs-database/new')}
+                                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--plus size-4"></span>
+                                    <span>Create IPC</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {loading ? (
-                        <Loader />
-                    ) : (
-                        <SAMTable
-                            columns={columns}
-                            tableData={filteredTableData}
-                            inputFields={inputFields}
-                            actions
-                            previewAction
-                            editAction
-                            detailsAction
-                            title={"IPC"}
-                            loading={false}
-                            onSuccess={getIPCs}
-                            dynamicDialog={false}
-                            rowsPerPage={20}
-                            openStaticDialog={(type, data) => {
-                                if (type === "Preview" && data) {
-                                    return handlePreviewIpc(data);
-                                }
-                                if (type === "Edit" && data) {
-                                    return handleEditIpc(data);
-                                }
-                                if (type === "Details" && data) {
-                                    return handleViewIpcDetails(data);
-                                }
-                            }}
-                        />
-                    )}
-                </div>
-            ) : (
-                <div>
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBackToTable}
-                                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--arrow-left size-4"></span>
-                                <span>Back</span>
-                            </button>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                            <ExportDropdown 
-                                exportingPdf={exportingPdf}
-                                exportingExcel={exportingExcel}
-                                onExportPdf={handleExportPdf}
-                                onExportExcel={handleExportExcel}
+                    {/* Scrollable Content */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                        {loading ? (
+                            <Loader />
+                        ) : (
+                            <SAMTable
+                                columns={columns}
+                                tableData={filteredTableData}
+                                inputFields={inputFields}
+                                actions
+                                previewAction
+                                editAction
+                                detailsAction
+                                title={"IPC"}
+                                loading={false}
+                                onSuccess={getIPCs}
+                                dynamicDialog={false}
+                                rowsPerPage={20}
+                                openStaticDialog={(type, data) => {
+                                    if (type === "Preview" && data) {
+                                        return handlePreviewIpc(data);
+                                    }
+                                    if (type === "Edit" && data) {
+                                        return handleEditIpc(data);
+                                    }
+                                    if (type === "Details" && data) {
+                                        return handleViewIpcDetails(data);
+                                    }
+                                }}
                             />
+                        )}
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* Fixed Header Section */}
+                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                        {/* Header */}
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBackToTable}
+                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--arrow-left size-4"></span>
+                                    <span>Back</span>
+                                </button>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <ExportDropdown
+                                    exportingPdf={exportingPdf}
+                                    exportingExcel={exportingExcel}
+                                    onExportPdf={handleExportPdf}
+                                    onExportExcel={handleExportExcel}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Preview Card */}
-                    <div className="card bg-base-100 shadow-sm p-4">
-                        <div className="flex items-center space-x-3 mb-4">
-                            <div className="p-2 bg-error/20 rounded-lg">
-                                <span className="iconify lucide--file-text text-error size-5"></span>
+                    {/* Scrollable Content */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                        {/* Preview Card */}
+                        <div className="card bg-base-100 shadow-sm p-4">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className="p-2 bg-error/20 rounded-lg">
+                                    <span className="iconify lucide--file-text text-error size-5"></span>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-base-content">PDF Preview</h3>
+                                    <p className="text-sm text-base-content/60">
+                                        {previewData?.fileName}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-base-content">PDF Preview</h3>
-                                <p className="text-sm text-base-content/60">
-                                    {previewData?.fileName}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        {/* PDF Preview Content */}
-                        <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
-                            <div className="h-[calc(100vh-200px)]">
-                                {previewData && (
-                                    <PDFViewer
-                                        fileBlob={previewData.blob}
-                                        fileName={previewData.fileName}
-                                    />
-                                )}
+
+                            {/* PDF Preview Content */}
+                            <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
+                                <div className="h-[calc(100vh-300px)]">
+                                    {previewData && (
+                                        <PDFViewer
+                                            fileBlob={previewData.blob}
+                                            fileName={previewData.fileName}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

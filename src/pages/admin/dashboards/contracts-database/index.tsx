@@ -579,95 +579,103 @@ const ContractsDatabase = () => {
     return (
         <div>
             {viewMode === 'table' ? (
-                <div>
-                    {/* Header with Back Button and Category Cards */}
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBackToDashboard}
-                                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            >
-                                <span className="iconify lucide--arrow-left size-4"></span>
-                                <span>Back</span>
-                            </button>
-
-                            {/* Project Filter Dropdown */}
-                            <div className="dropdown">
-                                <div
-                                    tabIndex={0}
-                                    role="button"
+                <div style={{
+                    height: 'calc(100vh - 4rem)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    {/* Fixed Header Section */}
+                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                        {/* Header with Back Button and Category Cards */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleBackToDashboard}
                                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                                 >
-                                    <span className="iconify lucide--filter size-4"></span>
-                                    <span>{selectedProject}</span>
-                                    <span className="iconify lucide--chevron-down size-3.5"></span>
+                                    <span className="iconify lucide--arrow-left size-4"></span>
+                                    <span>Back</span>
+                                </button>
+
+                                {/* Project Filter Dropdown */}
+                                <div className="dropdown">
+                                    <div
+                                        tabIndex={0}
+                                        role="button"
+                                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                    >
+                                        <span className="iconify lucide--filter size-4"></span>
+                                        <span>{selectedProject}</span>
+                                        <span className="iconify lucide--chevron-down size-3.5"></span>
+                                    </div>
+                                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
+                                        <li>
+                                            <button
+                                                onClick={() => setSelectedProject("All Projects")}
+                                                className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                    selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                                                }`}
+                                            >
+                                                <span className="iconify lucide--list size-4"></span>
+                                                <span>All Projects ({allContracts.length})</span>
+                                            </button>
+                                        </li>
+                                        <li className="menu-title">
+                                            <span className="text-xs font-semibold">Projects</span>
+                                        </li>
+                                        {uniqueProjects.map((projectName) => {
+                                            const count = allContracts.filter((contract: any) => contract.projectName === projectName).length;
+                                            return (
+                                                <li key={projectName}>
+                                                    <button
+                                                        onClick={() => setSelectedProject(projectName as string)}
+                                                        className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                                            selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                                        }`}
+                                                    >
+                                                        <span className="iconify lucide--folder size-4"></span>
+                                                        <span className="truncate flex-1">{projectName}</span>
+                                                        <span className="badge badge-sm badge-ghost">{count}</span>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
                                 </div>
-                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
-                                    <li>
-                                        <button
-                                            onClick={() => setSelectedProject("All Projects")}
-                                            className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
-                                            }`}
-                                        >
-                                            <span className="iconify lucide--list size-4"></span>
-                                            <span>All Projects ({allContracts.length})</span>
-                                        </button>
-                                    </li>
-                                    <li className="menu-title">
-                                        <span className="text-xs font-semibold">Projects</span>
-                                    </li>
-                                    {uniqueProjects.map((projectName) => {
-                                        const count = allContracts.filter((contract: any) => contract.projectName === projectName).length;
-                                        return (
-                                            <li key={projectName}>
-                                                <button
-                                                    onClick={() => setSelectedProject(projectName as string)}
-                                                    className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
-                                                    }`}
-                                                >
-                                                    <span className="iconify lucide--folder size-4"></span>
-                                                    <span className="truncate flex-1">{projectName}</span>
-                                                    <span className="badge badge-sm badge-ghost">{count}</span>
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
                             </div>
-                        </div>
 
-                        {/* Category Selection Cards */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 0
-                                        ? "btn-primary"
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(0)}
-                            >
-                                <span className="iconify lucide--file-text size-4" />
-                                <span>Active Contracts ({filteredContractsData.length})</span>
-                            </button>
+                            {/* Category Selection Cards */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                        activeTab === 0
+                                            ? "btn-primary"
+                                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    }`}
+                                    onClick={() => setActiveTab(0)}
+                                >
+                                    <span className="iconify lucide--file-text size-4" />
+                                    <span>Active Contracts ({filteredContractsData.length})</span>
+                                </button>
 
-                            <button
-                                className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                    activeTab === 1
-                                        ? "btn-primary"
-                                        : "btn-ghost border border-base-300 hover:border-primary/50"
-                                }`}
-                                onClick={() => setActiveTab(1)}
-                            >
-                                <span className="iconify lucide--x-circle size-4" />
-                                <span>Terminated Contracts ({filteredTerminatedData.length})</span>
-                            </button>
+                                <button
+                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                                        activeTab === 1
+                                            ? "btn-primary"
+                                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    }`}
+                                    onClick={() => setActiveTab(1)}
+                                >
+                                    <span className="iconify lucide--x-circle size-4" />
+                                    <span>Terminated Contracts ({filteredTerminatedData.length})</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Tab Content - Using simplified structure that works */}
-                    <div>
+                    {/* Scrollable Content */}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
                         {loading ? (
                             <Loader />
                         ) : (
