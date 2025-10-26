@@ -734,6 +734,7 @@ const ContractDetails = () => {
                         <div className="h-[calc(100%-60px)]">
                             <TerminatedContracts
                                 selectedProject={terminatedPreviewData.projectName}
+                                contractId={terminatedPreviewData.contractId}
                             />
                         </div>
                     </div>
