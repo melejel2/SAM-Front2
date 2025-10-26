@@ -688,7 +688,7 @@ const ContractsDatabase = () => {
                                             }
                                         }}
                                         dynamicDialog={false}
-                                        rowsPerPage={10}
+                                        rowsPerPage={20}
                                     />
                                 )}
 
@@ -714,7 +714,7 @@ const ContractsDatabase = () => {
                                             }
                                         }}
                                         dynamicDialog={false}
-                                        rowsPerPage={10}
+                                        rowsPerPage={20}
                                         rowActions={(row) => ({
                                             generateAction: row.originalStatus?.toLowerCase() === 'terminated',
                                             exportAction: true,

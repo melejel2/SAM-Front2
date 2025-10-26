@@ -215,7 +215,13 @@ const BudgetBOQEdit = () => {
     }
 
     return (
-        <div style={{ flex: 1, width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            width: '100%',
+            height: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
             <BOQStep
                     dialogType="Edit"
                     buildings={buildings}

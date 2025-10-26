@@ -3,7 +3,7 @@ import { useEditWizardContext } from "../context/EditWizardContext";
 import { AttachmentsDialog, AttachmentsType } from "../../shared/components/AttachmentsDialog";
 
 
-export const EditStep5_ContractDetails: React.FC = () => {
+export const EditStep3_ContractDetails: React.FC = () => {
     const { formData, setFormData, contracts, currencies, projects } = useEditWizardContext();
     const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("001");
     const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);

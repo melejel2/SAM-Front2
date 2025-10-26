@@ -1,7 +1,10 @@
 import React from "react";
+import { Icon } from "@iconify/react";
+import paperclipIcon from "@iconify/icons-lucide/paperclip";
+import infoIcon from "@iconify/icons-lucide/info";
 import { useWizardContext } from "../context/WizardContext";
 
-export const Step7_Review: React.FC = () => {
+export const Step5_Review: React.FC = () => {
     const { formData, projects, buildings, subcontractors, contracts, currencies } = useWizardContext();
 
     // Helper functions
@@ -11,8 +14,14 @@ export const Step7_Review: React.FC = () => {
     };
 
     const getBuildingNames = () => {
-        return formData.buildingIds
-            .map(id => buildings.find(b => b.id === id)?.name || `Building ${id}`)
+        // Extract all unique building IDs from buildingTradeMap
+        const selectedBuildingIds = Array.from(
+            new Set(
+                Object.values(formData.buildingTradeMap).flat()
+            )
+        );
+        return selectedBuildingIds
+            .map((id: any) => buildings.find((b: any) => b.id === id)?.name || `Building ${id}`)
             .join(', ');
     };
 
@@ -142,7 +151,7 @@ export const Step7_Review: React.FC = () => {
                         <div className="space-y-2">
                             {formData.attachments.map((attachment, index) => (
                                 <div key={index} className="flex items-center gap-2">
-                                    <span className="iconify lucide--paperclip w-4 h-4 text-base-content/60"></span>
+                                    <Icon icon={paperclipIcon} className="w-4 h-4 text-base-content/60" />
                                     <span className="text-base-content">{attachment.file.name}</span>
                                     <span className="text-xs text-base-content/60">({attachment.type})</span>
                                 </div>
@@ -220,11 +229,11 @@ export const Step7_Review: React.FC = () => {
                 {/* Validation Notice */}
                 <div className="bg-info/10 border border-info/20 rounded-lg p-4">
                     <div className="flex items-start gap-2">
-                        <span className="iconify lucide--info w-5 h-5 text-info mt-0.5"></span>
+                        <Icon icon={infoIcon} className="w-5 h-5 text-info mt-0.5" />
                         <div>
                             <h4 className="font-semibold text-info mb-1">Review Complete</h4>
                             <p className="text-sm text-base-content/70">
-                                Please review all information above carefully. Click "Next" to proceed to the preview step 
+                                Please review all information above carefully. Click "Next" to proceed to the preview step
                                 where you can generate the final contract document.
                             </p>
                         </div>

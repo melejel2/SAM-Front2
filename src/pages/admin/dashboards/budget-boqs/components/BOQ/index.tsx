@@ -71,6 +71,8 @@ const BOQStep: React.FC<BOQStepProps> = ({
     const [showVODialog, setShowVODialog] = useState(false);
     const [currentSheetForVO, setCurrentSheetForVO] = useState<any>(null);
     const [showBuildingDialog, setShowBuildingDialog] = useState(false);
+    const [pendingSheetNavigation, setPendingSheetNavigation] = useState<string | null>(null);
+    const [importingBoq, setImportingBoq] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { toaster } = useToast();
@@ -87,13 +89,42 @@ const BOQStep: React.FC<BOQStepProps> = ({
         if (projectData && projectData.buildings && projectData.buildings.length > 0) {
             // Check if current selected building exists in project data
             const currentBuildingInProject = projectData.buildings.find((b: any) => b.id === selectedBuilding?.id);
-            
+
             if (!currentBuildingInProject) {
                 // If current building is not in project data, select the first one from project data
                 setSelectedBuilding(projectData.buildings[0]);
             }
         }
     }, [projectData, selectedBuilding]);
+
+    // Handle pending navigation to imported sheet
+    useEffect(() => {
+        if (pendingSheetNavigation && projectData && selectedBuilding) {
+            // Find the sheet in the current building's data
+            const building = projectData.buildings?.find((b: any) => b.id === selectedBuilding.id);
+            if (building && building.boqSheets) {
+                const targetSheet = building.boqSheets.find((sheet: any) =>
+                    sheet.name === pendingSheetNavigation &&
+                    sheet.boqItems &&
+                    sheet.boqItems.length > 0
+                );
+
+                if (targetSheet) {
+                    console.log(`Navigating to imported sheet: "${pendingSheetNavigation}"`);
+                    // Create a trade object that matches the expected structure
+                    setSelectedTrade({
+                        id: targetSheet.id,
+                        name: targetSheet.name,
+                        buildingSheetId: targetSheet.id,
+                        hasData: true,
+                        itemCount: targetSheet.boqItems.length
+                    });
+                    toaster.success(`Now viewing "${pendingSheetNavigation}"`);
+                    setPendingSheetNavigation(null); // Clear the pending navigation
+                }
+            }
+        }
+    }, [pendingSheetNavigation, projectData, selectedBuilding, setSelectedTrade, toaster]);
 
     const handleClearBoq = () => {
         if (!selectedProject || !selectedBuilding) {
@@ -172,6 +203,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
     // Debounced file processing to prevent multiple rapid imports
     const processExcelFile = useCallback(async (file: File, projectId: number, buildingId: number) => {
+        setImportingBoq(true);
         try {
             const buildingSaveModels = await getBoqPreview({
                 projectId,
@@ -180,6 +212,162 @@ const BOQStep: React.FC<BOQStepProps> = ({
             });
 
             if (buildingSaveModels && Array.isArray(buildingSaveModels) && buildingSaveModels.length > 0) {
+                console.log("BOQ Import - Received preview data:", buildingSaveModels);
+
+                // Fix duplicate IDs by assigning unique temporary IDs
+                let tempIdCounter = -1; // Use negative IDs to avoid conflicts with real IDs
+                buildingSaveModels.forEach((buildingModel: any) => {
+                    if (buildingModel.boqSheets && Array.isArray(buildingModel.boqSheets)) {
+                        buildingModel.boqSheets.forEach((sheet: any) => {
+                            if (sheet.boqItems && Array.isArray(sheet.boqItems)) {
+                                sheet.boqItems = sheet.boqItems.map((item: any) => {
+                                    // If item has id: 0 or no id, assign unique temporary ID
+                                    if (!item.id || item.id === 0) {
+                                        return { ...item, id: tempIdCounter-- };
+                                    }
+                                    return item;
+                                });
+                            }
+                        });
+                    }
+                });
+
+                console.log("BOQ Import - After assigning unique IDs:", buildingSaveModels);
+
+                // Validate the preview data structure
+                let hasValidData = false;
+                buildingSaveModels.forEach((buildingModel: any) => {
+                    if (buildingModel.boqSheets && Array.isArray(buildingModel.boqSheets)) {
+                        buildingModel.boqSheets.forEach((sheet: any) => {
+                            if (sheet.boqItems && Array.isArray(sheet.boqItems) && sheet.boqItems.length > 0) {
+                                // Log detailed item information
+                                console.log(`Sheet "${sheet.name}" - ${sheet.boqItems.length} items:`,
+                                    sheet.boqItems.map((item: any, idx: number) => ({
+                                        index: idx,
+                                        id: item.id,
+                                        no: item.no,
+                                        key: item.key?.substring(0, 30) + '...',
+                                        qte: item.qte,
+                                        pu: item.pu
+                                    }))
+                                );
+
+                                // Check if all items have the same 'no' and 'key' fields (indicates malformed data)
+                                const firstItemNo = sheet.boqItems[0]?.no;
+                                const firstItemKey = sheet.boqItems[0]?.key;
+                                const allSameNo = sheet.boqItems.every((item: any) => item.no === firstItemNo);
+                                const allSameKey = sheet.boqItems.every((item: any) => item.key === firstItemKey);
+
+                                console.log(`Sheet "${sheet.name}" - All same no="${firstItemNo}": ${allSameNo}, All same key: ${allSameKey}`);
+
+                                if (!allSameNo && !allSameKey) {
+                                    hasValidData = true;
+                                } else if (sheet.boqItems.length === 1) {
+                                    // Single item is okay (might be just a title)
+                                    hasValidData = true;
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (!hasValidData) {
+                    console.warn("BOQ Import - Preview data appears malformed (duplicate rows detected). Auto-saving and refreshing...");
+                    toaster.info("Processing import...");
+
+                    // Capture first imported sheet name for navigation after refresh
+                    let malformedSheetName: string | null = null;
+                    buildingSaveModels.forEach((buildingModel: any) => {
+                        if (!malformedSheetName && buildingModel.boqSheets && buildingModel.boqSheets.length > 0) {
+                            const firstSheetWithData = buildingModel.boqSheets.find((sheet: any) =>
+                                sheet.boqItems && sheet.boqItems.length > 0
+                            );
+                            if (firstSheetWithData) {
+                                malformedSheetName = firstSheetWithData.name;
+                            }
+                        }
+                    });
+
+                    // Auto-save the project to trigger backend processing, then refresh
+                    const saveAndRefresh = async () => {
+                        // First, update the project data with the preview (even if malformed)
+                        let updatedProjectData: any = null;
+
+                        setProjectData((prevData: any) => {
+                            if (!prevData) return null;
+
+                            const updatedBuildings = [...prevData.buildings];
+
+                            buildingSaveModels.forEach((buildingModel: any) => {
+                                const existingBuildingIndex = updatedBuildings.findIndex(b => b.id === buildingModel.id);
+
+                                if (existingBuildingIndex !== -1) {
+                                    // MERGE sheets instead of replacing entire building
+                                    const existingBuilding = updatedBuildings[existingBuildingIndex];
+                                    const existingSheets = existingBuilding.boqSheets || [];
+                                    const importedSheets = buildingModel.boqSheets || [];
+
+                                    // Create a map of existing sheets for quick lookup
+                                    const existingSheetsMap = new Map(
+                                        existingSheets.map((sheet: any) => [sheet.name, sheet])
+                                    );
+
+                                    // Merge: Update existing sheets or add new ones from import
+                                    // ONLY merge sheets that have actual data
+                                    importedSheets.forEach((importedSheet: any) => {
+                                        if (importedSheet.boqItems && importedSheet.boqItems.length > 0) {
+                                            existingSheetsMap.set(importedSheet.name, importedSheet);
+                                        }
+                                    });
+
+                                    // Convert map back to array
+                                    const mergedSheets = Array.from(existingSheetsMap.values());
+
+                                    // Update building with merged sheets, keep all other properties
+                                    updatedBuildings[existingBuildingIndex] = {
+                                        ...existingBuilding,
+                                        boqSheets: mergedSheets,
+                                        projectLevel: buildingModel.projectLevel ?? existingBuilding.projectLevel,
+                                        subContractorLevel: buildingModel.subContractorLevel ?? existingBuilding.subContractorLevel
+                                    };
+                                } else {
+                                    updatedBuildings.push(buildingModel);
+                                }
+                            });
+
+                            updatedProjectData = { ...prevData, buildings: updatedBuildings };
+                            return updatedProjectData;
+                        });
+
+                        // Wait a bit for state to update
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
+                        // Trigger save if callback exists
+                        if (onSave) {
+                            await onSave();
+                        }
+
+                        // Refresh data from backend
+                        toaster.success("Import complete! Refreshing data...");
+                        onDataRefresh();
+
+                        // Set pending navigation after refresh and end loading
+                        setTimeout(() => {
+                            if (malformedSheetName) {
+                                setPendingSheetNavigation(malformedSheetName);
+                            }
+                            setImportingBoq(false);
+                        }, 500); // Wait a bit for data refresh to complete
+                    };
+
+                    saveAndRefresh();
+                    return; // Exit early, don't show success message yet
+                }
+
+                // Track the first imported sheet name to auto-navigate to it
+                let firstImportedSheetName: string | null = null;
+
+                // Update project data with imported building models
                 setProjectData((prevData: any) => {
                     if (!prevData) return null;
 
@@ -196,13 +384,15 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
                             // Create a map of existing sheets for quick lookup
                             const existingSheetsMap = new Map(
-                                existingSheets.map((sheet: any) => [sheet.id || sheet.name, sheet])
+                                existingSheets.map((sheet: any) => [sheet.name, sheet])
                             );
 
                             // Merge: Update existing sheets or add new ones from import
+                            // ONLY merge sheets that have actual data
                             importedSheets.forEach((importedSheet: any) => {
-                                const key = importedSheet.id || importedSheet.name;
-                                existingSheetsMap.set(key, importedSheet);
+                                if (importedSheet.boqItems && importedSheet.boqItems.length > 0) {
+                                    existingSheetsMap.set(importedSheet.name, importedSheet);
+                                }
                             });
 
                             // Convert map back to array
@@ -211,30 +401,56 @@ const BOQStep: React.FC<BOQStepProps> = ({
                             // Update building with merged sheets, keep all other properties
                             updatedBuildings[existingBuildingIndex] = {
                                 ...existingBuilding,
-                                ...buildingModel,
-                                boqSheets: mergedSheets
+                                boqSheets: mergedSheets,
+                                projectLevel: buildingModel.projectLevel ?? existingBuilding.projectLevel,
+                                subContractorLevel: buildingModel.subContractorLevel ?? existingBuilding.subContractorLevel
                             };
+
+                            // Capture first imported sheet name for auto-navigation
+                            if (!firstImportedSheetName && buildingModel.boqSheets && buildingModel.boqSheets.length > 0) {
+                                const firstSheetWithData = buildingModel.boqSheets.find((sheet: any) =>
+                                    sheet.boqItems && sheet.boqItems.length > 0
+                                );
+                                if (firstSheetWithData) {
+                                    firstImportedSheetName = firstSheetWithData.name;
+                                }
+                            }
                         } else {
                             // Add new building
                             updatedBuildings.push(buildingModel);
                         }
                     });
 
-                    return { ...prevData, buildings: updatedBuildings };
+                    const newProjectData = { ...prevData, buildings: updatedBuildings };
+                    console.log("BOQ Import - Updated project data:", newProjectData);
+                    return newProjectData;
                 });
 
-                toaster.success(`BOQ preview loaded successfully for ${buildingSaveModels.length} building(s)!`);
+                // Set pending navigation to auto-switch to imported sheet
+                if (firstImportedSheetName) {
+                    console.log(`Setting pending navigation to: "${firstImportedSheetName}"`);
+                    setPendingSheetNavigation(firstImportedSheetName);
+                    toaster.success(`BOQ imported successfully!`);
+                } else {
+                    toaster.success(`BOQ imported successfully for ${buildingSaveModels.length} building(s)!`);
+                }
+
+                setImportingBoq(false);
             } else if (buildingSaveModels) {
                 // Handle case where import is valid but results in no sheets
-                toaster.info("The imported file did not contain any valid BOQ sheets. The existing data remains unchanged.");
+                toaster.info("The imported file did not contain any valid BOQ sheets.");
+                setImportingBoq(false);
             } else {
                 // Handle case where the API fails to return a model
-                toaster.error("Failed to get BOQ preview.");
+                toaster.error("Failed to import BOQ.");
+                setImportingBoq(false);
             }
         } catch (error) {
+            console.error("Error importing BOQ:", error);
             toaster.error("Error importing BOQ file");
+            setImportingBoq(false);
         }
-    }, [getBoqPreview, setProjectData, toaster]);
+    }, [getBoqPreview, setProjectData, toaster, onSave, onDataRefresh, setPendingSheetNavigation]);
 
     const debouncedProcessExcelFile = useDebouncedCallback(processExcelFile, 300);
 
@@ -259,7 +475,14 @@ const BOQStep: React.FC<BOQStepProps> = ({
     }, [selectedProject, selectedBuilding, debouncedProcessExcelFile, toaster]);
 
     return (
-        <div style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+            height: '100%',
+            width: '100%',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
             {/* Top row with Back, Clear, and action buttons */}
             <div className="flex justify-between items-center mb-4" style={{ flexShrink: 0 }}>
                 <div className="flex items-center gap-3">
@@ -303,9 +526,9 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
                     {/* Clear BOQ Button */}
                     <button
-                        type="button" 
+                        type="button"
                         onClick={handleClearBoq}
-                        disabled={!selectedProject || !selectedBuilding}
+                        disabled={!selectedProject || !selectedBuilding || importingBoq}
                         className="btn btn-sm bg-red-500 border border-red-500 text-white hover:bg-red-600 disabled:opacity-50"
                     >
                         Clear BOQ
@@ -340,7 +563,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                             });
                             setShowVODialog(true);
                         }}
-                        disabled={!selectedProject || !selectedBuilding}
+                        disabled={!selectedProject || !selectedBuilding || importingBoq}
                         className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
                     >
                         View VOs
@@ -348,12 +571,12 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     
                     {/* Import BOQ Button */}
                     <button
-                        type="button" 
+                        type="button"
                         onClick={handleImportBoq}
-                        disabled={!selectedProject || !selectedBuilding}
+                        disabled={!selectedProject || !selectedBuilding || importingBoq}
                         className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
                     >
-                        Import BOQ
+                        {importingBoq ? "Importing..." : "Import BOQ"}
                     </button>
                     
                     {hasUnsavedChanges && (
@@ -366,7 +589,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     {onSave && (
                         <button
                             onClick={onSave}
-                            disabled={saving || !hasUnsavedChanges}
+                            disabled={saving || !hasUnsavedChanges || importingBoq}
                             className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 flex items-center gap-2 disabled:opacity-50"
                         >
                             <Icon icon={saveIcon} className="w-4 h-4" />
@@ -537,6 +760,25 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         onCreateBuildings={handleCreateBuildings}
                     />
                 </Suspense>
+            )}
+
+            {/* BOQ Import Loading Overlay */}
+            {importingBoq && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-base-100 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="loading loading-spinner loading-lg text-primary"></div>
+                            <div className="text-center">
+                                <h3 className="text-lg font-semibold text-base-content mb-2">
+                                    Importing BOQ...
+                                </h3>
+                                <p className="text-sm text-base-content/70">
+                                    Please wait while we process your file
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

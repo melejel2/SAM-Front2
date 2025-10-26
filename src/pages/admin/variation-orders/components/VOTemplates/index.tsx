@@ -142,7 +142,7 @@ const VOTemplatesManager: React.FC<VOTemplatesManagerProps> = ({
                         previewAction
                         editAction={false}
                         deleteAction={!readonly}
-                        rowsPerPage={10}
+                        rowsPerPage={20}
                         openStaticDialog={(action, template) => {
                             if (action === "Preview" && template) {
                                 handlePreviewTemplate(template);

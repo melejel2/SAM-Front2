@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
+import eyeIcon from "@iconify/icons-lucide/eye";
+import checkIcon from "@iconify/icons-lucide/check";
 import { WizardProvider, useWizardContext } from "./context/WizardContext";
 import { StepIndicator } from "../shared/components/StepIndicator";
 import useToast from "@/hooks/use-toast";
@@ -33,9 +38,8 @@ const NewSubcontractWizardContent: React.FC = () => {
     };
 
     const handleSubmitAndNavigate = async () => {
-        await handleSubmit();
-        // If submission was successful, navigate back to the list
-        if (!loading) {
+        const success = await handleSubmit();
+        if (success) {
             navigate('/dashboard/contracts');
         }
     };
@@ -169,7 +173,7 @@ const NewSubcontractWizardContent: React.FC = () => {
                     }
                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                 >
-                    <span className="iconify lucide--arrow-left size-4"></span>
+                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
                     <span>Back</span>
                 </button>
                 
@@ -180,7 +184,7 @@ const NewSubcontractWizardContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 8 ? (
+                    {currentStep < 6 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -193,18 +197,12 @@ const NewSubcontractWizardContent: React.FC = () => {
                                             toaster.error("Please select a project");
                                             break;
                                         case 2:
-                                            toaster.error("Please select a trade");
-                                            break;
-                                        case 3:
-                                            toaster.error("Please select at least one building");
-                                            break;
-                                        case 4:
                                             toaster.error("Please select a subcontractor");
                                             break;
-                                        case 5:
+                                        case 3:
                                             toaster.error("Please fill in all required contract details");
                                             break;
-                                        case 6:
+                                        case 4:
                                             toaster.error("Please add at least one BOQ item");
                                             break;
                                         default:
@@ -214,15 +212,15 @@ const NewSubcontractWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 7 ? (
+                            {currentStep === 5 ? (
                                 <>
                                     <span>Preview</span>
-                                    <span className="iconify lucide--eye size-4"></span>
+                                    <Icon icon={eyeIcon} className="w-4 h-4" />
                                 </>
                             ) : (
                                 <>
                                     <span>Next</span>
-                                    <span className="iconify lucide--arrow-right size-4"></span>
+                                    <Icon icon={arrowRightIcon} className="w-4 h-4" />
                                 </>
                             )}
                         </button>
@@ -240,7 +238,7 @@ const NewSubcontractWizardContent: React.FC = () => {
                             ) : (
                                 <>
                                     <span>Save</span>
-                                    <span className="iconify lucide--check size-4"></span>
+                                    <Icon icon={checkIcon} className="w-4 h-4" />
                                 </>
                             )}
                         </button>

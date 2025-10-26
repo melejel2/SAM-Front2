@@ -1,6 +1,6 @@
 import React from "react";
 import { Icon } from "@iconify/react";
-import { useWizardContext } from "../context/WizardContext";
+import { useEditWizardContext } from "../context/EditWizardContext";
 import SAMTable from "@/components/Table";
 
 interface Subcontractor {
@@ -15,10 +15,10 @@ interface Subcontractor {
     subcontractorTel?: string | null;
 }
 
-export const Step4_SubcontractorSelection: React.FC = () => {
-    const { formData, setFormData, subcontractors, loading } = useWizardContext();
+export const EditStep2_SubcontractorSelection: React.FC = () => {
+    const { formData, setFormData, subcontractors, loading } = useEditWizardContext();
     
-    // Find selected subcontractor based on formData.subcontractorId
+    // Calculate selectedSubcontractor directly from current state
     const selectedSubcontractor = React.useMemo(() => {
         if (subcontractors.length > 0 && formData.subcontractorId) {
             return subcontractors.find(s => s.id === formData.subcontractorId) || null;
@@ -26,9 +26,12 @@ export const Step4_SubcontractorSelection: React.FC = () => {
         return null;
     }, [subcontractors, formData.subcontractorId]);
 
+    // Remove forced re-rendering - it was breaking prop passing
+
     const handleSubcontractorSelect = (subcontractor: Subcontractor) => {
         setFormData({ subcontractorId: subcontractor.id });
     };
+
 
     return (
         <>

@@ -37,7 +37,8 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
         try {
             // Create object URL for native browser PDF viewer
             objectUrl = URL.createObjectURL(fileBlob);
-            setPdfUrl(`${objectUrl}#zoom=100`); // Add zoom parameter
+            // Remove #zoom=100 to avoid blob URL loading issues
+            setPdfUrl(objectUrl);
             setIsLoading(false);
             setError(null);
         } catch (urlError) {
@@ -90,18 +91,34 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
                     </div>
                 )}
                 {pdfUrl && !error && (
-                    <iframe
-                        src={pdfUrl}
+                    <object
+                        data={pdfUrl}
+                        type="application/pdf"
                         className="w-full h-full border-0"
                         style={{
                             minHeight: '500px',
                             backgroundColor: 'var(--fallback-b2, oklch(var(--b2)))'
                         }}
-                        title={fileName}
+                        aria-label={fileName}
                         onLoad={handleIframeLoad}
                         onError={handleIframeError}
-                        loading="lazy"
-                    />
+                    >
+                        <div className="flex items-center justify-center h-full p-8">
+                            <div className="text-center">
+                                <span className="iconify lucide--file-text text-base-content/50 size-12 mb-4"></span>
+                                <p className="text-base-content/70 mb-4">
+                                    Your browser cannot display the PDF inline.
+                                </p>
+                                <a
+                                    href={pdfUrl}
+                                    download={fileName}
+                                    className="btn btn-primary btn-sm"
+                                >
+                                    Download PDF
+                                </a>
+                            </div>
+                        </div>
+                    </object>
                 )}
             </div>
         </div>

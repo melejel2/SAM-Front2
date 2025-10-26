@@ -1082,7 +1082,7 @@ export const Topbar = () => {
       <>
         {/* Mobile Topbar */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-14">
-          <div className="h-full flex items-center justify-between px-36">
+          <div className="h-full flex items-center justify-between px-16">
             <div className="flex items-center gap-2">
               <Link to="/" className="flex-shrink-0">
                 <div className="flex items-center bg-base-200 rounded-md px-1 h-[32px] inline-flex">
@@ -1167,7 +1167,7 @@ export const Topbar = () => {
   return (
     <>
       <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-16">
-        <div className="h-full flex items-center justify-between px-36">
+        <div className="h-full flex items-center justify-between px-16">
           {/* Left side - App Logo with typing animation */}
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0">

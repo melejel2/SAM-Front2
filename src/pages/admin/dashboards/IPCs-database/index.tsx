@@ -289,7 +289,7 @@ const IPCsDatabase = () => {
                             loading={false}
                             onSuccess={getIPCs}
                             dynamicDialog={false}
-                            rowsPerPage={10}
+                            rowsPerPage={20}
                             openStaticDialog={(type, data) => {
                                 if (type === "Preview" && data) {
                                     return handlePreviewIpc(data);

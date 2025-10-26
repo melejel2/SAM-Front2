@@ -181,7 +181,7 @@ const TableComponent: React.FC<TableProps> = ({
     activeSheetId: externalActiveSheetId,
     onSheetSelect,
     customHeaderContent,
-    rowsPerPage = 10,
+    rowsPerPage = 20,
     previewLoadingRowId: externalPreviewLoadingRowId,
     exportingRowId,
     selectedRowId,

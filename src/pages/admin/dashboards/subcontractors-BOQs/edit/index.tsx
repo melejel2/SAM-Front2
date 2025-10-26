@@ -34,10 +34,13 @@ const EditSubcontractWizardContent: React.FC = () => {
     };
 
     const handleSubmitAndNavigate = async () => {
-        await handleSubmit();
-        // If submission was successful, navigate back to the list
-        if (!loading) {
+        try {
+            await handleSubmit();
+            // Navigation will only happen if handleSubmit succeeds (doesn't throw)
             navigate('/dashboard/contracts');
+        } catch (error) {
+            // Error already handled by handleSubmit
+            console.error("Submit failed:", error);
         }
     };
 
@@ -188,7 +191,7 @@ const EditSubcontractWizardContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 8 ? (
+                    {currentStep < 6 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -201,15 +204,12 @@ const EditSubcontractWizardContent: React.FC = () => {
                                             toaster.error("Please select a project");
                                             break;
                                         case 2:
-                                            toaster.error("Please select at least one building");
-                                            break;
-                                        case 3:
                                             toaster.error("Please select a subcontractor");
                                             break;
-                                        case 4:
+                                        case 3:
                                             toaster.error("Please fill in all required contract details");
                                             break;
-                                        case 5:
+                                        case 4:
                                             toaster.error("Please add at least one BOQ item");
                                             break;
                                         default:
@@ -219,7 +219,7 @@ const EditSubcontractWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 7 ? (
+                            {currentStep === 5 ? (
                                 <>
                                     <span>Preview</span>
                                     <span className="iconify lucide--eye size-4"></span>

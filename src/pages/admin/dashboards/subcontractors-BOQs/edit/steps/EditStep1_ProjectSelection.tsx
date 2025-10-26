@@ -64,7 +64,8 @@ export const EditStep1_ProjectSelection: React.FC = () => {
     const applyProjectChange = (project: Project) => {
         setFormData({
             projectId: project.id,
-            buildingIds: [], // Reset building selection
+            selectedTrades: [], // Reset trade selection
+            buildingTradeMap: [], // Reset building-trade mappings
             boqData: [], // Clear BOQ data
             // Reset other dependent fields
             contractDate: formData.contractDate, // Keep basic contract info

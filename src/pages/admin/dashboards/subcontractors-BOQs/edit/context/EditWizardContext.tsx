@@ -87,11 +87,17 @@ export interface BOQItem {
     _readonly?: boolean; // Internal flag for UI purposes
 }
 
+interface BuildingTradeMapping {
+    buildingId: number;
+    tradeId: number;
+    tradeName: string;
+}
+
 interface EditWizardFormData {
     id: number; // Different from new wizard - this has an ID
     projectId: number | null;
-    tradeId: number | null;
-    buildingIds: number[];
+    selectedTrades: number[]; // Multiple trades
+    buildingTradeMap: BuildingTradeMapping[]; // Map buildings to their trades
     subcontractorId: number | null;
     contractId: number | null;
     currencyId: number | null;
@@ -149,6 +155,7 @@ interface EditWizardContextType {
     projects: Project[];
     trades: Trade[];
     buildings: BuildingWithSheets[];
+    allBuildings: BuildingWithSheets[];
     subcontractors: Subcontractor[];
     contracts: Contract[];
     currencies: Currency[];
@@ -182,8 +189,8 @@ interface EditWizardContextType {
 const initialEditFormData: EditWizardFormData = {
     id: 0,
     projectId: null,
-    tradeId: null,
-    buildingIds: [],
+    selectedTrades: [],
+    buildingTradeMap: [],
     subcontractorId: null,
     contractId: null,
     currencyId: null,
@@ -480,7 +487,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         ...initialEditFormData,
                         id: existingData.id || contractId,
                         projectId: existingData.projectId,
-                        buildingIds: extractedBuildingIds,
                         subcontractorId: existingData.subContractorId,
                         contractId: existingData.contractId,
                         currencyId: existingData.currencyId,
@@ -534,10 +540,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
                     // 🔍 DEBUG: Log final form data
                     console.log("🏢 EDIT MODE - Final form data set:", {
-                        buildingIds: newFormData.buildingIds,
-                        buildingCount: newFormData.buildingIds.length,
                         projectId: newFormData.projectId,
-                        tradeId: newFormData.tradeId,
+                        selectedTrades: newFormData.selectedTrades,
+                        buildingTradeMapCount: newFormData.buildingTradeMap.length,
                     });
 
                     // Load buildings for the project
@@ -558,24 +563,16 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         [contractsApi, fetchBuildingsWithSheets],
     );
 
-    // Validation functions (same as new wizard)
+    // Validation functions (6 steps)
     const validateStep1 = (): boolean => {
         return formData.projectId !== null;
     };
 
     const validateStep2 = (): boolean => {
-        return formData.tradeId !== null;
-    };
-
-    const validateStep3 = (): boolean => {
-        return formData.buildingIds.length > 0;
-    };
-
-    const validateStep4 = (): boolean => {
         return formData.subcontractorId !== null;
     };
 
-    const validateStep5 = (): boolean => {
+    const validateStep3 = (): boolean => {
         return (
             formData.contractId !== null &&
             formData.currencyId !== null &&
@@ -585,15 +582,15 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         );
     };
 
-    const validateStep6 = (): boolean => {
+    const validateStep4 = (): boolean => {
         return formData.boqData.some((building) => building.items.length > 0);
     };
 
-    const validateStep7 = (): boolean => {
+    const validateStep5 = (): boolean => {
         return true; // Review step doesn't require validation
     };
 
-    const validateStep8 = (): boolean => {
+    const validateStep6 = (): boolean => {
         return true; // Preview step doesn't require validation
     };
 
@@ -611,10 +608,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 return validateStep5();
             case 6:
                 return validateStep6();
-            case 7:
-                return validateStep7();
-            case 8:
-                return validateStep8();
             default:
                 return false;
         }
@@ -622,7 +615,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
     // Navigation functions
     const goToNextStep = useCallback(() => {
-        if (validateCurrentStep() && currentStep < 8) {
+        if (validateCurrentStep() && currentStep < 6) {
             setCurrentStep(currentStep + 1);
         }
     }, [validateCurrentStep, currentStep]);
@@ -727,6 +720,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             console.error("Error updating contract:", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
             toaster.error(`Failed to update contract: ${errorMessage}`);
+            // Re-throw so index.tsx knows save failed and doesn't navigate
+            throw error;
         } finally {
             setLoading(false);
         }
@@ -870,7 +865,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         };
     }, [contractId, token]); // Only re-run when contractId or token changes
 
-    // Build trades list from sheet names - ONLY sheets with actual BOQ data (matching budget BOQ behavior)
+    // Build trades list from sheet names - ONLY sheets with actual BOQ data
     useEffect(() => {
         if (formData.projectId && allBuildings.length > 0) {
             const tradesMap = new Map<string, Trade>();
@@ -878,21 +873,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             // Use sheet names as trades - but ONLY sheets with actual BOQ data
             allBuildings.forEach((building) => {
                 building.sheets.forEach((sheet) => {
-                    // Only include sheets that have actual BOQ data populated (matching budget BOQ behavior)
+                    // Only include sheets that have actual BOQ data populated
                     const hasBoqData = sheet.boqItemCount && sheet.boqItemCount > 0;
-
-                    // 🔍 DEBUG: Log all sheets and their BOQ status, especially "Earth Works"
-                    if (sheet.name === "Earth Works") {
-                        console.log("🌍 EARTH WORKS SHEET DEBUG:", {
-                            sheetName: sheet.name,
-                            sheetId: sheet.id,
-                            buildingName: building.name,
-                            buildingId: building.id,
-                            boqItemCount: sheet.boqItemCount,
-                            hasBoqData,
-                            willBeIncludedInTrades: hasBoqData,
-                        });
-                    }
 
                     if (sheet.name && sheet.name.trim() && hasBoqData) {
                         const sheetName = sheet.name.trim();
@@ -913,120 +895,78 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
             let finalTrades = Array.from(tradesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-            // 🔧 EDIT MODE FIX: Ensure existing contract's trade is always available for editing
-            // This handles cases where:
-            // 1. Contract was created when trade had BOQ data
-            // 2. BOQ data was later removed from project sheets
-            // 3. Contract still needs to be editable
+            // 🔧 EDIT MODE FIX: Ensure existing contract's trades are always available for editing
             if (originalContractData && originalContractData.buildings && originalContractData.buildings.length > 0) {
-                const existingSheetName = originalContractData.buildings[0]?.sheetName;
-                if (existingSheetName && !finalTrades.some((trade) => trade.name === existingSheetName)) {
-                    console.warn("⚠️ EDIT MODE - Contract uses trade with no current BOQ data:", existingSheetName);
-                    console.warn("⚠️ This suggests the BOQ data was removed after contract creation");
-                    console.log("🔧 EDIT MODE - Adding missing contract trade for editing:", existingSheetName);
+                const existingSheetNames = [...new Set(originalContractData.buildings.map((b: any) => b.sheetName))];
 
-                    // Find the first sheet with this name to get an ID (even if boqItemCount = 0)
-                    let sheetId = 0;
-                    let foundSheet = false;
-                    allBuildings.forEach((building) => {
-                        building.sheets.forEach((sheet) => {
-                            if (sheet.name === existingSheetName && sheetId === 0) {
-                                sheetId = sheet.id;
-                                foundSheet = true;
-                            }
-                        });
-                    });
+                existingSheetNames.forEach((sheetName) => {
+                    if (sheetName && !finalTrades.some((trade) => trade.name === sheetName)) {
+                        console.warn("⚠️ EDIT MODE - Contract uses trade with no current BOQ data:", sheetName);
 
-                    if (foundSheet) {
-                        // Add the missing trade (marked as legacy/empty)
-                        finalTrades.push({
-                            id: sheetId,
-                            name: existingSheetName,
-                            code: existingSheetName,
-                            buildingCount: 1, // At least the buildings in the contract
+                        // Find the first sheet with this name to get an ID
+                        let sheetId = 0;
+                        allBuildings.forEach((building) => {
+                            building.sheets.forEach((sheet) => {
+                                if (sheet.name === sheetName && sheetId === 0) {
+                                    sheetId = sheet.id;
+                                }
+                            });
                         });
 
-                        // Re-sort after adding
-                        finalTrades = finalTrades.sort((a, b) => a.name.localeCompare(b.name));
-                        console.log(
-                            "🔧 EDIT MODE - Updated trades list now includes:",
-                            finalTrades.map((t) => t.name),
-                        );
-                    } else {
-                        console.error("🚨 CRITICAL - Contract trade doesn't exist in project:", existingSheetName);
+                        if (sheetId > 0) {
+                            finalTrades.push({
+                                id: sheetId,
+                                name: sheetName,
+                                code: sheetName,
+                                buildingCount: 1,
+                            });
+                        }
                     }
-                }
+                });
+
+                finalTrades = finalTrades.sort((a, b) => a.name.localeCompare(b.name));
             }
 
             setTrades(finalTrades);
 
-            // 🔧 FIX: Set tradeId based on existing contract data
-            // If we have existing contract data and haven't set tradeId yet, match by sheet name
+            // 🔧 FIX: Set selectedTrades and buildingTradeMap based on existing contract data
             if (
                 originalContractData &&
-                !formData.tradeId &&
+                formData.selectedTrades.length === 0 &&
                 originalContractData.buildings &&
                 originalContractData.buildings.length > 0 &&
                 formData.projectId === originalContractData.projectId
             ) {
-                const existingSheetName = originalContractData.buildings[0]?.sheetName;
-                const existingBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
+                const buildingTradeMap: BuildingTradeMapping[] = [];
+                const selectedTradesSet = new Set<number>();
 
-                console.log("🔍 TRADE MATCHING DEBUG:", {
-                    existingSheetName,
-                    finalTradesCount: finalTrades.length,
-                    finalTradesNames: finalTrades.map((t) => t.name),
-                    originalContractDataExists: !!originalContractData,
-                    currentTradeId: formData.tradeId,
-                    existingBuildingIds,
+                originalContractData.buildings.forEach((building: any) => {
+                    const matchingTrade = finalTrades.find((trade) => trade.name === building.sheetName);
+                    if (matchingTrade) {
+                        buildingTradeMap.push({
+                            buildingId: building.id,
+                            tradeId: matchingTrade.id,
+                            tradeName: matchingTrade.name,
+                        });
+                        selectedTradesSet.add(matchingTrade.id);
+                    }
                 });
 
-                if (existingSheetName) {
-                    // ONLY exact match - no fuzzy matching
-                    const matchingTrade = finalTrades.find((trade) => trade.name === existingSheetName);
-
-                    console.log("🔍 TRADE MATCHING RESULT:", {
-                        searchingFor: existingSheetName,
-                        matchingTrade,
-                        found: !!matchingTrade,
-                        availableTradesWithBoqData: finalTrades.map((t) => t.name),
-                    });
-
-                    if (matchingTrade) {
-                        console.log(
-                            `🔧 EDIT MODE - Setting tradeId to ${matchingTrade.id} for sheet "${existingSheetName}" with buildingIds:`,
-                            existingBuildingIds,
-                        );
-                        // Set both tradeId AND preserve buildingIds in one update to avoid race condition
-                        setFormDataState((prev) => ({
-                            ...prev,
-                            tradeId: matchingTrade.id,
-                            buildingIds: existingBuildingIds, // Ensure building IDs are preserved
-                        }));
-                    } else {
-                        console.error("🚨 EDIT MODE - No EXACT match found for sheet:", existingSheetName);
-                        console.error("🚨 This means 'Earth Works' sheet either:");
-                        console.error("   1. Has no BOQ items (boqItemCount = 0)");
-                        console.error("   2. Doesn't exist in current project buildings");
-                        console.error("   3. Sheet name changed after contract was created");
-                        console.error(
-                            "🚨 Available trades (sheets with BOQ data):",
-                            finalTrades.map((t) => t.name),
-                        );
-                    }
-                } else {
-                    console.warn("🚨 EDIT MODE - No sheetName found in existing contract data");
+                if (buildingTradeMap.length > 0) {
+                    console.log("🔧 EDIT MODE - Setting building-trade mappings:", buildingTradeMap);
+                    setFormDataState((prev) => ({
+                        ...prev,
+                        selectedTrades: Array.from(selectedTradesSet),
+                        buildingTradeMap,
+                    }));
                 }
             }
         }
-    }, [formData.projectId, allBuildings, originalContractData]); // Add originalContractData dependency
+    }, [formData.projectId, allBuildings, originalContractData]);
 
     // Fetch buildings with sheets when project changes
     useEffect(() => {
         console.log("🏢 Project changed. Current projectId:", formData.projectId);
-        console.log("🏢 Before clearing, buildings:", buildings);
-        console.log("🏢 Before clearing, allBuildings:", allBuildings);
-        console.log("🏢 Before clearing, trades:", trades);
 
         if (formData.projectId) {
             // Immediately clear buildings and trades from the old project
@@ -1035,8 +975,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setTrades([]);
 
             fetchBuildingsWithSheets(formData.projectId);
-            // Clear trade and building selections when project changes
-            setFormData({ tradeId: null, buildingIds: [] });
+            // Clear trade, building, and BOQ data when project changes
+            setFormData({ selectedTrades: [], buildingTradeMap: [], boqData: [] });
         } else {
             // If project is cleared, also clear buildings and trades
             setBuildings([]);
@@ -1044,63 +984,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
             setTrades([]);
         }
     }, [formData.projectId]);
-
-    // Filter buildings when trade changes (SIMPLE: based on sheet names)
-    useEffect(() => {
-        console.log("🏢 Trade changed or buildings updated. Current tradeId:", formData.tradeId);
-        console.log("🏢 allBuildings at this point:", allBuildings);
-
-        if (formData.tradeId && allBuildings.length > 0) {
-            // Find the selected trade
-            const selectedTrade = trades.find((t) => t.id === formData.tradeId);
-            if (selectedTrade) {
-                const filteredBuildings = allBuildings
-                    .map((building) => {
-                        // Filter sheets by trade name (sheet name)
-                        const availableSheets = building.sheets.filter((sheet) => sheet.name === selectedTrade.name);
-                        return {
-                            ...building,
-                            availableSheets,
-                            sheetCount: availableSheets.length,
-                        };
-                    })
-                    .filter((building) => building.sheetCount > 0);
-
-                console.log(`🔍 EDIT Filtered buildings for trade "${selectedTrade.name}":`, filteredBuildings);
-                setBuildings(filteredBuildings);
-
-                // 🔍 DEBUG: Log building IDs state during filtering
-                console.log("🏢 BUILDING FILTER - Current state:", {
-                    selectedTradeId: formData.tradeId,
-                    selectedTradeName: selectedTrade.name,
-                    currentBuildingIds: formData.buildingIds,
-                    filteredBuildingIds: filteredBuildings.map((b) => b.id),
-                    buildingIdsStillValid: formData.buildingIds.filter((id) =>
-                        filteredBuildings.some((b) => b.id === id),
-                    ),
-                    hasOriginalContractData: !!originalContractData,
-                });
-
-                // 🔧 FIX: Only clear building selection if this is NOT from loading existing contract data
-                // If we have existing contract data, preserve the building selections
-                if (!originalContractData) {
-                    // Clear building selection when trade changes (only for new contracts)
-                    setFormData({ buildingIds: [] });
-                } else {
-                    // For edit mode, ensure we don't accidentally clear building IDs
-                    if (formData.buildingIds.length === 0 && originalContractData.buildings && formData.projectId === originalContractData.projectId) {
-                        const restoredBuildingIds = originalContractData.buildings.map((b: any) => b.id) || [];
-                        console.log("🔧 EDIT MODE - Restoring building IDs during filter:", restoredBuildingIds);
-                        setFormDataState((prev) => ({ ...prev, buildingIds: restoredBuildingIds }));
-                    }
-                }
-            }
-        } else if (!formData.tradeId) {
-            console.log("🏢 No trade selected. Setting buildings to allBuildings.");
-            // Reset to all buildings when no trade selected
-            setBuildings(allBuildings);
-        }
-    }, [formData.tradeId, allBuildings, trades, originalContractData]); // Add originalContractData dependency
 
     // Context value - Memoized to prevent unnecessary re-renders
     const contextValue: EditWizardContextType = useMemo(() => ({
@@ -1117,6 +1000,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         projects,
         trades,
         buildings,
+        allBuildings,
         subcontractors,
         contracts,
         currencies,
@@ -1156,6 +1040,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         projects,
         trades,
         buildings,
+        allBuildings,
         subcontractors,
         contracts,
         currencies,

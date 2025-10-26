@@ -12,19 +12,13 @@ interface Project {
 
 export const Step1_ProjectSelection: React.FC = () => {
     const { formData, setFormData, projects, loadingProjects } = useWizardContext();
-    
-    // Find selected project based on formData.projectId
-    const selectedProject = React.useMemo(() => {
-        if (projects.length > 0 && formData.projectId) {
-            return projects.find(p => p.id === formData.projectId) || null;
-        }
-        return null;
-    }, [projects, formData.projectId]);
 
     const handleProjectSelect = (project: Project) => {
-        setFormData({ 
-            projectId: project.id, 
-            buildingIds: [] // Reset building selection when project changes
+        setFormData({
+            projectId: project.id,
+            selectedTrades: [],
+            buildingTradeMap: {},
+            boqData: [] // Clear stale BOQ items
         });
         // Buildings will be loaded automatically by the useEffect in WizardContext
     };

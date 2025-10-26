@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -86,8 +86,8 @@ export interface BOQItem {
 
 interface WizardFormData {
     projectId: number | null;
-    tradeId: number | null;
-    buildingIds: number[];
+    selectedTrades: string[]; // Array of selected trade names (sheet names)
+    buildingTradeMap: { [tradeName: string]: number[] }; // Map of trade → building IDs
     subcontractorId: number | null;
     contractId: number | null;
     currencyId: number | null;
@@ -169,14 +169,14 @@ interface WizardContextType {
     goToPreviousStep: () => void;
 
     // Submission
-    handleSubmit: () => Promise<void>;
+    handleSubmit: () => Promise<boolean>;
 }
 
 // Initial form data
 const initialFormData: WizardFormData = {
     projectId: null,
-    tradeId: null,
-    buildingIds: [],
+    selectedTrades: [],
+    buildingTradeMap: {},
     subcontractorId: null,
     contractId: null,
     currencyId: null,
@@ -433,18 +433,10 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
     };
 
     const validateStep2 = (): boolean => {
-        return formData.tradeId !== null;
-    };
-
-    const validateStep3 = (): boolean => {
-        return formData.buildingIds.length > 0;
-    };
-
-    const validateStep4 = (): boolean => {
         return formData.subcontractorId !== null;
     };
 
-    const validateStep5 = (): boolean => {
+    const validateStep3 = (): boolean => {
         return (
             formData.contractId !== null &&
             formData.currencyId !== null &&
@@ -454,15 +446,29 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         );
     };
 
-    const validateStep6 = (): boolean => {
+    const validateStep4 = (): boolean => {
+        // Check that at least one trade is selected
+        if (formData.selectedTrades.length === 0) {
+            return false;
+        }
+
+        // Check that at least one building is selected for each trade
+        for (const tradeName of formData.selectedTrades) {
+            const buildings = formData.buildingTradeMap[tradeName] || [];
+            if (buildings.length === 0) {
+                return false;
+            }
+        }
+
+        // Check that BOQ data exists
         return formData.boqData.some((building) => building.items.length > 0);
     };
 
-    const validateStep7 = (): boolean => {
+    const validateStep5 = (): boolean => {
         return true; // Review step doesn't require validation
     };
 
-    const validateStep8 = (): boolean => {
+    const validateStep6 = (): boolean => {
         return true; // Preview step doesn't require validation
     };
 
@@ -471,19 +477,15 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             case 1:
                 return validateStep1();
             case 2:
-                return validateStep2();
+                return validateStep2(); // Subcontractor (was Step4)
             case 3:
-                return validateStep3();
+                return validateStep3(); // Contract Details (was Step5)
             case 4:
-                return validateStep4();
+                return validateStep4(); // BOQ Items (was Step6)
             case 5:
-                return validateStep5();
+                return validateStep5(); // Review (was Step7)
             case 6:
-                return validateStep6();
-            case 7:
-                return validateStep7();
-            case 8:
-                return validateStep8();
+                return validateStep6(); // Preview (was Step8)
             default:
                 return false;
         }
@@ -491,7 +493,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
     // Navigation functions
     const goToNextStep = () => {
-        if (validateCurrentStep() && currentStep < 8) {
+        if (validateCurrentStep() && currentStep < 6) {
             setCurrentStep(currentStep + 1);
         }
     };
@@ -506,7 +508,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
     const contractsApi = useContractsApi();
 
     // Submission function using the new API service
-    const handleSubmit = async () => {
+    const handleSubmit = async (): Promise<boolean> => {
         try {
             setLoading(true);
 
@@ -576,7 +578,8 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 subcontractorId: formData.subcontractorId,
                 contractId: formData.contractId,
                 currencyId: formData.currencyId,
-                buildingCount: formData.buildingIds.length,
+                selectedTradesCount: formData.selectedTrades.length,
+                totalBuildingsCount: Object.values(formData.buildingTradeMap).reduce((sum, buildings) => sum + buildings.length, 0),
                 boqDataCount: formData.boqData.length,
                 totalBoqItems: formData.boqData.reduce((sum, building) => sum + building.items.length, 0),
             });
@@ -613,7 +616,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
                 toaster.success("Contract created successfully!");
                 setHasUnsavedChanges(false);
-                // Navigation will be handled by the main component
+                return true; // SUCCESS
             } else {
                 throw new Error(result.error || "Failed to create contract");
             }
@@ -626,6 +629,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             });
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
             toaster.error(`Failed to create contract: ${errorMessage}`);
+            return false; // FAILURE
         } finally {
             setLoading(false);
         }
@@ -680,38 +684,21 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         if (formData.projectId) {
             fetchBuildingsWithSheets(formData.projectId);
             // Clear trade and building selections when project changes
-            setFormData({ tradeId: null, buildingIds: [] });
+            // ALSO clear boqData to prevent stale items from being submitted
+            setFormData({
+                selectedTrades: [],
+                buildingTradeMap: {},
+                boqData: [] // CRITICAL: Clear stale BOQ items
+            });
         }
     }, [formData.projectId]);
 
-    // Filter buildings when trade changes (SIMPLE: based on sheet names)
+    // Filter buildings when trade changes (LEGACY: kept for compatibility but unused in new architecture)
     useEffect(() => {
-        if (formData.tradeId && allBuildings.length > 0) {
-            // Find the selected trade
-            const selectedTrade = trades.find((t) => t.id === formData.tradeId);
-            if (selectedTrade) {
-                const filteredBuildings = allBuildings
-                    .map((building) => {
-                        // Filter sheets by trade name (sheet name)
-                        const availableSheets = building.sheets.filter((sheet) => sheet.name === selectedTrade.name);
-                        return {
-                            ...building,
-                            availableSheets,
-                            sheetCount: availableSheets.length,
-                        };
-                    })
-                    .filter((building) => building.sheetCount > 0);
-
-                console.log(`🔍 Filtered buildings for trade "${selectedTrade.name}":`, filteredBuildings);
-                setBuildings(filteredBuildings);
-                // Clear building selection when trade changes
-                setFormData({ buildingIds: [] });
-            }
-        } else if (!formData.tradeId) {
-            // Reset to all buildings when no trade selected
-            setBuildings(allBuildings);
-        }
-    }, [formData.tradeId, allBuildings, trades]);
+        // Note: This effect is kept for backward compatibility but is not used in the new unified trade/building selection
+        // The new architecture uses selectedTrades and buildingTradeMap instead
+        setBuildings(allBuildings);
+    }, [allBuildings]);
 
     // Context value - Memoized to prevent unnecessary re-renders
     const contextValue: WizardContextType = useMemo(() => ({

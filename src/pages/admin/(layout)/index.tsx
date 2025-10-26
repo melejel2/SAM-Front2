@@ -23,10 +23,10 @@ const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
       <div className="relative">
         {/* Sidebar - Desktop only */}
         {!isMobile && (
-          <div 
+          <div
             className="fixed z-30"
             style={{
-              left: '48px',
+              left: '8px',
               top: '64px',
               bottom: 0,
               display: 'flex',
@@ -41,13 +41,13 @@ const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
         <div
           className={`
             ${isMobile ? 'pt-14' : 'pt-16'}
-            px-36
+            px-16
           `}
           style={{
-            height: isMobile ? 'calc(100vh - 3.5rem)' : 'calc(100vh - 4rem)',
+            minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            paddingTop: isMobile ? '3.5rem' : '5rem',
+            paddingTop: isMobile ? '3.5rem' : '4rem',
             paddingBottom: 0
           }}
         >

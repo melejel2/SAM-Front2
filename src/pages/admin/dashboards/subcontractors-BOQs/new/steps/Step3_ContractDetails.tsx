@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useWizardContext } from "../context/WizardContext";
-import { AttachmentsDialog, AttachmentsType } from "../../shared/components/AttachmentsDialog";
+import { AttachmentsDialog } from "../../shared/components/AttachmentsDialog";
 
 // Define the floating label input component for reusability
 const FloatingLabelInput: React.FC<{
@@ -78,7 +78,7 @@ const FloatingLabelInput: React.FC<{
     );
 };
 
-export const Step5_ContractDetails: React.FC = () => {
+export const Step3_ContractDetails: React.FC = () => {
     const { formData, setFormData, contracts, currencies, projects } = useWizardContext();
     const [contractNumberSuffix, setContractNumberSuffix] = useState<string>("");
     const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);

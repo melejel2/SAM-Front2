@@ -1,8 +1,8 @@
 import React from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
 
-export const EditStep7_Review: React.FC = () => {
-    const { formData, projects, buildings, subcontractors, contracts, currencies } = useEditWizardContext();
+export const EditStep5_Review: React.FC = () => {
+    const { formData, projects, allBuildings, subcontractors, contracts, currencies } = useEditWizardContext();
 
     // Helper functions
     const getProjectName = () => {
@@ -11,8 +11,9 @@ export const EditStep7_Review: React.FC = () => {
     };
 
     const getBuildingNames = () => {
-        return formData.buildingIds
-            .map(id => buildings.find(b => b.id === id)?.name || buildings.find(b => b.id === id)?.buildingName || `Building ${id}`)
+        const buildingIds = [...new Set(formData.buildingTradeMap.map(m => m.buildingId))];
+        return buildingIds
+            .map(id => allBuildings.find(b => b.id === id)?.name || allBuildings.find(b => b.id === id)?.buildingName || `Building ${id}`)
             .join(', ');
     };
 
