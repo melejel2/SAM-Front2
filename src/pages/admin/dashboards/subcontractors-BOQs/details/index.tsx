@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
-import { getContractVOs, previewVoDataSet, exportVoDataSetWord, deleteVoDataSet, generateVoDataSet } from "@/api/services/vo-api";
+import {
+    deleteVoDataSet,
+    exportVoDataSetWord,
+    generateVoDataSet,
+    getContractVOs,
+    previewVoDataSet,
+} from "@/api/services/vo-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -10,6 +16,7 @@ import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 
 import { useContractsApi } from "../hooks/use-contracts-api";
+import TerminatedContracts from "../TerminatedContracts";
 
 // Contract-specific VOs hook
 const useContractVOs = (contractId: string) => {
@@ -119,6 +126,8 @@ const ContractDetails = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
     const [currencies, setCurrencies] = useState<any[]>([]);
+    const [showTerminatedPreviewModal, setShowTerminatedPreviewModal] = useState(false);
+    const [terminatedPreviewData, setTerminatedPreviewData] = useState<any>(null);
 
     // New state for VO preview and export
     const [loadingPreviewVO, setLoadingPreviewVO] = useState(false);
@@ -287,8 +296,7 @@ const ContractDetails = () => {
         } catch (error) {
             const message = error instanceof Error ? error.message : "An unknown error occurred.";
             toaster.error(`An error occurred during preview generation: ${message}`);
-        }
-        finally {
+        } finally {
             setLoadingPreview(false);
         }
     };
@@ -539,13 +547,14 @@ const ContractDetails = () => {
 
     const handleGenerateVO = async (voId: number) => {
         // Find the VO data to get the VO number for confirmation
-        const voData = vos.find(vo => vo.id === voId);
-        const voNumber = (voData && typeof voData.voNumber === 'string') ? voData.voNumber : `VO-${voId}`;
-        const projectName = (currentProject && typeof currentProject.name === 'string') ? currentProject.name : "Unknown Project";
-        
+        const voData = vos.find((vo) => vo.id === voId);
+        const voNumber = voData && typeof voData.voNumber === "string" ? voData.voNumber : `VO-${voId}`;
+        const projectName =
+            currentProject && typeof currentProject.name === "string" ? currentProject.name : "Unknown Project";
+
         // Show confirmation dialog
         const confirmMessage = `Are you sure you want to generate VO ${voNumber} for project ${projectName}?\n\nThis will create the final VO document and update its status.`;
-        
+
         if (!confirm(confirmMessage)) {
             return;
         }
@@ -695,7 +704,67 @@ const ContractDetails = () => {
                         </ul>
                     </div>
 
-                    {(contractData.contractDatasetStatus === "Editable" || contractData.contractDatasetStatus === "Active") && (
+                    {contractData.contractDatasetStatus === "Terminated" && (
+                        <button
+                            onClick={() => {
+                                setTerminatedPreviewData({
+                                    contractId: contractData.id,
+                                    contractNumber: contractData.contractNumber,
+                                    projectName: contractData.projectName,
+                                    status: contractData.originalStatus,
+                                });
+                                setShowTerminatedPreviewModal(true);
+                            }}
+                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
+                            <span className="iconify lucide--file-text size-4"></span>
+                            <span>Preview Files</span>
+                        </button>
+                    )}
+
+            {/* Terminated Contracts Preview Modal */}
+            {showTerminatedPreviewModal && terminatedPreviewData && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box h-[90vh] max-w-7xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-bold">Terminated Contract Files</h3>
+                            <button onClick={() => setShowTerminatedPreviewModal(false)} className="btn btn-ghost btn-sm">
+                                <span className="iconify lucide--x size-5"></span>
+                            </button>
+                        </div>
+                        <div className="h-[calc(100%-60px)]">
+                            <TerminatedContracts
+                                selectedProject={terminatedPreviewData.projectName}
+                            />
+                        </div>
+                    </div>
+                    <form method="dialog" className="modal-backdrop">
+                        <button onClick={() => setShowTerminatedPreviewModal(false)}>close</button>
+                    </form>
+                </dialog>
+            )}
+
+            {/* VO Preview Modal */}
+            {showVoPreview && voPreviewData && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box h-[90vh] max-w-7xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-bold">VO Preview</h3>
+                            <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
+                                <span className="iconify lucide--x size-5"></span>
+                            </button>
+                        </div>
+                        <div className="h-[calc(100%-60px)]">
+                            <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
+                        </div>
+                    </div>
+                    <form method="dialog" className="modal-backdrop">
+                        <button onClick={() => setShowVoPreview(false)}>close</button>
+                    </form>
+                </dialog>
+            )}
+
+                    {(contractData.contractDatasetStatus === "Editable" ||
+                        contractData.contractDatasetStatus === "Active") && (
                         <button
                             onClick={handleEditContract}
                             className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
@@ -749,7 +818,7 @@ const ContractDetails = () => {
                     <div className="card-body">
                         <h3 className="card-title text-base-content flex items-center gap-2">
                             <span className="iconify lucide--file-text size-5 text-purple-600"></span>
-                            Contract Information
+                            Contract Information ibrahim
                         </h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex justify-between">
@@ -888,16 +957,20 @@ const ContractDetails = () => {
                                 if (type === "Edit") {
                                     console.log("📝 Edit action - navigating to edit wizard");
                                     // Navigate to VO creation wizard for editing
-                                    navigate(`/dashboard/contracts/details/${extraData.contractIdentifier}/edit-vo/${data.id}`, {
-                                        state: {
-                                            contractId: extraData.contractId,
-                                            voDatasetId: data.id // Pass the ID of the VO dataset to edit
-                                        }
-                                    });
+                                    navigate(
+                                        `/dashboard/contracts/details/${extraData.contractIdentifier}/edit-vo/${data.id}`,
+                                        {
+                                            state: {
+                                                contractId: extraData.contractId,
+                                                voDatasetId: data.id, // Pass the ID of the VO dataset to edit
+                                            },
+                                        },
+                                    );
                                 } else if (type === "Preview") {
                                     console.log("👁️ Preview action");
                                     handlePreviewVoDataSet(data.id, data.voNumber);
-                                } else if (type === "Export") { // New action type
+                                } else if (type === "Export") {
+                                    // New action type
                                     console.log("📤 Export action");
                                     handleExportVoDataSetWord(data.id, data.voNumber);
                                 } else if (type === "Delete") {
