@@ -1,5 +1,5 @@
 export const ACTIVE_URL = "https://samback.karamentreprises.com/";
-//export const ACTIVE_URL = "https://localhost:7055/";
+//export const ACTIVE_URL = "https://localhost:7055/";  // ⚠️ USE THIS FOR LOCAL BACKEND TESTING
 //export const ACTIVE_URL = "http://localhost:5276/";
 export const ACTIVE_API_URL = `${ACTIVE_URL}api/`;
 

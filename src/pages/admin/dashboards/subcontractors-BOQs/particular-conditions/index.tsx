@@ -415,13 +415,6 @@ const ParticularConditions = () => {
 
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Management Fees (%)</span>
-                    </label>
-                    <input type="text" className="input input-bordered" name="purchaseIncrease" value={formData.purchaseIncrease || ''} onChange={(e) => handleInputChange(e)} placeholder="0" />
-                </div>
-
-                <div className="form-control">
-                    <label className="label">
                         <span className="label-text">Late Penalty (‰)</span>
                     </label>
                     <input type="text" className="input input-bordered" name="latePenalties" value={formData.latePenalties || ''} onChange={(e) => handleInputChange(e)} placeholder="0" />
@@ -474,13 +467,6 @@ const ParticularConditions = () => {
                         <span className="label-text">Max Progress (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" name="progress" value={formData.progress || ''} onChange={(e) => handleInputChange(e)} placeholder="0" />
-                </div>
-
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Hold Back (%)</span>
-                    </label>
-                    <input type="text" className="input input-bordered" name="holdBack" value={formData.holdBack || ''} onChange={(e) => handleInputChange(e)} placeholder="0" />
                 </div>
             </div>
 

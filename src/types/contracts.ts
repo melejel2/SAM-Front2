@@ -25,7 +25,8 @@ export const AttachmentType = AttachmentsType;
 
 // Particular Conditions VM - matches backend ContractsDataSetBase + Id
 export interface ParticularConditionVM {
-  [key: string]: any; // Add index signature for API compatibility
+  // Index signature required for apiRequest body parameter compatibility
+  [key: string]: unknown;
   id: number;
   contractDate?: string | null;
   completionDate?: string | null;
@@ -84,7 +85,8 @@ export interface SubcontractorBuildingsVM {
 }
 
 export interface SubcontractorBoqVM {
-  [key: string]: any; // Allow index signature for API compatibility
+  // Index signature required for apiRequest body parameter compatibility
+  [key: string]: unknown;
   id: number;
   currencyId: number;
   projectId: number;
@@ -129,7 +131,8 @@ export interface SubcontractorBoqVM {
 
 // Request DTOs
 export interface CopyBoqItemsRequest {
-  [key: string]: any; // Allow index signature for API compatibility
+  // Index signature required for apiRequest body parameter compatibility
+  [key: string]: unknown;
   sheetName: string;
   buildingIds: number[];
 }
@@ -142,7 +145,8 @@ export interface ImportContractBoqsRequest {
 }
 
 export interface ClearContractBoqItemsRequest {
-  [key: string]: any; // Allow index signature for API compatibility
+  // Index signature required for apiRequest body parameter compatibility
+  [key: string]: unknown;
   contractDataSetId: number;
   buildingId?: number;
 }

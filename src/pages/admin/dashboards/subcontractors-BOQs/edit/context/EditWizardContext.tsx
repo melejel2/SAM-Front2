@@ -186,6 +186,9 @@ interface EditWizardContextType {
     handleSubmit: () => Promise<void>;
 }
 
+// Default VAT rate constant - matches supported regions (FR: 20%, CI: 18%, CM: 19.25%)
+const DEFAULT_VAT_FALLBACK = 20;
+
 // Initial form data for editing
 const initialEditFormData: EditWizardFormData = {
     id: 0,
@@ -201,7 +204,7 @@ const initialEditFormData: EditWizardFormData = {
     contractNumber: "",
     advancePayment: 0,
     materialSupply: 0,
-    vat: 20, // Default VAT rate
+    vat: DEFAULT_VAT_FALLBACK, // Default VAT rate (can be overridden per contract)
     purchaseIncrease: "",
     latePenalties: "",
     latePenalityCeiling: "",
@@ -472,7 +475,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         completionDate: existingData.completionDate ? existingData.completionDate.split("T")[0] : "",
                         advancePayment: existingData.advancePayment || 0,
                         materialSupply: existingData.materialSupply || 0,
-                        vat: existingData.vat ?? 20,
+                        vat: existingData.vat ?? DEFAULT_VAT_FALLBACK,
                         purchaseIncrease: existingData.purchaseIncrease || "",
                         latePenalties: existingData.latePenalties || "",
                         latePenalityCeiling: existingData.latePenalityCeiling || "",
@@ -485,7 +488,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         holdBack: existingData.holdBack || "",
                         subcontractorAdvancePayee: existingData.subcontractorAdvancePayee || "",
                         recoverAdvance: existingData.recoverAdvance || "",
-                        procurementConstruction: existingData.procurementConstraction || "",
+                        procurementConstruction: existingData.procurementConstruction || "",
                         prorataAccount: existingData.prorataAccount || "",
                         managementFees: existingData.managementFees || "",
                         plansExecution: existingData.plansExecution || "",

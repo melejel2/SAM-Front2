@@ -173,7 +173,9 @@ interface WizardContextType {
     handleSubmit: () => Promise<boolean>;
 }
 
-// Initial form data
+// Default VAT rate constant - matches supported regions (FR: 20%, CI: 18%, CM: 19.25%)
+const DEFAULT_VAT_FALLBACK = 20;
+
 const initialFormData: WizardFormData = {
     projectId: null,
     selectedTrades: [],
@@ -187,7 +189,7 @@ const initialFormData: WizardFormData = {
     contractNumber: "",
     advancePayment: 0,
     materialSupply: 0,
-    vat: 20, // Default VAT rate, will be loaded from system config
+    vat: DEFAULT_VAT_FALLBACK, // Default VAT rate (can be overridden per contract)
     purchaseIncrease: "",
     latePenalties: "",
     latePenalityCeiling: "",
@@ -407,6 +409,38 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             setLoading(false);
         }
     };
+
+    const fetchSystemVat = useCallback(async () => {
+        if (!token) return;
+
+        try {
+            const response = await apiRequest({
+                method: "GET",
+                endpoint: "Configuration/GetConfigurationByKey?key=Tax",
+                token,
+            });
+
+            const configuration =
+                response && typeof response === "object" && "data" in response
+                    ? (response as any).data
+                    : response;
+
+            const rawValue = configuration?.value ?? configuration?.Value;
+            const parsedVat = typeof rawValue === "string" ? parseFloat(rawValue) : Number(rawValue);
+
+            if (!Number.isNaN(parsedVat) && parsedVat >= 0 && parsedVat <= 100) {
+                setFormDataState((prev) => {
+                    if (prev.vat !== DEFAULT_VAT_FALLBACK) {
+                        return prev;
+                    }
+                    return { ...prev, vat: parsedVat };
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching VAT configuration:", error);
+            toaster.warning("Using default VAT rate (20%).");
+        }
+    }, [token, toaster]);
 
     const fetchCurrencies = async () => {
         try {
@@ -646,8 +680,9 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             fetchSubcontractors();
             fetchContracts();
             fetchCurrencies();
+            fetchSystemVat();
         }
-    }, [token]);
+    }, [token, fetchSystemVat]);
 
     // Build trades list from sheet names - ONLY sheets with actual BOQ data (matching budget BOQ behavior)
     useEffect(() => {

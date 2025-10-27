@@ -163,13 +163,6 @@ export const EditStep3_ContractDetails: React.FC = () => {
 
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Management Fees (%)</span>
-                    </label>
-                    <input type="text" className="input input-bordered" value={formData.purchaseIncrease || ''} onChange={(e) => handleFieldChange('purchaseIncrease', e.target.value)} placeholder="0" />
-                </div>
-
-                <div className="form-control">
-                    <label className="label">
                         <span className="label-text">Late Penalty (‰)</span>
                     </label>
                     <input type="text" className="input input-bordered" value={formData.latePenalties || ''} onChange={(e) => handleFieldChange('latePenalties', e.target.value)} placeholder="0" />
@@ -222,13 +215,6 @@ export const EditStep3_ContractDetails: React.FC = () => {
                         <span className="label-text">Max Progress (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" value={formData.progress || ''} onChange={(e) => handleFieldChange('progress', e.target.value)} placeholder="0" />
-                </div>
-
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Hold Back (%)</span>
-                    </label>
-                    <input type="text" className="input input-bordered" value={formData.holdBack || ''} onChange={(e) => handleFieldChange('holdBack', e.target.value)} placeholder="0" />
                 </div>
             </div>
 
