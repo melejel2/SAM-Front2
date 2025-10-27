@@ -41,7 +41,6 @@ const useContractVOs = (contractId: string) => {
             const response = await getContractVOs(parseInt(contractId), getToken() ?? "");
 
             if (response.success && response.data && Array.isArray(response.data)) {
-                console.log("🔍 getContractVOsData response.data:", response.data);
                 const formattedVos = response.data.map((vo: any) => ({
                     id: vo.id,
                     voNumber: vo.voNumber || vo.VoNumber || "-",
@@ -149,6 +148,27 @@ const ContractDetails = () => {
 
     // Contract VOs management
     const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(contractId || "");
+
+    // Row actions control - disable edit, generate, and delete for active VOs
+    const handleVoRowActions = (row: any) => {
+        const isActive = row.status?.toLowerCase() === 'active';
+
+        if (isActive) {
+            // Active VOs cannot be edited, generated, or deleted
+            return {
+                editAction: false,
+                deleteAction: false,
+                generateAction: false
+            };
+        }
+
+        // Non-active VOs have all actions enabled
+        return {
+            editAction: true,
+            deleteAction: true,
+            generateAction: true
+        };
+    };
 
     // Initialize contracts API
     const contractsApi = useContractsApi();
@@ -819,7 +839,7 @@ const ContractDetails = () => {
                     <div className="card-body">
                         <h3 className="card-title text-base-content flex items-center gap-2">
                             <span className="iconify lucide--file-text size-5 text-purple-600"></span>
-                            Contract Information ibrahim
+                            Contract Information
                         </h3>
                         <div className="mt-4 space-y-3">
                             <div className="flex justify-between">
@@ -950,6 +970,7 @@ const ContractDetails = () => {
                             exportAction // <--- New prop
                             deleteAction
                             generateAction
+                            rowActions={handleVoRowActions} // <--- Conditional row actions based on status
                             title=""
                             loading={false}
                             onSuccess={getContractVOs} // Refresh VOs after any action

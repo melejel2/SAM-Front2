@@ -921,7 +921,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className="iconify lucide--info text-base-content/70 size-4"></span>
                                                                     </Button>
                                                                 )}
-                                                                {(rowAction?.editAction || editAction) && (
+                                                                {(rowAction?.editAction ?? editAction) && (
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
@@ -936,7 +936,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
                                                                     </Button>
                                                                 )}
-                                                                {(rowAction?.exportAction || exportAction) && (
+                                                                {(rowAction?.exportAction ?? exportAction) && (
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
@@ -952,7 +952,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className={`iconify ${exportingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--arrow-up-from-line'} text-base-content/70 text-info size-4`}></span>
                                                                     </Button>
                                                                 )}
-                                                                {(rowAction?.generateAction || generateAction) && (
+                                                                {(rowAction?.generateAction ?? generateAction) && (
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
@@ -969,7 +969,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
                                                                     </Button>
                                                                 )}
-                                                                {(rowAction?.deleteAction || deleteAction) && (
+                                                                {(rowAction?.deleteAction ?? deleteAction) && (
                                                                     <Button
                                                                         color="ghost"
                                                                         className="text-error/70 hover:bg-error/20 tooltip"

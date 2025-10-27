@@ -94,7 +94,7 @@ const SubcontractorsBOQs = () => {
                                 <span>{selectedProject}</span>
                                 <span className="iconify lucide--chevron-down size-3.5"></span>
                             </div>
-                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
+                            <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
                                 <li>
                                     <button
                                         onClick={() => setSelectedProject("All Projects")}

@@ -130,6 +130,25 @@ const ContractDatabaseDetails = () => {
     // Contract VOs management
     const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(contractId || '');
 
+    // Row actions control - disable edit, generate, and delete for active VOs
+    const handleVoRowActions = useCallback((row: any) => {
+        const isActive = row.status?.toLowerCase() === 'active';
+
+        if (isActive) {
+            return {
+                editAction: false,
+                deleteAction: false,
+                generateAction: false
+            };
+        }
+
+        return {
+            editAction: true,
+            deleteAction: true,
+            generateAction: true
+        };
+    }, []);
+
     useEffect(() => {
         if (contractId) {
             loadContractDetails();
@@ -429,7 +448,7 @@ const ContractDatabaseDetails = () => {
                             <span>Export</span>
                             <span className="iconify lucide--chevron-down size-3"></span>
                         </button>
-                        <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-52">
                             <li>
                                 <a onClick={handleExportPdf}>
                                     Export as PDF
@@ -592,6 +611,9 @@ const ContractDatabaseDetails = () => {
                             actions
                             previewAction
                             editAction
+                            generateAction
+                            deleteAction
+                            rowActions={handleVoRowActions}
                             title=""
                             loading={false}
                             onSuccess={() => {}}

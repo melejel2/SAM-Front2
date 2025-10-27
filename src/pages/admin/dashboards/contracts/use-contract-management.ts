@@ -60,9 +60,9 @@ const useContractManagement = () => {
     subcontractorName: "Subcontractor",
     tradeName: "Trade",
     contractType: "Type",
-    contractDate: "Date of Signature",
     completionDate: "End Date",
     amount: "Amount",
+    voAmount: "VO Amount",
     status: "Status",
   }), []);
 
@@ -192,9 +192,9 @@ const useContractManagement = () => {
       projectName: contract.projectName || '-',
       subcontractorName: contract.subcontractorName || '-',
       tradeName: contract.tradeName || '-',
-      contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
       completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
       amount: contract.amount ? formatCurrency(contract.amount) : '-',
+      voAmount: contract.voAmount ? formatCurrency(contract.voAmount) : '-',
       originalStatus: contract.status || '', // Preserve original for filtering
       status: formatStatusBadge(contract.status),
     }));
