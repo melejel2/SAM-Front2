@@ -107,6 +107,7 @@ interface EditWizardFormData {
     completionDate: string;
     advancePayment: number;
     materialSupply: number;
+    vat: number;
     purchaseIncrease: string;
     latePenalties: string;
     latePenalityCeiling: string;
@@ -200,6 +201,7 @@ const initialEditFormData: EditWizardFormData = {
     contractNumber: "",
     advancePayment: 0,
     materialSupply: 0,
+    vat: 20, // Default VAT rate
     purchaseIncrease: "",
     latePenalties: "",
     latePenalityCeiling: "",
@@ -470,6 +472,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         completionDate: existingData.completionDate ? existingData.completionDate.split("T")[0] : "",
                         advancePayment: existingData.advancePayment || 0,
                         materialSupply: existingData.materialSupply || 0,
+                        vat: existingData.vat ?? 20,
                         purchaseIncrease: existingData.purchaseIncrease || "",
                         latePenalties: existingData.latePenalties || "",
                         latePenalityCeiling: existingData.latePenalityCeiling || "",
@@ -613,6 +616,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 completionDate: formData.completionDate,
                 advancePayment: formData.advancePayment, // Store as percentage directly
                 materialSupply: formData.materialSupply, // Store as percentage directly
+                vat: formData.vat || 0,
                 purchaseIncrease: formData.purchaseIncrease,
                 latePenalties: formData.latePenalties,
                 latePenaliteCeiling: formData.latePenalityCeiling,

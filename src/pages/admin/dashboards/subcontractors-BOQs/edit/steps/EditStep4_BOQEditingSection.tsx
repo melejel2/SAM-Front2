@@ -29,6 +29,8 @@ interface BOQTableRowProps {
     units: any[];
     isEmptyRow: boolean;
     formatNumber: (value: number) => string;
+    formatInputValue: (value: number | string | undefined) => string;
+    parseInputValue: (value: string) => number;
     updateBOQItem: (index: number, field: keyof BOQItem, value: any) => void;
     addNewBOQItem: (initialData: Partial<BOQItem>, fieldName: string) => void;
     deleteBOQItem: (index: number) => void;
@@ -44,6 +46,8 @@ const BOQTableRow = memo<BOQTableRowProps>(({
     units,
     isEmptyRow,
     formatNumber,
+    formatInputValue,
+    parseInputValue,
     updateBOQItem,
     addNewBOQItem,
     deleteBOQItem,
@@ -179,20 +183,20 @@ const BOQTableRow = memo<BOQTableRowProps>(({
             <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
                 <input
                     id={`boq-input-${item.id}-qte`}
-                    type="number"
+                    type="text"
                     className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
                         (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')
                             ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
                             : 'bg-transparent focus:ring-primary/20'
                     }`}
-                    value={item.qte || ''}
+                    value={formatInputValue(item.qte)}
                     onChange={(e) => {
                         if (isFieldReadonly(item, 'qte')) {
                             toaster.warning('Quantity cannot be modified for Budget BOQ items with readonly restrictions');
                             return;
                         }
                         if (!item.unite && !isEmptyRow) return;
-                        const value = parseFloat(e.target.value) || 0;
+                        const value = parseInputValue(e.target.value);
                         if (isEmptyRow && value > 0) {
                             addNewBOQItem({ qte: value }, 'qte');
                         } else if (!isEmptyRow) {
@@ -200,7 +204,6 @@ const BOQTableRow = memo<BOQTableRowProps>(({
                         }
                     }}
                     placeholder=""
-                    step="0.01"
                     disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'qte')}
                     readOnly={isFieldReadonly(item, 'qte')}
                     title={isFieldReadonly(item, 'qte') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter quantity'}
@@ -209,20 +212,20 @@ const BOQTableRow = memo<BOQTableRowProps>(({
             <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm text-base-content text-center">
                 <input
                     id={`boq-input-${item.id}-pu`}
-                    type="number"
+                    type="text"
                     className={`w-full text-center text-xs sm:text-sm focus:outline-none focus:ring-2 rounded px-1 py-0.5 ${
                         (!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')
                             ? 'bg-base-200/50 text-base-content/60 cursor-not-allowed border border-base-300/50'
                             : 'bg-transparent focus:ring-primary/20'
                     }`}
-                    value={item.pu || ''}
+                    value={formatInputValue(item.pu)}
                     onChange={(e) => {
                         if (isFieldReadonly(item, 'pu')) {
                             toaster.warning('Unit price cannot be modified for Budget BOQ items with readonly restrictions');
                             return;
                         }
                         if (!item.unite && !isEmptyRow) return;
-                        const value = parseFloat(e.target.value) || 0;
+                        const value = parseInputValue(e.target.value);
                         if (isEmptyRow && value > 0) {
                             addNewBOQItem({ pu: value }, 'pu');
                         } else if (!isEmptyRow) {
@@ -230,7 +233,6 @@ const BOQTableRow = memo<BOQTableRowProps>(({
                         }
                     }}
                     placeholder=""
-                    step="0.01"
                     disabled={(!item.unite && !isEmptyRow) || isFieldReadonly(item, 'pu')}
                     readOnly={isFieldReadonly(item, 'pu')}
                     title={isFieldReadonly(item, 'pu') ? 'This field is read-only (loaded from Budget BOQ)' : (!item.unite && !isEmptyRow) ? 'Select a unit first' : 'Enter unit price'}
@@ -305,9 +307,29 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = ({
     // Number formatting function - memoized
     const formatNumber = useCallback((value: number) => {
         return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
+            minimumFractionDigits: 0,
             maximumFractionDigits: 2
         }).format(value || 0);
+    }, []);
+
+    // Format input value for display (handles numbers and strings)
+    const formatInputValue = useCallback((value: number | string | undefined) => {
+        if (!value && value !== 0) return '';
+        const numValue = typeof value === 'string' ? parseFloat(value) : value;
+        if (isNaN(numValue)) return '';
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+            useGrouping: true
+        }).format(numValue);
+    }, []);
+
+    // Parse formatted input back to number
+    const parseInputValue = useCallback((value: string): number => {
+        // Remove commas and parse
+        const cleaned = value.replace(/,/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
     }, []);
 
     // Create empty BOQ item
@@ -638,6 +660,8 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                                         units={units}
                                         isEmptyRow={isEmptyRow}
                                         formatNumber={formatNumber}
+                                        formatInputValue={formatInputValue}
+                                        parseInputValue={parseInputValue}
                                         updateBOQItem={updateBOQItem}
                                         addNewBOQItem={addNewBOQItem}
                                         deleteBOQItem={deleteBOQItem}

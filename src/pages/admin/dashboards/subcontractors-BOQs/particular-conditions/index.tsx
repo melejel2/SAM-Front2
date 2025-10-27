@@ -415,7 +415,7 @@ const ParticularConditions = () => {
 
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Interest (%)</span>
+                        <span className="label-text">Management Fees (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" name="purchaseIncrease" value={formData.purchaseIncrease || ''} onChange={(e) => handleInputChange(e)} placeholder="0" />
                 </div>

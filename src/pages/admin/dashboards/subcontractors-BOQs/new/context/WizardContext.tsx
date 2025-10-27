@@ -97,6 +97,7 @@ interface WizardFormData {
     completionDate: string;
     advancePayment: number;
     materialSupply: number;
+    vat: number;
     purchaseIncrease: string;
     latePenalties: string;
     latePenalityCeiling: string;
@@ -186,6 +187,7 @@ const initialFormData: WizardFormData = {
     contractNumber: "",
     advancePayment: 0,
     materialSupply: 0,
+    vat: 20, // Default VAT rate, will be loaded from system config
     purchaseIncrease: "",
     latePenalties: "",
     latePenalityCeiling: "",
@@ -524,6 +526,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 completionDate: formData.completionDate || "",
                 advancePayment: formData.advancePayment || 0,
                 materialSupply: formData.materialSupply || 0,
+                vat: formData.vat || 0,
                 purchaseIncrease: formData.purchaseIncrease || "",
                 latePenalties: formData.latePenalties || "",
                 latePenaliteCeiling: formData.latePenalityCeiling || "",

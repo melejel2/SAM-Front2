@@ -54,6 +54,7 @@ export interface ParticularConditionVM {
   subTrade?: string | null;
   paymentsTerm?: string | null;
   materialSupply: number;
+  vat: number;
 }
 
 // Core DTOs matching backend
@@ -121,7 +122,8 @@ export interface SubcontractorBoqVM {
   subTrade?: string;
   paymentsTerm?: string;
   materialSupply: number;
-  
+  vat: number;
+
   buildings: SubcontractorBuildingsVM[];
 }
 
@@ -210,7 +212,8 @@ export interface ContractWizardFormData {
   // Financial terms
   advancePayment: number;
   materialSupply: number;
-  
+  vat: number;
+
   // Contract terms
   purchaseIncrease: string;
   latePenalties: string;

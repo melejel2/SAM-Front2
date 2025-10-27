@@ -147,7 +147,23 @@ export const EditStep3_ContractDetails: React.FC = () => {
 
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Interest (%)</span>
+                        <span className="label-text font-semibold">VAT/Tax (%)</span>
+                    </label>
+                    <input
+                        type="number"
+                        className="input input-bordered"
+                        value={formData.vat || ''}
+                        onChange={(e) => handleFieldChange('vat', Number(e.target.value))}
+                        placeholder="20"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                    />
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Management Fees (%)</span>
                     </label>
                     <input type="text" className="input input-bordered" value={formData.purchaseIncrease || ''} onChange={(e) => handleFieldChange('purchaseIncrease', e.target.value)} placeholder="0" />
                 </div>
