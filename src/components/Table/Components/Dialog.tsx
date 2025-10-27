@@ -136,18 +136,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                         formDataBody.append(key, file);
                     }
                 });
-                
-                // Debug logging
-                console.log('FormData being sent:', {
-                    textFields: Object.fromEntries(
-                        Object.entries(formData).filter(([_, v]) => v !== null && v !== undefined)
-                    ),
-                    fileFields: Object.fromEntries(
-                        Object.entries(files).filter(([_, v]) => v !== null)
-                    ),
-                    endpoint: createEndPoint
-                });
-                
+
                 requestBody = formDataBody;
             }
 
@@ -199,7 +188,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     setIsLoading(false);
                 }
             } else if (dialogType === "Preview") {
-                console.log("Preview");
+                // Preview mode - no action needed
             }
 
             // toaster.success(`${dialogType === "Edit" ? "updated" : "created"} successfully.`);

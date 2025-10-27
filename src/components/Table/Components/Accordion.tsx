@@ -393,11 +393,10 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
     };
 
     const handleDelete = (id: number) => {
-        console.log(`Delete row with ID: ${id}`);
+        // Delete handler
     };
 
     const handleSuccess = () => {
-        console.log("Dialog action completed!");
         handleHide();
     };
 

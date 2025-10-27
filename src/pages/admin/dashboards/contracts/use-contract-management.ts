@@ -233,45 +233,31 @@ const useContractManagement = () => {
    * @param status ContractDatasetStatus (0=Editable, 1=Terminated, 2=Active)
    */
   const getContractsByStatus = async (status: ContractDatasetStatus) => {
-    console.log("🔍 getContractsByStatus called with status:", status);
-    console.log("🔍 Status mapping: 0=Editable, 1=Terminated, 2=Active");
-
     if (!token) {
-      console.log("⚠️ No token available, skipping...");
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log("📡 Calling API: getContractsDatasetsList with status", status);
       const result = await getContractsDatasetsList(status, token);
-      console.log("📥 API Response:", result);
 
       if (result.success && result.data) {
         const contractsArray = Array.isArray(result.data) ? result.data : extractDataArray(result.data);
-        console.log("📊 Contracts array length:", contractsArray.length);
-        console.log("📊 Raw contracts data:", contractsArray);
 
         const processedData = processContractData(contractsArray);
-        console.log("✅ Processed data length:", processedData.length);
 
         const reversedData = processedData.reverse(); // Show newest first
-        console.log("🔄 Reversed data length:", reversedData.length);
 
         // Update appropriate state based on status
         if (status === ContractDatasetStatus.Editable) {
-          console.log("💾 Setting draftsData with", reversedData.length, "items");
           setDraftsData(reversedData);
         } else if (status === ContractDatasetStatus.Active) {
-          console.log("💾 Setting activeData with", reversedData.length, "items");
           setActiveData(reversedData);
         } else if (status === ContractDatasetStatus.Terminated) {
-          console.log("💾 Setting terminatedData with", reversedData.length, "items");
           setTerminatedData(reversedData);
         }
       } else {
-        console.log("❌ API call failed or no data:", result);
         // Clear state on error
         if (status === ContractDatasetStatus.Editable) {
           setDraftsData([]);
@@ -292,7 +278,6 @@ const useContractManagement = () => {
       }
     } finally {
       setLoading(false);
-      console.log("✅ API call completed for status", status);
     }
   };
 

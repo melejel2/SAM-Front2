@@ -47,7 +47,6 @@ const useBuildings = () => {
     setLoading(true);
     try {
       // TODO: Implement actual API call when backend endpoint is ready
-      console.log(`🏢 Mock: Getting buildings for project ID: ${projectId}`);
       
       // Mock data for now
       const mockBuildings: Building[] = [

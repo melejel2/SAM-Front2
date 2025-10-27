@@ -540,7 +540,6 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                 // Convert back to array
                 const mergedBoqData = Array.from(existingDataMap.values());
 
-                console.log("🎯📋 Merged boqData:", mergedBoqData);
                 setFormData({ boqData: mergedBoqData });
 
                 // Mark Budget BOQ as loaded for the tabs we just loaded

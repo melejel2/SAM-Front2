@@ -233,14 +233,12 @@ export const getVoDatasetsList = async (status: ContractDatasetStatus | 'All', t
  */
 export const getVoDatasetWithBoqs = async (id: number, token: string) => {
   try {
-    console.log("🔍 API Call: GetVoDatasetWithBoqs", { id, token: token ? "provided" : "missing" });
     const response = await apiRequest({
       endpoint: `VoDataSet/GetVoDatasetWithBoqs/${id}`,
       method: 'GET',
       token
     });
-    
-    console.log("📥 API Response: GetVoDatasetWithBoqs", response);
+
     return response;
   } catch (error) {
     console.error('Get VO dataset with BOQs API Error:', error);
@@ -654,20 +652,11 @@ export const deleteVoDataSet = async (id: number, token: string): Promise<VoApiR
  */
 export const getContractForVO = async (contractId: number, token: string): Promise<VoApiResponse<ContractContext> | VoApiError> => {
   try {
-    console.log("🌐 Making API request for contract VO data:", {
-      endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
-      contractId,
-      hasToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token'
-    });
-
     const response = await apiRequest({
       endpoint: `ContractsDatasets/GetSubcontractorData/${contractId}`,
       method: 'GET',
       token
     });
-
-    console.log("📥 Raw API response:", response);
 
     // The API returns the data directly, not wrapped in a success/data structure
     if (response && response.id) {

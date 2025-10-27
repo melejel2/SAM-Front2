@@ -124,36 +124,24 @@ const ExportDropdown = ({
 };
 
 const Templates = () => {
-    console.log('Templates component rendering');
-    
-    const { 
-        contractColumns, 
-        voColumns, 
-        otherColumns, 
-        contractData, 
-        voData, 
-        otherTemplatesData, 
-        contractInputFields, 
-        voInputFields, 
-        otherInputFields, 
-        loading, 
-        getTemplates 
+    const {
+        contractColumns,
+        voColumns,
+        otherColumns,
+        contractData,
+        voData,
+        otherTemplatesData,
+        contractInputFields,
+        voInputFields,
+        otherInputFields,
+        loading,
+        getTemplates
     } = useTemplates();
     
-    console.log('Templates hook data:', { 
-        contractColumns, 
-        voColumns, 
-        otherColumns, 
-        contractData: contractData?.length,
-        voData: voData?.length,
-        otherTemplatesData: otherTemplatesData?.length,
-        loading 
-    });
-    
-    const { getToken } = useAuth();
+    const { getToken, authState } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
-    const { canManageTemplates, canViewTemplates } = usePermissions();
+    const { canManageTemplates, canViewTemplates, userRole, isAdmin } = usePermissions();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -166,6 +154,7 @@ const Templates = () => {
 
     const token = getToken();
 
+
     useEffect(() => {
         getTemplates();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,14 +164,14 @@ const Templates = () => {
         // Set loading state for this specific row
         const rowId = row.id || row.contractId || row.projectId || String(row);
         setPreviewLoadingRowId(rowId);
-        
+
         try {
             let endpoint = '';
             let fileName = '';
-            
+
             // Use template name instead of database ID in filenames
             const templateRef = row.templateName || row.name || row.id;
-            
+
             if (templateType === 'contract') {
                 endpoint = `Templates/PreviewTemplatePdf?id=${row.id}&isVo=false`;
                 fileName = `template-${templateRef}.pdf`;
@@ -249,9 +238,7 @@ const Templates = () => {
             const isContractTemplate = templateType === 'contract';
             const isVoParam = isContractTemplate ? 'false' : 'true';
             const endpoint = `Templates/DeleteTemplate?id=${templateData.id}&isVo=${isVoParam}`;
-            
-            console.log('Deleting template:', { templateData, templateType, endpoint });
-            
+
             const response = await apiRequest({
                 endpoint,
                 method: "DELETE",
@@ -427,17 +414,17 @@ const Templates = () => {
                                 {/* Contract Templates Tab */}
                                 {activeTab === 0 && (
                                     <SAMTable
-                                        columns={contractColumns}
-                                        tableData={contractData}
-                                        inputFields={contractInputFields}
-                                        actions={true}
-                                        editAction={false}
-                                        deleteAction={canManageTemplates}
-                                        previewAction={true}
-                                        title={"Contract Template"}
-                                        loading={false}
-                                        addBtn={canManageTemplates}
-                                        addBtnText="Upload Template"
+                                            columns={contractColumns}
+                                            tableData={contractData}
+                                            inputFields={contractInputFields}
+                                            actions={true}
+                                            editAction={false}
+                                            deleteAction={canManageTemplates}
+                                            previewAction={true}
+                                            title={"Contract Template"}
+                                            loading={false}
+                                            addBtn={canManageTemplates}
+                                            addBtnText="Upload Template"
                                         createEndPoint="Templates/AddContractTemplate"
                                         deleteEndPoint="Templates/DeleteTemplate"
                                         onSuccess={getTemplates}
@@ -445,11 +432,10 @@ const Templates = () => {
                                             if (type === "Preview" && data) {
                                                 handlePreview(data, 'contract');
                                             } else if (type === "Delete" && data) {
-                                                console.log('Delete clicked for contract template:', data);
                                                 openDeleteModal(data, 'contract');
                                             }
                                         }}
-                                        dynamicDialog={false}
+                                        dynamicDialog={true}
                                         previewLoadingRowId={previewLoadingRowId}
                                     />
                                 )}
@@ -475,7 +461,6 @@ const Templates = () => {
                                             if (type === "Preview" && data) {
                                                 handlePreview(data, 'vo');
                                             } else if (type === "Delete" && data) {
-                                                console.log('Delete clicked for VO template:', data);
                                                 openDeleteModal(data, 'vo');
                                             }
                                         }}
@@ -505,7 +490,6 @@ const Templates = () => {
                                             if (type === "Preview" && data) {
                                                 handlePreview(data, 'other');
                                             } else if (type === "Delete" && data) {
-                                                console.log('Delete clicked for other template:', data);
                                                 openDeleteModal(data, 'other');
                                             }
                                         }}

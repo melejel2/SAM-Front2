@@ -72,39 +72,8 @@ const apiRequest = async <T = any>({
     }
 
     try {
-        // DEBUG: Log the HTTP request details - for save contracts and delete operations
-        if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
-            const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
-            const debugTitle = url.includes('DeleteProject') ? "HTTP DELETE REQUEST" : "HTTP SAVE REQUEST";
-            console.log(`${debugPrefix} === ${debugTitle} ===`);
-            console.log(`${debugPrefix} URL:`, url);
-            console.log(`${debugPrefix} Method:`, method);
-            console.log(`${debugPrefix} Headers:`, mergedHeaders);
-            if (body) {
-                if (body instanceof FormData) {
-                    console.log(`${debugPrefix} Body: [FormData]`);
-                } else if (body instanceof URLSearchParams) {
-                    console.log(`${debugPrefix} Body: [URLSearchParams]`);
-                } else {
-                    console.log(`${debugPrefix} Body (JSON):`, JSON.stringify(body, null, 2));
-                }
-            } else {
-                console.log(`${debugPrefix} Body: No body`);
-            }
-        }
-        
+
         const response = await fetch(url, requestOptions);
-        
-        // DEBUG: Log the HTTP response summary - for save contracts and delete operations
-        if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
-            const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
-            const debugTitle = url.includes('DeleteProject') ? "HTTP DELETE RESPONSE" : "HTTP SAVE RESPONSE";
-            console.log(`${debugPrefix} === ${debugTitle} ===`);
-            console.log(`${debugPrefix} Status:`, response.status);
-            console.log(`${debugPrefix} Status Text:`, response.statusText);
-            console.log(`${debugPrefix} OK:`, response.ok);
-            console.log(`${debugPrefix} Headers:`, Object.fromEntries(response.headers.entries()));
-        }
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -202,7 +171,6 @@ const apiRequest = async <T = any>({
             console.error('JSON parsing error:', error, 'Response text:', responseText);
             // Check if it's a content-type issue
             const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
             
             return {
                 isSuccess: false,

@@ -123,7 +123,6 @@ const useBudgetBOQs = () => {
             });
 
             if (data && Array.isArray(data)) {
-                console.log(data);
                 setBuildings(data);
                 // Update cache
                 buildingsCacheRef.current.set(projectId, { data, timestamp: now });

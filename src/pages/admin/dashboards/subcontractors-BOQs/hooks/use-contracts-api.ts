@@ -97,35 +97,30 @@ export const useContractsApi = () => {
 
   // Save or update contract dataset
   const saveContract = async (model: SubcontractorBoqVM, showSuccessMessage = true) => {
-    console.log("🎯🔑 saveContract called - checking token...");
-    console.log("🎯🔑 Token exists:", !!token);
     if (!token) {
-      console.error("🎯🔑 NO TOKEN - Authentication required");
+      console.error("NO TOKEN - Authentication required");
       toaster.error('Authentication required');
       return { success: false };
     }
 
     try {
-      console.log("🎯🔑 Setting loading and calling saveSubcontractorDataset...");
       setLoading(true);
       const result = await saveSubcontractorDataset(model, token);
-      
-      console.log("🎯🔑 saveSubcontractorDataset returned:", result);
-      
+
       if (!result.success) {
-        console.error("🎯🔑 Save failed:", result);
+        console.error("Save failed:", result);
         toaster.error(result.message || 'Failed to save contract');
         return { success: false, error: result.error };
       }
-      
+
       if (showSuccessMessage) {
         toaster.success('Contract saved successfully!');
       }
-      
+
       return { success: true, data: result.data };
     } catch (error) {
-      console.error('🎯🔑 Save contract error:', error);
-      console.error('🎯🔑 Error details:', {
+      console.error('Save contract error:', error);
+      console.error('Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
@@ -133,7 +128,6 @@ export const useContractsApi = () => {
       toaster.error('An error occurred while saving the contract');
       return { success: false };
     } finally {
-      console.log("🎯🔑 Setting loading to false");
       setLoading(false);
     }
   };
@@ -514,37 +508,22 @@ export const useContractsApi = () => {
 
     try {
       setLoading(true);
-      
-      console.log('🎯📄 LIVE PREVIEW DEBUG - Input contractData:', contractData);
-      console.log('🎯📄 Contract ID exists:', !!contractData.id);
-      console.log('🎯📄 Contract has BOQ items:', !!(contractData.contractDetailsList && contractData.contractDetailsList.length > 0));
-      
+
       // If contractData has an ID, fetch the full contract data first (like the working preview)
       if (contractData.id) {
-        console.log('🎯📄 Fetching full contract data from API for ID:', contractData.id);
         // Get the full contract data structure from the API
         const contractResponse = await getSubcontractorData(Number(contractData.id), token);
-        
+
         if (!contractResponse.success || !contractResponse.data) {
-          console.error('🎯📄 Failed to fetch contract data:', contractResponse);
+          console.error('Failed to fetch contract data:', contractResponse);
           toaster.error('Failed to load contract data for preview');
           return { success: false, blob: null };
         }
-        
-        console.log('🎯📄 Full contract data fetched:', contractResponse.data);
-        console.log('🎯📄 Buildings count:', contractResponse.data.buildings?.length || 0);
-        console.log('🎯📄 Contract basics:', {
-          contractNumber: contractResponse.data.contractNumber,
-          subContractorId: contractResponse.data.subContractorId,
-          amount: contractResponse.data.amount
-        });
 
         // Use the full contract data for live preview
         const blob = await livePreviewPdf(contractResponse.data, token);
         return { success: true, blob };
       } else {
-        console.log('🎯📄 Using provided contract data directly (no ID found)');
-        console.log('🎯📄 Direct data BOQ items:', contractData.contractDetailsList?.length || 0);
         
         // For cases where we already have a properly structured SubcontractorBoqVM
         const blob = await livePreviewPdf(contractData, token);
@@ -567,37 +546,22 @@ export const useContractsApi = () => {
 
     try {
       setLoading(true);
-      
-      console.log('🎯📄 LIVE PREVIEW WORD DEBUG - Input contractData:', contractData);
-      console.log('🎯📄 Contract ID exists:', !!contractData.id);
-      console.log('🎯📄 Contract has BOQ items:', !!(contractData.contractDetailsList && contractData.contractDetailsList.length > 0));
-      
+
       // If contractData has an ID, fetch the full contract data first (like the working preview)
       if (contractData.id) {
-        console.log('🎯📄 Fetching full contract data from API for ID:', contractData.id);
         // Get the full contract data structure from the API
         const contractResponse = await getSubcontractorData(Number(contractData.id), token);
-        
+
         if (!contractResponse.success || !contractResponse.data) {
-          console.error('🎯📄 Failed to fetch contract data:', contractResponse);
+          console.error('Failed to fetch contract data:', contractResponse);
           toaster.error('Failed to load contract data for preview');
           return { success: false, blob: null };
         }
-        
-        console.log('🎯📄 Full contract data fetched:', contractResponse.data);
-        console.log('🎯📄 Buildings count:', contractResponse.data.buildings?.length || 0);
-        console.log('🎯📄 Contract basics:', {
-          contractNumber: contractResponse.data.contractNumber,
-          subContractorId: contractResponse.data.subContractorId,
-          amount: contractResponse.data.amount
-        });
-        
+
         // Use the full contract data for live preview
         const blob = await livePreviewWord(contractResponse.data, token);
         return { success: true, blob };
       } else {
-        console.log('🎯📄 Using provided contract data directly (no ID found)');
-        console.log('🎯📄 Direct data BOQ items:', contractData.contractDetailsList?.length || 0);
         
         // For cases where we already have a properly structured SubcontractorBoqVM
         const blob = await livePreviewWord(contractData, token);

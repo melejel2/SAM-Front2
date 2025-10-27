@@ -110,7 +110,6 @@ const BOQStep: React.FC<BOQStepProps> = ({
                 );
 
                 if (targetSheet) {
-                    console.log(`Navigating to imported sheet: "${pendingSheetNavigation}"`);
                     // Create a trade object that matches the expected structure
                     setSelectedTrade({
                         id: targetSheet.id,
@@ -212,8 +211,6 @@ const BOQStep: React.FC<BOQStepProps> = ({
             });
 
             if (buildingSaveModels && Array.isArray(buildingSaveModels) && buildingSaveModels.length > 0) {
-                console.log("BOQ Import - Received preview data:", buildingSaveModels);
-
                 // Fix duplicate IDs by assigning unique temporary IDs
                 let tempIdCounter = -1; // Use negative IDs to avoid conflicts with real IDs
                 buildingSaveModels.forEach((buildingModel: any) => {
@@ -232,33 +229,17 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     }
                 });
 
-                console.log("BOQ Import - After assigning unique IDs:", buildingSaveModels);
-
                 // Validate the preview data structure
                 let hasValidData = false;
                 buildingSaveModels.forEach((buildingModel: any) => {
                     if (buildingModel.boqSheets && Array.isArray(buildingModel.boqSheets)) {
                         buildingModel.boqSheets.forEach((sheet: any) => {
                             if (sheet.boqItems && Array.isArray(sheet.boqItems) && sheet.boqItems.length > 0) {
-                                // Log detailed item information
-                                console.log(`Sheet "${sheet.name}" - ${sheet.boqItems.length} items:`,
-                                    sheet.boqItems.map((item: any, idx: number) => ({
-                                        index: idx,
-                                        id: item.id,
-                                        no: item.no,
-                                        key: item.key?.substring(0, 30) + '...',
-                                        qte: item.qte,
-                                        pu: item.pu
-                                    }))
-                                );
-
                                 // Check if all items have the same 'no' and 'key' fields (indicates malformed data)
                                 const firstItemNo = sheet.boqItems[0]?.no;
                                 const firstItemKey = sheet.boqItems[0]?.key;
                                 const allSameNo = sheet.boqItems.every((item: any) => item.no === firstItemNo);
                                 const allSameKey = sheet.boqItems.every((item: any) => item.key === firstItemKey);
-
-                                console.log(`Sheet "${sheet.name}" - All same no="${firstItemNo}": ${allSameNo}, All same key: ${allSameKey}`);
 
                                 if (!allSameNo && !allSameKey) {
                                     hasValidData = true;
@@ -422,13 +403,11 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     });
 
                     const newProjectData = { ...prevData, buildings: updatedBuildings };
-                    console.log("BOQ Import - Updated project data:", newProjectData);
                     return newProjectData;
                 });
 
                 // Set pending navigation to auto-switch to imported sheet
                 if (firstImportedSheetName) {
-                    console.log(`Setting pending navigation to: "${firstImportedSheetName}"`);
                     setPendingSheetNavigation(firstImportedSheetName);
                     toaster.success(`BOQ imported successfully!`);
                 } else {

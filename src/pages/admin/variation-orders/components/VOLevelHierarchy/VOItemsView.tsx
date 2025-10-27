@@ -300,7 +300,6 @@ const VOItemsView: React.FC<VOItemsViewProps> = ({
                                 className="bg-red-600 text-white hover:bg-red-700"
                                 onClick={() => {
                                     // Handle bulk delete
-                                    console.log("Bulk delete items:", Array.from(selectedItems));
                                 }}
                             >
                                 <span className="iconify lucide--trash-2 size-4"></span>

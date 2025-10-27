@@ -138,13 +138,6 @@ export const saveSubcontractorDataset = async (
     token: string,
 ): Promise<ContractsApiResponse> => {
     try {
-        // DEBUG: Log the API request details
-        console.log("🎯💾 === SAVE CONTRACT DATASET API CALL ===");
-        console.log("🎯💾 Endpoint:", "ContractsDatasets/SaveSubcontractorDataset");
-        console.log("🎯💾 Method:", "POST");
-        console.log("🎯💾 Token:", token ? `${token.substring(0, 20)}...` : "No token");
-        console.log("🎯💾 Model payload:", JSON.stringify(model, null, 2));
-
         const response = await apiRequest({
             endpoint: "ContractsDatasets/SaveSubcontractorDataset",
             method: "POST",
@@ -152,11 +145,7 @@ export const saveSubcontractorDataset = async (
             body: model, // Send model directly, not wrapped in an object
         });
 
-        // DEBUG: Log the raw response
-        console.log("🎯💾 RAW SAVE API RESPONSE:", response);
-
         const processedResponse = handleApiResponse(response);
-        console.log("🎯💾 PROCESSED SAVE API RESPONSE:", processedResponse);
 
         return processedResponse;
     } catch (error) {

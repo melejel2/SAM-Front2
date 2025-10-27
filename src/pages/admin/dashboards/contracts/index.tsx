@@ -186,7 +186,6 @@ const ContractsManagement = memo(() => {
 
     // Handle Export Word action (for active and terminated contracts)
     const handleExportTerminated = useCallback(async (row: any) => {
-        console.log("handleExportTerminated called with row:", row); // Added for debugging
         setExportingWord(true);
         try {
             const result = await exportTerminatedContract(Number(row.id)); // Use the exposed exportTerminatedContract from the hook

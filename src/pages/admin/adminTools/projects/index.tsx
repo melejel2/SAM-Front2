@@ -42,7 +42,6 @@ const Projects = () => {
         const projectData = await openProject(row.id);
         if (projectData) {
             // Handle the project data - you might want to open it in a new page or modal
-            console.log("Project data:", projectData);
         }
     };
 

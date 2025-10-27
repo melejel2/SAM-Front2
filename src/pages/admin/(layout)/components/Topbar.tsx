@@ -617,7 +617,6 @@ const NotificationsDialog: React.FC<{
   }, []);
 
   const handleNotificationClick = useCallback((notification: Notification) => {
-    console.log("Notification clicked:", notification);
     // Handle notification click - replace with actual navigation logic
   }, []);
 

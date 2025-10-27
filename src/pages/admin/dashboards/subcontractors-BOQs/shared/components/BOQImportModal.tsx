@@ -159,25 +159,12 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             formData.append("BuildingId", selectedBuildingId.toString());
             formData.append("SheetName", selectedSheetName);
 
-            console.log("📤 Sending FormData:");
-            console.log("  - File name:", excelFile.name);
-            console.log("  - File size:", excelFile.size, "bytes");
-            console.log("  - ContractsDataSetId:", contractDataSetId > 0 ? contractDataSetId.toString() : "0");
-            console.log("  - BuildingId:", selectedBuildingId.toString());
-            console.log("  - SheetName:", selectedSheetName);
-
             const result = await apiRequest({
                 endpoint: "ContractsDatasets/GetContractBoqItemsFromExcel",
                 method: "POST",
                 body: formData,
                 token: token,
             });
-
-            console.log("Raw API response:", result);
-            console.log("API response type:", typeof result);
-            console.log("API response keys:", result ? Object.keys(result) : "null");
-            console.log("Is Array?", Array.isArray(result));
-            console.log("Response structure:", JSON.stringify(result, null, 2));
 
             // Check if the request was successful
             if (!result.isSuccess && result.isSuccess === false) {
@@ -187,13 +174,9 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
             // Extract BOQ items from the response structure
             const items: ImportedBoqItem[] = [];
             if (result && Array.isArray(result)) {
-                console.log("Processing result array with length:", result.length);
                 result.forEach((building: any, index: number) => {
-                    console.log(`Building ${index}:`, building);
                     if (building.boqsContract && Array.isArray(building.boqsContract)) {
-                        console.log(`Building ${index} has ${building.boqsContract.length} BOQ items`);
                         building.boqsContract.forEach((item: any) => {
-                            console.log("Processing BOQ item:", item);
                             const mappedItem = {
                                 id: 0,
                                 no: item.no || "",
@@ -205,42 +188,25 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                 costCodeId: item.costCodeId,
                                 costCodeName: item.costCode,
                             };
-                            console.log("First array mapped to:", mappedItem);
                             items.push(mappedItem);
                         });
-                        console.log("All mapped items:", items);
-                    } else {
-                        console.log(
-                            `Building ${index} has no boqsContract or it's not an array:`,
-                            building.boqsContract,
-                        );
                     }
                 });
             } else if (result && typeof result === "object") {
-                console.log("Result is an object, checking for direct array...");
-
                 // Handle case where result might be an object wrapping the array
                 let dataArray = result;
                 if (result.data && Array.isArray(result.data)) {
                     dataArray = result.data;
-                    console.log("Found data property with array length:", dataArray.length);
                 } else if (Array.isArray(result)) {
-                    console.log("Result is directly an array with length:", result.length);
+                    // Result is directly an array
                 } else {
-                    console.log("Result is not an array, treating as single building object");
                     // Result might be a single building object or wrapped differently
-                    console.log("Trying to extract buildings from object...");
-
                     // Try different possible structures
                     if (result.buildings && Array.isArray(result.buildings)) {
                         dataArray = result.buildings;
-                        console.log("Found buildings array with length:", dataArray.length);
                     } else if (result.boqsContract && Array.isArray(result.boqsContract)) {
                         // Single building case
-                        console.log("Found single building with BOQ items:", result.boqsContract.length);
                         result.boqsContract.forEach((item: any) => {
-                            console.log("Processing single building BOQ item:", item);
-                            console.log("Mapping item:", item);
                             const mappedItem = {
                                 id: 0,
                                 no: item.no || "",
@@ -252,23 +218,16 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                 costCodeId: item.costCodeId,
                                 costCodeName: item.costCode,
                             };
-                            console.log("Mapped to:", mappedItem);
                             items.push(mappedItem);
                         });
-                    } else {
-                        console.log("Unknown result structure, keys:", Object.keys(result));
                     }
                 }
 
                 // Process array if we found one
                 if (Array.isArray(dataArray) && dataArray !== result) {
                     dataArray.forEach((building: any, index: number) => {
-                        console.log(`Building ${index}:`, building);
                         if (building.boqsContract && Array.isArray(building.boqsContract)) {
-                            console.log(`Building ${index} has ${building.boqsContract.length} BOQ items`);
                             building.boqsContract.forEach((item: any) => {
-                                console.log("Processing BOQ item:", item);
-                                console.log("Mapping array item:", item);
                                 const mappedItem = {
                                     id: 0,
                                     no: item.no || item.key || "", // Add missing 'no' property
@@ -280,19 +239,11 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                     costCodeId: item.costCodeId,
                                     costCodeName: item.costCode,
                                 };
-                                console.log("Array mapped to:", mappedItem);
                                 items.push(mappedItem);
                             });
-                        } else {
-                            console.log(
-                                `Building ${index} has no boqsContract or it's not an array:`,
-                                building.boqsContract,
-                            );
                         }
                     });
                 }
-            } else {
-                console.log("Result is not an array or object:", result);
             }
 
             setPreviewItems(items);

@@ -99,8 +99,6 @@ const BudgetBOQEdit = () => {
             const data = await openProject(selectedProject.id);
             setProjectData(data);
             setOriginalProjectData(JSON.parse(JSON.stringify(data))); // Deep copy
-
-            console.log("BudgetBOQEdit - Loaded project data:", data);
         } catch (error) {
             console.error("Error loading project data:", error);
             toaster.error("Failed to load project data");
