@@ -539,14 +539,6 @@ export const useContractsApi = () => {
           amount: contractResponse.data.amount
         });
 
-        // ⚠️ VAT DEBUG: Log the VAT value being sent to backend
-        console.log('🔍💰 VAT DEBUG - VAT from fetched contract data:', contractResponse.data.vat);
-        console.log('🔍💰 VAT DEBUG - Full data being sent to livePreviewPdf:', {
-          vat: contractResponse.data.vat,
-          contractId: contractResponse.data.contractId,
-          id: contractResponse.data.id
-        });
-
         // Use the full contract data for live preview
         const blob = await livePreviewPdf(contractResponse.data, token);
         return { success: true, blob };

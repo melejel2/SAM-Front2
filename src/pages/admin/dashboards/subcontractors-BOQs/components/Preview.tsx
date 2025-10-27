@@ -117,6 +117,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
             subTrade: formData.subTrade || "",
             paymentsTerm: formData.paymentsTerm || "",
             contractNumber: formData.contractNumber || "",
+            vat: formData.vat || 0, // VAT/Tax percentage for BOQ calculations
             contractDatasetStatus: "Editable",
             isGenerated: false,
             buildings: buildings,
