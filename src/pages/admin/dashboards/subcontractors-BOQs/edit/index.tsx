@@ -46,12 +46,7 @@ const EditSubcontractWizardContent: React.FC = () => {
 
     if (initialDataLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <Loader />
-                    <p className="mt-4 text-base-content/70">Loading contract data...</p>
-                </div>
-            </div>
+            <Loader text="Loading contract data..." height="100vh" />
         );
     }
 

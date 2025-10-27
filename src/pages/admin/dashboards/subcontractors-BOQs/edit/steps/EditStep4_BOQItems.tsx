@@ -7,6 +7,7 @@ import { EditBOQEditingSection } from "./EditStep4_BOQEditingSection";
 export const EditStep4_BOQItems: React.FC = () => {
     const { formData, setFormData, allBuildings, trades, loading } = useEditWizardContext();
     const [activeTab, setActiveTab] = useState<string>("");
+    const [budgetBOQLoadedTabs, setBudgetBOQLoadedTabs] = useState<Set<string>>(new Set());
 
     // Build buildings list per trade
     const tradesWithBuildings = useMemo(() => {
@@ -41,6 +42,17 @@ export const EditStep4_BOQItems: React.FC = () => {
             if (trade) {
                 const newBoqData = formData.boqData.filter((b: any) => b.sheetName !== trade.name);
                 setFormData({ boqData: newBoqData });
+
+                // CRITICAL FIX: Clear budgetBOQLoadedTabs for all tabs with this trade
+                setBudgetBOQLoadedTabs(prev => {
+                    const newSet = new Set(prev);
+                    // Find all tab keys for this trade and remove them
+                    allBuildings.forEach((building: any) => {
+                        const key = `${building.id}-${trade.name}`;
+                        newSet.delete(key);
+                    });
+                    return newSet;
+                });
             }
         }
     };
@@ -69,6 +81,14 @@ export const EditStep4_BOQItems: React.FC = () => {
                 (b: any) => !(b.buildingId === buildingId && b.sheetName === tradeName)
             );
             setFormData({ boqData: newBoqData });
+
+            // CRITICAL FIX: Clear budgetBOQLoadedTabs for this specific tab
+            const tabKey = `${buildingId}-${tradeName}`;
+            setBudgetBOQLoadedTabs(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(tabKey);
+                return newSet;
+            });
         }
     };
 
@@ -95,6 +115,21 @@ export const EditStep4_BOQItems: React.FC = () => {
     React.useEffect(() => {
         if (boqTabs.length > 0 && !activeTab) {
             setActiveTab(boqTabs[0].key);
+        }
+    }, [boqTabs, activeTab]);
+
+    // Reset activeTab if current tab no longer exists (e.g., trade/building was removed)
+    React.useEffect(() => {
+        if (activeTab && boqTabs.length > 0) {
+            // Check if current activeTab key still exists in boqTabs
+            const tabExists = boqTabs.some(tab => tab.key === activeTab);
+            if (!tabExists) {
+                // Active tab was removed, switch to first available tab
+                setActiveTab(boqTabs[0].key);
+            }
+        } else if (activeTab && boqTabs.length === 0) {
+            // All tabs removed, clear activeTab
+            setActiveTab("");
         }
     }, [boqTabs, activeTab]);
 
@@ -149,6 +184,8 @@ export const EditStep4_BOQItems: React.FC = () => {
                     tabs={boqTabs}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
+                    budgetBOQLoadedTabs={budgetBOQLoadedTabs}
+                    setBudgetBOQLoadedTabs={setBudgetBOQLoadedTabs}
                 />
             )}
         </div>

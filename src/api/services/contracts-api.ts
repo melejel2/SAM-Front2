@@ -477,6 +477,7 @@ export const exportContractPdf = async (id: number, token: string): Promise<Blob
             method: "GET",
             token,
             responseType: "blob",
+            timeout: 180000, // 3 minutes for PDF conversion (longer than default 2 min)
         });
 
         return response as Blob;
@@ -545,6 +546,7 @@ export const livePreviewPdf = async (model: SubcontractorBoqVM, token: string): 
             token,
             body: model,
             responseType: "blob",
+            timeout: 180000, // 3 minutes for PDF conversion (longer than default 2 min)
         });
 
         return response as Blob;

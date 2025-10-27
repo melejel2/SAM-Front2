@@ -4,7 +4,6 @@ import layersIcon from "@iconify/icons-lucide/layers";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import trashIcon from "@iconify/icons-lucide/trash";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
-import infoIcon from "@iconify/icons-lucide/info";
 import { useWizardContext, BOQItem } from "../context/WizardContext";
 import useToast from "@/hooks/use-toast";
 import useBOQUnits from "../../hooks/use-units";
@@ -19,6 +18,8 @@ interface BOQEditingSectionProps {
     tabs: Array<{ key: string; label: string; buildingId: number; tradeName: string }>;
     activeTab: string;
     onTabChange: (tabKey: string) => void;
+    budgetBOQLoadedTabs: Set<string>;
+    setBudgetBOQLoadedTabs: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 // Memoized BOQ Table Row Component for performance
@@ -272,7 +273,9 @@ BOQTableRow.displayName = 'BOQTableRow';
 export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
     tabs,
     activeTab,
-    onTabChange
+    onTabChange,
+    budgetBOQLoadedTabs,
+    setBudgetBOQLoadedTabs
 }) => {
     const { formData, setFormData, allBuildings } = useWizardContext();
     const { toaster } = useToast();
@@ -293,7 +296,6 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
     const [selectedDescription, setSelectedDescription] = useState<{ itemNo: string; description: string } | null>(null);
     const [selectedBOQItemIndex, setSelectedBOQItemIndex] = useState<number | null>(null);
     const [showBudgetBOQModal, setShowBudgetBOQModal] = useState(false);
-    const [budgetBOQLoadedTabs, setBudgetBOQLoadedTabs] = useState<Set<string>>(new Set());
 
     // Get active tab info
     const activeTabInfo = useMemo(() => {

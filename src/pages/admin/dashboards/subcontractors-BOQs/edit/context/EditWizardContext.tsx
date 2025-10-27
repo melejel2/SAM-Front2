@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
@@ -324,7 +324,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
     const fetchBuildingsWithSheets = useCallback(
         async (projectId: number) => {
-            console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
             try {
                 setLoadingBuildings(true);
                 // Use OpenProject API to get full project data with BOQ items (matching budget BOQ approach)
@@ -362,11 +361,9 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         };
                     });
 
-                    console.log("🏢 Fetched new buildings:", buildingsWithSheets);
                     setAllBuildings(buildingsWithSheets);
                     setBuildings(buildingsWithSheets);
                 } else {
-                    console.warn("OpenProject returned no buildings or invalid data");
                     setAllBuildings([]);
                     setBuildings([]);
                 }
@@ -461,28 +458,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                     // ✅ Store original contract data for project change detection
                     setOriginalContractData(existingData);
 
-                    // 🔍 DEBUGGING: Log buildings and BOQ structure
-                    console.log("🔍 EDIT PAGE - Buildings and BOQ Structure:", {
-                        contractId: contractId,
-                        existingDataBuildings: existingData.buildings,
-                        buildingsCount: existingData.buildings?.length || 0,
-                        buildingDetails: existingData.buildings?.map((building: any) => ({
-                            id: building.id,
-                            buildingName: building.buildingName,
-                            sheetName: building.sheetName,
-                            boqsContractCount: building.boqsContract?.length || 0,
-                            boqsContract: building.boqsContract || null,
-                        })),
-                    });
-
-                    // 🔍 DEBUG: Log building IDs from existing data
-                    const extractedBuildingIds = existingData.buildings?.map((b: any) => b.id) || [];
-                    console.log("🏢 EDIT MODE - Building IDs from existing data:", {
-                        existingDataBuildings: existingData.buildings,
-                        extractedBuildingIds: extractedBuildingIds,
-                        buildingCount: extractedBuildingIds.length,
-                    });
-
                     const newFormData = {
                         ...initialEditFormData,
                         id: existingData.id || contractId,
@@ -538,13 +513,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
                     setFormDataState(newFormData);
 
-                    // 🔍 DEBUG: Log final form data
-                    console.log("🏢 EDIT MODE - Final form data set:", {
-                        projectId: newFormData.projectId,
-                        selectedTrades: newFormData.selectedTrades,
-                        buildingTradeMapCount: newFormData.buildingTradeMap.length,
-                    });
-
                     // Load buildings for the project
                     if (existingData.projectId) {
                         await fetchBuildingsWithSheets(existingData.projectId);
@@ -558,6 +526,8 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 toaster.error(`Failed to load contract data: ${errorMessage}`);
             } finally {
                 setInitialDataLoading(false);
+                // Mark that initial load is complete - NOW project changes should clear data
+                isInitialProjectLoadRef.current = false;
             }
         },
         [contractsApi, fetchBuildingsWithSheets],
@@ -953,7 +923,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 });
 
                 if (buildingTradeMap.length > 0) {
-                    console.log("🔧 EDIT MODE - Setting building-trade mappings:", buildingTradeMap);
                     setFormDataState((prev) => ({
                         ...prev,
                         selectedTrades: Array.from(selectedTradesSet),
@@ -965,8 +934,14 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     }, [formData.projectId, allBuildings, originalContractData]);
 
     // Fetch buildings with sheets when project changes
+    // Track if this is the first project load to avoid clearing data during initial edit load
+    const isInitialProjectLoadRef = useRef(true);
+
     useEffect(() => {
-        console.log("🏢 Project changed. Current projectId:", formData.projectId);
+        // 🔧 CRITICAL FIX: Skip ALL runs until initial data load completes
+        if (isInitialProjectLoadRef.current) {
+            return;
+        }
 
         if (formData.projectId) {
             // Immediately clear buildings and trades from the old project

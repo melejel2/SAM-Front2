@@ -365,7 +365,7 @@ const Templates = () => {
             {viewMode === 'table' ? (
                 <>
                     {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                    <div style={{ flexShrink: 0 }} className="pb-3">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <button
@@ -419,7 +419,7 @@ const Templates = () => {
                     </div>
 
                     {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         {loading ? (
                             <Loader />
                         ) : (
@@ -520,7 +520,7 @@ const Templates = () => {
             ) : (
                 <>
                     {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                    <div style={{ flexShrink: 0 }} className="pb-3">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <button
@@ -544,7 +544,7 @@ const Templates = () => {
                     </div>
 
                     {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         <div className="card bg-base-100 shadow-sm p-4">
                             <div className="flex items-center space-x-3 mb-4">
                                 <div className="p-2 bg-primary/20 rounded-lg">

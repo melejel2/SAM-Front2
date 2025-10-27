@@ -387,7 +387,7 @@ const ContractDatabaseDetails = () => {
             overflow: 'hidden'
         }}>
             {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+            <div style={{ flexShrink: 0 }} className="pb-3">
                 {/* Header with Back Button */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -456,7 +456,7 @@ const ContractDatabaseDetails = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6 pb-6">
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="pb-6">
                 <div className="space-y-6">
                     {/* Contract Information Cards */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

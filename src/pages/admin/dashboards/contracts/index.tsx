@@ -305,7 +305,7 @@ const ContractsManagement = memo(() => {
             overflow: 'hidden'
         }}>
             {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+            <div style={{ flexShrink: 0 }} className="pb-3">
                 {/* Header with Back Button and Tab Cards */}
                 <div className="flex justify-between items-center mb-0">
                     <div className="flex items-center gap-3">
@@ -360,7 +360,7 @@ const ContractsManagement = memo(() => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 {loading ? (
                     <Loader />
                 ) : (
@@ -372,9 +372,6 @@ const ContractsManagement = memo(() => {
                                 tableData={draftsData}
                                 actions
                                 previewAction
-                                editAction
-                                generateAction
-                                deleteAction
                                 addBtn
                                 addBtnText="New Contract"
                                 title="Draft Contract"
@@ -383,20 +380,11 @@ const ContractsManagement = memo(() => {
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Edit" && data) {
-                                        return handleEdit(data);
-                                    } else if ((type as any) === "Generate" && data) {
-                                        return handleGenerateClick(data);
                                     } else if (type === "Add") {
                                         return handleNewContract();
                                     }
                                 }}
                                 dynamicDialog={false}
-                                rowActions={(row) => ({
-                                    generateAction: true,
-                                    editAction: true,
-                                    deleteAction: true,
-                                })}
                             />
                         )}
 
@@ -407,26 +395,15 @@ const ContractsManagement = memo(() => {
                                 tableData={activeData}
                                 actions
                                 previewAction
-                                exportAction // Keep this if it's for the ZIP export
                                 title="Active Contract"
                                 loading={false}
                                 onSuccess={getActiveContracts}
                                 openStaticDialog={(type, data) => {
-                                    console.log("openStaticDialog called with type:", type, "and data:", data); // Added for debugging
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Export" && data) { // Modified to handle generic "Export" type
-                                        return handleExportWordFile(data); // Call Word export
-                                    } else if ((type as any) === "CreateVO" && data) {
-                                        return handleCreateVO(data);
-                                    } else if ((type as any) === "Terminate" && data) {
-                                        return handleTerminateClick(data);
                                     }
                                 }}
                                 dynamicDialog={false}
-                                rowActions={(row) => ({
-                                    terminateAction: true,
-                                })}
                             />
                         )}
 
@@ -443,18 +420,9 @@ const ContractsManagement = memo(() => {
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Export" && data) {
-                                        // Export action for terminated contracts
-                                        return handleExportTerminated(data);
-                                    } else if ((type as any) === "Generate" && data) {
-                                        return handleGenerateFinalClick(data);
                                     }
                                 }}
                                 dynamicDialog={false}
-                                rowActions={(row) => ({
-                                    generateAction: true,
-                                    exportAction: true, // Show export action
-                                })}
                             />
                         )}
                     </>

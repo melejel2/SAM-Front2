@@ -42,7 +42,7 @@ const CostCodes = () => {
             overflow: 'hidden'
         }}>
             {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+            <div style={{ flexShrink: 0 }} className="pb-3">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <button
@@ -79,7 +79,7 @@ const CostCodes = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 {loading ? (
                     <Loader />
                 ) : (

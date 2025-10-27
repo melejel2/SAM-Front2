@@ -109,7 +109,7 @@ const BudgetBOQs = () => {
             overflow: 'hidden'
         }}>
             {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+            <div style={{ flexShrink: 0 }} className="pb-3">
                 {/* Header with Back Button */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -124,7 +124,7 @@ const BudgetBOQs = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 <SAMTable
                     columns={columns}
                     tableData={tableData}

@@ -211,7 +211,7 @@ const IPCsDatabase = () => {
             {viewMode === 'table' ? (
                 <>
                     {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                    <div style={{ flexShrink: 0 }} className="pb-3">
                         {/* Header with Back Button */}
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
@@ -283,7 +283,7 @@ const IPCsDatabase = () => {
                     </div>
 
                     {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         {loading ? (
                             <Loader />
                         ) : (
@@ -318,7 +318,7 @@ const IPCsDatabase = () => {
             ) : (
                 <>
                     {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="p-6 pb-3">
+                    <div style={{ flexShrink: 0 }} className="pb-3">
                         {/* Header */}
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ const IPCsDatabase = () => {
                     </div>
 
                     {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="px-6">
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         {/* Preview Card */}
                         <div className="card bg-base-100 shadow-sm p-4">
                             <div className="flex items-center space-x-3 mb-4">

@@ -33,7 +33,10 @@ const PreviewContractFile = async (contractId: number, type: ContractType, token
 
 interface TerminatedContractsProps {
     selectedProject: string;
-    contractId: number; // Add contractId prop
+    // contractId is optional: the component can be rendered for a project view
+    // without a specific contract selected. Functions that require the id
+    // already check for its presence before proceeding.
+    contractId?: number;
 }
 
 const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProject, contractId }) => {

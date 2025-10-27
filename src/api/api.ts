@@ -10,6 +10,7 @@ type ApiRequestParams = {
     token?: string;
     body?: BodyInit | Record<string, unknown>;
     headers?: Record<string, string>;
+    timeout?: number; // Timeout in milliseconds (default: 2 minutes)
 };
 
 const handleUnauthorized = () => {
@@ -33,6 +34,7 @@ const apiRequest = async <T = any>({
     token,
     body,
     headers = {},
+    timeout = 120000, // Default 2 minutes
 }: ApiRequestParams): Promise<T | { isSuccess: false; success: false; message: string; status?: number }> => {
     const normalizedEndpoint = endpoint.replace(/^\//, "");
     const url = `${ACTIVE_API_URL}${normalizedEndpoint}`;
@@ -55,9 +57,14 @@ const apiRequest = async <T = any>({
 
     const mergedHeaders = { ...headersInit, ...headers };
 
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     const requestOptions: RequestInit = {
         method,
         headers: mergedHeaders,
+        signal: controller.signal,
     };
 
     if (body) {
@@ -205,11 +212,24 @@ const apiRequest = async <T = any>({
         }
     } catch (error) {
         console.error("API Request Failed:", error);
+
+        // Handle timeout errors specifically
+        if (error instanceof Error && error.name === 'AbortError') {
+            return {
+                isSuccess: false,
+                success: false,
+                message: `Request timed out after ${timeout / 1000} seconds. The operation may take longer than expected.`,
+            };
+        }
+
         return {
             isSuccess: false,
             success: false,
             message: error instanceof Error ? error.message : "Unknown error occurred",
         };
+    } finally {
+        // Clear the timeout
+        clearTimeout(timeoutId);
     }
 };
 export default apiRequest;

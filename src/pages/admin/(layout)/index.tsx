@@ -47,7 +47,7 @@ const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            paddingTop: isMobile ? '3.5rem' : '4rem',
+            paddingTop: isMobile ? '4rem' : '5rem',
             paddingBottom: 0
           }}
         >
