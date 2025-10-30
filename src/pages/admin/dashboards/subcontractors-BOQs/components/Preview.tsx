@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import apiRequest from "@/api/api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
@@ -17,9 +18,11 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isTemplateError, setIsTemplateError] = useState(false);
 
     const { getToken } = useAuth();
     const { toaster } = useToast();
+    const navigate = useNavigate();
 
     useEffect(() => {
         // This effect decides whether to show a preview from saved data (on initial edit load)
@@ -157,8 +160,21 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to load initial contract preview.";
-            setError(errorMessage);
-            toaster.error(errorMessage);
+
+            // Check if this is a template upload error
+            if (errorMessage.includes("does not have a Word document uploaded") ||
+                errorMessage.includes("upload a template document")) {
+                setError(errorMessage);
+                setIsTemplateError(true);
+                toaster.error("Template Upload Required", {
+                    description: errorMessage,
+                    duration: 8000,
+                });
+            } else {
+                setError(errorMessage);
+                setIsTemplateError(false);
+                toaster.error(errorMessage);
+            }
         } finally {
             setLoading(false);
         }
@@ -193,8 +209,21 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-            setError(`Failed to generate live preview: ${errorMessage}`);
-            toaster.error(`Failed to generate live preview: ${errorMessage}`);
+
+            // Check if this is a template upload error
+            if (errorMessage.includes("does not have a Word document uploaded") ||
+                errorMessage.includes("upload a template document")) {
+                setError(errorMessage);
+                setIsTemplateError(true);
+                toaster.error("Template Upload Required", {
+                    description: errorMessage,
+                    duration: 8000,
+                });
+            } else {
+                setError(`Failed to generate live preview: ${errorMessage}`);
+                setIsTemplateError(false);
+                toaster.error(`Failed to generate live preview: ${errorMessage}`);
+            }
         } finally {
             setLoading(false);
         }
@@ -241,14 +270,43 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
     if (!previewData) {
         return (
             <div className="flex min-h-[400px] items-center justify-center">
-                <div className="text-center">
+                <div className="text-center max-w-2xl px-4">
                     <div className="text-base-content/70 mb-4">
-                        <span className="iconify lucide--alert-circle mx-auto mb-4 block size-16"></span>
-                        <h3 className="mb-2 text-lg font-semibold">Preview Not Available</h3>
-                        <p>{error || "Unable to load contract preview."}</p>
-                        <button className="btn btn-primary btn-sm mt-4" onClick={generateLivePreview}>
-                            Retry
-                        </button>
+                        {isTemplateError ? (
+                            <>
+                                <span className="iconify lucide--file-warning mx-auto mb-4 block size-16 text-warning"></span>
+                                <h3 className="mb-3 text-lg font-semibold text-base-content">Template Document Missing</h3>
+                                <div className="bg-warning/10 border-warning/30 rounded-lg border p-4 mb-4 text-left">
+                                    <p className="text-sm text-base-content/80 whitespace-pre-line">{error}</p>
+                                </div>
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        className="btn btn-warning btn-sm"
+                                        onClick={() => navigate('/dashboard/admin-tools/templates')}
+                                    >
+                                        <span className="iconify lucide--upload size-4"></span>
+                                        Go to Contracts Database
+                                    </button>
+                                    <button
+                                        className="btn bg-base-200 text-base-content hover:bg-base-300 btn-sm"
+                                        onClick={generateLivePreview}
+                                    >
+                                        <span className="iconify lucide--refresh-cw size-4"></span>
+                                        Retry
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <span className="iconify lucide--alert-circle mx-auto mb-4 block size-16"></span>
+                                <h3 className="mb-2 text-lg font-semibold text-base-content">Preview Not Available</h3>
+                                <p className="text-base-content/70 mb-4">{error || "Unable to load contract preview."}</p>
+                                <button className="btn btn-primary btn-sm" onClick={generateLivePreview}>
+                                    <span className="iconify lucide--refresh-cw size-4"></span>
+                                    Retry
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
