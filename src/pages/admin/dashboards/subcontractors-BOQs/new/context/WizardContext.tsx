@@ -271,6 +271,11 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 token: token || undefined,
             });
 
+            // Handle error responses
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                return; // Silently fail - use empty list
+            }
+
             // Handle both wrapped and direct array responses
             if (Array.isArray(response)) {
                 // Sort by ID descending (latest first)
@@ -283,7 +288,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching projects:", error);
-            toaster.error("Failed to fetch projects");
+            // Silently fail - don't show toast for optional data
         } finally {
             setLoadingProjects(false);
         }
@@ -297,6 +302,12 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 endpoint: "CostCode/GetCodeCostLibrary",
                 token: token || undefined,
             });
+
+            // Handle error responses
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                return; // Silently fail
+            }
+
             if (Array.isArray(response)) {
                 setAllCostCodes(response);
             } else if (response.success && Array.isArray(response.data)) {
@@ -304,11 +315,10 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching cost codes:", error);
-            toaster.error("Failed to fetch cost codes");
         } finally {
             setLoading(false);
         }
-    }, [token, toaster]);
+    }, [token]);
 
     const fetchBuildingsWithSheets = useCallback(
         async (projectId: number) => {
@@ -376,6 +386,11 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 endpoint: "Subcontractors/GetSubcontractors",
                 token: token || undefined,
             });
+
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                return;
+            }
+
             if (Array.isArray(response)) {
                 setSubcontractors(response);
             } else if (response.success && Array.isArray(response.data)) {
@@ -383,7 +398,6 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching subcontractors:", error);
-            toaster.error("Failed to fetch subcontractors");
         } finally {
             setLoading(false);
         }
@@ -397,6 +411,11 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 endpoint: "Templates/GetContracts",
                 token: token || undefined,
             });
+
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                return;
+            }
+
             if (Array.isArray(response)) {
                 setContracts(response);
             } else if (response.success && Array.isArray(response.data)) {
@@ -404,7 +423,6 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching contracts:", error);
-            toaster.error("Failed to fetch contracts");
         } finally {
             setLoading(false);
         }
@@ -419,6 +437,12 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 endpoint: "Configuration/GetConfigurationByKey?key=Tax",
                 token,
             });
+
+            // Check if response indicates an error (404, 400, etc.) or missing data
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                // Silently use default VAT if endpoint returns error
+                return;
+            }
 
             const configuration =
                 response && typeof response === "object" && "data" in response
@@ -437,10 +461,9 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 });
             }
         } catch (error) {
-            console.error("Error fetching VAT configuration:", error);
-            toaster.warning("Using default VAT rate (20%).");
+            // Silently use fallback - don't show toast for missing optional configuration
         }
-    }, [token, toaster]);
+    }, [token]);
 
     const fetchCurrencies = async () => {
         try {
@@ -450,6 +473,11 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
                 endpoint: "Currencie/GetCurrencies",
                 token: token || undefined,
             });
+
+            if (response && typeof response === "object" && "isSuccess" in response && !response.isSuccess) {
+                return;
+            }
+
             if (Array.isArray(response)) {
                 setCurrencies(response);
             } else if (response.success && Array.isArray(response.data)) {
@@ -457,7 +485,6 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             }
         } catch (error) {
             console.error("Error fetching currencies:", error);
-            toaster.error("Failed to fetch currencies");
         } finally {
             setLoading(false);
         }
@@ -674,15 +701,28 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
     // Initialize data on component mount
     useEffect(() => {
-        if (token) {
-            fetchProjects();
-            fetchCostCodes();
-            fetchSubcontractors();
-            fetchContracts();
-            fetchCurrencies();
-            fetchSystemVat();
-        }
-    }, [token, fetchSystemVat]);
+        if (!token) return;
+
+        const initializeData = async () => {
+            try {
+                await Promise.all([
+                    fetchProjects(),
+                    fetchCostCodes(),
+                    fetchSubcontractors(),
+                    fetchContracts(),
+                    fetchCurrencies(),
+                    fetchSystemVat()
+                ]);
+            } catch (error) {
+                console.error("Error initializing wizard data:", error);
+            }
+        };
+
+        initializeData();
+        // IMPORTANT: Only depend on token to avoid circular dependency issues
+        // fetchSystemVat, fetchProjects etc. should NOT be in the dependency array
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
 
     // Build trades list from sheet names - ONLY sheets with actual BOQ data (matching budget BOQ behavior)
     useEffect(() => {
