@@ -38,7 +38,7 @@ interface IPCWizardContextType {
     validateCurrentStep: () => boolean;
     goToNextStep: () => void;
     goToPreviousStep: () => void;
-    loadContracts: () => Promise<void>;
+    loadContracts: (status?: number) => Promise<void>;
     selectContract: (contractId: number) => void;
     updateBOQProgress: (buildingId: number, boqId: number, actualQte: number) => void;
     calculateFinancials: () => void;
@@ -90,7 +90,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
     
     // Load contracts from API
-    const loadContracts = useCallback(async () => {
+    const loadContracts = useCallback(async (status: number = 4) => {
         setLoadingContracts(true);
         try {
             const token = getToken();
@@ -100,17 +100,25 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
 
             const response = await apiRequest({
-                endpoint: "ContractsDatasets/GetContractsDatasetsList/0",
+                endpoint: `ContractsDatasets/GetContractsDatasetsList/${status}`,
                 method: "GET",
                 token: token
             });
             
             console.log("🔍 Contract API Response:", response);
+            console.log("Response isSuccess:", (response as any)?.isSuccess);
             
-            if (response.isSuccess && response.data) {
+            // Normalize API response: support both array response and { isSuccess, data } shape
+            const contractsRaw: any[] = Array.isArray(response)
+                ? response
+                : (response && Array.isArray((response as any).data))
+                    ? (response as any).data
+                    : [];
+            
+            if (contractsRaw.length > 0) {
                 // Transform contracts data to include building information
                 const contractsWithBuildings = await Promise.all(
-                    response.data.map(async (contract: any) => {
+                    contractsRaw.map(async (contract: any) => {
                         try {
                             // Load building data for each contract using IPC API
                             const buildingResponse = await apiRequest({
@@ -127,8 +135,11 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                                 tradeName: contract.trade?.name || contract.tradeName || 'Unknown Trade',
                                 totalAmount: contract.amount || 0,
                                 status: contract.status || 'Active',
-                                buildings: (buildingResponse && Array.isArray(buildingResponse)) ? buildingResponse : 
-                                          (buildingResponse?.data && Array.isArray(buildingResponse.data)) ? buildingResponse.data : []
+                                buildings: (Array.isArray(buildingResponse))
+                                    ? buildingResponse
+                                    : (buildingResponse && Array.isArray((buildingResponse as any).data))
+                                        ? (buildingResponse as any).data
+                                        : []
                             };
                         } catch (error) {
                             // If building data fails, return contract without buildings
@@ -147,6 +158,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 );
                 
                 setContracts(contractsWithBuildings);
+                console.log("Contracts set in context:", contractsWithBuildings);
             }
         } catch (error) {
             console.error('Error loading contracts:', error);

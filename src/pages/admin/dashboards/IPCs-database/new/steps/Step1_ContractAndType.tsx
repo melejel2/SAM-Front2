@@ -8,6 +8,7 @@ import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import calendarIcon from "@iconify/icons-lucide/calendar";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import infoIcon from "@iconify/icons-lucide/info";
+import { Table, TableBody } from "@/components/daisyui/Table";
 
 export const Step1_ContractAndType: React.FC = () => {
     const { 
@@ -17,24 +18,40 @@ export const Step1_ContractAndType: React.FC = () => {
         loadingContracts, 
         selectedContract,
         selectContract,
-        ipcTypes
+        ipcTypes,
+        loadContracts
     } = useIPCWizardContext();
+    
+    console.log("Contracts in Step1:", contracts);
     
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     
+    React.useEffect(() => {
+        const statusMap: { [key: string]: number } = {
+            "all": 4, // None
+            "active": 2, // Active
+            "completed": 5, // This status is not in the enum, so it will be ignored.
+            "terminated": 1 // Terminated
+        };
+        const status = statusMap[statusFilter.toLowerCase()];
+        if (status !== 5) {
+            loadContracts(status);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [statusFilter]);
+    
+    
     // Filter contracts based on search and status
     const filteredContracts = contracts.filter(contract => {
-        const matchesSearch = searchTerm === "" || 
-            contract.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            contract.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            contract.subcontractorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            contract.tradeName.toLowerCase().includes(searchTerm.toLowerCase());
-            
-        const matchesStatus = statusFilter === "all" || 
-            contract.status.toLowerCase() === statusFilter.toLowerCase();
-            
-        return matchesSearch && matchesStatus;
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = term === "" ||
+            (contract.contractNumber ?? "").toLowerCase().includes(term) ||
+            (contract.projectName ?? "").toLowerCase().includes(term) ||
+            (contract.subcontractorName ?? "").toLowerCase().includes(term) ||
+            (contract.tradeName ?? "").toLowerCase().includes(term);
+        
+        return matchesSearch;
     });
     
     const handleContractSelect = (contractId: number) => {
@@ -53,7 +70,10 @@ export const Step1_ContractAndType: React.FC = () => {
         }
     }, [formData.dateIpc, setFormData]);
     
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | undefined) => {
+        if (amount === undefined) {
+            return 'N/A';
+        }
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -167,67 +187,65 @@ export const Step1_ContractAndType: React.FC = () => {
                 )}
                 
                 {/* Contracts List */}
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {filteredContracts.length === 0 ? (
-                        <div className="text-center py-8">
-                            <Icon icon={searchIcon} className="text-base-content/30 size-12 mb-4" />
-                            <h4 className="text-lg font-semibold text-base-content mb-2">No Contracts Found</h4>
-                            <p className="text-base-content/70">
-                                {searchTerm || statusFilter !== "all" 
-                                    ? "Try adjusting your search criteria or filters" 
-                                    : "No contracts available for IPC creation"}
-                            </p>
-                        </div>
-                    ) : (
-                        filteredContracts.map(contract => (
-                            <div 
-                                key={contract.id}
-                                className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                                    formData.contractsDatasetId === contract.id
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-base-300 bg-base-100 hover:border-base-400'
-                                }`}
-                                onClick={() => handleContractSelect(contract.id)}
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h4 className="font-semibold text-base-content">
-                                                {contract.contractNumber}
-                                            </h4>
-                                            <span className={`badge badge-sm ${getStatusBadgeClass(contract.status)}`}>
-                                                {contract.status}
-                                            </span>
+                <div className="overflow-x-auto max-h-96">
+                    <Table size="sm" pinRows>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Contract Number</th>
+                                <th>Project Name</th>
+                                <th>Subcontractor</th>
+                                <th>Trade</th>
+                                <th>Status</th>
+                                <th className="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <TableBody>
+                            {filteredContracts.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="text-center">
+                                        <div className="py-8">
+                                            <Icon icon={searchIcon} className="text-base-content/30 size-12 mx-auto mb-4" />
+                                            <h4 className="text-lg font-semibold text-base-content mb-2">No Contracts Found</h4>
+                                            <p className="text-base-content/70">
+                                                {searchTerm || statusFilter !== "all"
+                                                    ? "Try adjusting your search criteria or filters"
+                                                    : "No contracts available for IPC creation"}
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredContracts.map(contract => (
+                                    <tr
+                                        key={contract.id}
+                                        onClick={() => handleContractSelect(contract.id)}
+                                        className={`cursor-pointer hover:bg-base-300 ${
+                                            formData.contractsDatasetId === contract.id ? 'bg-blue-100 dark:bg-blue-900/30' : ''
+                                        }`}
+                                    >
+                                        <td>
                                             {formData.contractsDatasetId === contract.id && (
                                                 <Icon icon={checkCircleIcon} className="text-blue-600 size-5" />
                                             )}
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                                            <div>
-                                                <span className="text-base-content/60">Project:</span>
-                                                <div className="font-medium text-base-content">
-                                                    {contract.projectName}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span className="text-base-content/60">Subcontractor:</span>
-                                                <div className="font-medium text-base-content">
-                                                    {contract.subcontractorName}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span className="text-base-content/60">Value:</span>
-                                                <div className="font-semibold text-green-600">
-                                                    {formatCurrency(contract.totalAmount)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
+                                        </td>
+                                        <td>{contract.contractNumber}</td>
+                                        <td>{contract.projectName}</td>
+                                        <td>{contract.subcontractorName}</td>
+                                        <td>{contract.tradeName}</td>
+                                        <td>
+                                            <span className={`badge badge-sm ${getStatusBadgeClass(contract.status)}`}>
+                                                {contract.status}
+                                            </span>
+                                        </td>
+                                        <td className="font-semibold text-right">
+                                            {formatCurrency(contract.totalAmount)}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
             </div>
             

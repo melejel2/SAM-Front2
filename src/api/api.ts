@@ -1,5 +1,5 @@
 export const ACTIVE_URL = "https://samback.karamentreprises.com/";
-//export const ACTIVE_URL = "https://localhost:7055/";  // ⚠️ USE THIS FOR LOCAL BACKEND TESTING
+//export const ACTIVE_URL = "https://localhost:7055/"; // ⚠️ USE THIS FOR LOCAL BACKEND TESTING
 //export const ACTIVE_URL = "http://localhost:5276/";
 export const ACTIVE_API_URL = `${ACTIVE_URL}api/`;
 
@@ -15,11 +15,11 @@ type ApiRequestParams = {
 
 const handleUnauthorized = () => {
     localStorage.removeItem("__SAM_ADMIN_AUTH__");
-    
+
     // Validate redirect URL to prevent open redirect attacks
     const loginUrl = "/auth/login";
     const currentPath = window.location.pathname;
-    
+
     // Only redirect if not already on login page to prevent infinite loops
     if (currentPath !== loginUrl && !currentPath.startsWith("/auth/")) {
         // Use a safe redirect method
@@ -72,7 +72,6 @@ const apiRequest = async <T = any>({
     }
 
     try {
-
         const response = await fetch(url, requestOptions);
 
         if (!response.ok) {
@@ -81,9 +80,9 @@ const apiRequest = async <T = any>({
             let errorData: any = null;
 
             // DEBUG: Log the error response details - focus on save contracts and delete operations
-            if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
-                const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
-                const debugTitle = url.includes('DeleteProject') ? "DELETE ERROR" : "SAVE CONTRACT ERROR";
+            if (url.includes("SaveSubcontractorDataset") || url.includes("DeleteProject")) {
+                const debugPrefix = url.includes("DeleteProject") ? "🗑️" : "🎯💾";
+                const debugTitle = url.includes("DeleteProject") ? "DELETE ERROR" : "SAVE CONTRACT ERROR";
                 console.error(`${debugPrefix} === ${debugTitle} ===`);
                 console.error(`${debugPrefix} Status:`, response.status);
                 console.error(`${debugPrefix} Status Text:`, response.statusText);
@@ -94,8 +93,8 @@ const apiRequest = async <T = any>({
             try {
                 errorData = JSON.parse(errorText);
                 errorMessage = errorData.message || errorMessage;
-                if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
-                    const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+                if (url.includes("SaveSubcontractorDataset") || url.includes("DeleteProject")) {
+                    const debugPrefix = url.includes("DeleteProject") ? "🗑️" : "🎯💾";
                     console.error(`${debugPrefix} PARSED ERROR DATA:`, errorData);
                 }
             } catch {
@@ -103,8 +102,8 @@ const apiRequest = async <T = any>({
                 if (errorText && errorText.trim()) {
                     errorMessage = errorText;
                 }
-                if (url.includes('SaveSubcontractorDataset') || url.includes('DeleteProject')) {
-                    const debugPrefix = url.includes('DeleteProject') ? "🗑️" : "🎯💾";
+                if (url.includes("SaveSubcontractorDataset") || url.includes("DeleteProject")) {
+                    const debugPrefix = url.includes("DeleteProject") ? "🗑️" : "🎯💾";
                     console.error(`${debugPrefix} COULD NOT PARSE ERROR RESPONSE AS JSON`);
                 }
             }
@@ -128,7 +127,8 @@ const apiRequest = async <T = any>({
             } else if (response.status === 404) {
                 errorMessage = errorData?.message || "The requested resource was not found.";
             } else if (response.status === 409) {
-                errorMessage = errorData?.message || "A conflict occurred. The resource may already exist or be in use.";
+                errorMessage =
+                    errorData?.message || "A conflict occurred. The resource may already exist or be in use.";
             } else if (response.status === 422) {
                 errorMessage = errorData?.message || "Invalid data provided. Please check your input.";
             } else if (response.status === 429) {
@@ -158,31 +158,31 @@ const apiRequest = async <T = any>({
 
         // Always try to parse as JSON first, regardless of content-type
         const responseText = await response.text();
-        
-        if (responseText.trim() === '') {
+
+        if (responseText.trim() === "") {
             // For GET requests, empty response likely means empty array
-            return (method === 'GET' ? [] : {}) as T;
+            return (method === "GET" ? [] : {}) as T;
         }
-        
+
         try {
             const parsedResponse = JSON.parse(responseText);
             return parsedResponse as T;
         } catch (error) {
-            console.error('JSON parsing error:', error, 'Response text:', responseText);
+            console.error("JSON parsing error:", error, "Response text:", responseText);
             // Check if it's a content-type issue
-            const contentType = response.headers.get('content-type');
-            
+            const contentType = response.headers.get("content-type");
+
             return {
                 isSuccess: false,
                 success: false,
-                message: 'Invalid JSON response from server'
+                message: "Invalid JSON response from server",
             } as T;
         }
     } catch (error) {
         console.error("API Request Failed:", error);
 
         // Handle timeout errors specifically
-        if (error instanceof Error && error.name === 'AbortError') {
+        if (error instanceof Error && error.name === "AbortError") {
             return {
                 isSuccess: false,
                 success: false,
