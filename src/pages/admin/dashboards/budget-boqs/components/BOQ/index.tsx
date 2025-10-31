@@ -480,7 +480,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     <button
                         type="button"
                         onClick={() => setShowBuildingDialog(true)}
-                        disabled={!buildings || buildings.length === 0}
+                        disabled={!buildings}
                         className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50 flex items-center gap-2"
                     >
                         <Icon icon={buildingIcon} className="w-4 h-4" />
