@@ -9,11 +9,14 @@ interface IPCStepIndicatorProps {
     currentStep: number;
 }
 
+import eyeIcon from "@iconify/icons-lucide/eye";
+
 const steps = [
     { number: 1, title: "Contract & Type", icon: fileTextIcon },
     { number: 2, title: "Period & BOQ", icon: calendarDaysIcon },
     { number: 3, title: "Deductions", icon: minusCircleIcon },
-    { number: 4, title: "Preview", icon: checkIcon }
+    { number: 4, title: "Review", icon: eyeIcon },
+    { number: 5, title: "Preview & Save", icon: checkIcon }
 ];
 
 export const IPCStepIndicator: React.FC<IPCStepIndicatorProps> = ({ currentStep }) => {

@@ -107,7 +107,7 @@ const NewIPCWizardContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 4 ? (
+                    {currentStep < 5 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -125,6 +125,9 @@ const NewIPCWizardContent: React.FC = () => {
                                         case 3:
                                             toaster.error("Please review deductions and financial calculations");
                                             break;
+                                        case 4:
+                                            toaster.error("Please review the IPC details before proceeding");
+                                            break;
                                         default:
                                             toaster.error("Please complete all required fields");
                                     }
@@ -132,7 +135,7 @@ const NewIPCWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 3 ? (
+                            {currentStep === 4 ? (
                                 <>
                                     <span>Preview</span>
                                     <span className="iconify lucide--eye size-4"></span>

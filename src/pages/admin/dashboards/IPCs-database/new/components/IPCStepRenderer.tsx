@@ -3,7 +3,8 @@ import { useIPCWizardContext } from "../context/IPCWizardContext";
 import { Step1_ContractAndType } from "../steps/Step1_ContractAndType";
 import { Step2_PeriodBuildingAndBOQ } from "../steps/Step2_PeriodBuildingAndBOQ";
 import { Step3_Deductions } from "../steps/Step3_Deductions";
-import { Step4_PreviewAndSave } from "../steps/Step4_PreviewAndSave";
+import { Step4_Review } from "../steps/Step4_Review";
+import { Step5_PreviewAndSave } from "../steps/Step5_PreviewAndSave";
 import { IPCErrorBoundary } from "./IPCErrorBoundary";
 
 const getStepName = (step: number): string => {
@@ -11,7 +12,8 @@ const getStepName = (step: number): string => {
         case 1: return "Contract Selection";
         case 2: return "Period & BOQ Progress";
         case 3: return "Deductions";
-        case 4: return "Preview & Save";
+        case 4: return "Review";
+        case 5: return "Preview & Save";
         default: return "Unknown Step";
     }
 };
@@ -42,7 +44,13 @@ export const IPCStepRenderer: React.FC = () => {
             case 4:
                 return (
                     <IPCErrorBoundary stepName={getStepName(4)}>
-                        <Step4_PreviewAndSave />
+                        <Step4_Review />
+                    </IPCErrorBoundary>
+                );
+            case 5:
+                return (
+                    <IPCErrorBoundary stepName={getStepName(5)}>
+                        <Step5_PreviewAndSave />
                     </IPCErrorBoundary>
                 );
             default:

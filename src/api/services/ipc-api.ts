@@ -336,6 +336,62 @@ class IpcApiService {
             };
         }
     }
+
+    /**
+     * Live preview IPC as PDF
+     * POST /api/Ipc/LivePreviewIpcPdf
+     */
+    async livePreviewIpcPdf(model: SaveIPCVM, token: string): Promise<{ success: boolean; blob?: Blob; error?: string }> {
+        try {
+            const response = await apiRequest({
+                endpoint: `Ipc/LivePreviewIpcPdf`,
+                method: "POST",
+                token,
+                body: model as unknown as Record<string, unknown>,
+                responseType: "blob",
+            });
+
+            if (response instanceof Blob) {
+                return { success: true, blob: response };
+            }
+
+            return { success: false, error: "Invalid response format" };
+        } catch (error) {
+            console.error("Error exporting IPC PDF:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Failed to export IPC PDF",
+            };
+        }
+    }
+
+    /**
+     * Live preview IPC as Excel
+     * POST /api/Ipc/LivePreviewIpcExcel
+     */
+    async livePreviewIpcExcel(model: SaveIPCVM, token: string): Promise<{ success: boolean; blob?: Blob; error?: string }> {
+        try {
+            const response = await apiRequest({
+                endpoint: `Ipc/LivePreviewIpcExcel`,
+                method: "POST",
+                token,
+                body: model as unknown as Record<string, unknown>,
+                responseType: "blob",
+            });
+
+            if (response instanceof Blob) {
+                return { success: true, blob: response };
+            }
+
+            return { success: false, error: "Invalid response format" };
+        } catch (error) {
+            console.error("Error exporting IPC Excel:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Failed to export IPC Excel",
+            };
+        }
+    }
 }
 
 // Export singleton instance

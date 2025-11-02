@@ -1,8 +1,8 @@
 import React from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 
-export const Step4_PreviewAndSave: React.FC = () => {
-    const { formData, selectedContract, handleSubmit } = useIPCWizardContext();
+export const Step4_Review: React.FC = () => {
+    const { formData, selectedContract } = useIPCWizardContext();
     
     const safeBuildings = formData.buildings || [];
     // Calculate totals
@@ -47,8 +47,8 @@ export const Step4_PreviewAndSave: React.FC = () => {
                     <span className="iconify lucide--check text-green-600 dark:text-green-400 size-5"></span>
                 </div>
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">Preview & Save IPC</h2>
-                    <p className="text-sm text-base-content/70">Review all IPC details before creating the certificate</p>
+                    <h2 className="text-lg font-semibold text-base-content">Review IPC</h2>
+                    <p className="text-sm text-base-content/70">Review all IPC details before proceeding</p>
                 </div>
             </div>
             
@@ -390,7 +390,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-2 mb-3">
                     <span className="iconify lucide--check-circle text-green-600 dark:text-green-400 size-5"></span>
-                    <h4 className="font-semibold text-green-600 dark:text-green-400">Ready to Create IPC</h4>
+                    <h4 className="font-semibold text-green-600 dark:text-green-400">Ready for Next Step</h4>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
@@ -414,20 +414,9 @@ export const Step4_PreviewAndSave: React.FC = () => {
                 
                 <div className="mt-3 p-3 bg-green-100 dark:bg-green-800/30 rounded">
                     <p className="text-sm text-green-600 dark:text-green-400">
-                        All required information has been provided. You can now create the IPC by clicking the "Create IPC" button.
+                        All required information has been provided. You can now proceed to the next step.
                     </p>
                 </div>
-            </div>
-            
-            {/* Save Button */}
-            <div className="flex justify-end">
-                <button 
-                    type="button" 
-                    className="btn btn-primary" 
-                    onClick={handleSubmit}
-                >
-                    Create IPC
-                </button>
             </div>
         </div>
     );
