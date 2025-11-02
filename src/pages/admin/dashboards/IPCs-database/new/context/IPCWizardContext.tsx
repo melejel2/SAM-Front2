@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
 import apiRequest from "@/api/api";
+import { ipcApiService } from "@/api/services/ipc-api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
-import { ipcApiService } from "@/api/services/ipc-api";
-import type { IpcWizardFormData, ContractBuildingsVM, IpcTypeOption, BoqIpcVM } from "@/types/ipc";
+import type { BoqIpcVM, ContractBuildingsVM, IpcTypeOption, IpcWizardFormData } from "@/types/ipc";
 import { FINANCIAL_CONSTANTS } from "@/types/ipc";
 
 // Additional Types for IPC Creation
@@ -25,12 +26,12 @@ interface IPCWizardContextType {
     hasUnsavedChanges: boolean;
     loading: boolean;
     loadingContracts: boolean;
-    
+
     // Data
     contracts: Contract[];
     selectedContract: Contract | null;
     ipcTypes: IpcTypeOption[];
-    
+
     // Actions
     setFormData: (data: Partial<IpcWizardFormData>) => void;
     setCurrentStep: (step: number) => void;
@@ -51,10 +52,10 @@ const IPCWizardContext = createContext<IPCWizardContextType | undefined>(undefin
 // Initial form data
 const getInitialFormData = (): IpcWizardFormData => ({
     contractsDatasetId: 0,
-    type: "Provisoire / Interim",
+    type: "",
     fromDate: "",
     toDate: "",
-    dateIpc: new Date().toISOString().split('T')[0],
+    dateIpc: new Date().toISOString().split("T")[0],
     advancePayment: 0,
     retentionPercentage: 10,
     advancePaymentPercentage: 0,
@@ -63,7 +64,7 @@ const getInitialFormData = (): IpcWizardFormData => ({
     buildings: [],
     labors: [],
     machines: [],
-    materials: []
+    materials: [],
 });
 
 // IPC Types
@@ -71,34 +72,38 @@ const IPC_TYPES: IpcTypeOption[] = [
     { value: "Provisoire / Interim", label: "Provisoire / Interim" },
     { value: "Final / Final", label: "Final / Final" },
     { value: "Rg / Retention", label: "Rg / Retention" },
-    { value: "Avance / Advance Payment", label: "Avance / Advance Payment" }
+    { value: "Avance / Advance Payment", label: "Avance / Advance Payment" },
 ];
 
 export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { authState } = useAuth();
     const { toaster } = useToast();
     const { getToken } = useAuth();
-    
+
     // State
     const [formData, setFormDataState] = useState<IpcWizardFormData>(getInitialFormData());
     const [currentStep, setCurrentStep] = useState(1);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [loading, setLoading] = useState(false);
     const [loadingContracts, setLoadingContracts] = useState(false);
-    
+
     // Data
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-    
+
     // Form data setter with unsaved changes tracking
     const setFormData = useCallback((data: Partial<IpcWizardFormData>) => {
-        setFormDataState(prev => {
+        setFormDataState((prev) => {
             const newFormData = {
                 ...prev,
                 ...data,
                 buildings: data.buildings !== undefined 
                     ? (data.buildings || []) 
-                    : (prev.buildings || []) 
+                    : (prev.buildings || []),
+                vos: data.vos !== undefined ? (data.vos || []) : (prev.vos || []),
+                labors: data.labors !== undefined ? (data.labors || []) : (prev.labors || []),
+                machines: data.machines !== undefined ? (data.machines || []) : (prev.machines || []),
+                materials: data.materials !== undefined ? (data.materials || []) : (prev.materials || []),
             };
             console.log("🔄 setFormData - New formData:", newFormData);
             return newFormData;
@@ -107,207 +112,241 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, []);
 
     // Load IPC data for editing
-    const loadIpcForEdit = useCallback(async (ipcId: number) => {
-        setLoading(true);
-        try {
-            const token = getToken();
-            if (!token) {
-                toaster.error("Authentication required");
-                return;
-            }
-            const response = await ipcApiService.getIpcForEdit(ipcId, token);
-            if (response.success && response.data) {
-                console.log("📝 loadIpcForEdit API Response Data:", response.data);
-                setFormData(response.data);
-                setSelectedContract(contracts.find(c => c.id === response.data.contractsDatasetId) || null);
-                setHasUnsavedChanges(false);
-            } else {
-                toaster.error(response.error || "Failed to load IPC data for edit");
-            }
-        } catch (error) {
-            console.error("Error loading IPC for edit:", error);
-            toaster.error("Error loading IPC for edit");
-        } finally {
-            setLoading(false);
-        }
-    }, [getToken, setFormData, setSelectedContract, setHasUnsavedChanges, toaster, contracts]);
-    
-    // Contract selection - don't auto-populate buildings for 4-step workflow
-    const selectContract = useCallback(async (contractId: number) => {
-        const contract = contracts.find(c => c.id === contractId);
-        if (contract) {
-            setSelectedContract(contract);
-            
-            const token = getToken();
-            if (!token) {
-                toaster.error("Authentication required");
-                return;
-            }
-
+    const loadIpcForEdit = useCallback(
+        async (ipcId: number) => {
+            setLoading(true);
             try {
-                // For new IPC, fetch initial contract data
-                const response = await ipcApiService.getContractDataForNewIpc(contractId, token);
+                const token = getToken();
+                if (!token) {
+                    toaster.error("Authentication required");
+                    return;
+                }
+                const response = await ipcApiService.getIpcForEdit(ipcId, token);
                 if (response.success && response.data) {
-                    console.log("📝 getContractDataForNewIpc API Response Data:", response.data);
-                    // Update formData with the entire SaveIPCVM object including buildings
-                    setFormData({
-                        ...response.data,
-                        contractsDatasetId: contractId, // Ensure contract ID is set
-                    });
+                    console.log("📝 loadIpcForEdit API Response Data:", response.data);
+                    setFormData(response.data);
+                    setSelectedContract(contracts.find((c) => c.id === response.data.contractsDatasetId) || null);
+                    setHasUnsavedChanges(false);
                 } else {
-                    toaster.error(response.error || "Failed to load initial IPC data");
+                    toaster.error(response.error || "Failed to load IPC data for edit");
                 }
             } catch (error) {
-                console.error("Error loading initial IPC data:", error);
-                toaster.error("Error loading initial IPC data");
+                console.error("Error loading IPC for edit:", error);
+                toaster.error("Error loading IPC for edit");
+            } finally {
+                setLoading(false);
             }
-        }
-    }, [contracts, setFormData, getToken, toaster]);
-    
-    // Load contracts from API
-    const loadContracts = useCallback(async (status: number = 4) => {
-        setLoadingContracts(true);
-        try {
-            const token = getToken();
-            if (!token) {
-                toaster.error("Authentication required");
-                return;
-            }
+        },
+        [getToken, setFormData, setSelectedContract, setHasUnsavedChanges, toaster, contracts],
+    );
 
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/GetContractsDatasetsList/${status}`,
-                method: "GET",
-                token: token
-            });
-            
-            console.log("🔍 Contract API Response:", response);
-            console.log("Response isSuccess:", (response as any)?.isSuccess);
-            
-            // Normalize API response: support both array response and { isSuccess, data } shape
-            const contractsRaw: any[] = Array.isArray(response)
-                ? response
-                : (response && Array.isArray((response as any).data))
-                    ? (response as any).data
-                    : [];
-            
-            if (contractsRaw.length > 0) {
-                // Transform contracts data to include building information
-                const contractsWithBuildings = await Promise.all(
-                    contractsRaw.map(async (contract: any) => {
-                        try {
-                            return {
-                                id: contract.id,
-                                contractNumber: contract.contractNumber || `Contract #${contract.id}`,
-                                projectName: contract.project?.name || contract.projectName || 'Unknown Project',
-                                subcontractorName: contract.subcontractor?.companyName || contract.subcontractorName || 'Unknown Subcontractor',
-                                tradeName: contract.trade?.name || contract.tradeName || 'Unknown Trade',
-                                totalAmount: contract.amount || 0,
-                                status: contract.status || 'Active',
-                                buildings: []
-                            };
-                        } catch (error) {
-                            // If building data fails, return contract without buildings
-                            return {
-                                id: contract.id,
-                                contractNumber: contract.contractNumber || `Contract #${contract.id}`,
-                                projectName: contract.project?.name || 'Unknown Project',
-                                subcontractorName: contract.subcontractor?.companyName || 'Unknown Subcontractor',
-                                tradeName: contract.trade?.name || 'Unknown Trade',
-                                totalAmount: contract.amount || 0,
-                                status: contract.status || 'Active',
-                                buildings: []
-                            };
-                        }
-                    })
-                );
-                
-                setContracts(contractsWithBuildings);
-                console.log("Contracts set in context:", contractsWithBuildings);
+    // Contract selection - don't auto-populate buildings for 4-step workflow
+    const selectContract = useCallback(
+        async (contractId: number) => {
+            const contract = contracts.find((c) => c.id === contractId);
+            if (contract) {
+                setSelectedContract(contract);
+
+                const token = getToken();
+                if (!token) {
+                    toaster.error("Authentication required");
+                    return;
+                }
+
+                try {
+                    // For new IPC, fetch initial contract data
+                    const response = await ipcApiService.getContractDataForNewIpc(contractId, token);
+                    if (response.success && response.data) {
+                        console.log("📝 getContractDataForNewIpc API Response Data:", response.data);
+                        // Update formData with the entire SaveIPCVM object including buildings
+                        setFormData({
+                            ...response.data,
+                            contractsDatasetId: contractId, // Ensure contract ID is set
+                        });
+                    } else {
+                        toaster.error(response.error || "Failed to load initial IPC data");
+                    }
+                } catch (error) {
+                    console.error("Error loading initial IPC data:", error);
+                    toaster.error("Error loading initial IPC data");
+                }
             }
-        } catch (error) {
-            console.error('Error loading contracts:', error);
-            toaster.error("Failed to load contracts");
-        } finally {
-            setLoadingContracts(false);
-        }
-    }, [getToken, toaster]);
-    
-    // BOQ Progress Update
-    const updateBOQProgress = useCallback((buildingId: number, boqId: number, actualQte: number) => {
-        setFormData({
-            buildings: formData.buildings.map(building => {
-                if (building.id === buildingId) {
-                    return {
-                        ...building,
-                        boqs: building.boqs.map(boq => {
-                            if (boq.id === boqId) {
-                                const actualAmount = actualQte * boq.unitPrice;
-                                const cumulQte = boq.precedQte + actualQte;
-                                const cumulAmount = cumulQte * boq.unitPrice;
-                                const cumulPercent = boq.qte === 0 ? 0 : (cumulQte / boq.qte) * 100;
-                                
+        },
+        [contracts, setFormData, getToken, toaster],
+    );
+
+    // Load contracts from API
+    const loadContracts = useCallback(
+        async (status: number = 4) => {
+            setLoadingContracts(true);
+            try {
+                const token = getToken();
+                if (!token) {
+                    toaster.error("Authentication required");
+                    return;
+                }
+
+                const response = await apiRequest({
+                    endpoint: `ContractsDatasets/GetContractsDatasetsList/${status}`,
+                    method: "GET",
+                    token: token,
+                });
+
+                console.log("🔍 Contract API Response:", response);
+                console.log("Response isSuccess:", (response as any)?.isSuccess);
+
+                // Normalize API response: support both array response and { isSuccess, data } shape
+                const contractsRaw: any[] = Array.isArray(response)
+                    ? response
+                    : response && Array.isArray((response as any).data)
+                      ? (response as any).data
+                      : [];
+
+                if (contractsRaw.length > 0) {
+                    // Transform contracts data to include building information
+                    const contractsWithBuildings = await Promise.all(
+                        contractsRaw.map(async (contract: any) => {
+                            try {
                                 return {
-                                    ...boq,
-                                    actualQte,
-                                    actualAmount,
-                                    cumulQte,
-                                    cumulAmount,
-                                    cumulPercent
+                                    id: contract.id,
+                                    contractNumber: contract.contractNumber || `Contract #${contract.id}`,
+                                    projectName: contract.project?.name || contract.projectName || "Unknown Project",
+                                    subcontractorName:
+                                        contract.subcontractor?.companyName ||
+                                        contract.subcontractorName ||
+                                        "Unknown Subcontractor",
+                                    tradeName: contract.trade?.name || contract.tradeName || "Unknown Trade",
+                                    totalAmount: contract.amount || 0,
+                                    status: contract.status || "Active",
+                                    buildings: [],
+                                };
+                            } catch (error) {
+                                // If building data fails, return contract without buildings
+                                return {
+                                    id: contract.id,
+                                    contractNumber: contract.contractNumber || `Contract #${contract.id}`,
+                                    projectName: contract.project?.name || "Unknown Project",
+                                    subcontractorName: contract.subcontractor?.companyName || "Unknown Subcontractor",
+                                    tradeName: contract.trade?.name || "Unknown Trade",
+                                    totalAmount: contract.amount || 0,
+                                    status: contract.status || "Active",
+                                    buildings: [],
                                 };
                             }
-                            return boq;
-                        })
-                    };
+                        }),
+                    );
+
+                    setContracts(contractsWithBuildings);
+                    console.log("Contracts set in context:", contractsWithBuildings);
                 }
-                return building;
-            })
-        });
-    }, [formData.buildings, setFormData]);
-    
+            } catch (error) {
+                console.error("Error loading contracts:", error);
+                toaster.error("Failed to load contracts");
+            } finally {
+                setLoadingContracts(false);
+            }
+        },
+        [getToken, toaster],
+    );
+
+    // BOQ Progress Update
+    const updateBOQProgress = useCallback(
+        (buildingId: number, boqId: number, actualQte: number) => {
+            setFormData({
+                buildings: formData.buildings.map((building) => {
+                    if (building.id === buildingId) {
+                        return {
+                            ...building,
+                            boqs: building.boqs.map((boq) => {
+                                if (boq.id === boqId) {
+                                    const actualAmount = actualQte * boq.unitPrice;
+                                    const cumulQte = boq.precedQte + actualQte;
+                                    const cumulAmount = cumulQte * boq.unitPrice;
+                                    const cumulPercent = boq.qte === 0 ? 0 : (cumulQte / boq.qte) * 100;
+
+                                    return {
+                                        ...boq,
+                                        actualQte,
+                                        actualAmount,
+                                        cumulQte,
+                                        cumulAmount,
+                                        cumulPercent,
+                                    };
+                                }
+                                return boq;
+                            }),
+                        };
+                    }
+                    return building;
+                }),
+            });
+        },
+        [formData.buildings, setFormData],
+    );
+
     // Financial calculations
     const calculateFinancials = useCallback(() => {
         // Calculate total IPC amount based on BOQ progress
         const totalIPCAmount = formData.buildings.reduce((total, building) => {
-            return total + building.boqs.reduce((buildingTotal, boq) => {
-                return buildingTotal + boq.actualAmount;
-            }, 0);
+            return (
+                total +
+                building.boqs.reduce((buildingTotal, boq) => {
+                    return buildingTotal + boq.actualAmount;
+                }, 0)
+            );
         }, 0);
-        
+
         // Calculate retention amount
         const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
-        
+
         // Calculate advance payment deduction
         const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
-        
+
         // Update form data with calculated values
         setFormData({
-            advancePayment: advanceDeduction
+            advancePayment: advanceDeduction,
         });
     }, [formData, setFormData]);
-    
+
     // Step validation for 4-step workflow
     const validateCurrentStep = useCallback((): boolean => {
         console.log(`Validating Step ${currentStep}`);
         switch (currentStep) {
             case 1:
-                console.log("Step 1 Validation - formData.contractsDatasetId:", formData.contractsDatasetId, "formData.type:", formData.type, "formData.dateIpc:", formData.dateIpc);
+                console.log(
+                    "Step 1 Validation - formData.contractsDatasetId:",
+                    formData.contractsDatasetId,
+                    "formData.type:",
+                    formData.type,
+                    "formData.dateIpc:",
+                    formData.dateIpc,
+                );
                 return !!(formData.contractsDatasetId > 0 && formData.type && formData.dateIpc);
             case 2:
-                console.log("Step 2 Validation - formData.fromDate:", formData.fromDate, "formData.toDate:", formData.toDate);
+                console.log(
+                    "Step 2 Validation - formData.fromDate:",
+                    formData.fromDate,
+                    "formData.toDate:",
+                    formData.toDate,
+                );
                 console.log("Step 2 Validation - formData.buildings.length:", formData.buildings.length);
                 const safeFormDataBuildings = formData.buildings || [];
-                const hasPositiveActualQte = safeFormDataBuildings.some(building =>
-                    (building.boqsContract || []).some(boq => {
+                const hasPositiveActualQte = safeFormDataBuildings.some((building) =>
+                    (building.boqsContract || []).some((boq) => {
                         const isPositive = (boq.actualQte || 0) > 0;
-                        console.log(`Building ${building.buildingName}, BOQ ${boq.key} - actualQte: ${boq.actualQte}, isPositive: ${isPositive}`);
+                        console.log(
+                            `Building ${building.buildingName}, BOQ ${boq.key} - actualQte: ${boq.actualQte}, isPositive: ${isPositive}`,
+                        );
                         return isPositive;
-                    })
+                    }),
                 );
                 console.log("Step 2 Validation - hasPositiveActualQte:", hasPositiveActualQte);
-                return !!(formData.fromDate && formData.toDate &&
-                       safeFormDataBuildings.length > 0 &&
-                       hasPositiveActualQte
-                       );
+                return !!(
+                    formData.fromDate &&
+                    formData.toDate &&
+                    safeFormDataBuildings.length > 0 &&
+                    hasPositiveActualQte
+                );
             case 3:
                 // Deductions - Financial calculations are automatic
                 return true;
@@ -318,23 +357,23 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 return false;
         }
     }, [currentStep, formData]);
-    
+
     // Navigation for 4-step workflow
     const goToNextStep = useCallback(() => {
         if (currentStep < 4 && validateCurrentStep()) {
-            setCurrentStep(prev => prev + 1);
+            setCurrentStep((prev) => prev + 1);
             if (currentStep === 2) {
                 calculateFinancials(); // Auto-calculate when moving to deductions step
             }
         }
     }, [currentStep, validateCurrentStep, calculateFinancials]);
-    
+
     const goToPreviousStep = useCallback(() => {
         if (currentStep > 1) {
-            setCurrentStep(prev => prev - 1);
+            setCurrentStep((prev) => prev - 1);
         }
     }, [currentStep]);
-    
+
     // Submit IPC
     const handleSubmit = useCallback(async () => {
         setLoading(true);
@@ -343,7 +382,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             if (!token) {
                 throw new Error("Authentication required");
             }
-            
+
             let response;
             if (formData.id === 0) {
                 // New IPC
@@ -352,7 +391,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 // Existing IPC
                 response = await ipcApiService.updateIpc(formData as any, token);
             }
-            
+
             if (response.success) {
                 setHasUnsavedChanges(false);
                 return { success: true };
@@ -360,7 +399,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 return { success: false, error: response.error || "Failed to save IPC" };
             }
         } catch (error) {
-            console.error('Error saving IPC:', error);
+            console.error("Error saving IPC:", error);
             return { success: false, error: "An unexpected error occurred" };
         } finally {
             setLoading(false);
@@ -379,89 +418,91 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             loadIpcForEdit(formData.id);
         }
     }, [formData.id, hasUnsavedChanges, contracts.length, loadIpcForEdit, selectedContract]);
-    
+
     // Memoize expensive calculations
     const financialSummary = useMemo(() => {
         const safeFormDataBuildings = formData.buildings || [];
         const totalIPCAmount = safeFormDataBuildings.reduce((total, building) => {
             const buildingBoqs = building.boqsContract || [];
-            return total + buildingBoqs.reduce((buildingTotal, boq) => {
-                return buildingTotal + (boq.actualAmount || 0);
-            }, 0);
+            return (
+                total +
+                buildingBoqs.reduce((buildingTotal, boq) => {
+                    return buildingTotal + (boq.actualAmount || 0);
+                }, 0)
+            );
         }, 0);
-        
+
         const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
         const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
-        
+
         return {
             totalAmount: totalIPCAmount,
             retentionAmount,
             advanceDeduction,
-            netAmount: totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty
+            netAmount: totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty,
         };
     }, [formData.buildings, formData.retentionPercentage, formData.advancePaymentPercentage, formData.penalty]);
 
     // Memoize context value to prevent unnecessary re-renders
-    const contextValue: IPCWizardContextType = useMemo(() => ({
-        // State
-        formData,
-        currentStep,
-        hasUnsavedChanges,
-        loading,
-        loadingContracts,
-        
-        // Data
-        contracts,
-        selectedContract,
-        ipcTypes: IPC_TYPES,
-        
-        // Actions
-        setFormData,
-        setCurrentStep,
-        setHasUnsavedChanges,
-        validateCurrentStep,
-        goToNextStep,
-        goToPreviousStep,
-        loadContracts,
-        selectContract,
-        updateBOQProgress,
-        calculateFinancials,
-        handleSubmit,
-        loadIpcForEdit
-    }), [
-        // Dependencies for memoization
-        formData,
-        currentStep,
-        hasUnsavedChanges,
-        loading,
-        loadingContracts,
-        contracts,
-        selectedContract,
-        setFormData,
-        setCurrentStep,
-        setHasUnsavedChanges,
-        validateCurrentStep,
-        goToNextStep,
-        goToPreviousStep,
-        loadContracts,
-        selectContract,
-        updateBOQProgress,
-        calculateFinancials,
-        handleSubmit,
-        loadIpcForEdit
-    ]);
-    
-    return (
-        <IPCWizardContext.Provider value={contextValue}>
-            {children}
-        </IPCWizardContext.Provider>
+    const contextValue: IPCWizardContextType = useMemo(
+        () => ({
+            // State
+            formData,
+            currentStep,
+            hasUnsavedChanges,
+            loading,
+            loadingContracts,
+
+            // Data
+            contracts,
+            selectedContract,
+            ipcTypes: IPC_TYPES,
+
+            // Actions
+            setFormData,
+            setCurrentStep,
+            setHasUnsavedChanges,
+            validateCurrentStep,
+            goToNextStep,
+            goToPreviousStep,
+            loadContracts,
+            selectContract,
+            updateBOQProgress,
+            calculateFinancials,
+            handleSubmit,
+            loadIpcForEdit,
+        }),
+        [
+            // Dependencies for memoization
+            formData,
+            currentStep,
+            hasUnsavedChanges,
+            loading,
+            loadingContracts,
+            contracts,
+            selectedContract,
+            setFormData,
+            setCurrentStep,
+            setHasUnsavedChanges,
+            validateCurrentStep,
+            goToNextStep,
+            goToPreviousStep,
+            loadContracts,
+            selectContract,
+            updateBOQProgress,
+            calculateFinancials,
+            handleSubmit,
+            loadIpcForEdit,
+        ],
     );
+
+    return <IPCWizardContext.Provider value={contextValue}>{children}</IPCWizardContext.Provider>;
 };
 
 export const useIPCWizardContext = (): IPCWizardContextType => {
     const context = useContext(IPCWizardContext);
     if (!context) {
-        throw new Error('useIPCWizardContext must be used within an IPCWizardProvider');
+        throw new Error("useIPCWizardContext must be used within an IPCWizardProvider");
     }
     return context;
 };

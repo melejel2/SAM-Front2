@@ -35,7 +35,11 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     openPenaltyForm,
     closePenaltyForm,
     updatePenaltyData,
-    clearData
+    clearData,
+    vos,
+    labors,
+    machines,
+    materials
   } = useIpcEdit();
 
   const [activeTab, setActiveTab] = useState<'details' | 'boq' | 'financial' | 'documents' | 'summary'>('details');
@@ -78,16 +82,26 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     return () => {
       clearData();
     };
-  }, [id, loadIpcForEdit, toaster, navigate, clearData]);
+  }, [id, loadIpcForEdit, clearData]);
 
   // Update form data when IPC loads
   useEffect(() => {
     if (ipcData) {
-      setFormData({
+      const formatToHTMLDate = (isoString: string | undefined) => {
+        if (!isoString) return '';
+        try {
+          return new Date(isoString).toISOString().split('T')[0];
+        } catch {
+          return '';
+        }
+      };
+
+      setFormData(prev => ({
+        ...prev,
         ipcNumber: ipcData.number?.toString() || '',
-        dateIpc: ipcData.dateIpc || '',
-        fromDate: ipcData.fromDate || '',
-        toDate: ipcData.toDate || '',
+        dateIpc: formatToHTMLDate(ipcData.dateIpc),
+        fromDate: formatToHTMLDate(ipcData.fromDate),
+        toDate: formatToHTMLDate(ipcData.toDate),
         retention: ipcData.retention || ipcData.retentionAmount || 0,
         advance: ipcData.advance || ipcData.advancePaymentAmount || 0,
         remarks: ipcData.remarks || '',
@@ -95,28 +109,41 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         advancePaymentPercentage: ipcData.advancePaymentPercentage || 0,
         penalty: ipcData.penalty || 0,
         previousPenalty: ipcData.previousPenalty || 0
-      });
+      }));
     }
   }, [ipcData]);
 
   // Calculate totals when buildings or form data changes
   useEffect(() => {
-    const totalIPCAmount = buildings.reduce((sum, building) => 
-      sum + building.boqs.reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+    const safeBuildings = buildings || [];
+    const safeVos = vos || [];
+    const safeLabors = labors || [];
+    const safeMachines = machines || [];
+    const safeMaterials = materials || [];
+
+    const totalIPCAmount = safeBuildings.reduce((sum, building) => 
+      sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
     );
+
+    const totalVosAmount = safeVos.reduce((sum, vo) => sum + (vo.amount || 0), 0);
+    const totalLaborsAmount = safeLabors.reduce((sum, labor) => sum + (labor.amount || 0), 0);
+    const totalMachinesAmount = safeMachines.reduce((sum, machine) => sum + (machine.amount || 0), 0);
+    const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.amount || 0), 0);
+
+    const grandTotalAmount = totalIPCAmount + totalVosAmount + totalLaborsAmount + totalMachinesAmount + totalMaterialsAmount;
     
-    const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
-    const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
-    const netPayment = totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty;
+    const retentionAmount = (grandTotalAmount * formData.retentionPercentage) / 100;
+    const advanceDeduction = (grandTotalAmount * formData.advancePaymentPercentage) / 100;
+    const netPayment = grandTotalAmount - retentionAmount - advanceDeduction - formData.penalty;
     
     setCalculatedTotals({
-      totalAmount: totalIPCAmount,
-      actualAmount: totalIPCAmount,
+      totalAmount: grandTotalAmount,
+      actualAmount: grandTotalAmount,
       retentionAmount,
       advanceDeduction,
       netPayment
     });
-  }, [buildings, formData.retentionPercentage, formData.advancePaymentPercentage, formData.penalty]);
+  }, [buildings, vos, labors, machines, materials, formData.retentionPercentage, formData.advancePaymentPercentage, formData.penalty]);
 
   const handleSave = async () => {
     if (!ipcData) return;
@@ -135,7 +162,11 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         advancePaymentPercentage: formData.advancePaymentPercentage,
         penalty: formData.penalty,
         previousPenalty: formData.previousPenalty,
-        buildings: buildings
+        buildings: buildings,
+        vos: vos,
+        labors: labors,
+        machines: machines,
+        materials: materials,
       });
 
       if (success) {
@@ -167,7 +198,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         if (building.id === buildingId) {
           return {
             ...building,
-            boqs: building.boqs.map(boq => {
+            boqsContract: (building.boqsContract || []).map(boq => {
               if (boq.id === boqId) {
                 const actualAmount = actualQte * boq.unitPrice;
                 const newCumulQte = (boq.precedQte || 0) + actualQte;
@@ -743,7 +774,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                       </div>
                     </div>
                     
-                    {building.boqs.length > 0 ? (
+                    {building.boqsContract.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="table table-sm">
                           <thead>
@@ -758,7 +789,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {building.boqs.slice(0, 10).map((boq) => (
+                            {building.boqsContract.slice(0, 10).map((boq) => (
                               <tr key={boq.id}>
                                 <td className="font-medium">{boq.key || boq.no}</td>
                                 <td>{boq.unite}</td>
@@ -783,10 +814,10 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                             ))}
                           </tbody>
                         </table>
-                        {building.boqs.length > 10 && (
+                        {building.boqsContract.length > 10 && (
                           <div className="text-center mt-2">
                             <span className="text-sm text-base-content/50">
-                              Showing 10 of {building.boqs.length} items
+                              Showing 10 of {building.boqsContract.length} items
                             </span>
                           </div>
                         )}

@@ -988,8 +988,11 @@ export const Topbar = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   
-  // Refs to reduce re-renders
+  // Refs for animation state and timer
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentDisplayTextRef = useRef(""); // Ref to track current animation display
+  const currentIsTypingRef = useRef(true); // Ref to track current animation mode
+  const currentTextIndexRef = useRef(0); // Ref to track current text index
   
   // Determine if we're in admin tools
   const isAdminTools = location.pathname.startsWith('/admin-tools');
@@ -1026,50 +1029,67 @@ export const Topbar = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Optimize animation timing to reduce constant updates
-  useEffect(() => {
+  // Animation logic for typing effect on logo text
+  const animateText = useCallback(() => {
     const typingSpeed = 75;
     const deletingSpeed = 50;
     const pauseDuration = 4000;
-    
-    // Clear previous timer
+
     if (animationTimerRef.current) {
       clearTimeout(animationTimerRef.current);
     }
 
-    const animate = () => {
-      if (isTyping) {
-        if (displayText.length < logoTexts[textIndex].length) {
-          setDisplayText(logoTexts[textIndex].substring(0, displayText.length + 1));
-          animationTimerRef.current = setTimeout(animate, typingSpeed);
-        } else {
-          animationTimerRef.current = setTimeout(() => {
-            setIsTyping(false);
-          }, pauseDuration);
-        }
-      } else {
-        if (displayText.length > 0) {
-          setDisplayText(displayText.substring(0, displayText.length - 1));
-          animationTimerRef.current = setTimeout(animate, deletingSpeed);
-        } else {
-          const nextIndex = (textIndex + 1) % logoTexts.length;
-          setTextIndex(nextIndex);
-          setIsTyping(true);
-          animationTimerRef.current = setTimeout(animate, typingSpeed);
-        }
-      }
-    };
+    const currentLogoText = logoTexts[currentTextIndexRef.current];
 
-    animationTimerRef.current = setTimeout(animate, isTyping ? typingSpeed : deletingSpeed);
+    if (currentIsTypingRef.current) {
+      // Typing
+      if (currentDisplayTextRef.current.length < currentLogoText.length) {
+        currentDisplayTextRef.current += currentLogoText[currentDisplayTextRef.current.length];
+        setDisplayText(currentDisplayTextRef.current); // Update React state for display
+        animationTimerRef.current = setTimeout(animateText, typingSpeed);
+      } else {
+        // Done typing, pause
+        animationTimerRef.current = setTimeout(() => {
+          currentIsTypingRef.current = false;
+          animateText();
+        }, pauseDuration);
+      }
+    } else {
+      // Deleting
+      if (currentDisplayTextRef.current.length > 0) {
+        currentDisplayTextRef.current = currentDisplayTextRef.current.slice(0, -1);
+        setDisplayText(currentDisplayTextRef.current);
+        animationTimerRef.current = setTimeout(animateText, deletingSpeed);
+      } else {
+        // Done deleting, switch to next text and start typing
+        currentIsTypingRef.current = true;
+        currentTextIndexRef.current = (currentTextIndexRef.current + 1) % logoTexts.length;
+        setTextIndex(currentTextIndexRef.current); // Update state to trigger re-render of logoTexts if needed
+        animateText();
+      }
+    }
+  }, [logoTexts]); // Only re-create if logoTexts changes
+
+  // Start/restart animation when logoTexts changes (e.g., route change)
+  useEffect(() => {
+    // Initialize refs with actual state values on mount or logoTexts change
+    currentDisplayTextRef.current = "";
+    currentIsTypingRef.current = true;
+    currentTextIndexRef.current = 0;
+    setDisplayText("");
+    setIsTyping(true);
+    setTextIndex(0);
+    
+    animateText();
 
     return () => {
       if (animationTimerRef.current) {
         clearTimeout(animationTimerRef.current);
       }
     };
-  }, [displayText, isTyping, textIndex, logoTexts]);
-  
-  // Reset animation when app route changes
+  }, [logoTexts, animateText]); // Depend on logoTexts and the stable animateText callback
+
+  // Reset animation when app route changes (still needed for a clean reset)
   useEffect(() => {
     setDisplayText("");
     setIsTyping(true);

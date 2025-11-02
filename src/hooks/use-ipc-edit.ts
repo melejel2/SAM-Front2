@@ -6,7 +6,11 @@ import type {
   IpcSummaryData,
   ContractBuildingsVM,
   CreateIpcRequest,
-  UpdateIpcRequest
+  UpdateIpcRequest,
+  VosIpcVM,
+  LaborIpcVM,
+  MachineIpcVM,
+  MaterialIpcVM,
 } from "@/types/ipc";
 
 /**
@@ -31,6 +35,12 @@ export const useIpcEdit = () => {
 
   const { getToken } = useAuth();
   const token = getToken();
+  
+  // New states for nested arrays
+  const [vos, setVos] = useState<VosIpcVM[]>([]);
+  const [labors, setLabors] = useState<LaborIpcVM[]>([]);
+  const [machines, setMachines] = useState<MachineIpcVM[]>([]);
+  const [materials, setMaterials] = useState<MaterialIpcVM[]>([]);
 
   /**
    * Load IPC for editing with summary data
@@ -54,6 +64,11 @@ export const useIpcEdit = () => {
 
       const ipc = ipcResponse.data;
       setIpcData(ipc);
+      setBuildings(ipc.buildings || []); // Set buildings directly from IPC data
+      setVos(ipc.vos || []); // Set vos
+      setLabors(ipc.labors || []); // Set labors
+      setMachines(ipc.machines || []); // Set machines
+      setMaterials(ipc.materials || []); // Set materials
 
       // NEW: Check if penalty form should be opened automatically
       if (ipc.openPenaltyForm) {
@@ -75,15 +90,6 @@ export const useIpcEdit = () => {
           setSummaryData(summaryResponse.data);
         }
       }
-
-      // Load contract buildings data
-      if (ipc.contractsDatasetId) {
-        const buildingsResponse = await ipcApiService.getContractBuildings(ipc.contractsDatasetId, token);
-        if (buildingsResponse.success && buildingsResponse.data) {
-          setBuildings(buildingsResponse.data);
-        }
-      }
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load IPC";
       setError(errorMessage);
@@ -160,6 +166,13 @@ export const useIpcEdit = () => {
         request.previousPenalty = penaltyData.previousPenalty;
         request.openPenaltyForm = true;
       }
+      
+      // Ensure all nested arrays are included in the request
+      request.buildings = buildings;
+      request.vos = vos;
+      request.labors = labors;
+      request.machines = machines;
+      request.materials = materials;
 
       const response = await ipcApiService.updateIpc(request, token);
       
@@ -185,7 +198,7 @@ export const useIpcEdit = () => {
     } finally {
       setSaving(false);
     }
-  }, [token, showPenaltyForm, penaltyData]);
+  }, [token, showPenaltyForm, penaltyData, buildings, vos, labors, machines, materials]);
 
   /**
    * Update BOQ quantities for IPC calculations
@@ -196,9 +209,16 @@ export const useIpcEdit = () => {
         building.id === buildingId
           ? {
               ...building,
-              boqs: building.boqs.map(boq => 
+              boqsContract: (building.boqsContract || []).map(boq => 
                 boq.id === boqId
-                  ? { ...boq, actualQte }
+                  ? { 
+                      ...boq, 
+                      actualQte, 
+                      actualAmount: actualQte * boq.unitPrice, // Recalculate actualAmount
+                      cumulQte: (boq.precedQte || 0) + actualQte, // Recalculate cumulQte
+                      cumulAmount: ((boq.precedQte || 0) + actualQte) * boq.unitPrice, // Recalculate cumulAmount
+                      cumulPercent: boq.qte === 0 ? 0 : (((boq.precedQte || 0) + actualQte) / boq.qte) * 100 // Recalculate cumulPercent
+                    }
                   : boq
               )
             }
@@ -243,7 +263,7 @@ export const useIpcEdit = () => {
     let actualAmount = 0;
 
     buildings.forEach(building => {
-      building.boqs.forEach(boq => {
+      (building.boqsContract || []).forEach(boq => {
         totalAmount += boq.totalAmount;
         actualAmount += boq.actualAmount;
       });
@@ -251,6 +271,19 @@ export const useIpcEdit = () => {
 
     return { totalAmount, actualAmount };
   }, [buildings]);
+
+  const clearData = useCallback(() => {
+    setIpcData(null);
+    setSummaryData(null);
+    setBuildings([]);
+    setError(null);
+    setShowPenaltyForm(false);
+    setPenaltyData({ penalty: 0, previousPenalty: 0, reason: "" });
+    setVos([]);
+    setLabors([]);
+    setMachines([]);
+    setMaterials([]);
+  }, []);
 
   return {
     // State
@@ -261,6 +294,14 @@ export const useIpcEdit = () => {
     summaryData, // NEW: Summary data with amount/previous/remaining
     buildings,
     setBuildings, // Allow external updates to buildings
+    vos,
+    setVos,
+    labors,
+    setLabors,
+    machines,
+    setMachines,
+    materials,
+    setMaterials,
     showPenaltyForm, // NEW: Penalty form visibility
     penaltyData, // NEW: Penalty form data
 
@@ -279,14 +320,7 @@ export const useIpcEdit = () => {
 
     // Utility
     setError,
-    clearData: () => {
-      setIpcData(null);
-      setSummaryData(null);
-      setBuildings([]);
-      setError(null);
-      setShowPenaltyForm(false);
-      setPenaltyData({ penalty: 0, previousPenalty: 0, reason: "" });
-    }
+    clearData
   };
 };
 

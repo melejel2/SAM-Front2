@@ -50,7 +50,7 @@ class IpcApiService {
     async getIpcForEdit(ipcId: number, token: string): Promise<IpcApiResponse<SaveIPCVM>> {
         try {
             const response = await apiRequest<SaveIPCVM>({
-                endpoint: `Ipc/GetIpcForEdit/${ipcId}`,
+                endpoint: `Ipc/OpenIpc/${ipcId}`,
                 method: "GET",
                 token,
             });
