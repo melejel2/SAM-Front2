@@ -126,8 +126,8 @@ class IpcApiService {
     async updateIpc(request: UpdateIpcRequest, token: string): Promise<IpcApiResponse<boolean>> {
         try {
             const response = await apiRequest<boolean>({
-                endpoint: "Ipc/UpdateIpc",
-                method: "PUT",
+                endpoint: "Ipc/SaveIpc",
+                method: "POST",
                 token,
                 body: request as unknown as Record<string, unknown>,
             });
@@ -341,7 +341,10 @@ class IpcApiService {
      * Live preview IPC as PDF
      * POST /api/Ipc/LivePreviewIpcPdf
      */
-    async livePreviewIpcPdf(model: SaveIPCVM, token: string): Promise<{ success: boolean; blob?: Blob; error?: string }> {
+    async livePreviewIpcPdf(
+        model: SaveIPCVM,
+        token: string,
+    ): Promise<{ success: boolean; blob?: Blob; error?: string }> {
         try {
             const response = await apiRequest({
                 endpoint: `Ipc/LivePreviewIpcPdf`,
@@ -369,7 +372,10 @@ class IpcApiService {
      * Live preview IPC as Excel
      * POST /api/Ipc/LivePreviewIpcExcel
      */
-    async livePreviewIpcExcel(model: SaveIPCVM, token: string): Promise<{ success: boolean; blob?: Blob; error?: string }> {
+    async livePreviewIpcExcel(
+        model: SaveIPCVM,
+        token: string,
+    ): Promise<{ success: boolean; blob?: Blob; error?: string }> {
         try {
             const response = await apiRequest({
                 endpoint: `Ipc/LivePreviewIpcExcel`,
