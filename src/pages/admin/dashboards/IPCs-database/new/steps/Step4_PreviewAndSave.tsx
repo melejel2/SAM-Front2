@@ -2,11 +2,12 @@ import React from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 
 export const Step4_PreviewAndSave: React.FC = () => {
-    const { formData, selectedContract } = useIPCWizardContext();
+    const { formData, selectedContract, handleSubmit } = useIPCWizardContext();
     
+    const safeBuildings = formData.buildings || [];
     // Calculate totals
-    const totalIPCAmount = formData.buildings.reduce((sum, building) => 
-        sum + building.boqs.reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+    const totalIPCAmount = safeBuildings.reduce((sum, building) => 
+        sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
     );
     
     const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
@@ -158,9 +159,9 @@ export const Step4_PreviewAndSave: React.FC = () => {
                         </h4>
                         
                         <div className="space-y-2">
-                            {formData.buildings.map(building => {
-                                const buildingAmount = building.boqs.reduce((sum, boq) => sum + (boq.actualAmount || 0), 0);
-                                const itemsWithProgress = building.boqs.filter(boq => (boq.actualQte || 0) > 0).length;
+                            {safeBuildings.map(building => {
+                                const buildingAmount = (building.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0);
+                                const itemsWithProgress = (building.boqsContract || []).filter(boq => (boq.actualQte || 0) > 0).length;
                                 
                                 return (
                                     <div key={building.id} className="flex justify-between items-center p-2 bg-base-200 rounded">
@@ -169,7 +170,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
                                                 {building.buildingName}
                                             </div>
                                             <div className="text-xs text-base-content/60">
-                                                {itemsWithProgress} / {building.boqs.length} items
+                                                {itemsWithProgress} / {(building.boqsContract || []).length} items
                                             </div>
                                         </div>
                                         <div className="font-semibold text-blue-600 text-sm">
@@ -181,7 +182,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
                             
                             <div className="flex justify-between items-center pt-2 border-t border-base-300">
                                 <span className="font-semibold text-base-content text-sm">Total Buildings:</span>
-                                <span className="font-semibold text-base-content text-sm">{formData.buildings.length}</span>
+                                <span className="font-semibold text-base-content text-sm">{safeBuildings.length}</span>
                             </div>
                         </div>
                     </div>
@@ -322,8 +323,8 @@ export const Step4_PreviewAndSave: React.FC = () => {
                 </h4>
                 
                 <div className="space-y-4">
-                    {formData.buildings.map(building => {
-                        const itemsWithProgress = building.boqs.filter(boq => (boq.actualQte || 0) > 0);
+                    {safeBuildings.map(building => {
+                        const itemsWithProgress = (building.boqsContract || []).filter(boq => (boq.actualQte || 0) > 0);
                         
                         if (itemsWithProgress.length === 0) return null;
                         
@@ -348,13 +349,13 @@ export const Step4_PreviewAndSave: React.FC = () => {
                                         <tbody>
                                             {itemsWithProgress.map(boq => (
                                                 <tr key={boq.id}>
-                                                    <td className="font-mono text-sm">{boq.itemCode}</td>
+                                                    <td className="font-mono text-sm">{boq.no}</td>
                                                     <td className="text-sm max-w-48">
-                                                        <div className="truncate" title={boq.description}>
-                                                            {boq.description}
+                                                        <div className="truncate" title={boq.key}>
+                                                            {boq.key}
                                                         </div>
                                                     </td>
-                                                    <td className="text-center text-sm">{boq.unit}</td>
+                                                    <td className="text-center text-sm">{boq.unite}</td>
                                                     <td className="text-right text-sm font-medium">
                                                         {(boq.actualQte || 0).toFixed(2)}
                                                     </td>
@@ -372,7 +373,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
                                                 <td colSpan={5} className="text-right">Building Total:</td>
                                                 <td className="text-right text-blue-600">
                                                     {formatCurrency(
-                                                        building.boqs.reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
+                                                        (building.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
                                                     )}
                                                 </td>
                                             </tr>
@@ -416,6 +417,17 @@ export const Step4_PreviewAndSave: React.FC = () => {
                         All required information has been provided. You can now create the IPC by clicking the "Create IPC" button.
                     </p>
                 </div>
+            </div>
+            
+            {/* Save Button */}
+            <div className="flex justify-end">
+                <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={handleSubmit}
+                >
+                    Create IPC
+                </button>
             </div>
         </div>
     );

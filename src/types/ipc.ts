@@ -26,12 +26,9 @@ export interface IpcSummaryData {
 
 export interface BoqIpcVM {
   id: number;
-  no?: string;
-  key?: string;
-  itemCode?: string; // BOQ item code/reference
-  description?: string; // BOQ item description
-  unite?: string;
-  unit?: string; // Alternative unit field name
+  no?: string; // BOQ item code/reference
+  key?: string; // BOQ item description
+  unite?: string; // Alternative unit field name
   qte: number;
   unitPrice: number;
   orderBoq: number;
@@ -50,7 +47,7 @@ export interface ContractBuildingsVM {
   buildingName: string;
   sheetId?: number; // Optional - may not be present in all API responses
   sheetName?: string; // Optional - may not be present in all API responses
-  boqs: BoqIpcVM[];
+  boqsContract: BoqIpcVM[];
 }
 
 // Deduction DTOs (still referenced in SaveIPCVM)

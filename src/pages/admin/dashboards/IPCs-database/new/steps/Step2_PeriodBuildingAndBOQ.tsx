@@ -10,9 +10,12 @@ import buildingIcon from "@iconify/icons-lucide/building";
 import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import alertCircleIcon from "@iconify/icons-lucide/alert-circle";
+import { useAuth } from "@/contexts/auth";
+import { ipcApiService } from "@/api/services/ipc-api";
 
 export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
+    const { getToken } = useAuth();
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
     
     const handleInputChange = (field: string, value: string | number) => {
@@ -34,8 +37,9 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     }, [formData.fromDate, formData.toDate, setFormData]);
     
     // Building selection logic
-    const availableBuildings = selectedContract?.buildings || [];
-    const selectedBuildingIds = formData.buildings.map(b => b.id);
+    const safeBuildings = formData.buildings || [];
+    const availableBuildings = safeBuildings;
+    const selectedBuildingIds = safeBuildings.map(b => b.id);
     
     const handleBuildingToggle = (building: ContractBuildingsVM) => {
         const isSelected = selectedBuildingIds.includes(building.id);
@@ -43,13 +47,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         if (isSelected) {
             // Remove building
             setFormData({
-                buildings: formData.buildings.filter(b => b.id !== building.id)
+                buildings: safeBuildings.filter(b => b.id !== building.id)
             });
         } else {
             // Add building with initialized BOQ data
             const buildingWithInitializedBOQ = {
                 ...building,
-                boqs: building.boqs.map(boq => ({
+                boqsContract: (building.boqsContract || []).map(boq => ({
                     ...boq,
                     actualQte: 0,
                     actualAmount: 0,
@@ -60,7 +64,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             };
             
             setFormData({
-                buildings: [...formData.buildings, buildingWithInitializedBOQ]
+                buildings: [...safeBuildings, buildingWithInitializedBOQ]
             });
         }
     };
@@ -69,7 +73,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const handleBOQQuantityChange = (buildingId: number, boqId: number, actualQte: number) => {
         // Find the specific BOQ item to validate against
         const building = availableBuildings.find(b => b.id === buildingId);
-        const boqItem = building?.boqs.find(b => b.id === boqId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
         
         if (!boqItem) return;
         
@@ -91,11 +95,11 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         }
         
         setFormData({
-            buildings: formData.buildings.map(building => {
+            buildings: safeBuildings.map(building => {
                 if (building.id === buildingId) {
                     return {
                         ...building,
-                        boqs: building.boqs.map(boq => {
+                        boqsContract: (building.boqsContract || []).map(boq => {
                             if (boq.id === boqId) {
                                 const actualAmount = validatedQte * boq.unitPrice;
                                 const newCumulQte = (boq.precedQte || 0) + validatedQte;
@@ -142,7 +146,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             <div className="text-center py-12">
                 <span className="iconify lucide--building text-base-content/30 size-16 mb-4"></span>
                 <h3 className="text-lg font-semibold text-base-content mb-2">No Contract Selected</h3>
-                <p className="text-base-content/70">Please go back and select a contract first</p>
+                <p className="text-sm text-base-content/70">Please go back and select a contract first</p>
             </div>
         );
     }
@@ -301,6 +305,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 {/* Buildings List */}
                 <div className="space-y-3">
                     {availableBuildings.map(building => {
+                        console.log("Building in Step2 rendering:", building.buildingName, building.boqsContract);
                         const isSelected = selectedBuildingIds.includes(building.id);
                         
                         return (
@@ -328,7 +333,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                     {building.buildingName}
                                                 </h4>
                                                 <p className="text-sm text-base-content/60">
-                                                    Sheet: {building.sheetName} • {building.boqs.length} BOQ items
+                                                    Sheet: {building.sheetName} • {(building.boqsContract || []).length} BOQ items
                                                 </p>
                                             </div>
                                         </div>
@@ -372,23 +377,23 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {building.boqs.map(boq => {
-                                                            const selectedBuilding = formData.buildings.find(b => b.id === building.id);
-                                                            const selectedBOQ = selectedBuilding?.boqs.find(b => b.id === boq.id);
+                                                        {(building.boqsContract || []).map(boq => {
+                                                            const selectedBuilding = safeBuildings.find(b => b.id === building.id);
+                                                            const selectedBOQ = (selectedBuilding?.boqsContract || []).find(b => b.id === boq.id);
                                                             const actualQte = selectedBOQ?.actualQte || 0;
                                                             
                                                             return (
                                                                 <tr key={boq.id} className="hover:bg-base-200/50">
                                                                     <td className="font-mono text-sm">
-                                                                        {boq.itemCode}
+                                                                        {boq.no}
                                                                     </td>
                                                                     <td className="text-sm max-w-48">
-                                                                        <div className="truncate" title={boq.description}>
-                                                                            {boq.description}
+                                                                        <div className="truncate" title={boq.key}>
+                                                                            {boq.key}
                                                                         </div>
                                                                     </td>
                                                                     <td className="text-center text-sm">
-                                                                        {boq.unit}
+                                                                        {boq.unite}
                                                                     </td>
                                                                     <td className="text-right text-sm font-medium">
                                                                         {boq.qte.toFixed(2)}
@@ -442,9 +447,9 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                             <td colSpan={7} className="text-right">Building Total:</td>
                                                             <td className="text-right text-blue-600">
                                                                 {formatCurrency(
-                                                                    building.boqs.reduce((sum, boq) => {
-                                                                        const selectedBuilding = formData.buildings.find(b => b.id === building.id);
-                                                                        const selectedBOQ = selectedBuilding?.boqs.find(b => b.id === boq.id);
+                                                                    (building.boqsContract || []).reduce((sum, boq) => {
+                                                                        const selectedBuilding = safeBuildings.find(b => b.id === building.id);
+                                                                        const selectedBOQ = (selectedBuilding?.boqsContract || []).find(b => b.id === boq.id);
                                                                         const actualQte = selectedBOQ?.actualQte || 0;
                                                                         return sum + (actualQte * boq.unitPrice);
                                                                     }, 0)
@@ -464,28 +469,28 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             </div>
             
             {/* IPC Summary */}
-            {formData.buildings.length > 0 && (
+            {safeBuildings.length > 0 && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-3">IPC Progress Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
                             <span className="text-blue-600/70 dark:text-blue-400/70">Buildings Selected:</span>
                             <div className="font-semibold text-blue-600 dark:text-blue-400">
-                                {formData.buildings.length}
+                                {safeBuildings.length}
                             </div>
                         </div>
                         <div>
                             <span className="text-blue-600/70 dark:text-blue-400/70">Total BOQ Items:</span>
                             <div className="font-semibold text-blue-600 dark:text-blue-400">
-                                {formData.buildings.reduce((sum, building) => sum + building.boqs.length, 0)}
+                                {safeBuildings.reduce((sum, building) => sum + (building.boqsContract || []).length, 0)}
                             </div>
                         </div>
                         <div>
                             <span className="text-blue-600/70 dark:text-blue-400/70">Total IPC Amount:</span>
                             <div className="font-semibold text-green-600">
                                 {formatCurrency(
-                                    formData.buildings.reduce((sum, building) => 
-                                        sum + building.boqs.reduce((boqSum, boq) => 
+                                    safeBuildings.reduce((sum, building) => 
+                                        sum + (building.boqsContract || []).reduce((boqSum, boq) => 
                                             boqSum + (boq.actualAmount || 0), 0), 0)
                                 )}
                             </div>
@@ -514,7 +519,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         <span className="text-sm">End date must be after start date</span>
                     </div>
                 )}
-                {formData.buildings.length === 0 && (
+                {safeBuildings.length === 0 && (
                     <div className="flex items-center gap-2 text-yellow-600">
                         <span className="iconify lucide--alert-triangle size-4"></span>
                         <span className="text-sm">Please select at least one building for the IPC</span>

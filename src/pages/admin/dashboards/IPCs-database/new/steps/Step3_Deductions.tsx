@@ -5,8 +5,9 @@ export const Step3_Deductions: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
     
     // Calculate totals
-    const totalIPCAmount = formData.buildings.reduce((sum, building) => 
-        sum + building.boqs.reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+    const safeBuildings = formData.buildings || [];
+    const totalIPCAmount = safeBuildings.reduce((sum, building) => 
+        sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
     );
     
     const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
@@ -29,6 +30,10 @@ export const Step3_Deductions: React.FC = () => {
         if (amount < 0) return 'text-red-600';
         return 'text-base-content';
     };
+
+    const safeLabors = formData.labors || [];
+    const safeMachines = formData.machines || [];
+    const safeMaterials = formData.materials || [];
     
     if (!selectedContract) {
         return (
@@ -84,7 +89,7 @@ export const Step3_Deductions: React.FC = () => {
                     <div>
                         <span className="text-base-content/60">Buildings:</span>
                         <div className="font-medium text-base-content">
-                            {formData.buildings.length}
+                            {safeBuildings.length}
                         </div>
                     </div>
                 </div>
@@ -98,9 +103,9 @@ export const Step3_Deductions: React.FC = () => {
                 </div>
                 
                 <div className="space-y-3">
-                    {formData.buildings.map(building => {
-                        const buildingAmount = building.boqs.reduce((sum, boq) => sum + (boq.actualAmount || 0), 0);
-                        const itemsWithProgress = building.boqs.filter(boq => (boq.actualQte || 0) > 0).length;
+                    {safeBuildings.map(building => {
+                        const buildingAmount = (building.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0);
+                        const itemsWithProgress = (building.boqsContract || []).filter(boq => (boq.actualQte || 0) > 0).length;
                         
                         return (
                             <div key={building.id} className="flex justify-between items-center p-3 bg-blue-100 dark:bg-blue-800/30 rounded">
@@ -109,7 +114,7 @@ export const Step3_Deductions: React.FC = () => {
                                         {building.buildingName}
                                     </span>
                                     <div className="text-sm text-blue-600/70 dark:text-blue-400/70">
-                                        {itemsWithProgress} of {building.boqs.length} items • Sheet: {building.sheetName}
+                                        {itemsWithProgress} of {(building.boqsContract || []).length} items • Sheet: {building.sheetName}
                                     </div>
                                 </div>
                                 <div className="font-semibold text-blue-600 dark:text-blue-400">
@@ -139,6 +144,27 @@ export const Step3_Deductions: React.FC = () => {
                         </h3>
                         
                         <div className="space-y-3">
+                            {/* Labor Items */}
+                            {(safeLabors.length > 0) ? (
+                                safeLabors.map(labor => (
+                                    <div key={labor.id} className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-800/30 rounded">
+                                        <div>
+                                            <span className="font-medium text-red-600 dark:text-red-400">
+                                                {labor.activityDescription || labor.ref}
+                                            </span>
+                                            <div className="text-sm text-red-600/70 dark:text-red-400/70">
+                                                {labor.quantity} {labor.unit} @ {formatCurrency(labor.unitPrice)} = {formatCurrency(labor.amount)}
+                                            </div>
+                                        </div>
+                                        <div className="font-semibold text-red-600 dark:text-red-400">
+                                            -{formatCurrency(labor.deduction)}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-sm text-base-content/60">No labor deductions to display.</div>
+                            )}
+
                             {/* Retention Percentage */}
                             <div className="floating-label-group">
                                 <input
@@ -177,6 +203,27 @@ export const Step3_Deductions: React.FC = () => {
                         </h3>
                         
                         <div className="space-y-3">
+                            {/* Machine Items */}
+                            {(safeMachines.length > 0) ? (
+                                safeMachines.map(machine => (
+                                    <div key={machine.id} className="flex justify-between items-center p-3 bg-orange-100 dark:bg-orange-800/30 rounded">
+                                        <div>
+                                            <span className="font-medium text-orange-600 dark:text-orange-400">
+                                                {machine.machineAcronym || machine.ref}
+                                            </span>
+                                            <div className="text-sm text-orange-600/70 dark:text-orange-400/70">
+                                                {machine.quantity} {machine.unit} @ {formatCurrency(machine.unitPrice)} = {formatCurrency(machine.amount)}
+                                            </div>
+                                        </div>
+                                        <div className="font-semibold text-orange-600 dark:text-orange-400">
+                                            -{formatCurrency(machine.deduction)}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-sm text-base-content/60">No machine deductions to display.</div>
+                            )}
+
                             {/* Advance Payment Percentage */}
                             <div className="floating-label-group">
                                 <input
@@ -218,6 +265,27 @@ export const Step3_Deductions: React.FC = () => {
                         </h3>
                         
                         <div className="space-y-3">
+                            {/* Material Items */}
+                            {(safeMaterials.length > 0) ? (
+                                safeMaterials.map(material => (
+                                    <div key={material.id} className="flex justify-between items-center p-3 bg-yellow-100 dark:bg-yellow-800/30 rounded">
+                                        <div>
+                                            <span className="font-medium text-yellow-600 dark:text-yellow-400">
+                                                {material.designation || material.acronym || material.bc}
+                                            </span>
+                                            <div className="text-sm text-yellow-600/70 dark:text-yellow-400/70">
+                                                {material.quantity} {material.unit} @ {formatCurrency(material.saleUnit)} = {formatCurrency(material.amount)}
+                                            </div>
+                                        </div>
+                                        <div className="font-semibold text-yellow-600 dark:text-yellow-400">
+                                            -{formatCurrency(material.deduction)}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-sm text-base-content/60">No material deductions to display.</div>
+                            )}
+
                             {/* Current Penalty Amount */}
                             <div className="floating-label-group">
                                 <input
