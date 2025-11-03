@@ -5,6 +5,8 @@ import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth";
+import { ipcApiService } from "@/api/services/ipc-api";
 
 import useIPCsDatabase from "./use-IPCs-database";
 
@@ -69,8 +71,18 @@ const ExportDropdown = ({
 };
 
 const IPCsDatabase = () => {
-    const { columns, tableData, inputFields, loading, getIPCs, previewIpc, downloadIpcExcel, exportIpcZip } = useIPCsDatabase();
+    const {
+        columns,
+        tableData,
+        inputFields,
+        loading,
+        getIPCs,
+        smartPreviewIpc,
+        smartDownloadIpcExcel,
+        exportIpcZip
+    } = useIPCsDatabase();
     const { toaster } = useToast();
+    const { getToken } = useAuth();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -85,7 +97,8 @@ const IPCsDatabase = () => {
     }, [location.pathname]);
 
     const handlePreviewIpc = async (row: any) => {
-        const result = await previewIpc(row.id);
+        // Use smart preview that chooses correct method based on IPC status
+        const result = await smartPreviewIpc(row.id, row._statusRaw || row.status, row.isGenerated);
         if (result.success && result.blob) {
             // Use contract number and IPC reference instead of database IDs
             const contractRef = row.contract || 'document';
@@ -128,8 +141,20 @@ const IPCsDatabase = () => {
     };
 
     const handleDownloadExcel = async (row: any) => {
-        const result = await downloadIpcExcel(row.id);
-        if (result.success) {
+        // Use smart download that chooses correct method based on IPC status
+        const result = await smartDownloadIpcExcel(row.id, row._statusRaw || row.status, row.isGenerated);
+        if (result.success && result.blob) {
+            // Download the file
+            const url = window.URL.createObjectURL(result.blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const contractRef = row.contract || 'document';
+            const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id;
+            a.download = `ipc-${ipcRef}-${contractRef}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
             toaster.success("Excel file downloaded successfully");
         } else {
             toaster.error("Failed to download Excel file");
@@ -142,6 +167,32 @@ const IPCsDatabase = () => {
             toaster.success("ZIP file exported successfully");
         } else {
             toaster.error("Failed to export ZIP file");
+        }
+    };
+
+    const handleGenerateIpc = async (row: any) => {
+        const confirmGenerate = window.confirm(
+            `Are you sure you want to generate IPC #${row.number}?\n\n` +
+            `This will finalize the IPC and change its status to "Issued". ` +
+            `Once generated, you will need to edit and save the IPC to regenerate the file.`
+        );
+
+        if (!confirmGenerate) return;
+
+        try {
+            const token = getToken();
+            const result = await ipcApiService.generateIpc(parseInt(row.id), token ?? "");
+
+            if (result.success || result.isSuccess) {
+                toaster.success(`IPC #${row.number} generated successfully`);
+                // Refresh the table to show updated status
+                await getIPCs();
+            } else {
+                toaster.error(result.error || result.message || "Failed to generate IPC");
+            }
+        } catch (error) {
+            console.error("Error generating IPC:", error);
+            toaster.error("Failed to generate IPC");
         }
     };
 
@@ -168,10 +219,15 @@ const IPCsDatabase = () => {
 
     const handleExportExcel = async () => {
         if (!previewData) return;
-        
+
         setExportingExcel(true);
         try {
-            const result = await downloadIpcExcel(previewData.id);
+            // Use smart download that chooses correct method based on IPC status
+            const result = await smartDownloadIpcExcel(
+                previewData.id,
+                previewData.rowData._statusRaw || previewData.rowData.status,
+                previewData.rowData.isGenerated
+            );
             if (result.success && result.blob) {
                 const url = window.URL.createObjectURL(result.blob);
                 const a = document.createElement('a');
@@ -295,6 +351,14 @@ const IPCsDatabase = () => {
                                 previewAction
                                 editAction
                                 detailsAction
+                                rowActions={(row) => {
+                                    // Show Generate button only for Editable IPCs (not yet generated)
+                                    const statusLower = (row._statusRaw || row.status || '').toLowerCase();
+                                    const isEditable = statusLower.includes('editable') && !row.isGenerated;
+                                    return {
+                                        generateAction: isEditable,
+                                    };
+                                }}
                                 title={"IPC"}
                                 loading={false}
                                 onSuccess={getIPCs}
@@ -309,6 +373,9 @@ const IPCsDatabase = () => {
                                     }
                                     if (type === "Details" && data) {
                                         return handleViewIpcDetails(data);
+                                    }
+                                    if (type === "Generate" && data) {
+                                        return handleGenerateIpc(data);
                                     }
                                 }}
                             />

@@ -161,6 +161,42 @@ const useIPCsDatabase = () => {
         }
     };
 
+    /**
+     * Smart IPC preview that chooses the correct method based on IPC status:
+     * - Issued IPCs: Use saved file from database (exportIpcPdf)
+     * - Editable IPCs: Generate live preview (livePreviewIpcPdf)
+     */
+    const smartPreviewIpc = async (ipcId: string, status: string, isGenerated: boolean) => {
+        try {
+            const statusLower = status?.toLowerCase() || '';
+            const isIssued = statusLower.includes('issued') || isGenerated;
+
+            if (isIssued) {
+                // IPC is already generated - load saved file from database
+                console.log(`[IPC Preview] Loading saved PDF for issued IPC ${ipcId}`);
+                const response = await ipcApiService.exportIpcPdf(parseInt(ipcId), token ?? "");
+                return response;
+            } else {
+                // IPC is editable - generate live preview
+                console.log(`[IPC Preview] Generating live preview for editable IPC ${ipcId}`);
+
+                // First, load the full IPC data
+                const ipcDataResponse = await ipcApiService.getIpcForEdit(parseInt(ipcId), token ?? "");
+
+                if (!ipcDataResponse.success || !ipcDataResponse.data) {
+                    return { success: false, error: "Failed to load IPC data for preview" };
+                }
+
+                // Generate live preview using the loaded data
+                const response = await ipcApiService.livePreviewIpcPdf(ipcDataResponse.data, token ?? "");
+                return response;
+            }
+        } catch (error) {
+            console.error("Error previewing IPC:", error);
+            return { success: false, error: "Failed to preview IPC" };
+        }
+    };
+
     const downloadIpcExcel = async (ipcId: string) => {
         try {
             const response = await ipcApiService.exportIpcExcel(parseInt(ipcId), token ?? "");
@@ -168,6 +204,42 @@ const useIPCsDatabase = () => {
         } catch (error) {
             console.error("Error fetching IPC Excel:", error);
             return { success: false, error: "Failed to fetch IPC Excel" };
+        }
+    };
+
+    /**
+     * Smart IPC Excel download that chooses the correct method based on IPC status:
+     * - Issued IPCs: Use saved file from database (exportIpcExcel)
+     * - Editable IPCs: Generate live preview (livePreviewIpcExcel)
+     */
+    const smartDownloadIpcExcel = async (ipcId: string, status: string, isGenerated: boolean) => {
+        try {
+            const statusLower = status?.toLowerCase() || '';
+            const isIssued = statusLower.includes('issued') || isGenerated;
+
+            if (isIssued) {
+                // IPC is already generated - load saved file from database
+                console.log(`[IPC Excel] Loading saved Excel for issued IPC ${ipcId}`);
+                const response = await ipcApiService.exportIpcExcel(parseInt(ipcId), token ?? "");
+                return response;
+            } else {
+                // IPC is editable - generate live preview
+                console.log(`[IPC Excel] Generating live Excel preview for editable IPC ${ipcId}`);
+
+                // First, load the full IPC data
+                const ipcDataResponse = await ipcApiService.getIpcForEdit(parseInt(ipcId), token ?? "");
+
+                if (!ipcDataResponse.success || !ipcDataResponse.data) {
+                    return { success: false, error: "Failed to load IPC data for Excel preview" };
+                }
+
+                // Generate live preview using the loaded data
+                const response = await ipcApiService.livePreviewIpcExcel(ipcDataResponse.data, token ?? "");
+                return response;
+            }
+        } catch (error) {
+            console.error("Error downloading IPC Excel:", error);
+            return { success: false, error: "Failed to download IPC Excel" };
         }
     };
 
@@ -190,7 +262,9 @@ const useIPCsDatabase = () => {
         loading,
         getIPCs,
         previewIpc,
+        smartPreviewIpc,
         downloadIpcExcel,
+        smartDownloadIpcExcel,
         exportIpcZip,
     };
 };
