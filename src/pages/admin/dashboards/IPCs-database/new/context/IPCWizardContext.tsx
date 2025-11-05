@@ -97,10 +97,10 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             const newFormData = {
                 ...prev,
                 ...data,
-                buildings: data.buildings !== undefined 
-                    ? (data.buildings || []) 
+                buildings: data.buildings !== undefined
+                    ? (data.buildings || [])
                     : (prev.buildings || []),
-                vos: data.vos !== undefined ? (data.vos || []) : (prev.vos || []),
+                vos: (data as any).vos !== undefined ? ((data as any).vos || []) : ((prev as any).vos || []),
                 labors: data.labors !== undefined ? (data.labors || []) : (prev.labors || []),
                 machines: data.machines !== undefined ? (data.machines || []) : (prev.machines || []),
                 materials: data.materials !== undefined ? (data.materials || []) : (prev.materials || []),
@@ -125,10 +125,10 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 if (response.success && response.data) {
                     console.log("📝 loadIpcForEdit API Response Data:", response.data);
                     setFormData(response.data);
-                    setSelectedContract(contracts.find((c) => c.id === response.data.contractsDatasetId) || null);
+                    setSelectedContract(contracts.find((c) => c.id === response.data?.contractsDatasetId) || null);
                     setHasUnsavedChanges(false);
                 } else {
-                    toaster.error(response.error || "Failed to load IPC data for edit");
+                    toaster.error(response.error?.message || "Failed to load IPC data for edit");
                 }
             } catch (error) {
                 console.error("Error loading IPC for edit:", error);
@@ -265,7 +265,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                     if (building.id === buildingId) {
                         return {
                             ...building,
-                            boqs: building.boqs.map((boq) => {
+                            boqsContract: building.boqsContract.map((boq: any) => {
                                 if (boq.id === boqId) {
                                     const actualAmount = actualQte * boq.unitPrice;
                                     const cumulQte = boq.precedQte + actualQte;
@@ -298,7 +298,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         const totalIPCAmount = formData.buildings.reduce((total, building) => {
             return (
                 total +
-                building.boqs.reduce((buildingTotal, boq) => {
+                building.boqsContract.reduce((buildingTotal: number, boq: any) => {
                     return buildingTotal + boq.actualAmount;
                 }, 0)
             );
@@ -395,7 +395,8 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
 
             let response;
-            if (formData.id === 0) {
+            const formDataId = (formData as any).id;
+            if (!formDataId || formDataId === 0) {
                 // New IPC
                 response = await ipcApiService.createIpc(formData as any, token);
             } else {
@@ -407,7 +408,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 setHasUnsavedChanges(false);
                 return { success: true };
             } else {
-                return { success: false, error: response.error || "Failed to save IPC" };
+                return { success: false, error: response.error?.message || "Failed to save IPC" };
             }
         } catch (error) {
             console.error("Error saving IPC:", error);
@@ -425,10 +426,11 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Load IPC data if editing an existing IPC
     useEffect(() => {
-        if (selectedContract && formData.id && formData.id !== 0 && !hasUnsavedChanges && contracts.length > 0) {
-            loadIpcForEdit(formData.id);
+        const formDataId = (formData as any).id;
+        if (selectedContract && formDataId && formDataId !== 0 && !hasUnsavedChanges && contracts.length > 0) {
+            loadIpcForEdit(formDataId);
         }
-    }, [formData.id, hasUnsavedChanges, contracts.length, loadIpcForEdit, selectedContract]);
+    }, [(formData as any).id, hasUnsavedChanges, contracts.length, loadIpcForEdit, selectedContract]);
 
     // Memoize expensive calculations
     const financialSummary = useMemo(() => {

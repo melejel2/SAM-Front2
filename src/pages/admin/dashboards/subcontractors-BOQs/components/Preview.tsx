@@ -166,10 +166,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
                 errorMessage.includes("upload a template document")) {
                 setError(errorMessage);
                 setIsTemplateError(true);
-                toaster.error("Template Upload Required", {
-                    description: errorMessage,
-                    duration: 8000,
-                });
+                toaster.error(`Template Upload Required: ${errorMessage}`);
             } else {
                 setError(errorMessage);
                 setIsTemplateError(false);
@@ -215,10 +212,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
                 errorMessage.includes("upload a template document")) {
                 setError(errorMessage);
                 setIsTemplateError(true);
-                toaster.error("Template Upload Required", {
-                    description: errorMessage,
-                    duration: 8000,
-                });
+                toaster.error(`Template Upload Required: ${errorMessage}`);
             } else {
                 setError(`Failed to generate live preview: ${errorMessage}`);
                 setIsTemplateError(false);

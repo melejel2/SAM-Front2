@@ -90,7 +90,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             // Show warning toast for exceeded quantity
             import("@/hooks/use-toast").then(({ default: useToast }) => {
                 const { toaster } = useToast();
-                toaster.warning(`Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unit || boqItem.unite || ''}`);
+                toaster.warning(`Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''}`);
             });
         }
         
@@ -421,7 +421,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                                                         step="0.01"
                                                                                         min="0"
                                                                                         max={maxAllowed}
-                                                                                        title={`Maximum available: ${maxAllowed.toFixed(2)} ${boq.unit || boq.unite || ''}`}
+                                                                                        title={`Maximum available: ${maxAllowed.toFixed(2)} ${boq.unite || ''}`}
                                                                                     />
                                                                                     {isInvalid && (
                                                                                         <div className="absolute -bottom-5 left-0 text-xs text-error whitespace-nowrap">

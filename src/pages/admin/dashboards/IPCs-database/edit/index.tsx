@@ -138,7 +138,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         const totalVosAmount = safeVos.reduce((sum, vo) => sum + (vo.amount || 0), 0);
         const totalLaborsAmount = safeLabors.reduce((sum, labor) => sum + (labor.amount || 0), 0);
         const totalMachinesAmount = safeMachines.reduce((sum, machine) => sum + (machine.amount || 0), 0);
-        const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.amount || 0), 0);
+        const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.totalSale || 0), 0);
 
         const grandTotalAmount =
             totalIPCAmount + totalVosAmount + totalLaborsAmount + totalMachinesAmount + totalMaterialsAmount;

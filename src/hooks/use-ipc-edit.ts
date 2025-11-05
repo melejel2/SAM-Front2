@@ -7,10 +7,10 @@ import type {
   ContractBuildingsVM,
   CreateIpcRequest,
   UpdateIpcRequest,
-  VosIpcVM,
-  LaborIpcVM,
-  MachineIpcVM,
-  MaterialIpcVM,
+  Vos,
+  LaborsVM,
+  MachinesVM,
+  MaterialsVM,
 } from "@/types/ipc";
 
 /**
@@ -37,10 +37,10 @@ export const useIpcEdit = () => {
   const token = getToken();
   
   // New states for nested arrays
-  const [vos, setVos] = useState<VosIpcVM[]>([]);
-  const [labors, setLabors] = useState<LaborIpcVM[]>([]);
-  const [machines, setMachines] = useState<MachineIpcVM[]>([]);
-  const [materials, setMaterials] = useState<MaterialIpcVM[]>([]);
+  const [vos, setVos] = useState<Vos[]>([]);
+  const [labors, setLabors] = useState<LaborsVM[]>([]);
+  const [machines, setMachines] = useState<MachinesVM[]>([]);
+  const [materials, setMaterials] = useState<MaterialsVM[]>([]);
 
   /**
    * Load IPC for editing with summary data
@@ -59,7 +59,7 @@ export const useIpcEdit = () => {
       const ipcResponse = await ipcApiService.getIpcForEdit(ipcId, token);
       
       if (!ipcResponse.success || !ipcResponse.data) {
-        throw new Error(ipcResponse.error || "Failed to load IPC data");
+        throw new Error(ipcResponse.error?.message || "Failed to load IPC data");
       }
 
       const ipc = ipcResponse.data;
@@ -131,7 +131,7 @@ export const useIpcEdit = () => {
       const response = await ipcApiService.createIpc(request, token);
       
       if (!response.success || !response.data) {
-        throw new Error(response.error || "Failed to create IPC");
+        throw new Error(response.error?.message || "Failed to create IPC");
       }
 
       setIpcData(response.data);
@@ -177,7 +177,7 @@ export const useIpcEdit = () => {
       const response = await ipcApiService.updateIpc(request, token);
       
       if (!response.success) {
-        throw new Error(response.error || "Failed to update IPC");
+        throw new Error(response.error?.message || "Failed to update IPC");
       }
 
       // Update local state

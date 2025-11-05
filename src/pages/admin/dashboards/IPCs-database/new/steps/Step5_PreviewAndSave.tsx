@@ -22,7 +22,7 @@ export const Step5_PreviewAndSave: React.FC = () => {
             }
 
             try {
-                const result = await ipcApiService.livePreviewIpcPdf(formData, token);
+                const result = await ipcApiService.livePreviewIpcPdf(formData as any, token);
                 if (result.success && result.blob) {
                     setPdfBlob(result.blob);
                 } else {

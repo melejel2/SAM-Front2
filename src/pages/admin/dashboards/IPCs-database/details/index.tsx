@@ -339,11 +339,11 @@ const IPCDetails = () => {
     
     // Calculate progress statistics
     const totalBoqItems = ipcData.buildings?.reduce((total, building) => {
-        return total + (building.boqs?.length || 0);
+        return total + (building.boqsContract?.length || 0);
     }, 0) || 0;
-    
+
     const completedItems = ipcData.buildings?.reduce((total, building) => {
-        return total + (building.boqs?.filter(boq => boq.cumulPercent >= 100).length || 0);
+        return total + (building.boqsContract?.filter(boq => boq.cumulPercent >= 100).length || 0);
     }, 0) || 0;
     
     const overallProgress = totalBoqItems > 0 ? Math.round((completedItems / totalBoqItems) * 100) : 0;
@@ -741,11 +741,11 @@ const IPCDetails = () => {
                                                     {building.buildingName} - {building.sheetName}
                                                 </h5>
                                                 <span className="badge badge-sm badge-neutral">
-                                                    {building.boqs?.length || 0} items
+                                                    {building.boqsContract?.length || 0} items
                                                 </span>
                                             </div>
-                                            
-                                            {building.boqs && building.boqs.length > 0 ? (
+
+                                            {building.boqsContract && building.boqsContract.length > 0 ? (
                                                 <SAMTable
                                                     columns={{
                                                         no: "Item No",
@@ -760,7 +760,7 @@ const IPCDetails = () => {
                                                         actualAmount: "Current Amount",
                                                         cumulAmount: "Cumulative Amount"
                                                     }}
-                                                    tableData={building.boqs.map(boq => ({
+                                                    tableData={building.boqsContract.map(boq => ({
                                                         id: boq.id,
                                                         no: boq.no || '-',
                                                         key: boq.key || '-',

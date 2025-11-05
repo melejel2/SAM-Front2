@@ -43,12 +43,12 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
       });
     }
 
-    setBuildings(prevBuildings => 
-      prevBuildings.map(building => 
+    setBuildings(prevBuildings =>
+      prevBuildings.map(building =>
         building.id === buildingId
           ? {
               ...building,
-              boqs: building.boqs.map(boq => 
+              boqsContract: building.boqsContract.map((boq: BoqIpcVM) =>
                 boq.id === boqId
                   ? calculateBoqAmounts({ ...boq, [field]: value })
                   : boq
@@ -83,12 +83,12 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
    * Bulk update BOQ quantities for a building
    */
   const bulkUpdateBuilding = useCallback((buildingId: number, updates: Array<{ boqId: number; actualQte: number }>) => {
-    setBuildings(prevBuildings => 
-      prevBuildings.map(building => 
+    setBuildings(prevBuildings =>
+      prevBuildings.map(building =>
         building.id === buildingId
           ? {
               ...building,
-              boqs: building.boqs.map(boq => {
+              boqsContract: building.boqsContract.map((boq: BoqIpcVM) => {
                 const update = updates.find(u => u.boqId === boq.id);
                 if (update) {
                   const updatedBoq = { ...boq, actualQte: update.actualQte };
@@ -115,7 +115,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     const building = buildings.find(b => b.id === buildingId);
     if (!building) return;
 
-    const updates = building.boqs.map(boq => ({
+    const updates = building.boqsContract.map((boq: BoqIpcVM) => ({
       boqId: boq.id,
       actualQte: boq.precedQte || 0
     }));
@@ -131,7 +131,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     const building = buildings.find(b => b.id === buildingId);
     if (!building) return;
 
-    const updates = building.boqs.map(boq => ({
+    const updates = building.boqsContract.map((boq: BoqIpcVM) => ({
       boqId: boq.id,
       actualQte: boq.cumulQte || 0
     }));
@@ -152,7 +152,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
       return;
     }
 
-    const updates = building.boqs.map(boq => ({
+    const updates = building.boqsContract.map((boq: BoqIpcVM) => ({
       boqId: boq.id,
       actualQte: Math.round((boq.qte || 0) * (percentage / 100) * 100) / 100 // Round to 2 decimal places
     }));
@@ -168,7 +168,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     const building = buildings.find(b => b.id === buildingId);
     if (!building) return;
 
-    const updates = building.boqs.map(boq => ({
+    const updates = building.boqsContract.map((boq: BoqIpcVM) => ({
       boqId: boq.id,
       actualQte: 0
     }));
@@ -184,7 +184,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     const building = buildings.find(b => b.id === buildingId);
     if (!building) return { totalAmount: 0, actualAmount: 0, cumulAmount: 0, precedAmount: 0 };
 
-    return building.boqs.reduce((totals, boq) => ({
+    return building.boqsContract.reduce((totals: any, boq: BoqIpcVM) => ({
       totalAmount: totals.totalAmount + (boq.totalAmount || 0),
       actualAmount: totals.actualAmount + (boq.actualAmount || 0),
       cumulAmount: totals.cumulAmount + (boq.cumulAmount || 0),
@@ -283,16 +283,16 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
   const exportForApi = useCallback(() => {
     return buildings.map(building => ({
       ...building,
-      boqs: building.boqs.map(boq => calculateBoqAmounts(boq))
+      boqsContract: building.boqsContract.map((boq: BoqIpcVM) => calculateBoqAmounts(boq))
     }));
   }, [buildings, calculateBoqAmounts]);
 
   // Recalculate amounts when buildings change
   useEffect(() => {
-    setBuildings(prevBuildings => 
+    setBuildings(prevBuildings =>
       prevBuildings.map(building => ({
         ...building,
-        boqs: building.boqs.map(boq => calculateBoqAmounts(boq))
+        boqsContract: building.boqsContract.map((boq: BoqIpcVM) => calculateBoqAmounts(boq))
       }))
     );
   }, []); // Only run on mount

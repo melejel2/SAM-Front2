@@ -1,4 +1,5 @@
 import type {
+    BackendDataWrapper,
     ContractBuildingsVM,
     CreateIpcRequest,
     IpcApiResponse,
@@ -32,13 +33,13 @@ class IpcApiService {
 
             return {
                 success: false,
-                error: "Invalid response format",
+                error: { message: "Invalid response format" },
             };
         } catch (error) {
             console.error("Error fetching IPCs list:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to fetch IPCs list",
+                error: { message: error instanceof Error ? error.message : "Failed to fetch IPCs list" },
             };
         }
     }
@@ -63,7 +64,7 @@ class IpcApiService {
             console.error("Error fetching IPC for edit:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to fetch IPC for edit",
+                error: { message: error instanceof Error ? error.message : "Failed to fetch IPC for edit" },
             };
         }
     }
@@ -87,7 +88,9 @@ class IpcApiService {
                     data: response.value, // Extract data from the 'value' property
                 };
             } else {
-                const errorMessage = response.error?.message || response.message || "Failed to fetch contract data for new IPC";
+                const errorMessage = ('error' in response && response.error?.message) ||
+                                     ('message' in response && response.message) ||
+                                     "Failed to fetch contract data for new IPC";
                 return {
                     success: false,
                     error: { message: errorMessage },
@@ -97,7 +100,7 @@ class IpcApiService {
             console.error("Error fetching contract data for new IPC:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to fetch contract data for new IPC",
+                error: { message: error instanceof Error ? error.message : "Failed to fetch contract data for new IPC" },
             };
         }
     }
@@ -123,7 +126,7 @@ class IpcApiService {
             console.error("Error creating IPC:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to create IPC",
+                error: { message: error instanceof Error ? error.message : "Failed to create IPC" },
             };
         }
     }
@@ -149,7 +152,7 @@ class IpcApiService {
             console.error("Error updating IPC:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to update IPC",
+                error: { message: error instanceof Error ? error.message : "Failed to update IPC" },
             };
         }
     }
@@ -175,7 +178,7 @@ class IpcApiService {
             console.error("Error fetching IPC summary data:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to fetch IPC summary data",
+                error: { message: error instanceof Error ? error.message : "Failed to fetch IPC summary data" },
             };
         }
     }
@@ -204,13 +207,13 @@ class IpcApiService {
 
             return {
                 success: false,
-                error: "Invalid response format",
+                error: { message: "Invalid response format" },
             };
         } catch (error) {
             console.error("Error fetching contract buildings:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to fetch contract buildings",
+                error: { message: error instanceof Error ? error.message : "Failed to fetch contract buildings" },
             };
         }
     }
@@ -235,7 +238,7 @@ class IpcApiService {
             console.error("Error deleting IPC:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to delete IPC",
+                error: { message: error instanceof Error ? error.message : "Failed to delete IPC" },
             };
         }
     }
@@ -341,7 +344,7 @@ class IpcApiService {
             console.error("Error generating IPC:", error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Failed to generate IPC",
+                error: { message: error instanceof Error ? error.message : "Failed to generate IPC" },
             };
         }
     }

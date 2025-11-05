@@ -274,7 +274,7 @@ export const Step3_Deductions: React.FC = () => {
                                                 {material.designation || material.acronym || material.bc}
                                             </span>
                                             <div className="text-sm text-yellow-600/70 dark:text-yellow-400/70">
-                                                {material.quantity} {material.unit} @ {formatCurrency(material.saleUnit)} = {formatCurrency(material.amount)}
+                                                {material.quantity} {material.unit} @ {formatCurrency(material.saleUnit)} = {formatCurrency(material.totalSale)}
                                             </div>
                                         </div>
                                         <div className="font-semibold text-yellow-600 dark:text-yellow-400">
