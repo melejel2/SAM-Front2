@@ -156,6 +156,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 try {
                     // For new IPC, fetch initial contract data
                     const response = await ipcApiService.getContractDataForNewIpc(contractId, token);
+                    console.log("📝 getContractDataForNewIpc raw API Response:", response);
                     if (response.success && response.data) {
                         console.log("📝 getContractDataForNewIpc API Response Data:", response.data);
                         // Update formData with the entire SaveIPCVM object including buildings
@@ -164,11 +165,18 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                             contractsDatasetId: contractId, // Ensure contract ID is set
                         });
                     } else {
-                        toaster.error(response.error || "Failed to load initial IPC data");
+                        console.error("📝 getContractDataForNewIpc API Response Error:", response.error);
+                        const errorMessageToDisplay = response.error?.message || "Failed to load initial IPC data";
+                        console.warn("Attempting to display error toast with message:", errorMessageToDisplay);
+                        toaster.error(errorMessageToDisplay);
+                        setSelectedContract(null); // Deselect the contract on failure
+                        setFormData(getInitialFormData()); // Reset form data on failure
                     }
                 } catch (error) {
                     console.error("Error loading initial IPC data:", error);
                     toaster.error("Error loading initial IPC data");
+                    setSelectedContract(null); // Deselect the contract on error
+                    setFormData(getInitialFormData()); // Reset form data on error
                 }
             }
         },

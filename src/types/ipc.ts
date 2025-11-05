@@ -231,7 +231,17 @@ export interface IpcApiResponse<T = any> {
   isSuccess?: boolean;
   message?: string;
   data?: T;
-  error?: string;
+  error?: { code?: string; message: string; };
+}
+
+export interface BackendDataWrapper<T = any> {
+  value: T;
+  isSuccess: boolean;
+  isFailure: boolean;
+  error: {
+    code: string;
+    message: string;
+  };
 }
 
 export interface IpcApiResult<T = any> {

@@ -74,16 +74,25 @@ class IpcApiService {
      */
     async getContractDataForNewIpc(contractDataSetId: number, token: string): Promise<IpcApiResponse<SaveIPCVM>> {
         try {
-            const response = await apiRequest<SaveIPCVM>({
+            const response = await apiRequest<BackendDataWrapper<SaveIPCVM>>({
                 endpoint: `Ipc/GetContractDataForNewIpc?ContractDataSetID=${contractDataSetId}`,
                 method: "POST",
                 token,
             });
 
-            return {
-                success: true,
-                data: response as SaveIPCVM,
-            };
+            // Check the success status from the Result object
+            if (response.isSuccess && response.value) {
+                return {
+                    success: true,
+                    data: response.value, // Extract data from the 'value' property
+                };
+            } else {
+                const errorMessage = response.error?.message || response.message || "Failed to fetch contract data for new IPC";
+                return {
+                    success: false,
+                    error: { message: errorMessage },
+                };
+            }
         } catch (error) {
             console.error("Error fetching contract data for new IPC:", error);
             return {
