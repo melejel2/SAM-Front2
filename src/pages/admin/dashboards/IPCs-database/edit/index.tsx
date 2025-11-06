@@ -574,6 +574,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                     onChange={(e) => setFormData((prev) => ({ ...prev, ipcNumber: e.target.value }))}
                                     className="input input-bordered"
                                     placeholder="Enter IPC number"
+                                    readOnly
                                 />
                             </div>
 
