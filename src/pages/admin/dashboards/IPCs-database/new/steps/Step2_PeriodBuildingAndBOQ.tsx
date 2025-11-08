@@ -311,13 +311,17 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         return (
                             <div key={building.id} className="border border-base-300 rounded-lg overflow-hidden">
                                 {/* Building Header */}
-                                <div 
-                                    className={`p-3 cursor-pointer transition-all duration-200 ${
+                                <div
+                                    className={`p-3 transition-all duration-200 ${
                                         isSelected
-                                            ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
-                                            : 'bg-base-100 hover:bg-base-200'
+                                            ? 'bg-green-50 dark:bg-green-900/20 border-green-500 cursor-pointer'
+                                            : 'bg-base-100'
                                     }`}
-                                    onClick={() => handleBuildingToggle(building)}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            toggleBuildingExpansion(building.id);
+                                        }
+                                    }}
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
