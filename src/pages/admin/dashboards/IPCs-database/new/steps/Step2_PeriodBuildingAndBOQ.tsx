@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
-import type { ContractBuildingsVM } from "@/types/ipc";
+import type { ContractBuildingsVM, Vos, VoBuildingsVM, VOBoqIpcVM } from "@/types/ipc";
 import { Icon } from "@iconify/react";
 import calendarDaysIcon from "@iconify/icons-lucide/calendar-days";
 import infoIcon from "@iconify/icons-lucide/info";
@@ -10,40 +10,62 @@ import buildingIcon from "@iconify/icons-lucide/building";
 import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import alertCircleIcon from "@iconify/icons-lucide/alert-circle";
+import filePlus2Icon from "@iconify/icons-lucide/file-plus-2";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
+
 
 export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
     const { getToken } = useAuth();
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
-    
+    const [expandedVOs, setExpandedVOs] = useState<Set<number>>(new Set());
+    const [expandedVOBuildings, setExpandedVOBuildings] = useState<Set<string>>(new Set());
+
+    // State to hold the master list of all buildings for the contract
+    const [allContractBuildings, setAllContractBuildings] = useState<ContractBuildingsVM[]>([]);
+
+    // Effect to fetch all buildings for the selected contract
+    React.useEffect(() => {
+        const fetchAllBuildings = async () => {
+            if (selectedContract) {
+                const token = getToken();
+                if (!token) return;
+                const response = await ipcApiService.getContractDataForNewIpc(selectedContract.id, token);
+                if (response.success && response.data) {
+                    setAllContractBuildings(response.data.buildings || []);
+                }
+            }
+        };
+        fetchAllBuildings();
+    }, [selectedContract, getToken]);
+
     const handleInputChange = (field: string, value: string | number) => {
         setFormData({ [field]: value });
     };
-    
+
     // Set default period (current month) if not set
     React.useEffect(() => {
         if (!formData.fromDate || !formData.toDate) {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
             const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            
+
             setFormData({
                 fromDate: firstDay.toISOString().split('T')[0],
                 toDate: lastDay.toISOString().split('T')[0]
             });
         }
     }, [formData.fromDate, formData.toDate, setFormData]);
-    
+
     // Building selection logic
     const safeBuildings = formData.buildings || [];
-    const availableBuildings = safeBuildings;
+    const availableBuildings = allContractBuildings; // Use cached master list
     const selectedBuildingIds = safeBuildings.map(b => b.id);
-    
+
     const handleBuildingToggle = (building: ContractBuildingsVM) => {
         const isSelected = selectedBuildingIds.includes(building.id);
-        
+
         if (isSelected) {
             // Remove building
             setFormData({
@@ -62,25 +84,25 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     cumulPercent: boq.qte === 0 ? 0 : ((boq.precedQte || 0) / boq.qte) * 100
                 }))
             };
-            
+
             setFormData({
                 buildings: [...safeBuildings, buildingWithInitializedBOQ]
             });
         }
     };
-    
+
     // BOQ editing logic with validation
     const handleBOQQuantityChange = (buildingId: number, boqId: number, actualQte: number) => {
         // Find the specific BOQ item to validate against
         const building = availableBuildings.find(b => b.id === buildingId);
         const boqItem = building?.boqsContract?.find(b => b.id === boqId);
-        
+
         if (!boqItem) return;
-        
+
         // Calculate maximum allowed quantity
         const precedQte = boqItem.precedQte || 0;
         const maxAllowedQty = Math.max(0, boqItem.qte - precedQte);
-        
+
         // Validate quantity limits
         let validatedQte = actualQte;
         if (actualQte < 0) {
@@ -93,7 +115,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 toaster.warning(`Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''}`);
             });
         }
-        
+
         setFormData({
             buildings: safeBuildings.map(building => {
                 if (building.id === buildingId) {
@@ -105,7 +127,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                 const newCumulQte = (boq.precedQte || 0) + validatedQte;
                                 const newCumulAmount = newCumulQte * boq.unitPrice;
                                 const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
-                                
+
                                 return {
                                     ...boq,
                                     actualQte: validatedQte,
@@ -124,6 +146,68 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         });
     };
     
+    const handleVOBOQQuantityChange = (voId: number, buildingId: number, boqId: number, actualQte: number) => {
+        const vos = (formData.vos || []) as Vos[];
+        const vo = vos.find(v => v.id === voId);
+        const building = vo?.buildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqs.find(b => b.id === boqId);
+    
+        if (!boqItem) return;
+    
+        const precedQte = boqItem.precedQte || 0;
+        const maxAllowedQty = Math.max(0, boqItem.qte - precedQte);
+    
+        let validatedQte = actualQte;
+        if (actualQte < 0) {
+            validatedQte = 0;
+        } else if (actualQte > maxAllowedQty) {
+            validatedQte = maxAllowedQty;
+            import("@/hooks/use-toast").then(({ default: useToast }) => {
+                const { toaster } = useToast();
+                toaster.warning(`Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''}`);
+            });
+        }
+    
+        setFormData({
+            vos: vos.map(v => {
+                if (v.id === voId) {
+                    return {
+                        ...v,
+                        buildings: v.buildings.map(b => {
+                            if (b.id === buildingId) {
+                                return {
+                                    ...b,
+                                    boqs: b.boqs.map(boq => {
+                                        if (boq.id === boqId) {
+                                            const unitPrice = boq.unitPrice;
+                                            const actualAmount = validatedQte * unitPrice;
+                                            const newCumulQte = precedQte + validatedQte;
+                                            const newCumulAmount = newCumulQte * unitPrice;
+                                            const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
+    
+                                            return {
+                                                ...boq,
+                                                actualQte: validatedQte,
+                                                actualAmount,
+                                                cumulQte: newCumulQte,
+                                                cumulAmount: newCumulAmount,
+                                                cumulPercent: newCumulPercent,
+                                                precedQte: precedQte,
+                                            };
+                                        }
+                                        return boq;
+                                    })
+                                };
+                            }
+                            return b;
+                        })
+                    };
+                }
+                return v;
+            })
+        });
+    };
+
     const toggleBuildingExpansion = (buildingId: number) => {
         const newExpanded = new Set(expandedBuildings);
         if (newExpanded.has(buildingId)) {
@@ -133,14 +217,34 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         }
         setExpandedBuildings(newExpanded);
     };
+
+    const toggleVOExpansion = (voId: number) => {
+        const newExpanded = new Set(expandedVOs);
+        if (newExpanded.has(voId)) {
+            newExpanded.delete(voId);
+        } else {
+            newExpanded.add(voId);
+        }
+        setExpandedVOs(newExpanded);
+    };
     
+    const toggleVOBuildingExpansion = (buildingKey: string) => {
+        const newExpanded = new Set(expandedVOBuildings);
+        if (newExpanded.has(buildingKey)) {
+            newExpanded.delete(buildingKey);
+        } else {
+            newExpanded.add(buildingKey);
+        }
+        setExpandedVOBuildings(newExpanded);
+    };
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(amount);
     };
-    
+
     if (!selectedContract) {
         return (
             <div className="text-center py-12">
@@ -150,7 +254,21 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             </div>
         );
     }
-    
+
+    const totalVoAmount = (formData.vos || []).reduce((voSum, vo) => {
+        return voSum + (vo.buildings || []).reduce((buildSum, building) => {
+            return buildSum + (building.boqs || []).reduce((boqSum, boq) => {
+                return boqSum + (boq.actualAmount || 0);
+            }, 0);
+        }, 0);
+    }, 0);
+
+    const totalContractAmount = safeBuildings.reduce((sum, building) =>
+        sum + (building.boqsContract || []).reduce((boqSum, boq) =>
+            boqSum + (boq.actualAmount || 0), 0), 0);
+
+    const totalIpcAmount = totalContractAmount + totalVoAmount;
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -163,7 +281,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     <p className="text-sm text-base-content/70">Set work period, select buildings and update progress quantities</p>
                 </div>
             </div>
-            
+
             {/* Contract Context */}
             <div className="bg-base-200 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">
@@ -191,14 +309,14 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     </div>
                 </div>
             </div>
-            
+
             {/* Work Period Section */}
             <div className="bg-base-200 p-4 rounded-lg">
                 <h3 className="font-semibold text-base-content mb-4 flex items-center gap-2">
                     <span className="iconify lucide--calendar-range size-4"></span>
                     Work Period Covered
                 </h3>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Period Dates */}
                     <div className="space-y-4">
@@ -213,7 +331,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                             />
                             <label className="floating-label">Period From *</label>
                         </div>
-                        
+
                         {/* To Date */}
                         <div className="floating-label-group">
                             <input
@@ -227,7 +345,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                             <label className="floating-label">Period To *</label>
                         </div>
                     </div>
-                    
+
                     {/* Period Summary and Presets */}
                     <div className="space-y-4">
                         {/* Quick Period Presets */}
@@ -266,7 +384,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         {/* Period Summary */}
                         {formData.fromDate && formData.toDate && (
                             <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
@@ -287,27 +405,26 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     </div>
                 </div>
             </div>
-            
+
             {/* Building Selection */}
             <div className="bg-base-200 p-4 rounded-lg">
                 <h3 className="font-semibold text-base-content mb-4 flex items-center gap-2">
                     <span className="iconify lucide--building size-4"></span>
                     Building Selection
                 </h3>
-                
+
                 {/* Building Selection Header */}
                 <div className="flex items-center justify-between mb-4">
                     <span className="text-sm text-base-content/60">
                         {selectedBuildingIds.length} of {availableBuildings.length} buildings selected
                     </span>
                 </div>
-                
+
                 {/* Buildings List */}
                 <div className="space-y-3">
                     {availableBuildings.map(building => {
-                        console.log("Building in Step2 rendering:", building.buildingName, building.boqsContract);
                         const isSelected = selectedBuildingIds.includes(building.id);
-                        
+
                         return (
                             <div key={building.id} className="border border-base-300 rounded-lg overflow-hidden">
                                 {/* Building Header */}
@@ -341,7 +458,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        
+
                                         {isSelected && (
                                             <div className="flex items-center gap-2">
                                                 <span className="iconify lucide--check-circle text-green-600 size-5"></span>
@@ -359,13 +476,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 {/* BOQ Progress Table - Only show if building is selected and expanded */}
                                 {isSelected && expandedBuildings.has(building.id) && (
                                     <div className="bg-base-100 border-t border-base-300">
                                         <div className="p-4">
                                             <h5 className="font-medium text-base-content mb-3">BOQ Progress for {building.buildingName}</h5>
-                                            
+
                                             <div className="overflow-x-auto">
                                                 <table className="table table-sm w-full">
                                                     <thead>
@@ -385,7 +502,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                             const selectedBuilding = safeBuildings.find(b => b.id === building.id);
                                                             const selectedBOQ = (selectedBuilding?.boqsContract || []).find(b => b.id === boq.id);
                                                             const actualQte = selectedBOQ?.actualQte || 0;
-                                                            
+
                                                             return (
                                                                 <tr key={boq.id} className="hover:bg-base-200/50">
                                                                     <td className="font-mono text-sm">
@@ -415,13 +532,12 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                                                         type="number"
                                                                                         value={actualQte}
                                                                                         onChange={(e) => handleBOQQuantityChange(
-                                                                                            building.id, 
-                                                                                            boq.id, 
+                                                                                            building.id,
+                                                                                            boq.id,
                                                                                             parseFloat(e.target.value) || 0
                                                                                         )}
-                                                                                        className={`input input-xs w-20 text-right bg-base-100 ${
-                                                                                            isInvalid ? 'border-error border-2' : 'border-base-300'
-                                                                                        }`}
+                                                                                        className={`input input-xs w-20 text-right bg-base-100 ${isInvalid ? 'border-error border-2' : 'border-base-300'
+                                                                                            }`}
                                                                                         step="0.01"
                                                                                         min="0"
                                                                                         max={maxAllowed}
@@ -471,9 +587,132 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     })}
                 </div>
             </div>
-            
+
+            {/* Variation Orders Section */}
+            <div className="bg-base-200 p-4 rounded-lg">
+                <h3 className="font-semibold text-base-content mb-4 flex items-center gap-2">
+                    <Icon icon={filePlus2Icon} className="size-4" />
+                    Variation Orders
+                </h3>
+                <div className="space-y-3">
+                    {((formData.vos || []) as VoDatasetBoqDetailsVM[]).map(vo => {
+                        const isVoExpanded = expandedVOs.has(vo.id);
+                        return (
+                            <div key={vo.id} className="border border-base-300 rounded-lg overflow-hidden">
+                                {/* VO Header */}
+                                <div
+                                    className="p-3 cursor-pointer bg-base-100 hover:bg-base-200"
+                                    onClick={() => toggleVOExpansion(vo.id)}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-semibold text-base-content">{vo.voNumber} - {vo.type}</h4>
+                                        <button type="button" className="btn btn-xs btn-outline">
+                                            {isVoExpanded ? 'Hide' : 'Show'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* VO Content */}
+                                {isVoExpanded && (
+                                    <div className="bg-base-100 border-t border-base-300 p-4 space-y-3">
+                                        {(vo.buildings || []).map(building => {
+                                            const buildingKey = `${vo.id}-${building.id}`;
+                                            const isBuildingExpanded = expandedVOBuildings.has(buildingKey);
+                                            return (
+                                                <div key={building.id} className="border border-base-300 rounded-lg overflow-hidden">
+                                                    {/* Building Header */}
+                                                    <div
+                                                        className="p-3 cursor-pointer bg-base-100 hover:bg-base-200"
+                                                        onClick={() => toggleVOBuildingExpansion(buildingKey)}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <h5 className="font-medium text-base-content">{building.buildingName}</h5>
+                                                            <button type="button" className="btn btn-xs btn-outline">
+                                                                {isBuildingExpanded ? 'Hide BOQ' : 'Show BOQ'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* BOQ Table */}
+                                                    {isBuildingExpanded && (
+                                                        <div className="p-4 overflow-x-auto">
+                                                            <table className="table table-sm w-full">
+                                                                <thead>
+                                                                    <tr className="bg-base-200">
+                                                                        <th className="text-left">Item Code</th>
+                                                                        <th className="text-left">Description</th>
+                                                                        <th className="text-center">Unit</th>
+                                                                        <th className="text-right">VO Qty</th>
+                                                                        <th className="text-right">Previous Qty</th>
+                                                                        <th className="text-right">This IPC Qty</th>
+                                                                        <th className="text-right">Unit Price</th>
+                                                                        <th className="text-right">This IPC Amount</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {(building.boqs || []).map(boq => {
+                                                                        const actualQte = boq.actualQte || 0;
+                                                                        const precedQte = boq.precedQte || 0;
+                                                                        const maxAllowed = Math.max(0, boq.qte - precedQte);
+                                                                        const isInvalid = actualQte > maxAllowed;
+
+                                                                        return (
+                                                                            <tr key={boq.id} className="hover:bg-base-200/50">
+                                                                                <td className="font-mono text-sm">{boq.no}</td>
+                                                                                <td className="text-sm max-w-48"><div className="truncate" title={boq.key || ''}>{boq.key}</div></td>
+                                                                                <td className="text-center text-sm">{boq.unite}</td>
+                                                                                <td className="text-right text-sm font-medium">{boq.qte.toFixed(2)}</td>
+                                                                                <td className="text-right text-sm">{(precedQte).toFixed(2)}</td>
+                                                                                <td className="text-right">
+                                                                                    <div className="relative">
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            value={actualQte}
+                                                                                            onChange={(e) => handleVOBOQQuantityChange(vo.id, building.id, boq.id, parseFloat(e.target.value) || 0)}
+                                                                                            className={`input input-xs w-20 text-right bg-base-100 ${isInvalid ? 'border-error' : 'border-base-300'}`}
+                                                                                            step="0.01"
+                                                                                            min="0"
+                                                                                            max={maxAllowed}
+                                                                                            title={`Max available: ${maxAllowed.toFixed(2)}`}
+                                                                                        />
+                                                                                        {isInvalid && <div className="absolute -bottom-5 left-0 text-xs text-error whitespace-nowrap">Max: {maxAllowed.toFixed(2)}</div>}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="text-right text-sm font-medium">{formatCurrency(boq.unitPrice)}</td>
+                                                                                <td className="text-right text-sm font-semibold text-blue-600">{formatCurrency(actualQte * boq.unitPrice)}</td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                </tbody>
+                                                                <tfoot>
+                                                                    <tr className="bg-base-200 font-semibold">
+                                                                        <td colSpan={7} className="text-right">VO Building Total:</td>
+                                                                        <td className="text-right text-blue-600">
+                                                                            {formatCurrency((building.boqs || []).reduce((sum, boq) => sum + ((boq.actualQte || 0) * boq.unitPrice), 0))}
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                     {((formData.vos || []).length === 0) && (
+                        <div className="text-center py-4 text-base-content/60">
+                            No variation orders found for this contract.
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* IPC Summary */}
-            {safeBuildings.length > 0 && (
+            {(safeBuildings.length > 0 || ((formData.vos || []).length > 0 && totalVoAmount > 0)) && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-3">IPC Progress Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -492,17 +731,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         <div>
                             <span className="text-blue-600/70 dark:text-blue-400/70">Total IPC Amount:</span>
                             <div className="font-semibold text-green-600">
-                                {formatCurrency(
-                                    safeBuildings.reduce((sum, building) => 
-                                        sum + (building.boqsContract || []).reduce((boqSum, boq) => 
-                                            boqSum + (boq.actualAmount || 0), 0), 0)
-                                )}
+                                {formatCurrency(totalIpcAmount)}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-            
+
             {/* Validation Messages */}
             <div className="space-y-2">
                 {!formData.fromDate && (
@@ -523,10 +758,10 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         <span className="text-sm">End date must be after start date</span>
                     </div>
                 )}
-                {safeBuildings.length === 0 && (
+                {safeBuildings.length === 0 && totalVoAmount === 0 && (
                     <div className="flex items-center gap-2 text-yellow-600">
                         <span className="iconify lucide--alert-triangle size-4"></span>
-                        <span className="text-sm">Please select at least one building for the IPC</span>
+                        <span className="text-sm">Please select at least one building or add progress to a variation order for the IPC</span>
                     </div>
                 )}
             </div>

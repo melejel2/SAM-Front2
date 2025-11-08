@@ -127,10 +127,35 @@ export interface MaterialsVM {
   precedentAmountOld: number;
 }
 
-// VO-related DTOs
+// VO-related DTOs for SaveIPCVM
+export interface VOBoqIpcVM {
+    id: number;
+    no: string | null;
+    key: string | null;
+    unite: string | null;
+    qte: number;
+    unitPrice: number;
+    cumulQte: number;
+    actualQte: number;
+    precedQte: number;
+    totalAmount?: number;
+    cumulAmount?: number;
+    actualAmount?: number;
+    precedAmount?: number;
+    cumulPercent?: number;
+}
+
+export interface VoBuildingsVM {
+    id: number;
+    buildingName: string;
+    boqs: VOBoqIpcVM[];
+}
+
 export interface Vos {
-  // VO structure - to be defined based on backend Vo.Vos class
-  [key: string]: any;
+    id: number;
+    voNumber: string;
+    type: string;
+    buildings: VoBuildingsVM[];
 }
 
 // Base IPC VM
@@ -272,6 +297,7 @@ export interface IpcWizardFormData {
   
   // BOQ progress data
   buildings: ContractBuildingsVM[];
+  vos: Vos[];
   
   // Deduction data (if still used)
   labors: LaborsVM[];
