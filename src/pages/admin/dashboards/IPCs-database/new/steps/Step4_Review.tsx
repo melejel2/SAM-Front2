@@ -1,14 +1,27 @@
 import React from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
+import type { Vos } from "@/types/ipc";
 
 export const Step4_Review: React.FC = () => {
     const { formData, selectedContract } = useIPCWizardContext();
     
     const safeBuildings = formData.buildings || [];
+    const safeVOs = (formData.vos || []) as Vos[];
+
     // Calculate totals
-    const totalIPCAmount = safeBuildings.reduce((sum, building) => 
+    const totalContractAmount = safeBuildings.reduce((sum, building) => 
         sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
     );
+
+    const totalVoAmount = safeVOs.reduce((voSum, vo) => {
+        return voSum + (vo.buildings || []).reduce((buildSum, building) => {
+            return buildSum + (building.boqs || []).reduce((boqSum, boq) => {
+                return boqSum + (boq.actualAmount || 0);
+            }, 0);
+        }, 0);
+    }, 0);
+
+    const totalIPCAmount = totalContractAmount + totalVoAmount;
     
     const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
     const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
@@ -184,6 +197,42 @@ export const Step4_Review: React.FC = () => {
                                 <span className="font-semibold text-base-content text-sm">Total Buildings:</span>
                                 <span className="font-semibold text-base-content text-sm">{safeBuildings.length}</span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Variation Orders Summary */}
+                    <div className="bg-base-100 p-4 rounded-lg border border-base-300">
+                        <h4 className="font-semibold text-base-content mb-3 flex items-center gap-2">
+                            <span className="iconify lucide--file-plus-2 size-4"></span>
+                            Variation Orders Summary
+                        </h4>
+                        
+                        <div className="space-y-2">
+                            {safeVOs.filter(vo => (vo.buildings || []).some(b => (b.boqs || []).some(boq => (boq.actualQte || 0) > 0))).map(vo => {
+                                const voAmount = (vo.buildings || []).reduce((sum, building) => 
+                                    sum + (building.boqs || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+                                );
+                                
+                                return (
+                                    <div key={vo.id} className="flex justify-between items-center p-2 bg-base-200 rounded">
+                                        <div>
+                                            <div className="font-medium text-base-content text-sm">
+                                                {vo.voNumber}
+                                            </div>
+                                            <div className="text-xs text-base-content/60">
+                                                {vo.type}
+                                            </div>
+                                        </div>
+                                        <div className="font-semibold text-blue-600 text-sm">
+                                            {formatCurrency(voAmount)}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            
+                            {safeVOs.filter(vo => (vo.buildings || []).some(b => (b.boqs || []).some(boq => (boq.actualQte || 0) > 0))).length === 0 && (
+                                <p className="text-sm text-base-content/60 text-center py-2">No variation orders with progress in this IPC.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -380,6 +429,86 @@ export const Step4_Review: React.FC = () => {
                                         </tfoot>
                                     </table>
                                 </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* VO Items Summary */}
+            <div className="bg-base-100 p-4 rounded-lg border border-base-300">
+                <h4 className="font-semibold text-base-content mb-4 flex items-center gap-2">
+                    <span className="iconify lucide--table size-4"></span>
+                    VO Items Summary
+                </h4>
+                
+                <div className="space-y-4">
+                    {safeVOs.map(vo => {
+                        const voHasProgress = (vo.buildings || []).some(b => (b.boqs || []).some(boq => (boq.actualQte || 0) > 0));
+                        if (!voHasProgress) return null;
+
+                        return (
+                            <div key={vo.id}>
+                                <h5 className="font-bold text-base-content mb-2">{vo.voNumber}</h5>
+                                {vo.buildings.map(building => {
+                                    const itemsWithProgress = (building.boqs || []).filter(boq => (boq.actualQte || 0) > 0);
+                                    if (itemsWithProgress.length === 0) return null;
+                                    
+                                    return (
+                                        <div key={building.id} className="border border-base-300 rounded mb-4">
+                                            <div className="bg-base-200 p-3 font-medium text-base-content">
+                                                {building.buildingName} - {itemsWithProgress.length} items with progress
+                                            </div>
+                                            
+                                            <div className="overflow-x-auto">
+                                                <table className="table table-sm w-full">
+                                                    <thead>
+                                                        <tr className="bg-base-200">
+                                                            <th className="text-left">Item Code</th>
+                                                            <th className="text-left">Description</th>
+                                                            <th className="text-center">Unit</th>
+                                                            <th className="text-right">This IPC Qty</th>
+                                                            <th className="text-right">Unit Price</th>
+                                                            <th className="text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {itemsWithProgress.map(boq => (
+                                                            <tr key={boq.id}>
+                                                                <td className="font-mono text-sm">{boq.no}</td>
+                                                                <td className="text-sm max-w-48">
+                                                                    <div className="truncate" title={boq.key || ''}>
+                                                                        {boq.key}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="text-center text-sm">{boq.unite}</td>
+                                                                <td className="text-right text-sm font-medium">
+                                                                    {(boq.actualQte || 0).toFixed(2)}
+                                                                </td>
+                                                                <td className="text-right text-sm">
+                                                                    {formatCurrency(boq.unitPrice)}
+                                                                </td>
+                                                                <td className="text-right text-sm font-semibold text-blue-600">
+                                                                    {formatCurrency(boq.actualAmount || 0)}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                    <tfoot>
+                                                        <tr className="bg-base-200 font-semibold">
+                                                            <td colSpan={5} className="text-right">Building Total:</td>
+                                                            <td className="text-right text-blue-600">
+                                                                {formatCurrency(
+                                                                    itemsWithProgress.reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         );
                     })}

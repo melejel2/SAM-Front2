@@ -1,14 +1,27 @@
 import React from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
+import type { Vos } from "@/types/ipc";
 
 export const Step3_Deductions: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
     
-    // Calculate totals
     const safeBuildings = formData.buildings || [];
-    const totalIPCAmount = safeBuildings.reduce((sum, building) => 
+    const safeVOs = (formData.vos || []) as Vos[];
+
+    // Calculate totals
+    const totalContractAmount = safeBuildings.reduce((sum, building) => 
         sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
     );
+
+    const totalVoAmount = safeVOs.reduce((voSum, vo) => {
+        return voSum + (vo.buildings || []).reduce((buildSum, building) => {
+            return buildSum + (building.boqs || []).reduce((boqSum, boq) => {
+                return boqSum + (boq.actualAmount || 0);
+            }, 0);
+        }, 0);
+    }, 0);
+
+    const totalIPCAmount = totalContractAmount + totalVoAmount;
     
     const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
     const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
@@ -107,8 +120,10 @@ export const Step3_Deductions: React.FC = () => {
                         const buildingAmount = (building.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0);
                         const itemsWithProgress = (building.boqsContract || []).filter(boq => (boq.actualQte || 0) > 0).length;
                         
+                        if (itemsWithProgress === 0) return null;
+
                         return (
-                            <div key={building.id} className="flex justify-between items-center p-3 bg-blue-100 dark:bg-blue-800/30 rounded">
+                            <div key={`bld-${building.id}`} className="flex justify-between items-center p-3 bg-blue-100 dark:bg-blue-800/30 rounded">
                                 <div>
                                     <span className="font-medium text-blue-600 dark:text-blue-400">
                                         {building.buildingName}
@@ -119,6 +134,29 @@ export const Step3_Deductions: React.FC = () => {
                                 </div>
                                 <div className="font-semibold text-blue-600 dark:text-blue-400">
                                     {formatCurrency(buildingAmount)}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {safeVOs.map(vo => {
+                        const voAmount = (vo.buildings || []).reduce((sum, building) => 
+                            sum + (building.boqs || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+                        );
+                        if (voAmount === 0) return null;
+
+                        return (
+                            <div key={`vo-${vo.id}`} className="flex justify-between items-center p-3 bg-purple-100 dark:bg-purple-800/30 rounded">
+                                <div>
+                                    <span className="font-medium text-purple-600 dark:text-purple-400">
+                                        {vo.voNumber}
+                                    </span>
+                                    <div className="text-sm text-purple-600/70 dark:text-purple-400/70">
+                                        Variation Order
+                                    </div>
+                                </div>
+                                <div className="font-semibold text-purple-600 dark:text-purple-400">
+                                    {formatCurrency(voAmount)}
                                 </div>
                             </div>
                         );
