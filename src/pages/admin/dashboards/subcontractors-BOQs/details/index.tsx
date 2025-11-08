@@ -15,8 +15,8 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 
-import { useContractsApi } from "../hooks/use-contracts-api";
 import TerminatedContracts from "../TerminatedContracts";
+import { useContractsApi } from "../hooks/use-contracts-api";
 
 // Contract-specific VOs hook
 const useContractVOs = (contractId: string) => {
@@ -127,6 +127,8 @@ const ContractDetails = () => {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [showTerminatedPreviewModal, setShowTerminatedPreviewModal] = useState(false);
     const [terminatedPreviewData, setTerminatedPreviewData] = useState<any>(null);
+    const [showTerminateModal, setShowTerminateModal] = useState(false);
+    const [terminating, setTerminating] = useState(false);
 
     // New state for VO preview and export
     const [loadingPreviewVO, setLoadingPreviewVO] = useState(false);
@@ -151,14 +153,14 @@ const ContractDetails = () => {
 
     // Row actions control - disable edit, generate, and delete for active VOs
     const handleVoRowActions = (row: any) => {
-        const isActive = row.status?.toLowerCase() === 'active';
+        const isActive = row.status?.toLowerCase() === "active";
 
         if (isActive) {
             // Active VOs cannot be edited, generated, or deleted
             return {
                 editAction: false,
                 deleteAction: false,
-                generateAction: false
+                generateAction: false,
             };
         }
 
@@ -166,7 +168,7 @@ const ContractDetails = () => {
         return {
             editAction: true,
             deleteAction: true,
-            generateAction: true
+            generateAction: true,
         };
     };
 
@@ -492,6 +494,33 @@ const ContractDetails = () => {
         });
     };
 
+    const handleTerminateContract = async () => {
+        if (!contractId || !contractData) return;
+
+        setTerminating(true);
+        try {
+            const response = await apiRequest({
+                endpoint: `ContractsDatasets/TerminateContract/${contractId}`,
+                method: "POST",
+                token: getToken() ?? "",
+            });
+
+            if (response && typeof response === "object" && "success" in response && response.success) {
+                toaster.success(`Contract ${contractData.contractNumber} has been terminated successfully`);
+                setShowTerminateModal(false);
+                // Navigate back to contracts database
+                navigate("/dashboard/contracts");
+            } else {
+                toaster.error("Failed to terminate contract");
+            }
+        } catch (error) {
+            console.error("Error terminating contract:", error);
+            toaster.error("An error occurred while terminating the contract");
+        } finally {
+            setTerminating(false);
+        }
+    };
+
     const handlePreviewVoDataSet = async (voDataSetId: number, voNumber: string) => {
         if (!contractId) {
             toaster.error("Contract ID is missing.");
@@ -741,48 +770,60 @@ const ContractDetails = () => {
                         </button>
                     )}
 
-            {/* Terminated Contracts Preview Modal */}
-            {showTerminatedPreviewModal && terminatedPreviewData && (
-                <dialog className="modal modal-open">
-                    <div className="modal-box h-[90vh] max-w-7xl">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-bold">Terminated Contract Files</h3>
-                            <button onClick={() => setShowTerminatedPreviewModal(false)} className="btn btn-ghost btn-sm">
-                                <span className="iconify lucide--x size-5"></span>
-                            </button>
-                        </div>
-                        <div className="h-[calc(100%-60px)]">
-                            <TerminatedContracts
-                                selectedProject={terminatedPreviewData.projectName}
-                                contractId={terminatedPreviewData.contractId}
-                            />
-                        </div>
-                    </div>
-                    <form method="dialog" className="modal-backdrop">
-                        <button onClick={() => setShowTerminatedPreviewModal(false)}>close</button>
-                    </form>
-                </dialog>
-            )}
+                    {/* Terminated Contracts Preview Modal */}
+                    {showTerminatedPreviewModal && terminatedPreviewData && (
+                        <dialog className="modal modal-open">
+                            <div className="modal-box h-[90vh] max-w-7xl">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold">Terminated Contract Files</h3>
+                                    <button
+                                        onClick={() => setShowTerminatedPreviewModal(false)}
+                                        className="btn btn-ghost btn-sm">
+                                        <span className="iconify lucide--x size-5"></span>
+                                    </button>
+                                </div>
+                                <div className="h-[calc(100%-60px)]">
+                                    <TerminatedContracts
+                                        selectedProject={terminatedPreviewData.projectName}
+                                        contractId={terminatedPreviewData.contractId}
+                                    />
+                                </div>
+                            </div>
+                            <form method="dialog" className="modal-backdrop">
+                                <button onClick={() => setShowTerminatedPreviewModal(false)}>close</button>
+                            </form>
+                        </dialog>
+                    )}
 
-            {/* VO Preview Modal */}
-            {showVoPreview && voPreviewData && (
-                <dialog className="modal modal-open">
-                    <div className="modal-box h-[90vh] max-w-7xl">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-bold">VO Preview</h3>
-                            <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
-                                <span className="iconify lucide--x size-5"></span>
-                            </button>
-                        </div>
-                        <div className="h-[calc(100%-60px)]">
-                            <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
-                        </div>
-                    </div>
-                    <form method="dialog" className="modal-backdrop">
-                        <button onClick={() => setShowVoPreview(false)}>close</button>
-                    </form>
-                </dialog>
-            )}
+                    {/* VO Preview Modal */}
+                    {showVoPreview && voPreviewData && (
+                        <dialog className="modal modal-open">
+                            <div className="modal-box h-[90vh] max-w-7xl">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold">VO Preview</h3>
+                                    <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
+                                        <span className="iconify lucide--x size-5"></span>
+                                    </button>
+                                </div>
+                                <div className="h-[calc(100%-60px)]">
+                                    <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
+                                </div>
+                            </div>
+                            <form method="dialog" className="modal-backdrop">
+                                <button onClick={() => setShowVoPreview(false)}>close</button>
+                            </form>
+                        </dialog>
+                    )}
+
+                    {contractData.contractDatasetStatus?.toLowerCase() === "active" && (
+                        <button
+                            onClick={() => setShowTerminateModal(true)}
+                            disabled={terminating}
+                            className="btn btn-sm btn-error flex items-center gap-2 text-white">
+                            <span className="iconify lucide--x-circle size-4"></span>
+                            <span>Terminate</span>
+                        </button>
+                    )}
 
                     {(contractData.contractDatasetStatus === "Editable" ||
                         contractData.contractDatasetStatus === "Active") && (
@@ -1059,6 +1100,68 @@ const ContractDetails = () => {
                         <button onClick={() => setShowVoPreview(false)}>close</button>
                     </form>
                 </dialog>
+            )}
+
+            {/* Terminate Contract Confirmation Modal */}
+            {showTerminateModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
+                    <div className="bg-base-100 w-full max-w-md animate-[modal-fade_0.2s] rounded-2xl p-6 shadow-2xl">
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="bg-error/10 flex h-12 w-12 items-center justify-center rounded-full">
+                                <span className="iconify lucide--x-circle text-error h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-base-content text-lg font-semibold">Terminate Contract</h3>
+                                <p className="text-base-content/60 text-sm">This action cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-base-content/80 mb-3">
+                                Are you sure you want to terminate contract{" "}
+                                <strong>{contractData?.contractNumber}</strong>
+                                {currentProject?.name && (
+                                    <>
+                                        {" "}
+                                        for project <strong>{currentProject.name}</strong>
+                                    </>
+                                )}
+                                ?
+                            </p>
+                            <div className="bg-error/30 border-error/20 rounded-lg border p-3">
+                                <p className="text-error-content text-sm">
+                                    <span className="iconify lucide--info mr-1 inline h-4 w-4" />
+                                    The contract will be moved to the terminated contracts list.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowTerminateModal(false)}
+                                className="btn btn-ghost btn-sm px-6"
+                                disabled={terminating}>
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleTerminateContract}
+                                className="btn btn-error btn-sm px-6"
+                                disabled={terminating}>
+                                {terminating ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Terminating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--x-circle size-4"></span>
+                                        <span>Terminate Contract</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
