@@ -135,7 +135,15 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             0,
         );
 
-        const totalVosAmount = safeVos.reduce((sum, vo) => sum + (vo.amount || 0), 0);
+        const totalVosAmount = safeVos.reduce((sum, vo) => {
+            const voAmount = vo.buildings.reduce((buildingSum, building) => {
+                const buildingAmount = building.boqs.reduce((boqSum, boq) => {
+                    return boqSum + (boq.actualAmount || 0);
+                }, 0);
+                return buildingSum + buildingAmount;
+            }, 0);
+            return sum + voAmount;
+        }, 0);
         const totalLaborsAmount = safeLabors.reduce((sum, labor) => sum + (labor.amount || 0), 0);
         const totalMachinesAmount = safeMachines.reduce((sum, machine) => sum + (machine.amount || 0), 0);
         const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.totalSale || 0), 0);
@@ -372,6 +380,24 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         }
     };
 
+    const handleDelete = async () => {
+        if (!id) return;
+
+        if (window.confirm("Are you sure you want to delete this IPC?")) {
+            try {
+                const result = await ipcApiService.deleteIpc(parseInt(id), token ?? "");
+                if (result.success) {
+                    toaster.success("IPC deleted successfully!");
+                    navigate("/admin/dashboards/IPCs-database");
+                } else {
+                    toaster.error(result.message || "Failed to delete IPC");
+                }
+            } catch (error) {
+                toaster.error("An error occurred while deleting the IPC.");
+            }
+        }
+    };
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("en-US", {
             minimumFractionDigits: 0,
@@ -521,6 +547,13 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                 <span>Save Changes</span>
                             </>
                         )}
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        disabled={saving}
+                        className="btn btn-sm btn-danger flex items-center gap-2">
+                        <span className="iconify lucide--trash size-4"></span>
+                        <span>Delete IPC</span>
                     </button>
                 </div>
             </div>

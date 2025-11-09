@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { ContractBuildingsVM, Vos, VoBuildingsVM, VOBoqIpcVM } from "@/types/ipc";
+import type { VoDatasetBoqDetailsVM } from "@/types/variation-order";
 import { Icon } from "@iconify/react";
 import calendarDaysIcon from "@iconify/icons-lucide/calendar-days";
 import infoIcon from "@iconify/icons-lucide/info";
@@ -595,7 +596,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     Variation Orders
                 </h3>
                 <div className="space-y-3">
-                    {((formData.vos || []) as VoDatasetBoqDetailsVM[]).map(vo => {
+                    {(formData.vos || []).map(vo => {
                         const isVoExpanded = expandedVOs.has(vo.id);
                         return (
                             <div key={vo.id} className="border border-base-300 rounded-lg overflow-hidden">

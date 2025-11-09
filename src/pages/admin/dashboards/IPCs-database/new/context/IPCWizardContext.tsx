@@ -62,6 +62,7 @@ const getInitialFormData = (): IpcWizardFormData => ({
     penalty: 0,
     previousPenalty: 0,
     buildings: [],
+    vos: [],
     labors: [],
     machines: [],
     materials: [],
