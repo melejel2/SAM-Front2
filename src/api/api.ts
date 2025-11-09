@@ -108,42 +108,47 @@ const apiRequest = async <T = any>({
                 }
             }
 
-            // Provide more user-friendly error messages based on status codes
-            if (response.status === 400) {
-                // Keep the actual error message from backend if available
-                if (!errorData?.message) {
-                    errorMessage = "Invalid request. Please check your input and try again.";
+            // Determine the most specific error message
+            let finalErrorMessage = errorMessage; // Start with the message from JSON parsing or raw text
+            if (errorData?.error?.message) { // Prioritize nested error message from backend Result object
+                finalErrorMessage = errorData.error.message;
+            } else if (errorData?.message) { // Then check top-level message from errorData
+                finalErrorMessage = errorData.message;
+            }
+
+            // Adjust message based on status codes if no specific message was found
+            if (!errorData?.error?.message && !errorData?.message) { // Only use generic messages if no specific message was found
+                if (response.status === 400) {
+                    finalErrorMessage = "Invalid request. Please check your input and try again.";
+                } else if (response.status === 401) {
+                    handleUnauthorized();
+                    return {
+                        isSuccess: false,
+                        success: false,
+                        message: "Your session has expired. Please log in again.",
+                        status: 401,
+                    };
+                } else if (response.status === 403) {
+                    finalErrorMessage = "Access denied. You don't have permission to perform this action.";
+                } else if (response.status === 404) {
+                    finalErrorMessage = "The requested resource was not found.";
+                } else if (response.status === 409) {
+                    finalErrorMessage = "A conflict occurred. The resource may already exist or be in use.";
+                } else if (response.status === 422) {
+                    finalErrorMessage = "Invalid data provided. Please check your input.";
+                } else if (response.status === 429) {
+                    finalErrorMessage = "Too many requests. Please wait a moment and try again.";
+                } else if (response.status >= 500) {
+                    finalErrorMessage = "Server error occurred. Please try again later or contact support.";
+                } else {
+                    finalErrorMessage = `Request failed with status ${response.status}. Please try again.`;
                 }
-            } else if (response.status === 401) {
-                handleUnauthorized();
-                return {
-                    isSuccess: false,
-                    success: false,
-                    message: "Your session has expired. Please log in again.",
-                    status: 401,
-                };
-            } else if (response.status === 403) {
-                errorMessage = errorData?.message || "Access denied. You don't have permission to perform this action.";
-            } else if (response.status === 404) {
-                errorMessage = errorData?.message || "The requested resource was not found.";
-            } else if (response.status === 409) {
-                errorMessage =
-                    errorData?.message || "A conflict occurred. The resource may already exist or be in use.";
-            } else if (response.status === 422) {
-                errorMessage = errorData?.message || "Invalid data provided. Please check your input.";
-            } else if (response.status === 429) {
-                errorMessage = "Too many requests. Please wait a moment and try again.";
-            } else if (response.status >= 500) {
-                errorMessage = "Server error occurred. Please try again later or contact support.";
-            } else if (!errorData?.message) {
-                // Fallback for any other status codes without specific messages
-                errorMessage = `Request failed with status ${response.status}. Please try again.`;
             }
 
             return {
                 isSuccess: false,
                 success: false,
-                message: errorMessage,
+                message: finalErrorMessage,
                 status: response.status,
             };
         }
