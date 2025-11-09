@@ -211,6 +211,11 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
 
     const handlePenaltySave = (penaltyFormData: typeof penaltyData) => {
         updatePenaltyData(penaltyFormData);
+        setFormData((prev) => ({
+            ...prev,
+            penalty: penaltyFormData.penalty,
+            previousPenalty: penaltyFormData.previousPenalty,
+        }));
         closePenaltyForm();
         toaster.success("Penalty information updated");
     };
@@ -849,9 +854,15 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                                                     <input
                                                                         type="number"
                                                                         value={boq.actualQte}
+                                                                        onChange={(e) =>
+                                                                            handleBOQQuantityChange(
+                                                                                building.id,
+                                                                                boq.id,
+                                                                                parseFloat(e.target.value),
+                                                                            )
+                                                                        }
                                                                         className="input input-xs input-bordered w-20"
                                                                         step="0.01"
-                                                                        readOnly
                                                                     />
                                                                 </td>
                                                                 <td>
