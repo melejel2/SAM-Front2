@@ -369,6 +369,11 @@ const IPCsDatabase = () => {
                                         return handlePreviewIpc(data);
                                     }
                                     if (type === "Edit" && data) {
+                                        const statusLower = (data._statusRaw || data.status || '').toLowerCase();
+                                        if (statusLower === 'issued') {
+                                            toaster.error("Cannot edit an issued IPC.");
+                                            return;
+                                        }
                                         return handleEditIpc(data);
                                     }
                                     if (type === "Details" && data) {
