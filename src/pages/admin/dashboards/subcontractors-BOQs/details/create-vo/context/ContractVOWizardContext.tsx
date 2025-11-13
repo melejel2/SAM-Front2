@@ -390,8 +390,8 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         return (
             formData.voNumber.trim() !== "" &&
             formData.voDate !== "" &&
-            formData.voType !== "" && // VO Type is required
-            formData.voContractId !== undefined && formData.voContractId > 0, // VO Contract is required
+            (formData.voType === "Addition" || formData.voType === "Omission") && // VO Type is required
+            formData.voContractId !== undefined && formData.voContractId > 0 && // VO Contract is required
             formData.description.trim() !== "" &&
             formData.selectedBuildingIds.length > 0
         );
