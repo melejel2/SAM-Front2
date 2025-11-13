@@ -289,7 +289,6 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
 
         try {
             // 1. Load Contract Details
-            console.log("🔄 Loading contract data for VO wizard:", { contractId, voDatasetId });
             const contractResponse = await getContractForVO(parseInt(contractId), memoizedToken || "");
 
             if (!contractResponse.success || !contractResponse.data) {
@@ -303,9 +302,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
 
             // 2. If voDatasetId is provided, load existing VO data
             if (voDatasetId) {
-                console.log("🔄 Loading existing VO dataset for editing:", { voDatasetId, token: memoizedToken });
                 const voDatasetResponse = await getVoDatasetWithBoqs(voDatasetId, memoizedToken || "");
-                console.log("📥 VO dataset response:", voDatasetResponse);
 
                 if (!voDatasetResponse || !voDatasetResponse.id) {
                     console.error("❌ VO dataset response failed:", voDatasetResponse);
@@ -316,7 +313,6 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 initialFormState = mapVoDatasetToFormData(fetchedVoDataset!, contractContext);
                 selectedBuildingIdsFromVo = initialFormState.selectedBuildingIds || []; // Get selected building IDs
                 setHasUnsavedChanges(false); // No unsaved changes initially for edit mode
-                console.log("✅ Successfully loaded VO dataset for editing:", { voDatasetId, initialFormState });
             } else {
                 // For new VO, generate VO number
                 const voNumberResponse = await generateVONumber(parseInt(contractId), memoizedToken || "");
@@ -361,13 +357,7 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         }
     }, [contractId, voDatasetId, memoizedToken, toaster]);
 
-    useEffect(() => {
-        console.log("🔄 ContractVOWizardProvider - formData changed:", formData);
-    }, [formData]);
-
-    useEffect(() => {
-        console.log("🔄 ContractVOWizardProvider - contractData changed:", contractData);
-    }, [contractData]);
+    // Removed debug useEffect hooks for formData and contractData logging
 
     // Memoized function to load VO contracts
     const loadVoContracts = useCallback(async () => {
@@ -394,28 +384,36 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
         }
     }, [contractId, memoizedToken, voDatasetId]);
 
-    // Validation functions
+    // Validation functions for 3-step wizard
     const validateStep1 = (): boolean => {
-        return formData.voNumber.trim() !== "" && formData.voDate !== "" && formData.description.trim() !== "";
-    };
-
-    const validateStep2 = (): boolean => {
-        return true; // Contract context is read-only, always valid
-    };
-
-    const validateStep3 = (): boolean => {
-        return formData.selectedBuildingIds.length > 0;
-    };
-
-    const validateStep4 = (): boolean => {
+        // Step 1: VO Details + Buildings
         return (
-            formData.lineItems.length > 0 &&
-            formData.lineItems.every((item) => item.no.trim() !== "" && item.quantity >= 0)
+            formData.voNumber.trim() !== "" &&
+            formData.voDate !== "" &&
+            formData.voType !== "" && // VO Type is required
+            formData.voContractId !== undefined && formData.voContractId > 0, // VO Contract is required
+            formData.description.trim() !== "" &&
+            formData.selectedBuildingIds.length > 0
         );
     };
 
-    const validateStep5 = (): boolean => {
-        return true; // Review step doesn't require validation
+    const validateStep2 = (): boolean => {
+        // Step 2: BOQ Line Items - Enhanced validation
+        return (
+            formData.lineItems.length > 0 &&
+            formData.lineItems.every((item) =>
+                item.no.trim() !== "" &&
+                item.description.trim() !== "" &&
+                item.unit.trim() !== "" &&
+                item.quantity > 0 && // Must be greater than 0, not just >= 0
+                item.unitPrice > 0 // Unit price must be positive
+            )
+        );
+    };
+
+    const validateStep3 = (): boolean => {
+        // Step 3: Review & Preview - always valid
+        return true;
     };
 
     const validateCurrentStep = (): boolean => {
@@ -426,34 +424,20 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 return validateStep2();
             case 3:
                 return validateStep3();
-            case 4:
-                return validateStep4();
-            case 5:
-                return true; // Review step doesn't require validation
-            case 6:
-                return true; // Preview step doesn't require validation
             default:
                 return false;
         }
     };
 
-    // Navigation functions
+    // Navigation functions for 3-step wizard
     const goToNextStep = () => {
-        if (validateCurrentStep()) {
-            if (currentStep === 1) {
-                // Skip step 2 (contract review) since we're already in contract context
-                setCurrentStep(3);
-            } else if (currentStep < 6) {
-                setCurrentStep(currentStep + 1);
-            }
+        if (validateCurrentStep() && currentStep < 3) {
+            setCurrentStep(currentStep + 1);
         }
     };
 
     const goToPreviousStep = () => {
-        if (currentStep === 3) {
-            // Skip step 2 when going back from step 3
-            setCurrentStep(1);
-        } else if (currentStep > 1) {
+        if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
     };
@@ -507,8 +491,6 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
 
             // Transform form data to backend format
             const voDataset = transformFormDataToVoDataset(formData, contractData, voDatasetId);
-
-            console.log("📤 SUBMITTING CONTRACT VO DATA:", JSON.stringify(voDataset, null, 2));
 
             // Determine if we are creating or updating
             const isUpdate = !!voDatasetId;

@@ -194,7 +194,7 @@ const CreateContractVOContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 6 ? (
+                    {currentStep < 3 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -204,16 +204,10 @@ const CreateContractVOContent: React.FC = () => {
                                     // Show validation errors based on current step
                                     switch (currentStep) {
                                         case 1:
-                                            toaster.error("Please fill in all required VO information");
+                                            toaster.error("Please fill in all required VO information and select at least one building");
                                             break;
-                                        case 3:
-                                            toaster.error("Please select at least one building");
-                                            break;
-                                        case 4:
+                                        case 2:
                                             toaster.error("Please add at least one VO line item");
-                                            break;
-                                        case 5:
-                                            toaster.error("Please review the VO details before proceeding.");
                                             break;
                                         default:
                                             toaster.error("Please complete all required fields");
@@ -222,17 +216,8 @@ const CreateContractVOContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 5 ? (
-                                <>
-                                    <span>Preview</span>
-                                    <span className="iconify lucide--eye size-4"></span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Next</span>
-                                    <span className="iconify lucide--arrow-right size-4"></span>
-                                </>
-                            )}
+                            <span>Next</span>
+                            <span className="iconify lucide--arrow-right size-4"></span>
                         </button>
                     ) : (
                         <button

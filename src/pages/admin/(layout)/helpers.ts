@@ -1,52 +1,87 @@
 import { ISidebarMenuItem } from "./components/SidebarMenuItem";
 
-export const dashboardMenuItems: ISidebarMenuItem[] = [
+// Navigation item type with PORTAL-style categories
+export type NavCategory = 'overview' | 'project' | 'finance' | 'operations' | 'admin';
+
+export interface INavMenuItem extends Omit<ISidebarMenuItem, 'isTitle'> {
+    category: NavCategory;
+    activePaths: string[];
+    status?: 'completed' | 'active' | 'upcoming';
+}
+
+export const dashboardMenuItems: INavMenuItem[] = [
     {
         id: "dashboard",
         icon: "lucide--monitor-dot",
         label: "Dashboard",
         url: "/dashboard",
+        category: "overview",
+        activePaths: ["/dashboard"],
     },
     {
         id: "dashboard-budget-BOQs",
         icon: "lucide--calculator",
         label: "Budget BOQs",
         url: "/dashboard/budget-BOQs",
+        category: "project",
+        activePaths: ["/dashboard/budget-BOQs"],
     },
     {
         id: "dashboard-contracts",
         icon: "lucide--file-signature",
-        label: "Contract Management",
+        label: "Contracts",
         url: "/dashboard/contracts",
+        category: "project",
+        activePaths: ["/dashboard/contracts", "/dashboard/subcontractors-boqs"],
     },
     {
         id: "dashboard-deductions-database",
         icon: "lucide--minus-circle",
-        label: "Deductions Database",
+        label: "Deductions",
         url: "/dashboard/deductions-database",
+        category: "finance",
+        activePaths: ["/dashboard/deductions-database"],
     },
     {
         id: "dashboard-IPCs-database",
         icon: "lucide--file-bar-chart",
-        label: "IPCs Database",
+        label: "IPCs",
         url: "/dashboard/IPCs-database",
+        category: "finance",
+        activePaths: ["/dashboard/IPCs-database"],
     },
     {
         id: "dashboard-reports",
         icon: "lucide--file-text",
         label: "Reports",
         url: "/dashboard/reports",
+        category: "operations",
+        activePaths: ["/dashboard/reports"],
     },
 ];
 
-export const adminToolsMenuItems: ISidebarMenuItem[] = [
+export const adminToolsMenuItems: INavMenuItem[] = [
     {
         id: "admin-tools",
         icon: "lucide--settings",
         label: "Admin Tools",
         url: "/admin-tools",
+        category: "admin",
+        activePaths: ["/admin-tools"],
     },
 ];
+
+// Section order for PORTAL-style grouped navigation
+export const sectionOrder: NavCategory[] = ['overview', 'project', 'finance', 'operations', 'admin'];
+
+// Section display labels
+export const sectionLabels: Record<NavCategory, string> = {
+    overview: 'Overview',
+    project: 'Projects',
+    finance: 'Finance',
+    operations: 'Operations',
+    admin: 'Administration',
+};
 
 const findItem = (menuItems: ISidebarMenuItem[], url: string): ISidebarMenuItem | null => {
     for (const item of menuItems) {

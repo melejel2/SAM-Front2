@@ -651,7 +651,7 @@ const TableComponent: React.FC<TableProps> = ({
     return (
         <>
             <div
-                className="bg-base-100 rounded-t-xl border-t border-l border-r border-base-300"
+                className="bg-base-100 rounded-t-sm border-t border-l border-r border-base-300"
                 style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
             >
                 <div className="px-2 sm:px-3 lg:px-4 py-2 border-b border-base-300 flex-shrink-0">
@@ -661,7 +661,7 @@ const TableComponent: React.FC<TableProps> = ({
                             {addBtn ? (
                                 <Button
                                     onClick={openCreateDialog}
-                                    className="btn btn-primary btn-sm rounded-xl table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
+                                    className="btn btn-primary btn-sm rounded table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
                                     <span className={`iconify ${addBtnText?.toLowerCase().includes('upload') ? 'lucide--upload' : 'lucide--plus'} size-4`}></span>
                                     <span className="text-xs">{addBtnText || `New ${title}`}</span>
                                 </Button>
@@ -711,7 +711,7 @@ const TableComponent: React.FC<TableProps> = ({
                     {showInitialHint && canScrollRight && (
                         <div className={cn(
                             "absolute top-1/2 right-4 -translate-y-1/2 z-20",
-                            "bg-base-content/10 backdrop-blur-sm rounded-full p-2",
+                            "bg-base-content/10 backdrop-blur-sm rounded-sm p-2",
                             "transition-all duration-500",
                             showInitialHint ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
                         )}>
@@ -894,8 +894,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        shape="square"
-                                                                        className="tooltip"
+                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Preview Row"
                                                                         data-tip="Preview"
                                                                         disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -910,8 +909,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        shape="square"
-                                                                        className="tooltip"
+                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="View Details"
                                                                         data-tip="Details"
                                                                         onClick={(e) => {
@@ -925,8 +923,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        shape="square"
-                                                                        className="tooltip"
+                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Edit Row"
                                                                         data-tip="Edit"
                                                                         onClick={(e) => {
@@ -940,8 +937,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        shape="square"
-                                                                        className="tooltip"
+                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Export"
                                                                         data-tip="Export"
                                                                         disabled={exportingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -956,8 +952,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        shape="square"
-                                                                        className="tooltip"
+                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Generate"
                                                                         data-tip="Generate"
                                                                         onClick={(e) => {
@@ -972,9 +967,8 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {(rowAction?.deleteAction ?? deleteAction) && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
-                                                                        shape="square"
                                                                         aria-label="Delete Row"
                                                                         data-tip="Delete"
                                                                         onClick={(e) => {
@@ -987,9 +981,8 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {rowAction?.terminateAction && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
-                                                                        shape="square"
                                                                         aria-label="Terminate Contract"
                                                                         data-tip="Terminate"
                                                                         onClick={(e) => {
@@ -1027,7 +1020,7 @@ const TableComponent: React.FC<TableProps> = ({
                     <div className="flex items-center justify-end px-2 sm:px-3 lg:px-4 py-2 flex-shrink-0 border-t border-base-300 bg-base-100">
                         {/* Pagination */}
                         <div className="flex items-center">
-                                <Pagination>
+                                <Pagination className="[&_.join-item]:!rounded-sm">
                                 <Button
                                     type="button"
                                     size="sm"

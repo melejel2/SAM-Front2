@@ -11,11 +11,9 @@ interface ContractVOStepIndicatorProps {
 }
 
 const steps = [
-    { number: 1, title: "VO Info", icon: infoIcon },
-    { number: 3, title: "Buildings", icon: buildingIcon },
-    { number: 4, title: "VO Items", icon: calculatorIcon },
-    { number: 5, title: "Review", icon: fileTextIcon },
-    { number: 6, title: "Preview", icon: eyeIcon }
+    { number: 1, title: "VO Details", icon: infoIcon },
+    { number: 2, title: "BOQ Items", icon: calculatorIcon },
+    { number: 3, title: "Review", icon: eyeIcon }
 ];
 
 export const ContractVOStepIndicator: React.FC<ContractVOStepIndicatorProps> = ({ currentStep }) => {

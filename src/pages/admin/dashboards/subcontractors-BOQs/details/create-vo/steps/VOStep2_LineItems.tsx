@@ -20,6 +20,7 @@ import CostCodeSelectionModal from "../../../components/CostCodeSelectionModal";
 import useCostCodeSelection from "../../../hooks/use-cost-code-selection";
 import useBOQUnits from "../../../hooks/use-units";
 import { useContractVOWizardContext } from "../context/ContractVOWizardContext";
+import VOBOQImportModal from "../components/VOBOQImportModal";
 
 interface VOLineItem {
     id?: number;
@@ -34,7 +35,7 @@ interface VOLineItem {
     buildingId?: number;
 }
 
-export const VOStep4_LineItems: React.FC = () => {
+export const VOStep2_LineItems: React.FC = () => {
     const { contractData, formData, setFormData, isUpdate, voDatasetId } = useContractVOWizardContext();
 
     const { getToken } = useAuth();
@@ -51,6 +52,7 @@ export const VOStep4_LineItems: React.FC = () => {
     const [filteredVOs, setFilteredVOs] = useState<BuildingsVOs[]>([]);
     const [selectedVO, setSelectedVO] = useState<string>("");
     const [loadingVOs, setLoadingVOs] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
 
     // Cost Code Selection Logic
     const [selectedVOLineItemIndex, setSelectedVOLineItemIndex] = useState<number | null>(null);
@@ -172,40 +174,9 @@ export const VOStep4_LineItems: React.FC = () => {
         }
     };
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!contractData) {
-            toaster.error("Contract data is not available.");
-            return;
-        }
-
-        setLoadingBOQItems(true);
-        try {
-            const response = await uploadContractVo(contractData.id, file, getToken() || "");
-
-            if (response && response.contractVoes) {
-                handleBOQImport(response.contractVoes);
-                toaster.success(`Successfully imported ${response.contractVoes.length} items from ${file.name}`);
-            } else {
-                toaster.error("Failed to import from Excel file: Invalid response format.");
-            }
-        } catch (error) {
-            console.error("Error importing from Excel:", error);
-            toaster.error((error as any).message || "An error occurred while importing from Excel.");
-        } finally {
-            setLoadingBOQItems(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
-        }
-    };
-
+    // Open import modal instead of file input
     const handleImportButtonClick = () => {
-        fileInputRef.current?.click();
+        setShowImportModal(true);
     };
 
     const handleClearBOQ = async () => {
@@ -642,6 +613,20 @@ export const VOStep4_LineItems: React.FC = () => {
                 costCodes={costCodes}
                 loading={costCodesLoading}
             />
+
+            {/* VO BOQ Import Modal */}
+            {contractData && (
+                <VOBOQImportModal
+                    isOpen={showImportModal}
+                    onClose={() => setShowImportModal(false)}
+                    onSuccess={handleBOQImport}
+                    contractDataSetId={contractData.id}
+                    voNumber={formData.voNumber}
+                    tradeName={contractData.tradeName}
+                    contractNumber={contractData.contractNumber}
+                    projectName={contractData.projectName}
+                />
+            )}
         </div>
     );
 };

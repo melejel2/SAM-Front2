@@ -26,8 +26,8 @@ export const Sidebar = () => {
   const isAdminTools = pathname.startsWith('/admin-tools');
   const menuItems = isAdminTools ? adminToolsMenuItems : dashboardMenuItems;
 
-  // Filter out title items for the floating sidebar
-  const navigationItems = menuItems.filter(item => !item.isTitle && item.url);
+  // Filter items with URLs (no isTitle in new INavMenuItem type)
+  const navigationItems = menuItems.filter(item => item.url);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

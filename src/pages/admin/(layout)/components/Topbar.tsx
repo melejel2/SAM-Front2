@@ -1185,8 +1185,11 @@ export const Topbar = () => {
   // Desktop Topbar
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-16">
-        <div className="h-full flex items-center justify-between px-16">
+      <div
+        className="fixed top-0 right-0 z-30 bg-base-100 border-b border-base-300 h-16 transition-all duration-300"
+        style={{ left: 'var(--sidebar-width, 52px)' }}
+      >
+        <div className="h-full flex items-center justify-between px-6">
           {/* Left side - App Logo with typing animation */}
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0">
