@@ -894,7 +894,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Preview Row"
                                                                         data-tip="Preview"
                                                                         disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -909,7 +909,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="View Details"
                                                                         data-tip="Details"
                                                                         onClick={(e) => {
@@ -923,7 +923,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Edit Row"
                                                                         data-tip="Edit"
                                                                         onClick={(e) => {
@@ -937,7 +937,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Export"
                                                                         data-tip="Export"
                                                                         disabled={exportingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -952,7 +952,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Generate"
                                                                         data-tip="Generate"
                                                                         onClick={(e) => {
@@ -967,7 +967,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {(rowAction?.deleteAction ?? deleteAction) && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
                                                                         aria-label="Delete Row"
                                                                         data-tip="Delete"
@@ -981,7 +981,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {rowAction?.terminateAction && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
                                                                         aria-label="Terminate Contract"
                                                                         data-tip="Terminate"
@@ -999,6 +999,26 @@ const TableComponent: React.FC<TableProps> = ({
                                             </tr>
                                         );
                                         })}
+
+                                        {/* Always add two empty rows at the bottom */}
+                                        {paginatedData.length > 0 && (
+                                            <>
+                                                <tr className="border-t border-base-300">
+                                                    <td
+                                                        colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
+                                                        className="px-2 sm:px-3 lg:px-4 py-3">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr className="border-t border-base-300">
+                                                    <td
+                                                        colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
+                                                        className="px-2 sm:px-3 lg:px-4 py-3">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </>
+                                        )}
 
                                         {/* Show "No data available" message only if there are no rows at all */}
                                         {paginatedData.length === 0 && (

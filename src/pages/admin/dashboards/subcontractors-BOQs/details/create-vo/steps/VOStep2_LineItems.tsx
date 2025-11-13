@@ -344,13 +344,6 @@ export const VOStep2_LineItems: React.FC = () => {
 
     return (
         <div>
-            <input
-                type="file"
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-                accept=".xlsx, .xls"
-            />
             <div className="mb-6 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     {selectedBuildings.length > 1 && (
