@@ -903,6 +903,100 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                 <p className="text-base-content/70">No building data is available for this IPC</p>
                             </div>
                         )}
+
+                        {/* VOs Section */}
+                        {vos && vos.length > 0 && (
+                            <div className="mt-8 space-y-6">
+                                <div className="text-center">
+                                    <h3 className="text-base-content mb-2 text-lg font-semibold">
+                                        Variation Order (VO) Progress
+                                    </h3>
+                                    <p className="text-base-content/70">
+                                        Work progress for variation orders in this IPC
+                                    </p>
+                                </div>
+                                {vos.map((vo: any) => (
+                                    <div key={vo.id} className="bg-base-200 rounded-lg p-4">
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <div className="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
+                                                <span className="iconify lucide--file-plus-2 size-5 text-orange-600 dark:text-orange-400"></span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base-content font-semibold">
+                                                    {vo.voNumber || `VO #${vo.id}`}
+                                                </h4>
+                                            </div>
+                                        </div>
+
+                                        {vo.buildings.map((building: any) => (
+                                            <div key={building.id} className="bg-base-100 mt-4 rounded-lg p-4">
+                                                <div className="mb-4 flex items-center gap-3">
+                                                    <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
+                                                        <span className="iconify lucide--building size-5 text-purple-600 dark:text-purple-400"></span>
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="text-base-content font-semibold">
+                                                            {building.buildingName}
+                                                        </h5>
+                                                        <p className="text-base-content/70 text-sm">
+                                                            Sheet: {building.sheetName}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {building.boqs && building.boqs.length > 0 ? (
+                                                    <div className="overflow-x-auto">
+                                                        <table className="table-sm table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Item</th>
+                                                                    <th>Unit</th>
+                                                                    <th>Quantity</th>
+                                                                    <th>Unit Price</th>
+                                                                    <th>Actual Qty</th>
+                                                                    <th>Progress %</th>
+                                                                    <th>Amount</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {building.boqs.map((boq: any) => (
+                                                                    <tr key={boq.id}>
+                                                                        <td className="font-medium">
+                                                                            {boq.key || boq.no}
+                                                                        </td>
+                                                                        <td>{boq.unite}</td>
+                                                                        <td>{boq.qte}</td>
+                                                                        <td>{formatCurrency(boq.unitPrice)}</td>
+                                                                        <td>{boq.actualQte}</td>
+                                                                        <td>
+                                                                            <div className="text-xs">
+                                                                                {boq.cumulPercent
+                                                                                    ? `${boq.cumulPercent.toFixed(1)}%`
+                                                                                    : "0.0%"}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="font-medium">
+                                                                            {formatCurrency(boq.actualAmount)}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-8 text-center">
+                                                        <span className="iconify lucide--table text-base-content/30 mb-2 size-12"></span>
+                                                        <p className="text-base-content/50">
+                                                            No BOQ items found for this building in this VO.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
