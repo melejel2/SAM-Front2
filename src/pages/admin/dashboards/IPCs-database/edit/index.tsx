@@ -13,9 +13,7 @@ import type { ContractBuildingsVM, SaveIPCVM } from "@/types/ipc";
 import IpcSummary from "../components/IpcSummary";
 import PenaltyForm from "../components/PenaltyForm";
 
-interface IPCEditProps {}
-
-const IPCEdit: React.FC<IPCEditProps> = () => {
+const IPCEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toaster } = useToast();
@@ -44,7 +42,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         materials,
     } = useIpcEdit();
 
-    const [activeTab, setActiveTab] = useState<"details" | "boq" | "financial" | "documents" | "summary">("details");
+    const [activeTab, setActiveTab] = useState<"details" | "boq" | "financial" | "livepreview" | "documents" | "summary">("details");
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
     const [editingQuantities, setEditingQuantities] = useState<Set<string>>(new Set());
     const [showPreview, setShowPreview] = useState(false);
@@ -54,6 +52,8 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     const [exportingExcel, setExportingExcel] = useState(false);
     const [exportingZip, setExportingZip] = useState(false);
     const [generatingIpc, setGeneratingIpc] = useState(false);
+    const [livePreviewPdf, setLivePreviewPdf] = useState<{ blob: Blob; fileName: string } | null>(null);
+    const [loadingLivePreview, setLoadingLivePreview] = useState(false);
     const [calculatedTotals, setCalculatedTotals] = useState({
         totalAmount: 0,
         actualAmount: 0,
@@ -173,29 +173,40 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         formData.penalty,
     ]);
 
+    const getCurrentIpcDataForSave = (): SaveIPCVM | null => {
+        if (!ipcData) {
+            return null;
+        }
+        return {
+            ...ipcData,
+            number: Number(formData.ipcNumber) || ipcData.number,
+            dateIpc: formData.dateIpc,
+            fromDate: formData.fromDate,
+            toDate: formData.toDate,
+            retention: formData.retention,
+            advance: formData.advance,
+            remarks: formData.remarks,
+            retentionPercentage: formData.retentionPercentage,
+            advancePaymentPercentage: formData.advancePaymentPercentage,
+            penalty: formData.penalty,
+            previousPenalty: formData.previousPenalty,
+            buildings: buildings,
+            vos: vos,
+            labors: labors,
+            machines: machines,
+            materials: materials,
+        };
+    };
+
     const handleSave = async () => {
-        if (!ipcData) return;
+        const payload = getCurrentIpcDataForSave();
+        if (!payload) {
+            toaster.error("Could not prepare IPC data for saving.");
+            return;
+        }
 
         try {
-            const success = await updateIpc({
-                ...ipcData, // Spread all existing IPC data
-                number: Number(formData.ipcNumber) || ipcData.number,
-                dateIpc: formData.dateIpc,
-                fromDate: formData.fromDate,
-                toDate: formData.toDate,
-                retention: formData.retention,
-                advance: formData.advance,
-                remarks: formData.remarks,
-                retentionPercentage: formData.retentionPercentage,
-                advancePaymentPercentage: formData.advancePaymentPercentage,
-                penalty: formData.penalty,
-                previousPenalty: formData.previousPenalty,
-                buildings: buildings,
-                vos: vos,
-                labors: labors,
-                machines: machines,
-                materials: materials,
-            });
+            const success = await updateIpc(payload);
 
             if (success) {
                 toaster.success("IPC updated successfully");
@@ -384,6 +395,43 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             setGeneratingIpc(false);
         }
     };
+
+    const handleFetchLivePreview = async () => {
+        const currentIpcPayload = getCurrentIpcDataForSave();
+        if (!currentIpcPayload) {
+            toaster.error("Could not get current IPC data for preview.");
+            return;
+        }
+
+        setLoadingLivePreview(true);
+        setLivePreviewPdf(null); // Clear previous preview
+        try {
+            const result = await ipcApiService.livePreviewIpcPdf(currentIpcPayload, token ?? "");
+
+            if (result.success && result.blob) {
+                setLivePreviewPdf({
+                    blob: result.blob,
+                    fileName: `IPC_${currentIpcPayload.number || id}_live_preview.pdf`,
+                });
+            } else {
+                toaster.error(result.error || "Failed to generate IPC live preview");
+                setLivePreviewPdf(null);
+            }
+        } catch (error) {
+            toaster.error(
+                "Live preview generation error: " + (error instanceof Error ? error.message : "Unknown error"),
+            );
+            setLivePreviewPdf(null);
+        } finally {
+            setLoadingLivePreview(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "livepreview") {
+            handleFetchLivePreview();
+        }
+    }, [activeTab]);
 
     const handleDelete = async () => {
         if (!id) return;
@@ -587,6 +635,12 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                     onClick={() => setActiveTab("financial")}>
                     <span className="iconify lucide--calculator mr-2 size-4"></span>
                     Financial Calculations
+                </button>
+                <button
+                    className={`tab tab-lifted ${activeTab === "livepreview" ? "tab-active" : ""}`}
+                    onClick={() => setActiveTab("livepreview")}>
+                    <span className="iconify lucide--eye mr-2 size-4"></span>
+                    Live Preview
                 </button>
                 <button
                     className={`tab tab-lifted ${activeTab === "documents" ? "tab-active" : ""}`}
@@ -997,6 +1051,52 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === "livepreview" && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base-content text-lg font-semibold">Live IPC Preview</h3>
+                                <p className="text-base-content/70 text-sm">
+                                    A live preview of the IPC document, reflecting all your current changes.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleFetchLivePreview}
+                                className="btn btn-primary btn-sm"
+                                disabled={loadingLivePreview}>
+                                {loadingLivePreview ? (
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                ) : (
+                                    <span className="iconify lucide--refresh-cw size-4"></span>
+                                )}
+                                Refresh
+                            </button>
+                        </div>
+                        <div className="h-[80vh] rounded-lg border border-base-300">
+                            {loadingLivePreview ? (
+                                <div className="flex h-full items-center justify-center">
+                                    <Loader />
+                                    <p className="ml-4">Loading Live Preview...</p>
+                                </div>
+                            ) : livePreviewPdf ? (
+                                <PDFViewer fileBlob={livePreviewPdf.blob} fileName={livePreviewPdf.fileName} />
+                            ) : (
+                                <div className="flex h-full flex-col items-center justify-center gap-4">
+                                    <span className="iconify lucide--alert-circle text-error size-12"></span>
+                                    <div className="text-center">
+                                        <h2 className="text-base-content mb-2 text-lg font-semibold">
+                                            Error Loading Preview
+                                        </h2>
+                                        <p className="text-base-content/70 mb-4">
+                                            Could not load the live preview. Click refresh to try again.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
