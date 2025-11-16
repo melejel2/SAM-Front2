@@ -263,14 +263,29 @@ const IPCEdit: React.FC = () => {
                         ...building,
                         boqsContract: (building.boqsContract || []).map((boq) => {
                             if (boq.id === boqId) {
-                                const actualAmount = actualQte * boq.unitPrice;
-                                const newCumulQte = (boq.precedQte || 0) + actualQte;
+                                const precedQte = boq.precedQte || 0;
+                                const maxAllowedQty = Math.max(0, boq.qte - precedQte);
+                                let validatedQte = actualQte;
+
+                                if (actualQte < 0) {
+                                    validatedQte = 0;
+                                } else if (actualQte > maxAllowedQty) {
+                                    validatedQte = maxAllowedQty;
+                                    toaster.warning(
+                                        `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${
+                                            boq.unite || ""
+                                        }`,
+                                    );
+                                }
+
+                                const actualAmount = validatedQte * boq.unitPrice;
+                                const newCumulQte = precedQte + validatedQte;
                                 const newCumulAmount = newCumulQte * boq.unitPrice;
                                 const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
 
                                 return {
                                     ...boq,
-                                    actualQte,
+                                    actualQte: validatedQte,
                                     actualAmount,
                                     cumulQte: newCumulQte,
                                     cumulAmount: newCumulAmount,
@@ -294,16 +309,8 @@ const IPCEdit: React.FC = () => {
             if (buildingToUpdate) {
                 const boqToUpdate = buildingToUpdate.boqs.find((b: any) => b.id === boqId);
                 if (boqToUpdate) {
-                    boqToUpdate.actualQte = actualQte;
-                    boqToUpdate.actualAmount = actualQte * boqToUpdate.unitPrice;
-                    boqToUpdate.cumulQte = (boqToUpdate.precedQte || 0) + actualQte;
-                    boqToUpdate.cumulAmount = boqToUpdate.cumulQte * boqToUpdate.unitPrice;
-                    boqToUpdate.cumulPercent =
-                        boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
-
                     const precedQte = boqToUpdate.precedQte || 0;
                     const maxAllowedQty = Math.max(0, boqToUpdate.qte - precedQte);
-
                     let validatedQte = actualQte;
 
                     if (actualQte < 0) {
@@ -314,11 +321,13 @@ const IPCEdit: React.FC = () => {
                             `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqToUpdate.unite || ""}`,
                         );
                     }
+
                     boqToUpdate.actualQte = validatedQte;
                     boqToUpdate.actualAmount = validatedQte * boqToUpdate.unitPrice;
                     boqToUpdate.cumulQte = (boqToUpdate.precedQte || 0) + validatedQte;
                     boqToUpdate.cumulAmount = boqToUpdate.cumulQte * boqToUpdate.unitPrice;
-                    boqToUpdate.cumulPercent = boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
+                    boqToUpdate.cumulPercent =
+                        boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
                 }
             }
         }
