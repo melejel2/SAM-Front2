@@ -36,11 +36,20 @@ const IPCEdit: React.FC = () => {
         closePenaltyForm,
         updatePenaltyData,
         clearData,
-        vos,
+        vos: initialVos,
         labors,
         machines,
         materials,
     } = useIpcEdit();
+
+    const [vos, setVos] = useState<any[]>([]);
+    useEffect(() => {
+        if (ipcData?.vos) {
+            setVos(ipcData.vos);
+        }
+    }, [ipcData]);
+
+    const [isSaving, setIsSaving] = useState(false);
 
     const [activeTab, setActiveTab] = useState<"details" | "boq" | "financial" | "livepreview" | "documents" | "summary">("details");
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
@@ -191,7 +200,7 @@ const IPCEdit: React.FC = () => {
             penalty: formData.penalty,
             previousPenalty: formData.previousPenalty,
             buildings: buildings,
-            vos: vos,
+            vos: vos, // Use the state `vos` instead of `ipcData.vos`
             labors: labors,
             machines: machines,
             materials: materials,
@@ -205,18 +214,28 @@ const IPCEdit: React.FC = () => {
             return;
         }
 
+        setIsSaving(true);
         try {
-            const success = await updateIpc(payload);
+            const token = getToken();
+            if (!token) {
+                toaster.error("Authentication required.");
+                setIsSaving(false);
+                return;
+            }
 
-            if (success) {
+            const response = await ipcApiService.updateIpc(payload, token);
+
+            if (response.success) {
                 toaster.success("IPC updated successfully");
                 // Reload data to reflect changes
                 loadIpcForEdit(parseInt(id!));
             } else {
-                toaster.error("Failed to update IPC");
+                toaster.error(response.error || "Failed to update IPC");
             }
         } catch (err) {
             toaster.error("An error occurred while saving");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -265,6 +284,45 @@ const IPCEdit: React.FC = () => {
                 return building;
             }),
         );
+    };
+
+    const handleVOQuantityChange = (voId: number, buildingId: number, boqId: number, actualQte: number) => {
+        const newVos = JSON.parse(JSON.stringify(vos || []));
+        const voToUpdate = newVos.find((v: any) => v.id === voId);
+        if (voToUpdate) {
+            const buildingToUpdate = voToUpdate.buildings.find((b: any) => b.id === buildingId);
+            if (buildingToUpdate) {
+                const boqToUpdate = buildingToUpdate.boqs.find((b: any) => b.id === boqId);
+                if (boqToUpdate) {
+                    boqToUpdate.actualQte = actualQte;
+                    boqToUpdate.actualAmount = actualQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulQte = (boqToUpdate.precedQte || 0) + actualQte;
+                    boqToUpdate.cumulAmount = boqToUpdate.cumulQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulPercent =
+                        boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
+
+                    const precedQte = boqToUpdate.precedQte || 0;
+                    const maxAllowedQty = Math.max(0, boqToUpdate.qte - precedQte);
+
+                    let validatedQte = actualQte;
+
+                    if (actualQte < 0) {
+                        validatedQte = 0;
+                    } else if (actualQte > maxAllowedQty) {
+                        validatedQte = maxAllowedQty;
+                        toaster.warning(
+                            `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqToUpdate.unite || ""}`,
+                        );
+                    }
+                    boqToUpdate.actualQte = validatedQte;
+                    boqToUpdate.actualAmount = validatedQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulQte = (boqToUpdate.precedQte || 0) + validatedQte;
+                    boqToUpdate.cumulAmount = boqToUpdate.cumulQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulPercent = boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
+                }
+            }
+        }
+        setVos(newVos);
     };
 
     const toggleBuildingExpansion = (buildingId: number) => {
@@ -587,9 +645,9 @@ const IPCEdit: React.FC = () => {
 
                     <button
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={isSaving}
                         className="btn btn-sm btn-primary flex items-center gap-2">
-                        {saving ? (
+                        {isSaving ? (
                             <>
                                 <span className="loading loading-spinner loading-sm"></span>
                                 <span>Saving...</span>
@@ -603,7 +661,7 @@ const IPCEdit: React.FC = () => {
                     </button>
                     <button
                         onClick={handleDelete}
-                        disabled={saving}
+                        disabled={isSaving}
                         className="btn btn-sm btn-danger flex items-center gap-2">
                         <span className="iconify lucide--trash size-4"></span>
                         <span>Delete IPC</span>
@@ -1021,7 +1079,22 @@ const IPCEdit: React.FC = () => {
                                                                         <td>{boq.unite}</td>
                                                                         <td>{boq.qte}</td>
                                                                         <td>{formatCurrency(boq.unitPrice)}</td>
-                                                                        <td>{boq.actualQte}</td>
+                                                                        <td>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={boq.actualQte}
+                                                                                onChange={(e) =>
+                                                                                    handleVOQuantityChange(
+                                                                                        vo.id,
+                                                                                        building.id,
+                                                                                        boq.id,
+                                                                                        parseFloat(e.target.value) || 0,
+                                                                                    )
+                                                                                }
+                                                                                className="input input-xs input-bordered w-20"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
                                                                         <td>
                                                                             <div className="text-xs">
                                                                                 {boq.cumulPercent
@@ -1302,7 +1375,7 @@ const IPCEdit: React.FC = () => {
                 onClose={closePenaltyForm}
                 onSave={handlePenaltySave}
                 initialData={penaltyData}
-                loading={saving}
+                loading={isSaving}
             />
 
             {/* Preview Modal */}
