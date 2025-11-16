@@ -8,6 +8,7 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import { useIpcEdit } from "@/hooks/use-ipc-edit";
 import useToast from "@/hooks/use-toast";
+import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
 import type { ContractBuildingsVM, LaborsVM, MachinesVM, MaterialsVM, SaveIPCVM } from "@/types/ipc";
 
 import IpcSummary from "../components/IpcSummary";
@@ -17,6 +18,7 @@ const IPCEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toaster } = useToast();
+    const { units, getUnitOptions, loading: loadingUnits } = useBOQUnits();
     const { authState, getToken } = useAuth();
     const token = getToken();
 
@@ -52,14 +54,14 @@ const IPCEdit: React.FC = () => {
         if (ipcData) {
             setLocalVos(ipcData.vos || []);
 
-            const processedLabors = (ipcData.labors || []).map(item => ({
+            const processedLabors = (ipcData.labors || []).map((item) => ({
                 ...item,
                 cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
                 deductionAmount: ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100,
             }));
             setLocalLabors(processedLabors);
 
-            const processedMachines = (ipcData.machines || []).map(item => {
+            const processedMachines = (ipcData.machines || []).map((item) => {
                 const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
                 return {
                     ...item,
@@ -69,8 +71,8 @@ const IPCEdit: React.FC = () => {
             });
             setLocalMachines(processedMachines);
 
-            const processedMaterials = (ipcData.materials || []).map(item => {
-                const totalItemValue = (item.quantity || 0) * (item.saleUnit || 0);
+            const processedMaterials = (ipcData.materials || []).map((item) => {
+                const totalItemValue = (item.livree || 0) * (item.saleUnit || 0);
                 return {
                     ...item,
                     cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
@@ -194,7 +196,8 @@ const IPCEdit: React.FC = () => {
             0,
         );
         const totalMaterialsAmount = safeMaterials.reduce(
-            (sum, material) => sum + ((material.totalSale || 0) * (material.actualDeduction || 0)) / 100,
+            (sum, material) =>
+                sum + ((material.livree || 0) * (material.saleUnit || 0) * (material.actualDeduction || 0)) / 100,
             0,
         );
 
@@ -383,27 +386,30 @@ const IPCEdit: React.FC = () => {
     ) => {
         if (type === "labors") {
             const newLabors = [...localLabors];
-            const item = newLabors[index];
-            (item[key as keyof LaborsVM] as any) = newValue;
-            // Recalculate dependent fields for Labors
+            const item = { ...newLabors[index], [key]: newValue }; // Create a new item object with updated value
+            newLabors[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Labors using the potentially updated item
             item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
             item.deductionAmount = ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100;
             setLocalLabors(newLabors);
         } else if (type === "machines") {
             const newMachines = [...localMachines];
-            const item = newMachines[index];
-            (item[key as keyof MachinesVM] as any) = newValue;
-            // Recalculate dependent fields for Machines
+            const item = { ...newMachines[index], [key]: newValue }; // Create a new item object with updated value
+            newMachines[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Machines using the potentially updated item
             const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
             item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
             item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
             setLocalMachines(newMachines);
         } else if (type === "materials") {
             const newMaterials = [...localMaterials];
-            const item = newMaterials[index];
-            (item[key as keyof MaterialsVM] as any) = newValue;
-            // Recalculate dependent fields for Materials
-            const totalItemValue = (item.quantity || 0) * (item.saleUnit || 0);
+            const item = { ...newMaterials[index], [key]: newValue }; // Create a new item object with updated value
+            newMaterials[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Materials using the potentially updated item
+            const totalItemValue = (item.livree || 0) * (item.saleUnit || 0);
             item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
             item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
             setLocalMaterials(newMaterials);
@@ -1245,9 +1251,12 @@ const IPCEdit: React.FC = () => {
                                             </thead>
                                             <tbody>
                                                 {localLabors.map((item: LaborsVM, index: number) => {
-                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
-                                                    const deductionAmount = ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100;
-                                                    
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        ((item.consumedAmount || 0) * (item.actualDeduction || 0)) /
+                                                        100;
+
                                                     return (
                                                         <tr key={`labor-${item.id || index}`}>
                                                             <td>
@@ -1281,8 +1290,7 @@ const IPCEdit: React.FC = () => {
                                                                 />
                                                             </td>
                                                             <td>
-                                                                <input
-                                                                    type="text"
+                                                                <select
                                                                     value={item.unit || ""}
                                                                     onChange={(e) =>
                                                                         handleDeductionChange(
@@ -1292,8 +1300,14 @@ const IPCEdit: React.FC = () => {
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    className="input input-xs input-bordered w-16"
-                                                                />
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
                                                             </td>
                                                             <td>
                                                                 <input
@@ -1396,9 +1410,11 @@ const IPCEdit: React.FC = () => {
                                             <tbody>
                                                 {localMachines.map((item: MachinesVM, index: number) => {
                                                     const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
-                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
-                                                    const deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
-                                                    
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        (totalItemValue * (item.actualDeduction || 0)) / 100;
+
                                                     return (
                                                         <tr key={`machine-${item.id || index}`}>
                                                             <td>
@@ -1447,8 +1463,7 @@ const IPCEdit: React.FC = () => {
                                                                 />
                                                             </td>
                                                             <td>
-                                                                <input
-                                                                    type="text"
+                                                                <select
                                                                     value={item.unit || ""}
                                                                     onChange={(e) =>
                                                                         handleDeductionChange(
@@ -1458,8 +1473,14 @@ const IPCEdit: React.FC = () => {
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    className="input input-xs input-bordered w-16"
-                                                                />
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
                                                             </td>
                                                             <td>
                                                                 <input
@@ -1545,14 +1566,12 @@ const IPCEdit: React.FC = () => {
                                             <thead>
                                                 <tr>
                                                     <th>Ref #</th>
-                                                    <th>Designation</th>
+                                                    <th>Item</th>
                                                     <th>Unit</th>
                                                     <th>Unit Price</th>
                                                     <th>Quantity</th>
                                                     <th>Allocated</th>
                                                     <th>Stock Qte</th>
-                                                    <th>Transfered Qte</th>
-                                                    <th>Livree</th>
                                                     <th>Consumed Amount</th>
                                                     <th>Previous Ded. %</th>
                                                     <th>Actual Ded. %</th>
@@ -1560,13 +1579,19 @@ const IPCEdit: React.FC = () => {
                                                     <th>Deduction Amount</th>
                                                     <th>Preced Amount</th>
                                                     <th>Actual Amount</th>
+                                                    <th>Cumul Amount</th>
+                                                    <th>Remark</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {localMaterials.map((item: MaterialsVM, index: number) => {
-                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
-                                                    const deductionAmount = ((item.totalSale || 0) * (item.actualDeduction || 0)) / 100;
-                                                    
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        ((item.livree || 0) * (item.saleUnit || 0) * (item.actualDeduction || 0)) /
+                                                        100;
+                                                    const cumulAmount = (item.livree || 0) * (item.saleUnit || 0) - deductionAmount; // Calculate cumulAmount
+
                                                     return (
                                                         <tr key={`material-${item.id || index}`}>
                                                             <td>
@@ -1600,8 +1625,7 @@ const IPCEdit: React.FC = () => {
                                                                 />
                                                             </td>
                                                             <td>
-                                                                <input
-                                                                    type="text"
+                                                                <select
                                                                     value={item.unit || ""}
                                                                     onChange={(e) =>
                                                                         handleDeductionChange(
@@ -1611,8 +1635,14 @@ const IPCEdit: React.FC = () => {
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    className="input input-xs input-bordered w-16"
-                                                                />
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
                                                             </td>
                                                             <td>
                                                                 <input
@@ -1681,38 +1711,6 @@ const IPCEdit: React.FC = () => {
                                                             <td>
                                                                 <input
                                                                     type="number"
-                                                                    value={item.transferedQte || 0}
-                                                                    onChange={(e) =>
-                                                                        handleDeductionChange(
-                                                                            "materials",
-                                                                            index,
-                                                                            "transferedQte",
-                                                                            parseFloat(e.target.value) || 0,
-                                                                        )
-                                                                    }
-                                                                    className="input input-xs input-bordered w-20"
-                                                                    step="0.01"
-                                                                />
-                                                            </td>
-                                                            <td>
-                                                                <input
-                                                                    type="number"
-                                                                    value={item.livree || 0}
-                                                                    onChange={(e) =>
-                                                                        handleDeductionChange(
-                                                                            "materials",
-                                                                            index,
-                                                                            "livree",
-                                                                            parseFloat(e.target.value) || 0,
-                                                                        )
-                                                                    }
-                                                                    className="input input-xs input-bordered w-20"
-                                                                    step="0.01"
-                                                                />
-                                                            </td>
-                                                            <td>
-                                                                <input
-                                                                    type="number"
                                                                     value={item.consumedAmount || 0}
                                                                     onChange={(e) =>
                                                                         handleDeductionChange(
@@ -1737,6 +1735,24 @@ const IPCEdit: React.FC = () => {
                                                             </td>
                                                             <td className="font-medium">
                                                                 {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(cumulAmount)}
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.remark || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "remark",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-32"
+                                                                />
                                                             </td>
                                                         </tr>
                                                     );

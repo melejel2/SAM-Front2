@@ -119,6 +119,7 @@ export interface MaterialsVM {
   precedentAmount: number;
   po_Id?: number;
   precedentAmountOld: number;
+  cumulAmount?: number; // New field for cumulative amount
 }
 
 // VO-related DTOs for SaveIPCVM
