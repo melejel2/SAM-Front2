@@ -8,7 +8,7 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import { useIpcEdit } from "@/hooks/use-ipc-edit";
 import useToast from "@/hooks/use-toast";
-import type { ContractBuildingsVM, SaveIPCVM } from "@/types/ipc";
+import type { ContractBuildingsVM, LaborsVM, MachinesVM, MaterialsVM, SaveIPCVM } from "@/types/ipc";
 
 import IpcSummary from "../components/IpcSummary";
 import PenaltyForm from "../components/PenaltyForm";
@@ -42,16 +42,48 @@ const IPCEdit: React.FC = () => {
         materials,
     } = useIpcEdit();
 
-    const [vos, setVos] = useState<any[]>([]);
+    const [localVos, setLocalVos] = useState<any[]>([]);
+    const [localLabors, setLocalLabors] = useState<LaborsVM[]>([]);
+    const [localMachines, setLocalMachines] = useState<MachinesVM[]>([]);
+    const [localMaterials, setLocalMaterials] = useState<MaterialsVM[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
-        if (ipcData?.vos) {
-            setVos(ipcData.vos);
+        if (ipcData) {
+            setLocalVos(ipcData.vos || []);
+
+            const processedLabors = (ipcData.labors || []).map(item => ({
+                ...item,
+                cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                deductionAmount: ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100,
+            }));
+            setLocalLabors(processedLabors);
+
+            const processedMachines = (ipcData.machines || []).map(item => {
+                const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+                return {
+                    ...item,
+                    cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                    deductionAmount: (totalItemValue * (item.actualDeduction || 0)) / 100,
+                };
+            });
+            setLocalMachines(processedMachines);
+
+            const processedMaterials = (ipcData.materials || []).map(item => {
+                const totalItemValue = (item.quantity || 0) * (item.saleUnit || 0);
+                return {
+                    ...item,
+                    cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                    deductionAmount: (totalItemValue * (item.actualDeduction || 0)) / 100,
+                };
+            });
+            setLocalMaterials(processedMaterials);
         }
     }, [ipcData]);
 
-    const [isSaving, setIsSaving] = useState(false);
-
-    const [activeTab, setActiveTab] = useState<"details" | "boq" | "financial" | "livepreview" | "documents" | "summary">("details");
+    const [activeTab, setActiveTab] = useState<
+        "details" | "boq" | "deductions" | "financial" | "livepreview" | "documents" | "summary"
+    >("details");
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
     const [editingQuantities, setEditingQuantities] = useState<Set<string>>(new Set());
     const [showPreview, setShowPreview] = useState(false);
@@ -133,10 +165,10 @@ const IPCEdit: React.FC = () => {
     // Calculate totals when buildings or form data changes
     useEffect(() => {
         const safeBuildings = buildings || [];
-        const safeVos = vos || [];
-        const safeLabors = labors || [];
-        const safeMachines = machines || [];
-        const safeMaterials = materials || [];
+        const safeVos = localVos || [];
+        const safeLabors = localLabors || [];
+        const safeMachines = localMachines || [];
+        const safeMaterials = localMaterials || [];
 
         const totalIPCAmount = safeBuildings.reduce(
             (sum, building) =>
@@ -153,12 +185,21 @@ const IPCEdit: React.FC = () => {
             }, 0);
             return sum + voAmount;
         }, 0);
-        const totalLaborsAmount = safeLabors.reduce((sum, labor) => sum + (labor.amount || 0), 0);
-        const totalMachinesAmount = safeMachines.reduce((sum, machine) => sum + (machine.amount || 0), 0);
-        const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.totalSale || 0), 0);
+        const totalLaborsAmount = safeLabors.reduce(
+            (sum, labor) => sum + ((labor.consumedAmount || 0) * (labor.actualDeduction || 0)) / 100,
+            0,
+        );
+        const totalMachinesAmount = safeMachines.reduce(
+            (sum, machine) => sum + ((machine.amount || 0) * (machine.actualDeduction || 0)) / 100,
+            0,
+        );
+        const totalMaterialsAmount = safeMaterials.reduce(
+            (sum, material) => sum + ((material.totalSale || 0) * (material.actualDeduction || 0)) / 100,
+            0,
+        );
 
         const grandTotalAmount =
-            totalIPCAmount + totalVosAmount + totalLaborsAmount + totalMachinesAmount + totalMaterialsAmount;
+            totalIPCAmount + totalVosAmount - totalLaborsAmount - totalMachinesAmount - totalMaterialsAmount;
 
         const retentionAmount = (grandTotalAmount * formData.retentionPercentage) / 100;
         const advanceDeduction = (grandTotalAmount * formData.advancePaymentPercentage) / 100;
@@ -173,10 +214,10 @@ const IPCEdit: React.FC = () => {
         });
     }, [
         buildings,
-        vos,
-        labors,
-        machines,
-        materials,
+        localVos,
+        localLabors,
+        localMachines,
+        localMaterials,
         formData.retentionPercentage,
         formData.advancePaymentPercentage,
         formData.penalty,
@@ -200,10 +241,10 @@ const IPCEdit: React.FC = () => {
             penalty: formData.penalty,
             previousPenalty: formData.previousPenalty,
             buildings: buildings,
-            vos: vos, // Use the state `vos` instead of `ipcData.vos`
-            labors: labors,
-            machines: machines,
-            materials: materials,
+            vos: localVos,
+            labors: localLabors,
+            machines: localMachines,
+            materials: localMaterials,
         };
     };
 
@@ -302,7 +343,7 @@ const IPCEdit: React.FC = () => {
     };
 
     const handleVOQuantityChange = (voId: number, buildingId: number, boqId: number, actualQte: number) => {
-        const newVos = JSON.parse(JSON.stringify(vos || []));
+        const newVos = JSON.parse(JSON.stringify(localVos || []));
         const voToUpdate = newVos.find((v: any) => v.id === voId);
         if (voToUpdate) {
             const buildingToUpdate = voToUpdate.buildings.find((b: any) => b.id === buildingId);
@@ -331,7 +372,42 @@ const IPCEdit: React.FC = () => {
                 }
             }
         }
-        setVos(newVos);
+        setLocalVos(newVos);
+    };
+
+    const handleDeductionChange = (
+        type: "labors" | "machines" | "materials",
+        index: number,
+        key: keyof LaborsVM | keyof MachinesVM | keyof MaterialsVM,
+        newValue: any,
+    ) => {
+        if (type === "labors") {
+            const newLabors = [...localLabors];
+            const item = newLabors[index];
+            (item[key as keyof LaborsVM] as any) = newValue;
+            // Recalculate dependent fields for Labors
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100;
+            setLocalLabors(newLabors);
+        } else if (type === "machines") {
+            const newMachines = [...localMachines];
+            const item = newMachines[index];
+            (item[key as keyof MachinesVM] as any) = newValue;
+            // Recalculate dependent fields for Machines
+            const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
+            setLocalMachines(newMachines);
+        } else if (type === "materials") {
+            const newMaterials = [...localMaterials];
+            const item = newMaterials[index];
+            (item[key as keyof MaterialsVM] as any) = newValue;
+            // Recalculate dependent fields for Materials
+            const totalItemValue = (item.quantity || 0) * (item.saleUnit || 0);
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
+            setLocalMaterials(newMaterials);
+        }
     };
 
     const toggleBuildingExpansion = (buildingId: number) => {
@@ -698,6 +774,12 @@ const IPCEdit: React.FC = () => {
                     BOQ Progress
                 </button>
                 <button
+                    className={`tab tab-lifted ${activeTab === "deductions" ? "tab-active" : ""}`}
+                    onClick={() => setActiveTab("deductions")}>
+                    <span className="iconify lucide--minus-circle mr-2 size-4"></span>
+                    Deductions
+                </button>
+                <button
                     className={`tab tab-lifted ${activeTab === "financial" ? "tab-active" : ""}`}
                     onClick={() => setActiveTab("financial")}>
                     <span className="iconify lucide--calculator mr-2 size-4"></span>
@@ -835,13 +917,13 @@ const IPCEdit: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                     <div>
-                                        <span className="text-red-600/70 dark:text-red-400/70">Previous Penalty:</span>
+                                        <span className="text-red-600/70 dark:text-red-400">Previous Penalty:</span>
                                         <div className="font-semibold text-red-600 dark:text-red-400">
                                             {formatCurrency(ipcData.previousPenalty || 0)}
                                         </div>
                                     </div>
                                     <div>
-                                        <span className="text-red-600/70 dark:text-red-400/70">Current Penalty:</span>
+                                        <span className="text-red-600/70 dark:text-red-400">Current Penalty:</span>
                                         <div className="font-semibold text-red-600 dark:text-red-400">
                                             {formatCurrency(ipcData.penalty || 0)}
                                         </div>
@@ -1026,7 +1108,7 @@ const IPCEdit: React.FC = () => {
                         )}
 
                         {/* VOs Section */}
-                        {vos && vos.length > 0 && (
+                        {localVos && localVos.length > 0 && (
                             <div className="mt-8 space-y-6">
                                 <div className="text-center">
                                     <h3 className="text-base-content mb-2 text-lg font-semibold">
@@ -1036,7 +1118,7 @@ const IPCEdit: React.FC = () => {
                                         Work progress for variation orders in this IPC
                                     </p>
                                 </div>
-                                {vos.map((vo: any) => (
+                                {localVos.map((vo: any) => (
                                     <div key={vo.id} className="bg-base-200 rounded-lg p-4">
                                         <div className="mb-4 flex items-center gap-3">
                                             <div className="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
@@ -1136,6 +1218,542 @@ const IPCEdit: React.FC = () => {
                     </div>
                 )}
 
+                {activeTab === "deductions" && (
+                    <div className="space-y-4">
+                        {/* Labors Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse" open>
+                            <summary className="collapse-title text-lg font-semibold">Labors</summary>
+                            <div className="collapse-content">
+                                {localLabors && localLabors.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Type of Worker</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localLabors.map((item: LaborsVM, index: number) => {
+                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount = ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100;
+                                                    
+                                                    return (
+                                                        <tr key={`labor-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.ref || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "ref",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.laborType || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "laborType",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.unitPrice || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "unitPrice",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No labor deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+
+                        {/* Machines Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse">
+                            <summary className="collapse-title text-lg font-semibold">Machines</summary>
+                            <div className="collapse-content">
+                                {localMachines && localMachines.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Machine Code</th>
+                                                    <th>Type of Machine</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localMachines.map((item: MachinesVM, index: number) => {
+                                                    const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
+                                                    
+                                                    return (
+                                                        <tr key={`machine-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.ref || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "ref",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.machineAcronym || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "machineAcronym",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.machineType || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "machineType",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.unitPrice || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "unitPrice",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No machine deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+
+                        {/* Materials Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse">
+                            <summary className="collapse-title text-lg font-semibold">Materials</summary>
+                            <div className="collapse-content">
+                                {localMaterials && localMaterials.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Designation</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Allocated</th>
+                                                    <th>Stock Qte</th>
+                                                    <th>Transfered Qte</th>
+                                                    <th>Livree</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localMaterials.map((item: MaterialsVM, index: number) => {
+                                                    const cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount = ((item.totalSale || 0) * (item.actualDeduction || 0)) / 100;
+                                                    
+                                                    return (
+                                                        <tr key={`material-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.bc || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "bc",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.designation || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "designation",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.saleUnit || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "saleUnit",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.allocated || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "allocated",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.stockQte || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "stockQte",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.transferedQte || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "transferedQte",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.livree || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "livree",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No material deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+                    </div>
+                )}
+
                 {activeTab === "livepreview" && (
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
@@ -1157,7 +1775,7 @@ const IPCEdit: React.FC = () => {
                                 Refresh
                             </button>
                         </div>
-                        <div className="h-[80vh] rounded-lg border border-base-300">
+                        <div className="border-base-300 h-[80vh] rounded-lg border">
                             {loadingLivePreview ? (
                                 <div className="flex h-full items-center justify-center">
                                     <Loader />
@@ -1282,25 +1900,6 @@ const IPCEdit: React.FC = () => {
                                         <span className="iconify lucide--info size-4"></span>
                                         <span>View Details</span>
                                     </button>
-
-                                    {ipcData.status === "Editable" && (
-                                        <button
-                                            onClick={handleGenerateIpc}
-                                            disabled={generatingIpc}
-                                            className="btn btn-sm flex w-full items-center gap-2 bg-green-600 text-white hover:bg-green-700">
-                                            {generatingIpc ? (
-                                                <>
-                                                    <span className="loading loading-spinner loading-xs"></span>
-                                                    <span>Generating...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="iconify lucide--check-circle size-4"></span>
-                                                    <span>Generate IPC</span>
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
                                 </div>
                             </div>
                         </div>

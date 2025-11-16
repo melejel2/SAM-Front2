@@ -79,11 +79,8 @@ export interface MachinesVM {
   consumedAmount: number;
   actualAmount: number;
   deduction: number;
-  deductionAmount: number;
   previousDeduction: number;
   actualDeduction: number;
-  actAmount: number;
-  perAmount: number;
   contractsDatasetId?: number;
   ref?: string;
   machineType?: string;
@@ -109,11 +106,8 @@ export interface MaterialsVM {
   livree: number; // Delivered Qte
   actualAmount: number;
   deduction: number;
-  deductionAmount: number;
   previousDeduction: number;
   actualDeduction: number;
-  actAmount: number;
-  perAmount: number;
   consumedAmount: number;
   isTransferred: boolean;
   remark?: string;
