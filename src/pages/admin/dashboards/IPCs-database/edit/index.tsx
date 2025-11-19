@@ -8,17 +8,17 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import { useIpcEdit } from "@/hooks/use-ipc-edit";
 import useToast from "@/hooks/use-toast";
-import type { ContractBuildingsVM, SaveIPCVM } from "@/types/ipc";
+import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
+import type { ContractBuildingsVM, LaborsVM, MachinesVM, MaterialsVM, SaveIPCVM } from "@/types/ipc";
 
 import IpcSummary from "../components/IpcSummary";
 import PenaltyForm from "../components/PenaltyForm";
 
-interface IPCEditProps {}
-
-const IPCEdit: React.FC<IPCEditProps> = () => {
+const IPCEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toaster } = useToast();
+    const { units, getUnitOptions, loading: loadingUnits } = useBOQUnits();
     const { authState, getToken } = useAuth();
     const token = getToken();
 
@@ -38,13 +38,54 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         closePenaltyForm,
         updatePenaltyData,
         clearData,
-        vos,
+        vos: initialVos,
         labors,
         machines,
         materials,
     } = useIpcEdit();
 
-    const [activeTab, setActiveTab] = useState<"details" | "boq" | "financial" | "documents" | "summary">("details");
+    const [localVos, setLocalVos] = useState<any[]>([]);
+    const [localLabors, setLocalLabors] = useState<LaborsVM[]>([]);
+    const [localMachines, setLocalMachines] = useState<MachinesVM[]>([]);
+    const [localMaterials, setLocalMaterials] = useState<MaterialsVM[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (ipcData) {
+            setLocalVos(ipcData.vos || []);
+
+            const processedLabors = (ipcData.labors || []).map((item) => ({
+                ...item,
+                cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                deductionAmount: ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100,
+            }));
+            setLocalLabors(processedLabors);
+
+            const processedMachines = (ipcData.machines || []).map((item) => {
+                const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+                return {
+                    ...item,
+                    cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                    deductionAmount: (totalItemValue * (item.actualDeduction || 0)) / 100,
+                };
+            });
+            setLocalMachines(processedMachines);
+
+            const processedMaterials = (ipcData.materials || []).map((item) => {
+                const totalItemValue = (item.livree || 0) * (item.saleUnit || 0);
+                return {
+                    ...item,
+                    cumulativeDeductionPercentage: (item.previousDeduction || 0) + (item.actualDeduction || 0),
+                    deductionAmount: (totalItemValue * (item.actualDeduction || 0)) / 100,
+                };
+            });
+            setLocalMaterials(processedMaterials);
+        }
+    }, [ipcData]);
+
+    const [activeTab, setActiveTab] = useState<
+        "details" | "boq" | "deductions" | "financial" | "livepreview" | "documents" | "summary"
+    >("details");
     const [expandedBuildings, setExpandedBuildings] = useState<Set<number>>(new Set());
     const [editingQuantities, setEditingQuantities] = useState<Set<string>>(new Set());
     const [showPreview, setShowPreview] = useState(false);
@@ -54,6 +95,8 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     const [exportingExcel, setExportingExcel] = useState(false);
     const [exportingZip, setExportingZip] = useState(false);
     const [generatingIpc, setGeneratingIpc] = useState(false);
+    const [livePreviewPdf, setLivePreviewPdf] = useState<{ blob: Blob; fileName: string } | null>(null);
+    const [loadingLivePreview, setLoadingLivePreview] = useState(false);
     const [calculatedTotals, setCalculatedTotals] = useState({
         totalAmount: 0,
         actualAmount: 0,
@@ -124,10 +167,10 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
     // Calculate totals when buildings or form data changes
     useEffect(() => {
         const safeBuildings = buildings || [];
-        const safeVos = vos || [];
-        const safeLabors = labors || [];
-        const safeMachines = machines || [];
-        const safeMaterials = materials || [];
+        const safeVos = localVos || [];
+        const safeLabors = localLabors || [];
+        const safeMachines = localMachines || [];
+        const safeMaterials = localMaterials || [];
 
         const totalIPCAmount = safeBuildings.reduce(
             (sum, building) =>
@@ -144,12 +187,22 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             }, 0);
             return sum + voAmount;
         }, 0);
-        const totalLaborsAmount = safeLabors.reduce((sum, labor) => sum + (labor.amount || 0), 0);
-        const totalMachinesAmount = safeMachines.reduce((sum, machine) => sum + (machine.amount || 0), 0);
-        const totalMaterialsAmount = safeMaterials.reduce((sum, material) => sum + (material.totalSale || 0), 0);
+        const totalLaborsAmount = safeLabors.reduce(
+            (sum, labor) => sum + ((labor.consumedAmount || 0) * (labor.actualDeduction || 0)) / 100,
+            0,
+        );
+        const totalMachinesAmount = safeMachines.reduce(
+            (sum, machine) => sum + ((machine.amount || 0) * (machine.actualDeduction || 0)) / 100,
+            0,
+        );
+        const totalMaterialsAmount = safeMaterials.reduce(
+            (sum, material) =>
+                sum + ((material.livree || 0) * (material.saleUnit || 0) * (material.actualDeduction || 0)) / 100,
+            0,
+        );
 
         const grandTotalAmount =
-            totalIPCAmount + totalVosAmount + totalLaborsAmount + totalMachinesAmount + totalMaterialsAmount;
+            totalIPCAmount + totalVosAmount - totalLaborsAmount - totalMachinesAmount - totalMaterialsAmount;
 
         const retentionAmount = (grandTotalAmount * formData.retentionPercentage) / 100;
         const advanceDeduction = (grandTotalAmount * formData.advancePaymentPercentage) / 100;
@@ -164,48 +217,69 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
         });
     }, [
         buildings,
-        vos,
-        labors,
-        machines,
-        materials,
+        localVos,
+        localLabors,
+        localMachines,
+        localMaterials,
         formData.retentionPercentage,
         formData.advancePaymentPercentage,
         formData.penalty,
     ]);
 
+    const getCurrentIpcDataForSave = (): SaveIPCVM | null => {
+        if (!ipcData) {
+            return null;
+        }
+        return {
+            ...ipcData,
+            number: Number(formData.ipcNumber) || ipcData.number,
+            dateIpc: formData.dateIpc,
+            fromDate: formData.fromDate,
+            toDate: formData.toDate,
+            retention: formData.retention,
+            advance: formData.advance,
+            remarks: formData.remarks,
+            retentionPercentage: formData.retentionPercentage,
+            advancePaymentPercentage: formData.advancePaymentPercentage,
+            penalty: formData.penalty,
+            previousPenalty: formData.previousPenalty,
+            buildings: buildings,
+            vos: localVos,
+            labors: localLabors,
+            machines: localMachines,
+            materials: localMaterials,
+        };
+    };
+
     const handleSave = async () => {
-        if (!ipcData) return;
+        const payload = getCurrentIpcDataForSave();
+        if (!payload) {
+            toaster.error("Could not prepare IPC data for saving.");
+            return;
+        }
 
+        setIsSaving(true);
         try {
-            const success = await updateIpc({
-                ...ipcData, // Spread all existing IPC data
-                number: Number(formData.ipcNumber) || ipcData.number,
-                dateIpc: formData.dateIpc,
-                fromDate: formData.fromDate,
-                toDate: formData.toDate,
-                retention: formData.retention,
-                advance: formData.advance,
-                remarks: formData.remarks,
-                retentionPercentage: formData.retentionPercentage,
-                advancePaymentPercentage: formData.advancePaymentPercentage,
-                penalty: formData.penalty,
-                previousPenalty: formData.previousPenalty,
-                buildings: buildings,
-                vos: vos,
-                labors: labors,
-                machines: machines,
-                materials: materials,
-            });
+            const token = getToken();
+            if (!token) {
+                toaster.error("Authentication required.");
+                setIsSaving(false);
+                return;
+            }
 
-            if (success) {
+            const response = await ipcApiService.updateIpc(payload, token);
+
+            if (response.success) {
                 toaster.success("IPC updated successfully");
                 // Reload data to reflect changes
                 loadIpcForEdit(parseInt(id!));
             } else {
-                toaster.error("Failed to update IPC");
+                toaster.error(response.error || "Failed to update IPC");
             }
         } catch (err) {
             toaster.error("An error occurred while saving");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -233,14 +307,29 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                         ...building,
                         boqsContract: (building.boqsContract || []).map((boq) => {
                             if (boq.id === boqId) {
-                                const actualAmount = actualQte * boq.unitPrice;
-                                const newCumulQte = (boq.precedQte || 0) + actualQte;
+                                const precedQte = boq.precedQte || 0;
+                                const maxAllowedQty = Math.max(0, boq.qte - precedQte);
+                                let validatedQte = actualQte;
+
+                                if (actualQte < 0) {
+                                    validatedQte = 0;
+                                } else if (actualQte > maxAllowedQty) {
+                                    validatedQte = maxAllowedQty;
+                                    toaster.warning(
+                                        `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${
+                                            boq.unite || ""
+                                        }`,
+                                    );
+                                }
+
+                                const actualAmount = validatedQte * boq.unitPrice;
+                                const newCumulQte = precedQte + validatedQte;
                                 const newCumulAmount = newCumulQte * boq.unitPrice;
                                 const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
 
                                 return {
                                     ...boq,
-                                    actualQte,
+                                    actualQte: validatedQte,
                                     actualAmount,
                                     cumulQte: newCumulQte,
                                     cumulAmount: newCumulAmount,
@@ -254,6 +343,77 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                 return building;
             }),
         );
+    };
+
+    const handleVOQuantityChange = (voId: number, buildingId: number, boqId: number, actualQte: number) => {
+        const newVos = JSON.parse(JSON.stringify(localVos || []));
+        const voToUpdate = newVos.find((v: any) => v.id === voId);
+        if (voToUpdate) {
+            const buildingToUpdate = voToUpdate.buildings.find((b: any) => b.id === buildingId);
+            if (buildingToUpdate) {
+                const boqToUpdate = buildingToUpdate.boqs.find((b: any) => b.id === boqId);
+                if (boqToUpdate) {
+                    const precedQte = boqToUpdate.precedQte || 0;
+                    const maxAllowedQty = Math.max(0, boqToUpdate.qte - precedQte);
+                    let validatedQte = actualQte;
+
+                    if (actualQte < 0) {
+                        validatedQte = 0;
+                    } else if (actualQte > maxAllowedQty) {
+                        validatedQte = maxAllowedQty;
+                        toaster.warning(
+                            `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqToUpdate.unite || ""}`,
+                        );
+                    }
+
+                    boqToUpdate.actualQte = validatedQte;
+                    boqToUpdate.actualAmount = validatedQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulQte = (boqToUpdate.precedQte || 0) + validatedQte;
+                    boqToUpdate.cumulAmount = boqToUpdate.cumulQte * boqToUpdate.unitPrice;
+                    boqToUpdate.cumulPercent =
+                        boqToUpdate.qte === 0 ? 0 : (boqToUpdate.cumulQte / boqToUpdate.qte) * 100;
+                }
+            }
+        }
+        setLocalVos(newVos);
+    };
+
+    const handleDeductionChange = (
+        type: "labors" | "machines" | "materials",
+        index: number,
+        key: keyof LaborsVM | keyof MachinesVM | keyof MaterialsVM,
+        newValue: any,
+    ) => {
+        if (type === "labors") {
+            const newLabors = [...localLabors];
+            const item = { ...newLabors[index], [key]: newValue }; // Create a new item object with updated value
+            newLabors[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Labors using the potentially updated item
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = ((item.consumedAmount || 0) * (item.actualDeduction || 0)) / 100;
+            setLocalLabors(newLabors);
+        } else if (type === "machines") {
+            const newMachines = [...localMachines];
+            const item = { ...newMachines[index], [key]: newValue }; // Create a new item object with updated value
+            newMachines[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Machines using the potentially updated item
+            const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
+            setLocalMachines(newMachines);
+        } else if (type === "materials") {
+            const newMaterials = [...localMaterials];
+            const item = { ...newMaterials[index], [key]: newValue }; // Create a new item object with updated value
+            newMaterials[index] = item; // Update the item in the array
+
+            // Recalculate dependent fields for Materials using the potentially updated item
+            const totalItemValue = (item.livree || 0) * (item.saleUnit || 0);
+            item.cumulativeDeductionPercentage = (item.previousDeduction || 0) + (item.actualDeduction || 0);
+            item.deductionAmount = (totalItemValue * (item.actualDeduction || 0)) / 100;
+            setLocalMaterials(newMaterials);
+        }
     };
 
     const toggleBuildingExpansion = (buildingId: number) => {
@@ -384,6 +544,43 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
             setGeneratingIpc(false);
         }
     };
+
+    const handleFetchLivePreview = async () => {
+        const currentIpcPayload = getCurrentIpcDataForSave();
+        if (!currentIpcPayload) {
+            toaster.error("Could not get current IPC data for preview.");
+            return;
+        }
+
+        setLoadingLivePreview(true);
+        setLivePreviewPdf(null); // Clear previous preview
+        try {
+            const result = await ipcApiService.livePreviewIpcPdf(currentIpcPayload, token ?? "");
+
+            if (result.success && result.blob) {
+                setLivePreviewPdf({
+                    blob: result.blob,
+                    fileName: `IPC_${currentIpcPayload.number || id}_live_preview.pdf`,
+                });
+            } else {
+                toaster.error(result.error || "Failed to generate IPC live preview");
+                setLivePreviewPdf(null);
+            }
+        } catch (error) {
+            toaster.error(
+                "Live preview generation error: " + (error instanceof Error ? error.message : "Unknown error"),
+            );
+            setLivePreviewPdf(null);
+        } finally {
+            setLoadingLivePreview(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "livepreview") {
+            handleFetchLivePreview();
+        }
+    }, [activeTab]);
 
     const handleDelete = async () => {
         if (!id) return;
@@ -539,9 +736,9 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
 
                     <button
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={isSaving}
                         className="btn btn-sm btn-primary flex items-center gap-2">
-                        {saving ? (
+                        {isSaving ? (
                             <>
                                 <span className="loading loading-spinner loading-sm"></span>
                                 <span>Saving...</span>
@@ -555,7 +752,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                     </button>
                     <button
                         onClick={handleDelete}
-                        disabled={saving}
+                        disabled={isSaving}
                         className="btn btn-sm btn-danger flex items-center gap-2">
                         <span className="iconify lucide--trash size-4"></span>
                         <span>Delete IPC</span>
@@ -583,10 +780,22 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                     BOQ Progress
                 </button>
                 <button
+                    className={`tab tab-lifted ${activeTab === "deductions" ? "tab-active" : ""}`}
+                    onClick={() => setActiveTab("deductions")}>
+                    <span className="iconify lucide--minus-circle mr-2 size-4"></span>
+                    Deductions
+                </button>
+                <button
                     className={`tab tab-lifted ${activeTab === "financial" ? "tab-active" : ""}`}
                     onClick={() => setActiveTab("financial")}>
                     <span className="iconify lucide--calculator mr-2 size-4"></span>
                     Financial Calculations
+                </button>
+                <button
+                    className={`tab tab-lifted ${activeTab === "livepreview" ? "tab-active" : ""}`}
+                    onClick={() => setActiveTab("livepreview")}>
+                    <span className="iconify lucide--eye mr-2 size-4"></span>
+                    Live Preview
                 </button>
                 <button
                     className={`tab tab-lifted ${activeTab === "documents" ? "tab-active" : ""}`}
@@ -714,13 +923,13 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                 </div>
                                 <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                     <div>
-                                        <span className="text-red-600/70 dark:text-red-400/70">Previous Penalty:</span>
+                                        <span className="text-red-600/70 dark:text-red-400">Previous Penalty:</span>
                                         <div className="font-semibold text-red-600 dark:text-red-400">
                                             {formatCurrency(ipcData.previousPenalty || 0)}
                                         </div>
                                     </div>
                                     <div>
-                                        <span className="text-red-600/70 dark:text-red-400/70">Current Penalty:</span>
+                                        <span className="text-red-600/70 dark:text-red-400">Current Penalty:</span>
                                         <div className="font-semibold text-red-600 dark:text-red-400">
                                             {formatCurrency(ipcData.penalty || 0)}
                                         </div>
@@ -903,6 +1112,707 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                 <p className="text-base-content/70">No building data is available for this IPC</p>
                             </div>
                         )}
+
+                        {/* VOs Section */}
+                        {localVos && localVos.length > 0 && (
+                            <div className="mt-8 space-y-6">
+                                <div className="text-center">
+                                    <h3 className="text-base-content mb-2 text-lg font-semibold">
+                                        Variation Order (VO) Progress
+                                    </h3>
+                                    <p className="text-base-content/70">
+                                        Work progress for variation orders in this IPC
+                                    </p>
+                                </div>
+                                {localVos.map((vo: any) => (
+                                    <div key={vo.id} className="bg-base-200 rounded-lg p-4">
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <div className="rounded-lg bg-orange-100 p-2 dark:bg-orange-900/30">
+                                                <span className="iconify lucide--file-plus-2 size-5 text-orange-600 dark:text-orange-400"></span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base-content font-semibold">
+                                                    {vo.voNumber || `VO #${vo.id}`}
+                                                </h4>
+                                            </div>
+                                        </div>
+
+                                        {vo.buildings.map((building: any) => (
+                                            <div key={building.id} className="bg-base-100 mt-4 rounded-lg p-4">
+                                                <div className="mb-4 flex items-center gap-3">
+                                                    <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
+                                                        <span className="iconify lucide--building size-5 text-purple-600 dark:text-purple-400"></span>
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="text-base-content font-semibold">
+                                                            {building.buildingName}
+                                                        </h5>
+                                                        <p className="text-base-content/70 text-sm">
+                                                            Sheet: {building.sheetName}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {building.boqs && building.boqs.length > 0 ? (
+                                                    <div className="overflow-x-auto">
+                                                        <table className="table-sm table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Item</th>
+                                                                    <th>Unit</th>
+                                                                    <th>Quantity</th>
+                                                                    <th>Unit Price</th>
+                                                                    <th>Actual Qty</th>
+                                                                    <th>Progress %</th>
+                                                                    <th>Amount</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {building.boqs.map((boq: any) => (
+                                                                    <tr key={boq.id}>
+                                                                        <td className="font-medium">
+                                                                            {boq.key || boq.no}
+                                                                        </td>
+                                                                        <td>{boq.unite}</td>
+                                                                        <td>{boq.qte}</td>
+                                                                        <td>{formatCurrency(boq.unitPrice)}</td>
+                                                                        <td>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={boq.actualQte}
+                                                                                onChange={(e) =>
+                                                                                    handleVOQuantityChange(
+                                                                                        vo.id,
+                                                                                        building.id,
+                                                                                        boq.id,
+                                                                                        parseFloat(e.target.value) || 0,
+                                                                                    )
+                                                                                }
+                                                                                className="input input-xs input-bordered w-20"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                        <td>
+                                                                            <div className="text-xs">
+                                                                                {boq.cumulPercent
+                                                                                    ? `${boq.cumulPercent.toFixed(1)}%`
+                                                                                    : "0.0%"}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="font-medium">
+                                                                            {formatCurrency(boq.actualAmount)}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-8 text-center">
+                                                        <span className="iconify lucide--table text-base-content/30 mb-2 size-12"></span>
+                                                        <p className="text-base-content/50">
+                                                            No BOQ items found for this building in this VO.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "deductions" && (
+                    <div className="space-y-4">
+                        {/* Labors Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse" open>
+                            <summary className="collapse-title text-lg font-semibold">Labors</summary>
+                            <div className="collapse-content">
+                                {localLabors && localLabors.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Type of Worker</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localLabors.map((item: LaborsVM, index: number) => {
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        ((item.consumedAmount || 0) * (item.actualDeduction || 0)) /
+                                                        100;
+
+                                                    return (
+                                                        <tr key={`labor-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.ref || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "ref",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.laborType || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "laborType",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <select
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.unitPrice || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "unitPrice",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "labors",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No labor deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+
+                        {/* Machines Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse">
+                            <summary className="collapse-title text-lg font-semibold">Machines</summary>
+                            <div className="collapse-content">
+                                {localMachines && localMachines.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Machine Code</th>
+                                                    <th>Type of Machine</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localMachines.map((item: MachinesVM, index: number) => {
+                                                    const totalItemValue = (item.quantity || 0) * (item.unitPrice || 0);
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        (totalItemValue * (item.actualDeduction || 0)) / 100;
+
+                                                    return (
+                                                        <tr key={`machine-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.ref || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "ref",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.machineAcronym || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "machineAcronym",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.machineType || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "machineType",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <select
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.unitPrice || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "unitPrice",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "machines",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No machine deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+
+                        {/* Materials Accordion */}
+                        <details className="collapse-arrow bg-base-200 collapse">
+                            <summary className="collapse-title text-lg font-semibold">Materials</summary>
+                            <div className="collapse-content">
+                                {localMaterials && localMaterials.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="table-sm table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ref #</th>
+                                                    <th>Item</th>
+                                                    <th>Unit</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Quantity</th>
+                                                    <th>Allocated</th>
+                                                    <th>Stock Qte</th>
+                                                    <th>Consumed Amount</th>
+                                                    <th>Previous Ded. %</th>
+                                                    <th>Actual Ded. %</th>
+                                                    <th>Cumulative Ded. %</th>
+                                                    <th>Deduction Amount</th>
+                                                    <th>Preced Amount</th>
+                                                    <th>Actual Amount</th>
+                                                    <th>Cumul Amount</th>
+                                                    <th>Remark</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {localMaterials.map((item: MaterialsVM, index: number) => {
+                                                    const cumulativeDeductionPercentage =
+                                                        (item.previousDeduction || 0) + (item.actualDeduction || 0);
+                                                    const deductionAmount =
+                                                        ((item.livree || 0) * (item.saleUnit || 0) * (item.actualDeduction || 0)) /
+                                                        100;
+                                                    const cumulAmount = (item.livree || 0) * (item.saleUnit || 0) - deductionAmount; // Calculate cumulAmount
+
+                                                    return (
+                                                        <tr key={`material-${item.id || index}`}>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.bc || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "bc",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.designation || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "designation",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <select
+                                                                    value={item.unit || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "unit",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-16">
+                                                                    <option value=""></option>
+                                                                    {getUnitOptions().map((unit) => (
+                                                                        <option key={unit.value} value={unit.label}>
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.saleUnit || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "saleUnit",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "quantity",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.allocated || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "allocated",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.stockQte || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "stockQte",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-20"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.consumedAmount || 0}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "consumedAmount",
+                                                                            parseFloat(e.target.value) || 0,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-24"
+                                                                    step="0.01"
+                                                                />
+                                                            </td>
+                                                            <td>{item.previousDeduction || 0}%</td>
+                                                            <td>{item.actualDeduction || 0}%</td>
+                                                            <td>{cumulativeDeductionPercentage.toFixed(2)}%</td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(deductionAmount)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.precedentAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(item.actualAmount || 0)}
+                                                            </td>
+                                                            <td className="font-medium">
+                                                                {formatCurrency(cumulAmount)}
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.remark || ""}
+                                                                    onChange={(e) =>
+                                                                        handleDeductionChange(
+                                                                            "materials",
+                                                                            index,
+                                                                            "remark",
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    className="input input-xs input-bordered w-32"
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="py-8 text-center">
+                                        <p className="text-base-content/50">No material deductions for this IPC.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+                    </div>
+                )}
+
+                {activeTab === "livepreview" && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base-content text-lg font-semibold">Live IPC Preview</h3>
+                                <p className="text-base-content/70 text-sm">
+                                    A live preview of the IPC document, reflecting all your current changes.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleFetchLivePreview}
+                                className="btn btn-primary btn-sm"
+                                disabled={loadingLivePreview}>
+                                {loadingLivePreview ? (
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                ) : (
+                                    <span className="iconify lucide--refresh-cw size-4"></span>
+                                )}
+                                Refresh
+                            </button>
+                        </div>
+                        <div className="border-base-300 h-[80vh] rounded-lg border">
+                            {loadingLivePreview ? (
+                                <div className="flex h-full items-center justify-center">
+                                    <Loader />
+                                    <p className="ml-4">Loading Live Preview...</p>
+                                </div>
+                            ) : livePreviewPdf ? (
+                                <PDFViewer fileBlob={livePreviewPdf.blob} fileName={livePreviewPdf.fileName} />
+                            ) : (
+                                <div className="flex h-full flex-col items-center justify-center gap-4">
+                                    <span className="iconify lucide--alert-circle text-error size-12"></span>
+                                    <div className="text-center">
+                                        <h2 className="text-base-content mb-2 text-lg font-semibold">
+                                            Error Loading Preview
+                                        </h2>
+                                        <p className="text-base-content/70 mb-4">
+                                            Could not load the live preview. Click refresh to try again.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -1006,25 +1916,6 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                                         <span className="iconify lucide--info size-4"></span>
                                         <span>View Details</span>
                                     </button>
-
-                                    {ipcData.status === "Editable" && (
-                                        <button
-                                            onClick={handleGenerateIpc}
-                                            disabled={generatingIpc}
-                                            className="btn btn-sm flex w-full items-center gap-2 bg-green-600 text-white hover:bg-green-700">
-                                            {generatingIpc ? (
-                                                <>
-                                                    <span className="loading loading-spinner loading-xs"></span>
-                                                    <span>Generating...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="iconify lucide--check-circle size-4"></span>
-                                                    <span>Generate IPC</span>
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1108,7 +1999,7 @@ const IPCEdit: React.FC<IPCEditProps> = () => {
                 onClose={closePenaltyForm}
                 onSave={handlePenaltySave}
                 initialData={penaltyData}
-                loading={saving}
+                loading={isSaving}
             />
 
             {/* Preview Modal */}

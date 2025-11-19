@@ -79,11 +79,8 @@ export interface MachinesVM {
   consumedAmount: number;
   actualAmount: number;
   deduction: number;
-  deductionAmount: number;
   previousDeduction: number;
   actualDeduction: number;
-  actAmount: number;
-  perAmount: number;
   contractsDatasetId?: number;
   ref?: string;
   machineType?: string;
@@ -109,11 +106,8 @@ export interface MaterialsVM {
   livree: number; // Delivered Qte
   actualAmount: number;
   deduction: number;
-  deductionAmount: number;
   previousDeduction: number;
   actualDeduction: number;
-  actAmount: number;
-  perAmount: number;
   consumedAmount: number;
   isTransferred: boolean;
   remark?: string;
@@ -125,6 +119,7 @@ export interface MaterialsVM {
   precedentAmount: number;
   po_Id?: number;
   precedentAmountOld: number;
+  cumulAmount?: number; // New field for cumulative amount
 }
 
 // VO-related DTOs for SaveIPCVM
@@ -158,6 +153,13 @@ export interface Vos {
     buildings: VoBuildingsVM[];
 }
 
+export interface IpcDataExtended extends IpcVM {
+    vos: Vos[];
+    labors: LaborsVM[];
+    machines: MachinesVM[];
+    materials: MaterialsVM[];
+}
+
 // Base IPC VM
 export interface IpcVM {
   id: number;
@@ -178,7 +180,7 @@ export interface IpcVM {
 }
 
 // Enhanced Save IPC VM with new penalty fields
-export interface SaveIPCVM extends IpcVM {
+export interface SaveIPCVM extends IpcDataExtended {
   // NEW: Summary data for IPC edit forms
   ipcSummaryData?: IpcSummaryData;
 
