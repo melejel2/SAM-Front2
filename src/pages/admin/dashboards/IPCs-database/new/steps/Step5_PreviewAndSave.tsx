@@ -6,11 +6,14 @@ import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import { Loader } from "@/components/Loader";
 
 export const Step5_PreviewAndSave: React.FC = () => {
-    const { formData, handleSubmit } = useIPCWizardContext();
+    const { formData } = useIPCWizardContext();
     const { getToken } = useAuth();
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Detect if we're in Edit mode
+    const isEditMode = (formData as any).id && (formData as any).id > 0;
 
     useEffect(() => {
         const fetchPreview = async () => {
@@ -45,8 +48,14 @@ export const Step5_PreviewAndSave: React.FC = () => {
                     <span className="iconify lucide--eye text-blue-600 dark:text-blue-400 size-5"></span>
                 </div>
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">Preview & Save IPC</h2>
-                    <p className="text-sm text-base-content/70">Preview the generated IPC and save it.</p>
+                    <h2 className="text-lg font-semibold text-base-content">
+                        {isEditMode ? "IPC Preview - Ready to Save" : "Preview & Save IPC"}
+                    </h2>
+                    <p className="text-sm text-base-content/70">
+                        {isEditMode
+                            ? "Review the IPC preview and click 'Save and Close' in the header to save your changes."
+                            : "Preview the generated IPC and click 'Create IPC' to save it."}
+                    </p>
                 </div>
             </div>
 
@@ -67,15 +76,7 @@ export const Step5_PreviewAndSave: React.FC = () => {
                 )}
             </div>
 
-            <div className="flex justify-end">
-                <button 
-                    type="button" 
-                    className="btn btn-primary" 
-                    onClick={handleSubmit}
-                >
-                    Create IPC
-                </button>
-            </div>
+            {/* Note: Submit button is in the page header (both Create and Edit modes) */}
         </div>
     );
 };

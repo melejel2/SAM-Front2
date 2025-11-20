@@ -2,13 +2,11 @@ import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import calendarIcon from "@iconify/icons-lucide/calendar";
 import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import fileTextIcon from "@iconify/icons-lucide/file-text";
-import infoIcon from "@iconify/icons-lucide/info";
 import searchIcon from "@iconify/icons-lucide/search";
 import { Icon } from "@iconify/react";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 import { Loader } from "@/components/Loader";
-import { Table, TableBody } from "@/components/daisyui/Table";
 
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 
@@ -31,7 +29,7 @@ export const Step1_ContractAndType: React.FC = () => {
 
     React.useEffect(() => {
         const statusMap: { [key: string]: number } = {
-            all: 4, // None
+            all: 2, // Changed from 4 (None) to 2 (Active) - show only active contracts by default
             active: 2, // Active
             completed: 5, // This status is not in the enum, so it will be ignored.
             terminated: 1, // Terminated
@@ -44,18 +42,20 @@ export const Step1_ContractAndType: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter]);
 
-    // Filter contracts based on search and status
-    const filteredContracts = contracts.filter((contract) => {
-        const term = searchTerm.toLowerCase();
-        const matchesSearch =
-            term === "" ||
-            (contract.contractNumber ?? "").toLowerCase().includes(term) ||
-            (contract.projectName ?? "").toLowerCase().includes(term) ||
-            (contract.subcontractorName ?? "").toLowerCase().includes(term) ||
-            (contract.tradeName ?? "").toLowerCase().includes(term);
+    // Enhanced filtering with better search capabilities
+    const filteredContracts = useMemo(() => {
+        return contracts.filter((contract) => {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch =
+                term === "" ||
+                (contract.contractNumber ?? "").toLowerCase().includes(term) ||
+                (contract.projectName ?? "").toLowerCase().includes(term) ||
+                (contract.subcontractorName ?? "").toLowerCase().includes(term) ||
+                (contract.tradeName ?? "").toLowerCase().includes(term);
 
-        return matchesSearch;
-    });
+            return matchesSearch;
+        });
+    }, [contracts, searchTerm]);
 
     const handleContractSelect = (contractId: number) => {
         selectContract(contractId);
@@ -105,261 +105,176 @@ export const Step1_ContractAndType: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-                    <Icon icon={fileTextIcon} className="size-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                    <h2 className="text-base-content text-lg font-semibold">Contract Selection & IPC Configuration</h2>
-                    <p className="text-base-content/70 text-sm">
-                        Choose the contract and configure basic IPC information
-                    </p>
-                </div>
+        <div className="space-y-4">
+            {/* Minimalistic Header */}
+            <div className="flex items-center gap-2 pb-2 border-b border-base-300">
+                <Icon icon={fileTextIcon} className="size-5 text-primary" />
+                <h2 className="text-base-content text-base font-semibold">Select Contract & Configure IPC</h2>
             </div>
 
-            {/* Contract Selection Section */}
-            <div className="bg-base-200 rounded-lg p-4">
-                <h3 className="text-base-content mb-4 flex items-center gap-2 font-semibold">
-                    <Icon icon={searchIcon} className="size-4" />
-                    Select Contract
-                </h3>
-
-                {/* Search and Filter Controls */}
-                <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-                    <div className="flex-1">
-                        <label className="floating-label">
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="input input-sm bg-base-100 border-base-300 floating-input w-full"
-                                placeholder=" "
-                            />
-                            <span>Search contracts...</span>
-                        </label>
-                    </div>
-
-                    <div className="w-full sm:w-48">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="select select-sm select-bordered bg-base-100 border-base-300 w-full">
-                            <option value="all">All Statuses</option>
-                            <option value="Editable">Editable</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                            <option value="terminated">Terminated</option>
-                        </select>
-                    </div>
+            {/* Compact Search Bar */}
+            <div className="flex gap-3">
+                <div className="relative flex-1">
+                    <Icon icon={searchIcon} className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-base-content/50" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="input input-sm bg-base-100 border-base-300 w-full pl-9"
+                        placeholder="Search by contract number, project, subcontractor, or trade..."
+                    />
                 </div>
 
-                {/* Selected Contract Info */}
-                {selectedContract && (
-                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-                        <div className="mb-3 flex items-center gap-2">
-                            <Icon icon={checkCircleIcon} className="size-5 text-blue-600 dark:text-blue-400" />
-                            <h4 className="font-semibold text-blue-600 dark:text-blue-400">Selected Contract</h4>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
-                            <div>
-                                <span className="text-blue-600/70 dark:text-blue-400/70">Contract Number:</span>
-                                <div className="font-semibold text-blue-600 dark:text-blue-400">
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="select select-sm select-bordered bg-base-100 border-base-300 w-40">
+                    <option value="all">Active</option>
+                    <option value="editable">Editable</option>
+                    <option value="terminated">Terminated</option>
+                </select>
+            </div>
+
+            {/* Selected Contract Compact Display */}
+            {selectedContract && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Icon icon={checkCircleIcon} className="size-4 text-primary flex-shrink-0" />
+                            <div className="min-w-0">
+                                <div className="font-semibold text-sm text-base-content truncate">
                                     {selectedContract.contractNumber}
                                 </div>
-                            </div>
-                            <div>
-                                <span className="text-blue-600/70 dark:text-blue-400/70">Project:</span>
-                                <div className="font-semibold text-blue-600 dark:text-blue-400">
-                                    {selectedContract.projectName}
+                                <div className="text-xs text-base-content/70 truncate">
+                                    {selectedContract.projectName} • {selectedContract.subcontractorName}
                                 </div>
                             </div>
-                            <div>
-                                <span className="text-blue-600/70 dark:text-blue-400/70">Subcontractor:</span>
-                                <div className="font-semibold text-blue-600 dark:text-blue-400">
-                                    {selectedContract.subcontractorName}
-                                </div>
-                            </div>
-                            <div>
-                                <span className="text-blue-600/70 dark:text-blue-400/70">Trade:</span>
-                                <div className="font-semibold text-blue-600 dark:text-blue-400">
-                                    {selectedContract.tradeName}
-                                </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                            <div className="text-xs text-base-content/60">Contract Value</div>
+                            <div className="font-semibold text-sm text-success">
+                                {formatCurrency(selectedContract.totalAmount)}
                             </div>
                         </div>
                     </div>
-                )}
 
-                {/* Contracts List */}
-                <div className="max-h-96 overflow-x-auto">
-                    <Table size="sm" pinRows>
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Contract Number</th>
-                                <th>Project Name</th>
-                                <th>Subcontractor</th>
-                                <th>Trade</th>
-                                <th>Status</th>
-                                <th className="text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <TableBody>
-                            {filteredContracts.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="text-center">
-                                        <div className="py-8">
-                                            <Icon
-                                                icon={searchIcon}
-                                                className="text-base-content/30 mx-auto mb-4 size-12"
-                                            />
-                                            <h4 className="text-base-content mb-2 text-lg font-semibold">
-                                                No Contracts Found
-                                            </h4>
-                                            <p className="text-base-content/70">
-                                                {searchTerm || statusFilter !== "all"
-                                                    ? "Try adjusting your search criteria or filters"
-                                                    : "No contracts available for IPC creation"}
-                                            </p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredContracts.map((contract) => (
-                                    <tr
-                                        key={contract.id}
-                                        onClick={() => handleContractSelect(contract.id)}
-                                        className={`hover:bg-base-300 cursor-pointer ${
-                                            formData.contractsDatasetId === contract.id
-                                                ? "bg-blue-100 dark:bg-blue-900/30"
-                                                : ""
-                                        }`}>
-                                        <td>
-                                            {formData.contractsDatasetId === contract.id && (
-                                                <Icon icon={checkCircleIcon} className="size-5 text-blue-600" />
-                                            )}
-                                        </td>
-                                        <td>{contract.contractNumber}</td>
-                                        <td>{contract.projectName}</td>
-                                        <td>{contract.subcontractorName}</td>
-                                        <td>{contract.tradeName}</td>
-                                        <td>
-                                            <span className={`badge badge-sm ${getStatusBadgeClass(contract.status)}`}>
-                                                {contract.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-right font-semibold">
-                                            {formatCurrency(contract.totalAmount)}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* IPC Configuration Section */}
-            {selectedContract && (
-                <div className="bg-base-200 rounded-lg p-4">
-                    <h3 className="text-base-content mb-4 flex items-center gap-2 font-semibold">
-                        <Icon icon={calendarIcon} className="size-4" />
-                        IPC Configuration
-                    </h3>
-
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        {/* Left Column - IPC Type and Number */}
-                        <div className="space-y-4">
-                            {/* IPC Type */}
-                            <div className="floating-label-group">
-                                <input
-                                    type="text"
-                                    list="ipc-types-datalist"
-                                    value={formData.type}
-                                    onChange={(e) => handleInputChange("type", e.target.value)}
-                                    className="input input-sm bg-base-100 border-base-300 floating-input w-full"
-                                    placeholder=" "
-                                />
-                                <datalist id="ipc-types-datalist">
-                                    {ipcTypes.map((type) => (
-                                        <option key={type.value} value={type.value}>
-                                            {type.label}
-                                        </option>
-                                    ))}
-                                </datalist>
-                                <label className="floating-label">IPC Type *</label>
-                            </div>
-
-                            {/* IPC Date */}
-                            <div className="floating-label-group">
-                                <input
-                                    type="date"
-                                    value={formData.dateIpc}
-                                    onChange={(e) => handleInputChange("dateIpc", e.target.value)}
-                                    className="input input-sm bg-base-100 border-base-300 floating-input w-full"
-                                    placeholder=" "
-                                />
-                                <label className="floating-label">IPC Date *</label>
-                            </div>
+                    {/* IPC Configuration Inline */}
+                    <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-primary/10">
+                        <div>
+                            <label className="text-xs text-base-content/60 mb-1 block">IPC Type *</label>
+                            <input
+                                type="text"
+                                list="ipc-types-datalist"
+                                value={formData.type}
+                                onChange={(e) => handleInputChange("type", e.target.value)}
+                                className="input input-sm bg-base-100 border-base-300 w-full"
+                                placeholder="Select type"
+                            />
+                            <datalist id="ipc-types-datalist">
+                                {ipcTypes.map((type) => (
+                                    <option key={type.value} value={type.value}>
+                                        {type.label}
+                                    </option>
+                                ))}
+                            </datalist>
                         </div>
-
-                        {/* Right Column - IPC Type Description */}
-                        <div className="space-y-4">
-                            <div className="bg-base-100 border-base-300 rounded-lg border p-4">
-                                <h4 className="text-base-content mb-2 font-medium">Selected IPC Type:</h4>
-                                <p className="text-base-content/70 text-sm">
-                                    {formData.type === "Provisoire / Interim" &&
-                                        "Standard interim payment for ongoing work progress."}
-                                    {formData.type === "Final / Final" &&
-                                        "Final payment certificate upon project completion."}
-                                    {formData.type === "Rg / Retention" && "Retention release payment certificate."}
-                                    {formData.type === "Avance / Advance Payment" &&
-                                        "Advance payment certificate for upfront payment."}
-                                </p>
-                            </div>
-
-                            {/* Quick Summary */}
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-base-content/60">Contract Value:</span>
-                                    <span className="font-semibold text-green-600">
-                                        {formatCurrency(selectedContract.totalAmount)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-base-content/60">Buildings:</span>
-                                    <span className="text-base-content font-medium">
-                                        {selectedContract.buildings.length}
-                                    </span>
-                                </div>
-                            </div>
+                        <div>
+                            <label className="text-xs text-base-content/60 mb-1 block">IPC Date *</label>
+                            <input
+                                type="date"
+                                value={formData.dateIpc}
+                                onChange={(e) => handleInputChange("dateIpc", e.target.value)}
+                                className="input input-sm bg-base-100 border-base-300 w-full"
+                            />
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Validation Messages */}
-            <div className="space-y-2">
-                {!selectedContract && (
-                    <div className="flex items-center gap-2 text-yellow-600">
-                        <Icon icon={alertTriangleIcon} className="size-4" />
-                        <span className="text-sm">Please select a contract for the IPC</span>
-                    </div>
-                )}
-                {selectedContract && !formData.type && (
-                    <div className="flex items-center gap-2 text-yellow-600">
-                        <Icon icon={alertTriangleIcon} className="size-4" />
-                        <span className="text-sm">Please select an IPC type</span>
-                    </div>
-                )}
-                {selectedContract && !formData.dateIpc && (
-                    <div className="flex items-center gap-2 text-yellow-600">
-                        <Icon icon={alertTriangleIcon} className="size-4" />
-                        <span className="text-sm">Please select an IPC date</span>
-                    </div>
-                )}
+            {/* Compact Contracts Table */}
+            <div className="overflow-x-auto border border-base-300 rounded-lg">
+                <table className="table table-sm table-pin-rows">
+                    <thead>
+                        <tr className="bg-base-200">
+                            <th className="w-8"></th>
+                            <th>Contract #</th>
+                            <th>Project</th>
+                            <th>Subcontractor</th>
+                            <th>Trade</th>
+                            <th className="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredContracts.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center py-8">
+                                    <Icon
+                                        icon={searchIcon}
+                                        className="text-base-content/30 mx-auto mb-2 size-8"
+                                    />
+                                    <div className="text-sm font-medium text-base-content/70">
+                                        {searchTerm || statusFilter !== "all"
+                                            ? "No contracts match your search"
+                                            : "No contracts available"}
+                                    </div>
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm("")}
+                                            className="btn btn-xs btn-ghost mt-2">
+                                            Clear search
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        ) : (
+                            filteredContracts.map((contract) => (
+                                <tr
+                                    key={contract.id}
+                                    onClick={() => handleContractSelect(contract.id)}
+                                    className={`hover:bg-base-200 cursor-pointer transition-colors ${
+                                        formData.contractsDatasetId === contract.id
+                                            ? "bg-primary/10"
+                                            : ""
+                                    }`}>
+                                    <td>
+                                        {formData.contractsDatasetId === contract.id && (
+                                            <Icon icon={checkCircleIcon} className="size-4 text-primary" />
+                                        )}
+                                    </td>
+                                    <td className="font-medium">{contract.contractNumber}</td>
+                                    <td className="text-sm">{contract.projectName}</td>
+                                    <td className="text-sm">{contract.subcontractorName}</td>
+                                    <td className="text-sm">{contract.tradeName}</td>
+                                    <td className="text-right font-semibold text-sm">
+                                        {formatCurrency(contract.totalAmount)}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
+
+            {/* Results Count */}
+            {filteredContracts.length > 0 && (
+                <div className="text-xs text-base-content/60 text-right">
+                    Showing {filteredContracts.length} of {contracts.length} contracts
+                </div>
+            )}
+
+            {/* Validation Messages */}
+            {!selectedContract && (
+                <div className="flex items-center gap-2 text-warning text-sm">
+                    <Icon icon={alertTriangleIcon} className="size-4" />
+                    <span>Please select a contract to continue</span>
+                </div>
+            )}
+            {selectedContract && !formData.type && (
+                <div className="flex items-center gap-2 text-warning text-sm">
+                    <Icon icon={alertTriangleIcon} className="size-4" />
+                    <span>Please select an IPC type</span>
+                </div>
+            )}
         </div>
     );
 };

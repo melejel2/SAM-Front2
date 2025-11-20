@@ -41,8 +41,10 @@ export const Step4_Review: React.FC = () => {
             day: 'numeric'
         });
     };
-    
-    if (!selectedContract) {
+
+    // In Edit mode, selectedContract might not be set, but formData has the contract data
+    const isEditMode = (formData as any).id && (formData as any).id > 0;
+    if (!selectedContract && !isEditMode) {
         return (
             <div className="text-center py-12">
                 <span className="iconify lucide--eye text-base-content/30 size-16 mb-4"></span>
@@ -51,7 +53,16 @@ export const Step4_Review: React.FC = () => {
             </div>
         );
     }
-    
+
+    // Get contract info from selectedContract or formData (Edit mode)
+    const contractInfo = selectedContract || {
+        contractNumber: (formData as any).contract || 'N/A',
+        projectName: (formData as any).projectName || 'N/A',
+        subcontractorName: (formData as any).subcontractorName || 'N/A',
+        tradeName: (formData as any).tradeName || 'N/A',
+        totalAmount: (formData as any).totalContractAmount || 0,
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -104,25 +115,25 @@ export const Step4_Review: React.FC = () => {
                     <div>
                         <span className="text-base-content/60">Contract Number:</span>
                         <div className="font-semibold text-base-content">
-                            {selectedContract.contractNumber}
+                            {contractInfo.contractNumber}
                         </div>
                     </div>
                     <div>
                         <span className="text-base-content/60">Project:</span>
                         <div className="font-medium text-base-content">
-                            {selectedContract.projectName}
+                            {contractInfo.projectName}
                         </div>
                     </div>
                     <div>
                         <span className="text-base-content/60">Subcontractor:</span>
                         <div className="font-medium text-base-content">
-                            {selectedContract.subcontractorName}
+                            {contractInfo.subcontractorName}
                         </div>
                     </div>
                     <div>
                         <span className="text-base-content/60">Trade:</span>
                         <div className="font-medium text-base-content">
-                            {selectedContract.tradeName}
+                            {contractInfo.tradeName}
                         </div>
                     </div>
                 </div>
@@ -330,7 +341,7 @@ export const Step4_Review: React.FC = () => {
                             <div className="flex justify-between">
                                 <span className="text-base-content/60">Contract Value:</span>
                                 <span className="font-semibold text-base-content">
-                                    {formatCurrency(selectedContract.totalAmount)}
+                                    {formatCurrency(contractInfo.totalAmount)}
                                 </span>
                             </div>
                             <div className="flex justify-between">
@@ -342,20 +353,20 @@ export const Step4_Review: React.FC = () => {
                             <div className="flex justify-between">
                                 <span className="text-base-content/60">Percentage of Contract:</span>
                                 <span className="font-semibold text-green-600">
-                                    {((totalIPCAmount / selectedContract.totalAmount) * 100).toFixed(2)}%
+                                    {((totalIPCAmount / (contractInfo.totalAmount || 1)) * 100).toFixed(2)}%
                                 </span>
                             </div>
-                            
+
                             {/* Progress Bar */}
                             <div>
                                 <div className="flex justify-between text-xs text-base-content/60 mb-1">
                                     <span>Contract Progress</span>
-                                    <span>{((totalIPCAmount / selectedContract.totalAmount) * 100).toFixed(1)}%</span>
+                                    <span>{((totalIPCAmount / (contractInfo.totalAmount || 1)) * 100).toFixed(1)}%</span>
                                 </div>
                                 <div className="w-full bg-base-300 rounded-full h-2">
-                                    <div 
+                                    <div
                                         className="bg-gradient-to-r from-blue-600 to-green-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${Math.min((totalIPCAmount / selectedContract.totalAmount) * 100, 100)}%` }}
+                                        style={{ width: `${Math.min((totalIPCAmount / (contractInfo.totalAmount || 1)) * 100, 100)}%` }}
                                     ></div>
                                 </div>
                             </div>

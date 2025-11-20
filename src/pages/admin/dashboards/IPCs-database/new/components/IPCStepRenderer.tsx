@@ -13,7 +13,7 @@ const getStepName = (step: number): string => {
         case 2: return "Period & BOQ Progress";
         case 3: return "Deductions";
         case 4: return "Review";
-        case 5: return "Preview & Save";
+        case 5: return "Save and Close";
         default: return "Unknown Step";
     }
 };

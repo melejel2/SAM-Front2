@@ -196,6 +196,31 @@ const IPCsDatabase = () => {
         }
     };
 
+    const handleDeleteIpc = async (row: any) => {
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete IPC #${row.number}?\n\n` +
+            `This action cannot be undone.`
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+            const token = getToken();
+            const result = await ipcApiService.deleteIpc(parseInt(row.id), token ?? "");
+
+            if (result.success) {
+                toaster.success(`IPC #${row.number} deleted successfully`);
+                // Refresh the table to show updated list
+                await getIPCs();
+            } else {
+                toaster.error(result.error?.message || "Failed to delete IPC");
+            }
+        } catch (error) {
+            console.error("Error deleting IPC:", error);
+            toaster.error("Failed to delete IPC");
+        }
+    };
+
     const handleExportPdf = async () => {
         if (!previewData) return;
         
@@ -352,11 +377,17 @@ const IPCsDatabase = () => {
                                 editAction
                                 detailsAction
                                 rowActions={(row) => {
-                                    // Show Generate button only for Editable IPCs (not yet generated)
                                     const statusLower = (row._statusRaw || row.status || '').toLowerCase();
                                     const isEditable = statusLower.includes('editable') && !row.isGenerated;
+                                    const isIssued = statusLower === 'issued';
+
                                     return {
+                                        // Show Generate button only for Editable IPCs (not yet generated)
                                         generateAction: isEditable,
+                                        // Hide Edit button for Issued IPCs
+                                        editAction: !isIssued,
+                                        // Show Delete button only for Editable IPCs (not yet generated)
+                                        deleteAction: isEditable,
                                     };
                                 }}
                                 title={"IPC"}
@@ -369,11 +400,6 @@ const IPCsDatabase = () => {
                                         return handlePreviewIpc(data);
                                     }
                                     if (type === "Edit" && data) {
-                                        const statusLower = (data._statusRaw || data.status || '').toLowerCase();
-                                        if (statusLower === 'issued') {
-                                            toaster.error("Cannot edit an issued IPC.");
-                                            return;
-                                        }
                                         return handleEditIpc(data);
                                     }
                                     if (type === "Details" && data) {
@@ -381,6 +407,9 @@ const IPCsDatabase = () => {
                                     }
                                     if (type === "Generate" && data) {
                                         return handleGenerateIpc(data);
+                                    }
+                                    if (type === "Delete" && data) {
+                                        return handleDeleteIpc(data);
                                     }
                                 }}
                             />

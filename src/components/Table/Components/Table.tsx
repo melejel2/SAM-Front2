@@ -204,6 +204,9 @@ const TableComponent: React.FC<TableProps> = ({
     const [activeSheetId, setActiveSheetId] = useState<number>(externalActiveSheetId ?? sheets[0]?.id ?? 0);
     const [internalPreviewLoadingRowId, setInternalPreviewLoadingRowId] = useState<string | null>(null);
     const previewLoadingRowId = externalPreviewLoadingRowId ?? internalPreviewLoadingRowId;
+    const [editLoadingRowId, setEditLoadingRowId] = useState<string | null>(null);
+    const [generateLoadingRowId, setGenerateLoadingRowId] = useState<string | null>(null);
+    const [deleteLoadingRowId, setDeleteLoadingRowId] = useState<string | null>(null);
     
     // Column filter states
     const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
@@ -546,14 +549,32 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
-    const openEditDialog = (row: any) => {
+    const openEditDialog = async (row: any) => {
         setDialogType("Edit");
         setCurrentRow(row);
         if (dynamicDialog) {
             handleShow();
         } else {
             if (openStaticDialog) {
-                openStaticDialog("Edit", row, { contractIdentifier, contractId }); // Pass contract context
+                const rowId = row.id || row.contractId || row.projectId || String(row);
+                setEditLoadingRowId(rowId);
+                try {
+                    await openStaticDialog("Edit", row, { contractIdentifier, contractId }); // Pass contract context
+                } finally {
+                    setEditLoadingRowId(null);
+                }
+            }
+        }
+    };
+
+    const openGenerateDialog = async (row: any) => {
+        if (openStaticDialog) {
+            const rowId = row.id || row.contractId || row.projectId || String(row);
+            setGenerateLoadingRowId(rowId);
+            try {
+                await openStaticDialog("Generate", row, { contractIdentifier, contractId });
+            } finally {
+                setGenerateLoadingRowId(null);
             }
         }
     };
@@ -571,14 +592,20 @@ const TableComponent: React.FC<TableProps> = ({
         }
     };
 
-    const openDeleteDialog = (row: any) => {
+    const openDeleteDialog = async (row: any) => {
         setDialogType("Delete");
         setCurrentRow(row);
         if (dynamicDialog) {
             handleShow();
         } else {
             if (openStaticDialog) {
-                openStaticDialog("Delete", row);
+                const rowId = row.id || row.contractId || row.projectId || String(row);
+                setDeleteLoadingRowId(rowId);
+                try {
+                    await openStaticDialog("Delete", row);
+                } finally {
+                    setDeleteLoadingRowId(null);
+                }
             }
         }
     };
@@ -926,11 +953,12 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Edit Row"
                                                                         data-tip="Edit"
+                                                                        disabled={editLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             openEditDialog(row);
                                                                         }}>
-                                                                        <span className="iconify lucide--pencil text-base-content/70 size-4"></span>
+                                                                        <span className={`iconify ${editLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--pencil'} text-base-content/70 size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.exportAction ?? exportAction) && (
@@ -955,13 +983,12 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Generate"
                                                                         data-tip="Generate"
+                                                                        disabled={generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            if (openStaticDialog) {
-                                                                                openStaticDialog("Generate", row, { contractIdentifier, contractId });
-                                                                            }
+                                                                            openGenerateDialog(row);
                                                                         }}>
-                                                                        <span className="iconify lucide--circle-check-big text-base-content/70 text-success size-4"></span>
+                                                                        <span className={`iconify ${generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--circle-check-big'} text-base-content/70 text-success size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.deleteAction ?? deleteAction) && (
@@ -971,11 +998,12 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         size="sm"
                                                                         aria-label="Delete Row"
                                                                         data-tip="Delete"
+                                                                        disabled={deleteLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             openDeleteDialog(row);
                                                                         }}>
-                                                                        <span className="iconify lucide--trash size-4"></span>
+                                                                        <span className={`iconify ${deleteLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--trash'} size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {rowAction?.terminateAction && (

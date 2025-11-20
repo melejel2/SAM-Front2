@@ -93,7 +93,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
     // Form data setter with unsaved changes tracking
-    const setFormData = useCallback((data: Partial<IpcWizardFormData>) => {
+    const setFormData = useCallback((data: Partial<IpcWizardFormData>, markDirty: boolean = true) => {
         setFormDataState((prev) => {
             const newFormData = {
                 ...prev,
@@ -106,10 +106,11 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 machines: data.machines !== undefined ? (data.machines || []) : (prev.machines || []),
                 materials: data.materials !== undefined ? (data.materials || []) : (prev.materials || []),
             };
-            console.log("🔄 setFormData - New formData:", newFormData);
             return newFormData;
         });
-        setHasUnsavedChanges(true);
+        if (markDirty) {
+            setHasUnsavedChanges(true);
+        }
     }, []);
 
     // Load IPC data for editing
@@ -124,8 +125,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 }
                 const response = await ipcApiService.getIpcForEdit(ipcId, token);
                 if (response.success && response.data) {
-                    console.log("📝 loadIpcForEdit API Response Data:", response.data);
-                    setFormData(response.data);
+                    setFormData(response.data, false); // Don't mark as dirty when loading
                     setSelectedContract(contracts.find((c) => c.id === response.data?.contractsDatasetId) || null);
                     setHasUnsavedChanges(false);
                 } else {
@@ -157,18 +157,14 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 try {
                     // For new IPC, fetch initial contract data
                     const response = await ipcApiService.getContractDataForNewIpc(contractId, token);
-                    console.log("📝 getContractDataForNewIpc raw API Response:", response);
                     if (response.success && response.data) {
-                        console.log("📝 getContractDataForNewIpc API Response Data:", response.data);
                         // Update formData with the entire SaveIPCVM object including buildings
                         setFormData({
                             ...response.data,
                             contractsDatasetId: contractId, // Ensure contract ID is set
                         });
                     } else {
-                        console.error("📝 getContractDataForNewIpc API Response Error:", response.error);
                         const errorMessageToDisplay = response.error?.message || "Failed to load initial IPC data";
-                        console.warn("Attempting to display error toast with message:", errorMessageToDisplay);
                         toaster.error(errorMessageToDisplay);
                         setSelectedContract(null); // Deselect the contract on failure
                         setFormData(getInitialFormData()); // Reset form data on failure
@@ -186,7 +182,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Load contracts from API
     const loadContracts = useCallback(
-        async (status: number = 4) => {
+        async (status: number = 2) => { // Changed from 4 (None) to 2 (Active)
             setLoadingContracts(true);
             try {
                 const token = getToken();
@@ -200,9 +196,6 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                     method: "GET",
                     token: token,
                 });
-
-                console.log("🔍 Contract API Response:", response);
-                console.log("Response isSuccess:", (response as any)?.isSuccess);
 
                 // Normalize API response: support both array response and { isSuccess, data } shape
                 const contractsRaw: any[] = Array.isArray(response)
@@ -246,7 +239,6 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                     );
 
                     setContracts(contractsWithBuildings);
-                    console.log("Contracts set in context:", contractsWithBuildings);
                 }
             } catch (error) {
                 console.error("Error loading contracts:", error);
@@ -319,43 +311,13 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Step validation for 4-step workflow
     const validateCurrentStep = useCallback((): boolean => {
-        console.log(`Validating Step ${currentStep}`);
         switch (currentStep) {
             case 1:
-                console.log(
-                    "Step 1 Validation - formData.contractsDatasetId:",
-                    formData.contractsDatasetId,
-                    "formData.type:",
-                    formData.type,
-                    "formData.dateIpc:",
-                    formData.dateIpc,
-                );
                 return !!(formData.contractsDatasetId > 0 && formData.type && formData.dateIpc);
             case 2:
-                console.log(
-                    "Step 2 Validation - formData.fromDate:",
-                    formData.fromDate,
-                    "formData.toDate:",
-                    formData.toDate,
-                );
-                console.log("Step 2 Validation - formData.buildings.length:", formData.buildings.length);
-                const safeFormDataBuildings = formData.buildings || [];
-                const hasPositiveActualQte = safeFormDataBuildings.some((building) =>
-                    (building.boqsContract || []).some((boq) => {
-                        const isPositive = (boq.actualQte || 0) > 0;
-                        console.log(
-                            `Building ${building.buildingName}, BOQ ${boq.key} - actualQte: ${boq.actualQte}, isPositive: ${isPositive}`,
-                        );
-                        return isPositive;
-                    }),
-                );
-                console.log("Step 2 Validation - hasPositiveActualQte:", hasPositiveActualQte);
-                return !!(
-                    formData.fromDate &&
-                    formData.toDate &&
-                    safeFormDataBuildings.length > 0 &&
-                    hasPositiveActualQte
-                );
+                // Simplified validation: Only require work period dates
+                // Buildings and BOQ progress are optional (allows empty IPC creation)
+                return !!(formData.fromDate && formData.toDate);
             case 3:
                 // Deductions - Financial calculations are automatic
                 return true;
@@ -425,13 +387,8 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Load IPC data if editing an existing IPC
-    useEffect(() => {
-        const formDataId = (formData as any).id;
-        if (selectedContract && formDataId && formDataId !== 0 && !hasUnsavedChanges && contracts.length > 0) {
-            loadIpcForEdit(formDataId);
-        }
-    }, [(formData as any).id, hasUnsavedChanges, contracts.length, loadIpcForEdit, selectedContract]);
+    // NOTE: loadIpcForEdit is called explicitly by Edit page (edit/index.tsx line 50)
+    // Removed redundant useEffect here to prevent infinite loop
 
     // Memoize expensive calculations
     const financialSummary = useMemo(() => {

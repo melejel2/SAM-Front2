@@ -123,7 +123,7 @@ const NewIPCWizardContent: React.FC = () => {
                                             break;
                                         case 2:
                                             toaster.error(
-                                                "Please set work period, select buildings and update BOQ progress",
+                                                "Please set work period (from date and to date)",
                                             );
                                             break;
                                         case 3:
