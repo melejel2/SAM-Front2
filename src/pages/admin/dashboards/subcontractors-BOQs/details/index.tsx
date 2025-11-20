@@ -14,6 +14,7 @@ import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { generateContractFileName, generateVOFileName } from "@/utils/ipc-filename";
 
 import TerminatedContracts from "../TerminatedContracts";
 import { useContractsApi } from "../hooks/use-contracts-api";
@@ -373,7 +374,9 @@ const ContractDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.pdf`;
+                link.download = contractData?.contractNumber
+                    ? generateContractFileName(contractData.contractNumber, 'pdf')
+                    : `Contract_${contractIdentifier}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -449,7 +452,9 @@ const ContractDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `Contract_${contractData?.contractNumber || contractIdentifier}.docx`;
+                link.download = contractData?.contractNumber
+                    ? generateContractFileName(contractData.contractNumber, 'docx')
+                    : `Contract_${contractIdentifier}.docx`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -558,7 +563,9 @@ const ContractDetails = () => {
                 const url = window.URL.createObjectURL(result);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `VO_${voNumber}.docx`;
+                link.download = contractData?.contractNumber
+                    ? generateVOFileName(contractData.contractNumber, voNumber, 'docx')
+                    : `VO_${voNumber}.docx`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();

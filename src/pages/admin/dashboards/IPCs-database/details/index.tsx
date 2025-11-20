@@ -9,6 +9,7 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import type { IpcStatus, SaveIPCVM } from "@/types/ipc";
+import { generateIPCFileName, generateIPCZipFileName, generateIPCPreviewFileName } from "@/utils/ipc-filename";
 
 // Helper functions
 const formatCurrency = (amount: number | string | undefined) => {
@@ -191,7 +192,7 @@ const IPCDetails = () => {
             if (result.success && result.blob) {
                 setPreviewData({
                     blob: result.blob,
-                    fileName: `IPC_${ipcData.number || id}.pdf`,
+                    fileName: generateIPCPreviewFileName(ipcData),
                 });
                 setShowPreview(true);
             } else {
@@ -213,7 +214,7 @@ const IPCDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `IPC_${ipcData?.number || id}.pdf`;
+                link.download = ipcData ? generateIPCFileName(ipcData, 'pdf') : `IPC_${id}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -241,7 +242,7 @@ const IPCDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `IPC_${ipcData?.number || id}.xlsx`;
+                link.download = ipcData ? generateIPCFileName(ipcData, 'xlsx') : `IPC_${id}.xlsx`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -269,7 +270,7 @@ const IPCDetails = () => {
                 const url = window.URL.createObjectURL(result.blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `IPC_${ipcData?.number || id}_Documents.zip`;
+                link.download = ipcData ? generateIPCZipFileName(ipcData) : `IPC_${id}_Documents.zip`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
