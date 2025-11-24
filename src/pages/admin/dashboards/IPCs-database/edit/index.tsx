@@ -49,9 +49,9 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         setPenaltyData({
             penalty: formData.penalty || 0,
             previousPenalty: formData.previousPenalty || 0,
-            reason: "",
+            reason: formData.penaltyReason || "",
         });
-    }, [formData.penalty, formData.previousPenalty]);
+    }, [formData.penalty, formData.previousPenalty, formData.penaltyReason]);
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
@@ -85,7 +85,9 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         setFormData({
             penalty: penaltyFormData.penalty,
             previousPenalty: penaltyFormData.previousPenalty,
+            penaltyReason: penaltyFormData.reason,
         });
+        setHasUnsavedChanges(true);
         setShowPenaltyForm(false);
         toaster.success("Penalty information updated");
     };
