@@ -127,18 +127,12 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 if (response.success && response.data) {
                     const ipcData = response.data as any; // Treat as any to access potentially incorrect field names
 
-                    // Map backend date fields (datefrom, dateto, dateopc) to frontend (fromDate, toDate, dateIpc)
+                    // Map backend date fields and handle timezone issues
                     const mappedData: Partial<IpcWizardFormData> = {
                         ...ipcData,
-                        fromDate: ipcData.fromDate || ipcData.FromDate || ipcData.datefrom
-                            ? new Date(ipcData.fromDate || ipcData.FromDate || ipcData.datefrom).toISOString().split("T")[0]
-                            : "",
-                        toDate: ipcData.toDate || ipcData.ToDate || ipcData.dateto
-                            ? new Date(ipcData.toDate || ipcData.ToDate || ipcData.dateto).toISOString().split("T")[0]
-                            : "",
-                        dateIpc: ipcData.dateIpc || ipcData.DateOpc || ipcData.dateopc
-                            ? new Date(ipcData.dateIpc || ipcData.DateOpc || ipcData.dateopc).toISOString().split("T")[0]
-                            : new Date().toISOString().split("T")[0],
+                        fromDate: (ipcData.fromDate || ipcData.FromDate || ipcData.datefrom || "").split("T")[0],
+                        toDate: (ipcData.toDate || ipcData.ToDate || ipcData.dateto || "").split("T")[0],
+                        dateIpc: (ipcData.dateIpc || ipcData.DateOpc || ipcData.dateopc || "").split("T")[0],
                     };
 
                     setFormData(mappedData, false); // Don't mark as dirty when loading
