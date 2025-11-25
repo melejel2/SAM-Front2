@@ -299,18 +299,19 @@ export interface IpcWizardFormData {
   fromDate: string;
   toDate: string;
   dateIpc: string;
-  
+
   // Financial calculations
   advancePayment: number;
   retentionPercentage: number;
   advancePaymentPercentage: number;
   penalty: number;
   previousPenalty: number;
-  
+  penaltyReason?: string; // Optional penalty reason/description
+
   // BOQ progress data
   buildings: ContractBuildingsVM[];
   vos: Vos[];
-  
+
   // Deduction data (if still used)
   labors: LaborsVM[];
   machines: MachinesVM[];
