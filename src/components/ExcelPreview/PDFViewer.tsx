@@ -11,7 +11,7 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // Create object URL for native browser PDF viewer
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/rules-of-hooks, react-hooks/set-state-in-effect
+     
     useEffect(() => {
         if (!fileBlob) {
             setError('No PDF file provided');

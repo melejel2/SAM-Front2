@@ -19,6 +19,7 @@
         "@azure/msal-react": "^3.0.22",
         "@iconify/icons-lucide": "^1.2.135",
         "@iconify/react": "^6.0.2",
+        "@tanstack/react-query": "^5.90.11",
         "apexcharts": "^5.3.6",
         "clsx": "^2.1.1",
         "filepond": "^4.32.10",

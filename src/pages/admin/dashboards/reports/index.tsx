@@ -1,61 +1,107 @@
-import { useEffect, useCallback, memo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import apiRequest from "@/api/api";
+import { useAuth } from "@/contexts/auth";
 import SAMTable from "@/components/Table";
 
-import useReports from "./use-reports";
+const columns = {
+  code: "Code",
+  name: "Project Name",
+};
 
-const Reports = memo(() => {
-    const { columns, tableData, inputFields } = useReports();
-    const navigate = useNavigate();
-    const location = useLocation();
+const Reports = () => {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [exportingRowId, setExportingRowId] = useState(null);
+  const navigate = useNavigate();
+  const { getToken } = useAuth();
 
-    useEffect(() => {
-        // This will trigger a re-render when navigating between dashboard pages
-        // ensuring fresh data is loaded
-    }, [location.pathname]);
+  const getProjectsList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiRequest({
+        endpoint: "Project/GetProjectsList",
+        method: "GET",
+        token: getToken(),
+      });
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken]);
 
-    const handleBackToDashboard = useCallback(() => {
-        navigate('/dashboard');
-    }, [navigate]);
+  useEffect(() => {
+    getProjectsList();
+  }, [getProjectsList]);
 
-    const handleSuccess = useCallback(() => {
-        // Empty success handler
-    }, []);
+  const handleBackToDashboard = useCallback(() => {
+    navigate("/dashboard");
+  }, [navigate]);
 
-    return (
-        <div>
-            {/* Header with Back Button */}
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBackToDashboard}
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--arrow-left size-4"></span>
-                        <span>Back</span>
-                    </button>
-                </div>
-            </div>
+  const handleExport = async (project) => {
+    setExportingRowId(project.id);
+    try {
+      const token = getToken();
+      const res = await fetch(`https://localhost:7055/api/Reports/ExportKPIReport?projectId=${project.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined
+        }
+      });
+      if (!res.ok) throw new Error('Failed to export');
+      const blob = await res.blob();
+      let filename = `KPI-Report-${project.name}.xlsx`;
+      const disp = res.headers.get('content-disposition');
+      if (disp && disp.indexOf('filename=') !== -1) {
+        filename = disp.split('filename=')[1].replace(/['\"]/g, '').split(';')[0];
+      }
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Export failed");
+    } finally {
+      setExportingRowId(null);
+    }
+  };
 
-            <div>
-                <SAMTable
-                    columns={columns}
-                    tableData={tableData}
-                    inputFields={inputFields}
-                    actions
-                    editAction
-                    deleteAction
-                    title={"Report"}
-                    loading={false}
-                    addBtn
-                    onSuccess={handleSuccess}
-                />
-            </div>
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBackToDashboard}
+            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+          >
+            <span className="iconify lucide--arrow-left size-4"></span>
+            <span>Back</span>
+          </button>
         </div>
-    );
-});
-
-Reports.displayName = 'Reports';
+      </div>
+      <div>
+        <SAMTable
+          columns={columns}
+          tableData={projects}
+          title={"Projects"}
+          loading={loading}
+          exportingRowId={exportingRowId}
+          rowActions={() => ({ exportAction: true })}
+          openStaticDialog={(type, row) => {
+            if (type === 'Export') handleExport(row);
+          }}
+          exportAction={true}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default Reports;
