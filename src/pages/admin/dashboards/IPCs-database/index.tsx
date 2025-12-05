@@ -103,7 +103,8 @@ const IPCsDatabase = () => {
             // Use contract number and IPC reference instead of database IDs
             const contractRef = row.contract || 'document';
             const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id; // Use business identifier
-            const fileName = `ipc-${ipcRef}-${contractRef}.pdf`;
+            const subcontractorName = row.subcontractorName || 'unknown';
+            const fileName = `ipc-${ipcRef}-${contractRef}-${subcontractorName}.pdf`;
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
             setViewMode('preview');
         } else {
@@ -150,7 +151,8 @@ const IPCsDatabase = () => {
             a.href = url;
             const contractRef = row.contract || 'document';
             const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id;
-            a.download = `ipc-${ipcRef}-${contractRef}.xlsx`;
+            const subcontractorName = row.subcontractorName || 'unknown';
+            a.download = `ipc-${ipcRef}-${contractRef}-${subcontractorName}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -258,7 +260,8 @@ const IPCsDatabase = () => {
                 const a = document.createElement('a');
                 a.href = url;
                 const ipcRef = previewData.rowData.number || previewData.rowData.ipcRef || previewData.id;
-                a.download = `ipc-${ipcRef}-${previewData.rowData.contract || 'document'}.xlsx`;
+                const subcontractorName = previewData.rowData.subcontractorName || 'unknown';
+                a.download = `ipc-${ipcRef}-${previewData.rowData.contract || 'document'}-${subcontractorName}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);

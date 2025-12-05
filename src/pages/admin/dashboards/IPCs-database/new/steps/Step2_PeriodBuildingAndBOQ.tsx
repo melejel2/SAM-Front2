@@ -5,6 +5,8 @@ import { Icon } from "@iconify/react";
 import calendarDaysIcon from "@iconify/icons-lucide/calendar-days";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
+import hashIcon from "@iconify/icons-lucide/hash";
+import percentIcon from "@iconify/icons-lucide/percent";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import useToast from "@/hooks/use-toast";
@@ -13,6 +15,9 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
     const { getToken } = useAuth();
     const { toaster } = useToast();
+
+    // Input mode toggle: 'quantity' or 'percentage'
+    const [inputMode, setInputMode] = useState<'quantity' | 'percentage'>('quantity');
 
     // Active building/VO tab - follows legacy SAM bottom tab pattern
     const [activeBuildingId, setActiveBuildingId] = useState<number | null>(null);
@@ -33,8 +38,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 if (response.success && response.data) {
                     setAllContractBuildings(response.data.buildings || []);
 
-                    // Auto-initialize buildings ONLY in NEW mode (not edit mode)
+                    // Auto-initialize fromDate from previous IPC's toDate if available
                     const isEditMode = (formData as any).id && (formData as any).id > 0;
+                    if (!isEditMode && response.data.previousIpcToDate && !formData.fromDate) {
+                        setFormData({ fromDate: response.data.previousIpcToDate.split('T')[0] });
+                    }
+
+                    // Auto-initialize buildings ONLY in NEW mode (not edit mode)
                     if (!isEditMode && (!formData.buildings || formData.buildings.length === 0) && response.data.buildings && response.data.buildings.length > 0) {
                         const initializedBuildings = response.data.buildings.map(building => ({
                             ...building,
@@ -56,17 +66,20 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         fetchAllBuildings();
     }, [selectedContract, getToken]);
 
-    // Set default period (current month) if not set - ONLY in NEW mode
+    // Set default period if not set - ONLY in NEW mode
+    // fromDate: First day of current month (will be updated to previous IPC's toDate in future enhancement)
+    // toDate: Today's date
     useEffect(() => {
         const isEditMode = (formData as any).id && (formData as any).id > 0;
         if (!isEditMode && (!formData.fromDate || !formData.toDate)) {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            // Changed: toDate now defaults to TODAY instead of end of month
+            const today = now;
 
             setFormData({
                 fromDate: firstDay.toISOString().split('T')[0],
-                toDate: lastDay.toISOString().split('T')[0]
+                toDate: today.toISOString().split('T')[0]
             });
         }
     }, [formData.fromDate, formData.toDate, setFormData]);
@@ -82,12 +95,19 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         setFormData({ [field]: value });
     };
 
-    const handleBOQQuantityChange = (buildingId: number, boqId: number, actualQte: number) => {
+    const handleBOQQuantityChange = (buildingId: number, boqId: number, inputValue: number) => {
         const safeBuildings = formData.buildings || [];
         const building = safeBuildings.find(b => b.id === buildingId);
         const boqItem = building?.boqsContract?.find(b => b.id === boqId);
 
         if (!boqItem) return;
+
+        // Convert input based on mode
+        let actualQte = inputValue;
+        if (inputMode === 'percentage') {
+            // Convert percentage to quantity
+            actualQte = (inputValue / 100) * boqItem.qte;
+        }
 
         // Calculate maximum allowed quantity
         const precedQte = boqItem.precedQte || 0;
@@ -99,7 +119,11 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             validatedQte = 0;
         } else if (actualQte > maxAllowedQty) {
             validatedQte = maxAllowedQty;
-            toaster.warning(`Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''}`);
+            const maxPercent = inputMode === 'percentage' ? ((maxAllowedQty / boqItem.qte) * 100).toFixed(2) : '';
+            const warningMsg = inputMode === 'percentage'
+                ? `Maximum for this item is ${maxPercent}% (${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''})`
+                : `Maximum quantity for this item is ${maxAllowedQty.toFixed(2)} ${boqItem.unite || ''}`;
+            toaster.warning(warningMsg);
         }
 
         setFormData({
@@ -355,30 +379,57 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setViewMode("contract")}
-                    className={`btn btn-sm ${viewMode === "contract" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
-                >
-                    Contract BOQ
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setViewMode("vo");
-                        if (safeVOs.length > 0 && !activeVOId) {
-                            setActiveVOId(safeVOs[0].id);
-                            if (safeVOs[0].buildings.length > 0) {
-                                setActiveVOBuildingId(safeVOs[0].buildings[0].id);
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("contract")}
+                        className={`btn btn-sm ${viewMode === "contract" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
+                    >
+                        Contract BOQ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setViewMode("vo");
+                            if (safeVOs.length > 0 && !activeVOId) {
+                                setActiveVOId(safeVOs[0].id);
+                                if (safeVOs[0].buildings.length > 0) {
+                                    setActiveVOBuildingId(safeVOs[0].buildings[0].id);
+                                }
                             }
-                        }
-                    }}
-                    className={`btn btn-sm ${viewMode === "vo" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
-                    disabled={safeVOs.length === 0}
-                >
-                    Variation Orders ({safeVOs.length})
-                </button>
+                        }}
+                        className={`btn btn-sm ${viewMode === "vo" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
+                        disabled={safeVOs.length === 0}
+                    >
+                        Variation Orders ({safeVOs.length})
+                    </button>
+                </div>
+
+                {/* Input Mode Toggle */}
+                <div className="flex items-center gap-2 border-l border-base-300 pl-4">
+                    <span className="text-sm text-base-content/70">Input Mode:</span>
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setInputMode('quantity')}
+                            className={`btn btn-xs ${inputMode === 'quantity' ? 'btn-primary' : 'bg-base-200 text-base-content hover:bg-base-300 border-base-300'}`}
+                            title="Enter actual quantities"
+                        >
+                            <Icon icon={hashIcon} className="size-3" />
+                            <span>Quantity</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setInputMode('percentage')}
+                            className={`btn btn-xs ${inputMode === 'percentage' ? 'btn-primary' : 'bg-base-200 text-base-content hover:bg-base-300 border-base-300'}`}
+                            title="Enter percentages (will convert to quantities)"
+                        >
+                            <Icon icon={percentIcon} className="size-3" />
+                            <span>Percentage</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* BOQ Table - Full Page View (Legacy SAM Pattern) */}

@@ -215,6 +215,9 @@ export interface SaveIPCVM extends IpcDataExtended {
   toDate?: string;
   dateIpc?: string;
 
+  // Previous IPC's toDate for auto-setting fromDate in new IPC
+  previousIpcToDate?: string;
+
   // Additional fields
   advance?: number;
   remarks?: string;
