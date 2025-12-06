@@ -13,6 +13,7 @@ import {
     ParticularConditionVM,
     SubcontractorBoqVM,
 } from "@/types/contracts";
+import { Subcontractor } from "@/types/subcontractor";
 
 export enum ContractType {
     contract = 0,
@@ -376,6 +377,33 @@ export const getContractsByProjectsAndSub = async (
             success: false,
             error: error instanceof Error ? error.message : "Failed to fetch contracts",
             message: "An error occurred while fetching contracts for project and subcontractor",
+        };
+    }
+};
+
+/**
+ * Get subcontractors for a specific project
+ * @param projectId Project ID
+ * @param token Authentication token
+ */
+export const getSubcontractorsByProjectId = async (
+    projectId: number,
+    token: string,
+): Promise<ContractsApiResponse<Subcontractor[]>> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `Subcontractors/GetSubcontractorsByProjectId?projectId=${projectId}`,
+            method: "GET",
+            token,
+        });
+
+        return handleApiResponse<Subcontractor[]>(response);
+    } catch (error) {
+        console.error("Get subcontractors by project ID API Error:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to fetch subcontractors",
+            message: "An error occurred while fetching subcontractors for the project",
         };
     }
 };

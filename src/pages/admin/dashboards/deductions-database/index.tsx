@@ -16,8 +16,24 @@ const DeductionsDatabase = memo(() => {
         // ensuring fresh data is loaded
     }, [location.pathname]);
 
-    const { laborColumns, materialsColumns, machinesColumns, laborData, materialsData, machinesData } =
-        useDeductionsDatabase();
+    const {
+        laborColumns,
+        materialsColumns,
+        machinesColumns,
+        laborData,
+        materialsData,
+        machinesData,
+        loading,
+        projects,
+        selectedProject,
+        setSelectedProject,
+        subcontractors,
+        selectedSubcontractor,
+        setSelectedSubcontractor,
+        contracts,
+        selectedContract,
+        setSelectedContract,
+    } = useDeductionsDatabase();
 
     // Memoize column and data selection to prevent recalculation
     const columns = useMemo(() => {
@@ -73,6 +89,45 @@ const DeductionsDatabase = memo(() => {
                             <span className="iconify lucide--arrow-left size-4"></span>
                             <span>Back</span>
                         </button>
+
+                        <Select
+                            value={selectedProject || ''}
+                            onChange={(e) => setSelectedProject(e.target.value)}
+                            className="select select-bordered select-sm w-full max-w-xs"
+                        >
+                            <SelectOption value="">Select Project</SelectOption>
+                            {projects.map((project) => (
+                                <SelectOption key={project.id} value={project.id}>
+                                    {project.name}
+                                </SelectOption>
+                            ))}
+                        </Select>
+
+                        <Select
+                            value={selectedSubcontractor || ''}
+                            onChange={(e) => setSelectedSubcontractor(e.target.value)}
+                            className="select select-bordered select-sm w-full max-w-xs"
+                        >
+                            <SelectOption value="">Select Subcontractor</SelectOption>
+                            {subcontractors.map((subcontractor) => (
+                                <SelectOption key={subcontractor.id} value={subcontractor.id}>
+                                    {subcontractor.name}
+                                </SelectOption>
+                            ))}
+                        </Select>
+
+                        <Select
+                            value={selectedContract || ''}
+                            onChange={(e) => setSelectedContract(e.target.value)}
+                            className="select select-bordered select-sm w-full max-w-xs"
+                        >
+                            <SelectOption value="">Select Contract</SelectOption>
+                            {contracts.map((contract) => (
+                                <SelectOption key={contract.id} value={contract.id}>
+                                    {contract.name}
+                                </SelectOption>
+                            ))}
+                        </Select>
                     </div>
 
                     {/* Category Selection Cards */}
@@ -126,7 +181,7 @@ const DeductionsDatabase = memo(() => {
                     editAction={false}
                     deleteAction={false}
                     title={activeView}
-                    loading={false}
+                    loading={loading} // Pass the loading state here
                     addBtn={false}
                     onSuccess={handleSuccess}
                 />

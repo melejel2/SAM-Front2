@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -9,7 +9,6 @@ const useSubcontractors = () => {
     const [loading, setLoading] = useState<boolean>(false);
 
     const { getToken } = useAuth();
-
     const token = getToken();
 
     const columns: SubcontractorTableColumns = {
@@ -74,7 +73,7 @@ const useSubcontractors = () => {
         },
     ];
 
-    const getSubcontractors = async () => {
+    const getSubcontractors = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -85,15 +84,18 @@ const useSubcontractors = () => {
             });
             if (data) {
                 setTableData(data);
+                return data;
             } else {
                 setTableData([]);
+                return [];
             }
         } catch (error) {
-            console.error(error);
+            console.error("useSubcontractors: Error during API request:", error);
+            return []; // Return empty array on error
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     return {
         columns,

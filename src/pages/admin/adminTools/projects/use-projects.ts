@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -70,7 +70,7 @@ const useProjects = () => {
         },
     ];
 
-    const getProjects = async () => {
+    const getProjects = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -81,15 +81,18 @@ const useProjects = () => {
             });
             if (data) {
                 setTableData(data);
+                return data;
             } else {
                 setTableData([]);
+                return [];
             }
         } catch (error) {
             console.error(error);
+            return []; // Return empty array on error
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     const uploadBoq = async (projectId: string, file: File) => {
         setUploadLoading(true);
