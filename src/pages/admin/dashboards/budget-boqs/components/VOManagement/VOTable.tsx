@@ -47,7 +47,7 @@ const VOTable: React.FC<VOTableProps> = (props) => {
     }, [vo]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/rules-of-hooks, react-hooks/set-state-in-effect
+         
         if (originalVO && JSON.stringify(editedVO) !== JSON.stringify(originalVO)) {
             setHasUnsavedChanges(true);
         } else {

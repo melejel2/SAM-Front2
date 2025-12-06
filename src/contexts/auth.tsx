@@ -10,7 +10,7 @@ const useHook = () => {
         user: undefined,
     });
 
-    let accessToken: string | null = authState.user?.token ?? null;
+    const accessToken: string | null = authState.user?.token ?? null;
 
     const updateState = (changes: Partial<IAuthState>) => {
         setState((prevState: IAuthState) => ({
@@ -20,7 +20,6 @@ const useHook = () => {
     };
 
     const setLoggedInUser = (user: AuthUser) => {
-        accessToken = user.token;
         updateState({ user });
     };
 
@@ -29,14 +28,13 @@ const useHook = () => {
     }, [accessToken, authState.user]);
 
     const logout = () => {
-        accessToken = null;
         updateState({
             user: undefined,
         });
     };
 
     const roleId = authState.user?.roleid;
-    const getToken = () => accessToken;
+    const getToken = useCallback(() => accessToken, [accessToken]);
 
     return {
         authState,
