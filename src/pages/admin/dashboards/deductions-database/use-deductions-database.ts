@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { getContractsByProjectsAndSub } from '@/api/services/contracts-api';
+import { getContractsByProjectsAndSub, getSubcontractorsByProjectId } from '@/api/services/contracts-api';
 import useSubcontractors from '@/pages/admin/adminTools/subcontractors/use-subcontractors';
 import { useAuth } from '@/contexts/auth';
 import useProjects from '@/pages/admin/adminTools/projects/use-projects';
@@ -57,6 +57,7 @@ const useDeductionsDatabase = () => {
     const [selectedContract, setSelectedContract] = useState<string | null>(null);
 
     const { getToken } = useAuth();
+    const token = getToken();
 
     // Effect to clear data when contract selection changes to null
     useEffect(() => {
@@ -74,11 +75,7 @@ const useDeductionsDatabase = () => {
             try {
                 const fetchedProjects = await getProjects();
                 setProjects(fetchedProjects);
-                if (fetchedProjects && fetchedProjects.length > 0) {
-                    setSelectedProject(fetchedProjects[0].id.toString());
-                } else {
-                    setSelectedProject(null);
-                }
+                setSelectedProject(null);
                 setSelectedSubcontractor(null); // Clear subcontractor selection when project changes
                 setSelectedContract(null); // Clear contract selection when project changes
             } catch (error) {
@@ -88,24 +85,41 @@ const useDeductionsDatabase = () => {
         fetchProjects();
     }, [getProjects]);
 
+    // Fetch Subcontractors
     useEffect(() => {
         const fetchSubcontractorData = async () => {
-            try {
-                const fetchedSubcontractors = await fetchAllSubcontractorsFromHook();
-                setSubcontractors(fetchedSubcontractors);
-                if (fetchedSubcontractors && fetchedSubcontractors.length > 0) {
-                    setSelectedSubcontractor(fetchedSubcontractors[0].id.toString());
-                } else {
+            const token = getToken(); // Get token here as well to be explicit
+            if (token) { // Ensure token is available before fetching
+                try {
+                    let fetchedSubcontractors: any[] = [];
+                    if (selectedProject) {
+                        // If a project is selected, fetch subcontractors for that project
+                        const response = await getSubcontractorsByProjectId(Number(selectedProject), token);
+                        if (response.success && response.data) {
+                            fetchedSubcontractors = response.data;
+                        } else {
+                            console.error("Error fetching subcontractors by project:", response.message);
+                        }
+                    } else {
+                        // If no project is selected, fetch all subcontractors
+                        fetchedSubcontractors = await fetchAllSubcontractorsFromHook();
+                    }
+
+                    setSubcontractors(fetchedSubcontractors);
+                    setSelectedSubcontractor(null);
+                } catch (error) {
+                    console.error("Error fetching subcontractors:", error); // Corrected error message
+                    setSubcontractors([]);
                     setSelectedSubcontractor(null);
                 }
-                setSelectedSubcontractor(null); // Clear subcontractor selection when project changes
-                setSelectedContract(null); // Clear contract selection when project changes
-            } catch (error) {
-                console.error("Error fetching projects:", error);
+            } else {
+                setSubcontractors([]);
+                setSelectedSubcontractor(null);
             }
+            setSelectedContract(null); // Clear contract selection whenever subcontractors are re-fetched
         };
         fetchSubcontractorData();
-    }, [fetchAllSubcontractorsFromHook]);
+    }, [token, fetchAllSubcontractorsFromHook, getToken]); // Added getToken and getSubcontractorsByProjectId to dependency array
 
     // Fetch Contracts based on selected Project and Subcontractor
     useEffect(() => {

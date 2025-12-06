@@ -124,7 +124,7 @@ const DeductionsDatabase = memo(() => {
                             <SelectOption value="">Select Contract</SelectOption>
                             {contracts.map((contract) => (
                                 <SelectOption key={contract.id} value={contract.id}>
-                                    {contract.name}
+                                    {contract.contractNumber}
                                 </SelectOption>
                             ))}
                         </Select>
