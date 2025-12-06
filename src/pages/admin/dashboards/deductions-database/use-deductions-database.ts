@@ -3,6 +3,7 @@ import { getContractsByProjectsAndSub, getSubcontractorsByProjectId } from '@/ap
 import useSubcontractors from '@/pages/admin/adminTools/subcontractors/use-subcontractors';
 import { useAuth } from '@/contexts/auth';
 import useProjects from '@/pages/admin/adminTools/projects/use-projects';
+import { fetchLabors, fetchMaterials, fetchMachines, fetchContracts as fetchAllContracts } from '../../../../api/services/deductionsApi';
 
 // Move static column definitions outside hook to prevent recreation
 const LABOR_COLUMNS = {
@@ -16,24 +17,24 @@ const LABOR_COLUMNS = {
 };
 
 const MATERIALS_COLUMNS = {
-    ref_nb: "REF #",
-    item: "Item",
+    bc: "REF #",
+    designation: "Item",
     unit: "Unit",
-    unit_price: "Unit Price",
-    allocated_qty: "Allocated Quantity",
-    transferred_qty: "Transferred Quantity",
-    transferred_to: "Transferred to",
-    stock_qty: "Stock Quantity",
+    sale_unit: "Unit Price",
+    allocated: "Allocated Quantity",
+    transfered_qte: "Transferred Quantity",
+    transfered_to: "Transferred to",
+    stock_qte: "Stock Quantity",
     remark: "Remarks",
 };
 
 const MACHINES_COLUMNS = {
-    ref_nb: "REF #",
-    machine_code: "Machine Code",
-    type_of_machine: "Type of Machine",
+    ref: "REF #",
+    machine_acronym: "Machine Code",
+    machine_type: "Type of Machine",
     unit: "unit",
     unit_price: "Unit Price",
-    qty: "Quantity",
+    quantity: "Quantity",
     amount: "Amount",
 };
 
@@ -59,16 +60,35 @@ const useDeductionsDatabase = () => {
     const { getToken } = useAuth();
     const token = getToken();
 
-    // Effect to clear data when contract selection changes to null
+    const fetchDeductionsData = useCallback(async (contractDataSetId: number) => {
+        setLoading(true);
+        try {
+            const [labors, materials, machines] = await Promise.all([
+                fetchLabors(contractDataSetId, token),
+                fetchMaterials(contractDataSetId, token),
+                fetchMachines(contractDataSetId, token),
+            ]);
+            setLaborData(labors);
+            setMaterialsData(materials);
+            setMachinesData(machines);
+        } catch (error) {
+            console.error("Failed to fetch deductions data:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Effect to clear data when contract selection changes to null or fetch data when a contract is selected
     useEffect(() => {
         if (selectedContract === null) {
             setLaborData([]);
             setMaterialsData([]);
             setMachinesData([]);
-            setLoading(false); // Dismiss loader when no contract is selected
+            setLoading(false);
+        } else {
+            fetchDeductionsData(Number(selectedContract));
         }
-        // When selectedContract is not null, this is where actual data fetching for tables would occur
-    }, [selectedContract]);
+    }, [selectedContract, fetchDeductionsData]);
 
     useEffect(() => {
         const fetchProjects = async () => {
