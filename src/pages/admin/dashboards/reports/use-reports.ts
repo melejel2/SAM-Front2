@@ -1,12 +1,21 @@
 import { useMemo } from 'react';
 
-const useReports = ({ projects }) => {
+interface Project {
+    id: number;
+    name: string;
+}
+
+interface UseReportsProps {
+    projects: Project[];
+}
+
+const useReports = ({ projects }: UseReportsProps) => {
     const columns = useMemo(() => ({
         name: "Project Name",
     }), []);
 
     const tableData = useMemo(() => (
-        (projects ?? []).map(p => ({ id: p.id, name: p.name }))
+        (projects ?? []).map((p: Project) => ({ id: p.id, name: p.name }))
     ), [projects]);
 
     return {

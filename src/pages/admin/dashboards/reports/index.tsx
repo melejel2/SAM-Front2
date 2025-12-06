@@ -9,20 +9,27 @@ const columns = {
   name: "Project Name",
 };
 
+interface Project {
+  id: number;
+  code: string;
+  name: string;
+}
+
 const Reports = () => {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
-  const [exportingRowId, setExportingRowId] = useState(null);
+  const [exportingRowId, setExportingRowId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { getToken } = useAuth();
 
   const getProjectsList = useCallback(async () => {
     setLoading(true);
     try {
+      const token = getToken();
       const data = await apiRequest({
         endpoint: "Project/GetProjectsList",
         method: "GET",
-        token: getToken(),
+        token: token || undefined,
       });
       setProjects(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -40,16 +47,18 @@ const Reports = () => {
     navigate("/dashboard");
   }, [navigate]);
 
-  const handleExport = async (project) => {
-    setExportingRowId(project.id);
+  const handleExport = async (project: Project) => {
+    setExportingRowId(String(project.id));
     try {
       const token = getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       const res = await fetch(`https://localhost:7055/api/Reports/ExportKPIReport?projectId=${project.id}`, {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          Authorization: token ? `Bearer ${token}` : undefined
-        }
+        headers
       });
       if (!res.ok) throw new Error('Failed to export');
       const blob = await res.blob();
@@ -64,7 +73,7 @@ const Reports = () => {
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
+      link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert("Export failed");
@@ -98,6 +107,7 @@ const Reports = () => {
             if (type === 'Export') handleExport(row);
           }}
           exportAction={true}
+          onSuccess={() => {}}
         />
       </div>
     </div>
