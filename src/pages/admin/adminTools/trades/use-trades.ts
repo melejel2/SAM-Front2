@@ -10,8 +10,6 @@ const useTrades = () => {
 
     const { getToken } = useAuth();
 
-    const token = getToken();
-
     const columns = {
         name: "EN",
         nameFr: "FR",
@@ -42,6 +40,7 @@ const useTrades = () => {
 
     const getTrades = useCallback(async () => {
         setLoading(true);
+        const token = getToken();
 
         try {
             const data = await apiRequest({ endpoint: "Sheets/GetSheets", method: "GET", token: token ?? "" });
@@ -57,7 +56,7 @@ const useTrades = () => {
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [getToken]);
 
     return {
         columns,
