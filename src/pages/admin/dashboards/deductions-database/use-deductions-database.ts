@@ -56,7 +56,7 @@ const useDeductionsDatabase = () => {
     const [contracts, setContracts] = useState<any[]>([]);
     const [selectedContract, setSelectedContract] = useState<string | null>(null);
 
-    const { token } = useAuth();
+    const { getToken } = useAuth();
 
     // Effect to clear data when contract selection changes to null
     useEffect(() => {
@@ -88,37 +88,30 @@ const useDeductionsDatabase = () => {
         fetchProjects();
     }, [getProjects]);
 
-    // Fetch Subcontractors
     useEffect(() => {
         const fetchSubcontractorData = async () => {
-            if (token) { // Ensure token is available before fetching
-                try {
-                    const fetchedSubcontractors = await fetchAllSubcontractorsFromHook();
-                    console.log("useDeductionsDatabase: Data received from fetchAllSubcontractorsFromHook:", fetchedSubcontractors);
-                    // No project-based filtering is done here as the hook provides all subcontractors
-                    setSubcontractors(fetchedSubcontractors);
-                    if (fetchedSubcontractors.length > 0) {
-                        setSelectedSubcontractor(fetchedSubcontractors[0].id.toString());
-                    } else {
-                        setSelectedSubcontractor(null);
-                    }
-                } catch (error) {
-                    console.error("Error fetching subcontractors:", error);
-                    setSubcontractors([]);
+            try {
+                const fetchedSubcontractors = await fetchAllSubcontractorsFromHook();
+                setSubcontractors(fetchedSubcontractors);
+                if (fetchedSubcontractors && fetchedSubcontractors.length > 0) {
+                    setSelectedSubcontractor(fetchedSubcontractors[0].id.toString());
+                } else {
                     setSelectedSubcontractor(null);
                 }
-            } else {
-                setSubcontractors([]);
-                setSelectedSubcontractor(null);
+                setSelectedSubcontractor(null); // Clear subcontractor selection when project changes
+                setSelectedContract(null); // Clear contract selection when project changes
+            } catch (error) {
+                console.error("Error fetching projects:", error);
             }
-            setSelectedContract(null); // Clear contract selection whenever subcontractors are re-fetched
         };
         fetchSubcontractorData();
-    }, [token, fetchAllSubcontractorsFromHook]); // Removed selectedProject from dependency as it's not directly used for filtering here
+    }, [fetchAllSubcontractorsFromHook]);
 
     // Fetch Contracts based on selected Project and Subcontractor
     useEffect(() => {
         const fetchContracts = async () => {
+            console.log("Fetching contracts for Project:", selectedProject, "Subcontractor:", selectedSubcontractor);
+            const token = getToken();
             if (selectedProject && selectedSubcontractor && token) {
                 try {
                     const response = await getContractsByProjectsAndSub(
@@ -128,11 +121,7 @@ const useDeductionsDatabase = () => {
                     );
                     if (response.success && response.data) {
                         setContracts(response.data);
-                        if (response.data.length > 0) {
-                            setSelectedContract(response.data[0].id); // Select first contract by default
-                        } else {
-                            setSelectedContract(null);
-                        }
+                        setSelectedContract(null);
                     } else {
                         console.error("Error fetching contracts:", response.message);
                         setContracts([]);
@@ -149,7 +138,7 @@ const useDeductionsDatabase = () => {
             }
         };
         fetchContracts();
-    }, [selectedProject, selectedSubcontractor, token]);
+    }, [selectedProject, selectedSubcontractor, getToken]);
 
 
 
