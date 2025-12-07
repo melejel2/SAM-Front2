@@ -5,29 +5,26 @@ import { useAuth } from "@/contexts/auth";
 
 // Static column definitions for Manager Data
 const LABOR_COLUMNS_MANAGER = {
-    type_of_worker: "Labor Type",
+    laborType: "Labor Type",
     unit: "Unit",
-    unit_price: "Unit Price",
+    unitPrice: "Unit Price",
 };
 
 const MATERIALS_COLUMNS_MANAGER = {
-    bc: "REF #",
-    designation: "Item",
+    poRef: "REF #",
+    item: "Item",
     unit: "Unit",
-    sale_unit: "Unit Price",
-    allocated: "Allocated Quantity",
-    transfered_qte: "Transferred Quantity",
-    transfered_to: "Transferred to",
-    stock_qte: "Stock Quantity",
-    remark: "Remarks",
+    unitPrice: "Unit Price",
+    orderdQte: "Orderd Qte",
+    deliveredQte: "Delivered Qte",
 };
 
 const MACHINES_COLUMNS_MANAGER = {
     ref: "REF #",
-    machine_acronym: "Machine Code",
-    machine_type: "Type of Machine",
+    machineAcronym: "Machine Code",
+    machineType: "Type of Machine",
     unit: "unit",
-    unit_price: "Unit Price",
+    unitPrice: "Unit Price",
     quantity: "Quantity",
     amount: "Amount",
 };
