@@ -49,13 +49,13 @@ const useDeductionsDatabase = () => {
 
     // State for dropdowns
     const [projects, setProjects] = useState<any[]>([]);
-    const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [selectedProject, setSelectedProject] = useState<string>("");
 
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
-    const [selectedSubcontractor, setSelectedSubcontractor] = useState<string | null>(null);
+    const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>("");
 
     const [contracts, setContracts] = useState<any[]>([]);
-    const [selectedContract, setSelectedContract] = useState<string | null>(null);
+    const [selectedContract, setSelectedContract] = useState<string>("");
 
     const { getToken } = useAuth();
     const token = getToken();
@@ -63,14 +63,32 @@ const useDeductionsDatabase = () => {
     const fetchDeductionsData = useCallback(async (contractDataSetId: number) => {
         setLoading(true);
         try {
-            const [labors, materials, machines] = await Promise.all([
+            const [laborsResult, materialsResult, machinesResult] = await Promise.all([
                 fetchLabors(contractDataSetId, token),
                 fetchMaterials(contractDataSetId, token),
                 fetchMachines(contractDataSetId, token),
             ]);
-            setLaborData(labors);
-            setMaterialsData(materials);
-            setMachinesData(machines);
+
+            if ('success' in laborsResult && !laborsResult.success) {
+                console.error("Failed to fetch labors:", laborsResult.message);
+                setLaborData([]);
+            } else {
+                setLaborData(laborsResult);
+            }
+
+            if ('success' in materialsResult && !materialsResult.success) {
+                console.error("Failed to fetch materials:", materialsResult.message);
+                setMaterialsData([]);
+            } else {
+                setMaterialsData(materialsResult);
+            }
+
+            if ('success' in machinesResult && !machinesResult.success) {
+                console.error("Failed to fetch machines:", machinesResult.message);
+                setMachinesData([]);
+            } else {
+                setMachinesData(machinesResult);
+            }
         } catch (error) {
             console.error("Failed to fetch deductions data:", error);
         } finally {
@@ -95,9 +113,9 @@ const useDeductionsDatabase = () => {
             try {
                 const fetchedProjects = await getProjects();
                 setProjects(fetchedProjects);
-                setSelectedProject(null);
-                setSelectedSubcontractor(null); // Clear subcontractor selection when project changes
-                setSelectedContract(null); // Clear contract selection when project changes
+                setSelectedProject("");
+                setSelectedSubcontractor(""); // Clear subcontractor selection when project changes
+                setSelectedContract(""); // Clear contract selection when project changes
             } catch (error) {
                 console.error("Error fetching projects:", error);
             }
@@ -126,15 +144,15 @@ const useDeductionsDatabase = () => {
                     }
 
                     setSubcontractors(fetchedSubcontractors);
-                    setSelectedSubcontractor(null);
+                    setSelectedSubcontractor("");
                 } catch (error) {
                     console.error("Error fetching subcontractors:", error); // Corrected error message
                     setSubcontractors([]);
-                    setSelectedSubcontractor(null);
+                    setSelectedSubcontractor("");
                 }
             } else {
                 setSubcontractors([]);
-                setSelectedSubcontractor(null);
+                setSelectedSubcontractor("");
             }
             setSelectedContract(null); // Clear contract selection whenever subcontractors are re-fetched
         };
@@ -155,20 +173,20 @@ const useDeductionsDatabase = () => {
                     );
                     if (response.success && response.data) {
                         setContracts(response.data);
-                        setSelectedContract(null);
+                        setSelectedContract("");
                     } else {
                         console.error("Error fetching contracts:", response.message);
                         setContracts([]);
-                        setSelectedContract(null);
+                        setSelectedContract("");
                     }
                 } catch (error) {
                     console.error("Error fetching contracts:", error);
                     setContracts([]);
-                    setSelectedContract(null);
+                    setSelectedContract("");
                 }
             } else {
                 setContracts([]);
-                setSelectedContract(null);
+                setSelectedContract("");
             }
         };
         fetchContracts();

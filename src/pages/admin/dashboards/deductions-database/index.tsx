@@ -2,12 +2,16 @@ import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
-import { Button, Select, SelectOption } from "@/components/daisyui";
+import { Button, Select, SelectOption, Modal, ModalHeader, ModalBody, ModalActions } from "@/components/daisyui";
 
 import useDeductionsDatabase from "./use-deductions-database";
+import useDeductionsManager from "./use-deductions-manager";
 
 const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalView, setModalView] = useState<"Labor" | "Materials" | "Machines">("Labor");
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -35,6 +39,16 @@ const DeductionsDatabase = memo(() => {
         setSelectedContract,
     } = useDeductionsDatabase();
 
+    const {
+        managerLoading,
+        managerLaborData,
+        managerMaterialsData,
+        managerMachinesData,
+        managerLaborColumns,
+        managerMaterialsColumns,
+        managerMachinesColumns,
+    } = useDeductionsManager(isModalOpen);
+
     // Memoize column and data selection to prevent recalculation
     const columns = useMemo(() => {
         switch (activeView) {
@@ -57,6 +71,28 @@ const DeductionsDatabase = memo(() => {
                 return laborData;
         }
     }, [activeView, materialsData, machinesData, laborData]);
+
+    const modalColumns = useMemo(() => {
+        switch (modalView) {
+            case "Materials":
+                return managerMaterialsColumns;
+            case "Machines":
+                return managerMachinesColumns;
+            default:
+                return managerLaborColumns;
+        }
+    }, [modalView, managerLaborColumns, managerMaterialsColumns, managerMachinesColumns]);
+
+    const modalTableData = useMemo(() => {
+        switch (modalView) {
+            case "Materials":
+                return managerMaterialsData;
+            case "Machines":
+                return managerMachinesData;
+            default:
+                return managerLaborData;
+        }
+    }, [modalView, managerLaborData, managerMaterialsData, managerMachinesData]);
 
     const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
@@ -128,6 +164,12 @@ const DeductionsDatabase = memo(() => {
                                 </SelectOption>
                             ))}
                         </Select>
+                        <Button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => setIsModalOpen(true)}
+                        >
+                            DataBase
+                        </Button>
                     </div>
 
                     {/* Category Selection Cards */}
@@ -186,6 +228,52 @@ const DeductionsDatabase = memo(() => {
                     onSuccess={handleSuccess}
                 />
             </div>
+
+            <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} className="w-11/12 max-w-5xl">
+                <ModalHeader>Deductions Database</ModalHeader>
+                <ModalBody>
+                    <div role="tablist" className="tabs tabs-lifted">
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === 'Labor' ? 'tab-active' : ''}`}
+                            onClick={() => setModalView('Labor')}
+                        >
+                            Labor
+                        </button>
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === 'Materials' ? 'tab-active' : ''}`}
+                            onClick={() => setModalView('Materials')}
+                        >
+                            Materials
+                        </button>
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === 'Machines' ? 'tab-active' : ''}`}
+                            onClick={() => setModalView('Machines')}
+                        >
+                            Machines
+                        </button>
+                    </div>
+                    <div className="mt-4">
+                        <SAMTable
+                            columns={modalColumns}
+                            tableData={modalTableData}
+                            inputFields={[]}
+                            actions={false}
+                            editAction={false}
+                            deleteAction={false}
+                            title={modalView}
+                            loading={managerLoading}
+                            addBtn={false}
+                            onSuccess={handleSuccess}
+                        />
+                    </div>
+                </ModalBody>
+                <ModalActions>
+                    <Button onClick={() => setIsModalOpen(false)}>Close</Button>
+                </ModalActions>
+            </Modal>
         </div>
     );
 });

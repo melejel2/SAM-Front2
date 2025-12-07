@@ -1,5 +1,12 @@
 import apiRequest from "../api";
 
+type ApiErrorResponse = {
+    isSuccess: false;
+    success: false;
+    message: string;
+    status?: number;
+};
+
 interface Labor {
     id: number;
     ref_nb: string;
@@ -36,7 +43,7 @@ interface Machine {
     amount: number;
 }
 
-export const fetchLabors = async (contractDataSetId: number, token: string): Promise<Labor[]> => {
+export const fetchLabors = async (contractDataSetId: number, token: string): Promise<Labor[] | ApiErrorResponse> => {
     return apiRequest<Labor[]>({
         endpoint: `Deductions/GetLaborsList/${contractDataSetId}`,
         method: "GET",
@@ -44,7 +51,7 @@ export const fetchLabors = async (contractDataSetId: number, token: string): Pro
     });
 };
 
-export const fetchMaterials = async (contractDataSetId: number, token: string): Promise<Material[]> => {
+export const fetchMaterials = async (contractDataSetId: number, token: string): Promise<Material[] | ApiErrorResponse> => {
     return apiRequest<Material[]>({
         endpoint: `Deductions/GetVentesList/${contractDataSetId}`,
         method: "GET",
@@ -52,7 +59,7 @@ export const fetchMaterials = async (contractDataSetId: number, token: string): 
     });
 };
 
-export const fetchMachines = async (contractDataSetId: number, token: string): Promise<Machine[]> => {
+export const fetchMachines = async (contractDataSetId: number, token: string): Promise<Machine[] | ApiErrorResponse> => {
     return apiRequest<Machine[]>({
         endpoint: `Deductions/GetMachinesList/${contractDataSetId}`,
         method: "GET",
@@ -69,4 +76,28 @@ export const fetchContracts = async (token: string): Promise<any[]> => {
         { id: 2, name: "Contract B", contractNumber: "C-002" },
         { id: 3, name: "Contract C", contractNumber: "C-003" },
     ];
+};
+
+export const fetchManagerLabors = async (token: string): Promise<Labor[] | ApiErrorResponse> => {
+    return apiRequest<Labor[]>({
+        endpoint: `DeductionsManager/labors`,
+        method: "GET",
+        token: token,
+    });
+};
+
+export const fetchManagerMaterials = async (token: string): Promise<Material[] | ApiErrorResponse> => {
+    return apiRequest<Material[]>({
+        endpoint: `DeductionsManager/poe`,
+        method: "GET",
+        token: token,
+    });
+};
+
+export const fetchManagerMachines = async (token: string): Promise<Machine[] | ApiErrorResponse> => {
+    return apiRequest<Machine[]>({
+        endpoint: `DeductionsManager/machines`,
+        method: "GET",
+        token: token,
+    });
 };
