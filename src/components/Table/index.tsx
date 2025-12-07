@@ -64,6 +64,7 @@ interface SAMTableProps {
     // Added for VO editing
     contractIdentifier?: string; // Identifier for navigation
     contractId?: string; // Actual contract ID
+    isNested?: boolean;
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -104,7 +105,8 @@ const SAMTable: React.FC<SAMTableProps> = ({
     inlineEditable = false,
     onInlineEdit,
     contractIdentifier,
-    contractId
+    contractId,
+    isNested,
 }) => {
     return (
         <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
@@ -153,6 +155,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onInlineEdit={onInlineEdit}
                             contractIdentifier={contractIdentifier}
                             contractId={contractId}
+                            isNested={isNested}
                         />
                     </div>
 

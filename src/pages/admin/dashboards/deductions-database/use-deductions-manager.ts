@@ -79,6 +79,7 @@ const useDeductionsManager = (isOpen: boolean) => {
         managerLaborColumns: LABOR_COLUMNS_MANAGER,
         managerMaterialsColumns: MATERIALS_COLUMNS_MANAGER,
         managerMachinesColumns: MACHINES_COLUMNS_MANAGER,
+        fetchManagerData, // Expose fetchManagerData
     };
 };
 

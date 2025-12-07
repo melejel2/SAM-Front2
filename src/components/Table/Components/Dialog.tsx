@@ -40,6 +40,7 @@ interface DialogProps {
     deleteEndPoint?: string;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
+    isNested?: boolean;
 }
 
 const DialogComponent: React.FC<DialogProps> = ({
@@ -59,6 +60,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     deleteEndPoint,
     onItemUpdate,
     onItemDelete,
+    isNested, // Destructure new prop
 }) => {
     // Initialize form data based on inputFields and current data
     const [formData, setFormData] = useState<Record<string, any>>(() => {
@@ -157,14 +159,13 @@ const DialogComponent: React.FC<DialogProps> = ({
                     if (response.isSuccess) {
                         toaster.success("Updated successfully.");
                         onSuccess();
-                    } else {
+                    }
+                    else {
                         toaster.error(response.message || "Failed to update record");
                     }
-                } catch (error: any) {
-                    console.error("Update error:", error);
-                    toaster.error(error.message || "Failed to update record");
                 } finally {
                     setIsLoading(false);
+                    handleHide();
                 }
             } else if (dialogType === "Add") {
                 try {
@@ -186,6 +187,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     toaster.error(error.message || "Failed to create record");
                 } finally {
                     setIsLoading(false);
+                    handleHide();
                 }
             } else if (dialogType === "Preview") {
                 // Preview mode - no action needed
@@ -506,7 +508,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                     <div className="form-control w-full" key={name}>
                         <label className="label">
                             <span className="label-text text-sm font-normal opacity-70">
-                                {label.charAt(0).toUpperCase() + label.slice(1)}
+                                {label ? label.charAt(0).toUpperCase() + label.slice(1) : ''}
                                 {required && <span className="text-error ml-1">*</span>}
                             </span>
                         </label>
@@ -514,7 +516,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                             type={type}
                             name={name}
                             value={formData[name]}
-                            placeholder={`Enter ${label.toLowerCase()}`}
+                            placeholder={`Enter ${(label || '').toLowerCase()}`}
                             required={required}
                             onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
                             className="input input-sm input-bordered w-full focus:input-primary"
@@ -525,20 +527,124 @@ const DialogComponent: React.FC<DialogProps> = ({
         }
     };
 
-    return (
-        <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
-            <div
-                className={cn("modal-box relative", {
-                    "max-w-7xl": dialogType === "Preview" || dialogType === "Approve",
-                    "max-w-5xl": dialogType === "Select",
-                    "max-w-xl": dialogType === "Delete",
-                })}>
-                <CloseBtn handleClose={handleClose} />
-                <h3 className="text-lg font-bold">{dialogType === "Delete" ? `Delete ${title}` : title}</h3>
+    const dialogContent = (
+        <div
+            className={cn("modal-box relative", {
+                "max-w-7xl": dialogType === "Preview" || dialogType === "Approve",
+                "max-w-5xl": dialogType === "Select",
+                "max-w-xl": dialogType === "Delete",
+            })}>
+            <CloseBtn handleClose={handleClose} />
+            <h3 className="text-lg font-bold">{dialogType === "Delete" ? `Delete ${title}` : title}</h3>
 
-                {dialogType === "Confirm" ? (
-                    <div>
-                        <p>{confirmMsg}</p>
+            {dialogType === "Confirm" ? (
+                <div>
+                    <p>{confirmMsg}</p>
+                    <div className="flex items-center justify-end space-x-4">
+                        <Button
+                            color="success"
+                            size="sm"
+                            type="button"
+                            disabled={isLoading}
+                            loading={isLoading}
+                            onClick={handleConfirm}>
+                            Confirm
+                        </Button>
+                        <Button
+                            color="error"
+                            size="sm"
+                            type="button"
+                            disabled={isLoading}
+                            loading={isLoading}
+                            onClick={handleClose}>
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            ) : dialogType === "Delete" ? (
+                <div className="space-y-4">
+                    <p className="pt-2">This action cannot be undone!</p>
+                    <div className="bg-warning/10 border border-warning rounded p-3 mb-4">
+                        <p className="text-sm text-warning font-medium">
+                            ⚠️ Before deleting, please note: If this {title.toLowerCase().includes('budget') ? 'Budget BOQ' : 'item'} has any active contracts, IPCs, or variation orders linked to it, the deletion will be blocked with a specific error message.
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-end space-x-4">
+                        <Button
+                            size="sm"
+                            type="button"
+                            disabled={isLoading}
+                            loading={isLoading}
+                            onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button
+                            color="error"
+                            size="sm"
+                            type="button"
+                            disabled={isLoading}
+                            loading={isLoading}
+                            onClick={handleDelete}>
+                            Delete
+                        </Button>
+                    </div>
+                </div>
+            ) : dialogType === "Preview" ? (
+                <form onSubmit={handleSubmit}>
+                    <SAMTable
+                        columns={previewColumns ?? {}}
+                        tableData={data ?? []}
+                        title={"Request Details"}
+                        onSuccess={() => {}}
+                        isNested={true} // Add this for nested SAMTable
+                    />
+
+                    <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
+                        Export
+                    </Button>
+                </form>
+            ) : dialogType === "Select" ? (
+                <SAMTable
+                    columns={previewColumns ?? {}}
+                    tableData={data ?? []}
+                    title={"Cost Code"}
+                    select
+                    onRowSelect={handleRowSelect}
+                    onSuccess={() => {}}
+                    isNested={true} // Add this for nested SAMTable
+                />
+            ) : dialogType === "Approve" ? (
+                <div className="space-y-5">
+                    <SAMTable
+                        columns={previewColumns ?? {}}
+                        tableData={data ?? []}
+                        title={"Request Details"}
+                        onSuccess={() => {}}
+                        isNested={true} // Add this for nested SAMTable
+                    />
+                    {showRejectionNote && (
+                        <>
+                            <label className="input input-sm input-bordered flex flex-col items-center gap-2 sm:flex-row">
+                                <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
+                                    Rejection Note
+                                </span>
+                                <input
+                                    type="text"
+                                    className="grow"
+                                    value={rejectionNote}
+                                    required={false}
+                                    onChange={(e) => setRejectionNote(e.target.value)}
+                                />
+                            </label>
+
+                            {showRejectionNote && rejectionNote === "" && (
+                                <span className="label-text-alt text-error !-mt-2 text-sm">
+                                    Enter the rejection reason
+                                </span>
+                            )}
+                        </>
+                    )}
+                    <div className="text-right">
                         <div className="flex items-center justify-end space-x-4">
                             <Button
                                 color="success"
@@ -546,143 +652,46 @@ const DialogComponent: React.FC<DialogProps> = ({
                                 type="button"
                                 disabled={isLoading}
                                 loading={isLoading}
-                                onClick={handleConfirm}>
-                                Confirm
+                                onClick={handleApprove}>
+                                Approve
                             </Button>
                             <Button
-                                color="error"
+                                className="disabled:bg-error/30"
                                 size="sm"
                                 type="button"
-                                disabled={isLoading}
+                                color="error"
+                                disabled={isLoading || (showRejectionNote && rejectionNote === "")}
                                 loading={isLoading}
-                                onClick={handleClose}>
-                                Cancel
+                                onClick={handleReject}>
+                                Reject
                             </Button>
                         </div>
                     </div>
-                ) : dialogType === "Delete" ? (
+                </div>
+            ) : (
+                <form onSubmit={handleSubmit} className="py-4">
                     <div className="space-y-4">
-                        <p className="pt-2">This action cannot be undone!</p>
-                        <div className="bg-warning/10 border border-warning rounded p-3 mb-4">
-                            <p className="text-sm text-warning font-medium">
-                                ⚠️ Before deleting, please note: If this {title.toLowerCase().includes('budget') ? 'Budget BOQ' : 'item'} has any active contracts, IPCs, or variation orders linked to it, the deletion will be blocked with a specific error message.
-                            </p>
-                        </div>
-                        <div className="flex items-center justify-end space-x-4">
-                            <Button
-                                size="sm"
-                                type="button"
-                                disabled={isLoading}
-                                loading={isLoading}
-                                onClick={handleClose}>
-                                Cancel
-                            </Button>
-                            <Button
-                                color="error"
-                                size="sm"
-                                type="button"
-                                disabled={isLoading}
-                                loading={isLoading}
-                                onClick={handleDelete}>
-                                Delete
-                            </Button>
-                        </div>
-                    </div>
-                ) : dialogType === "Preview" ? (
-                    <form onSubmit={handleSubmit}>
-                        <SAMTable
-                            columns={previewColumns ?? {}}
-                            tableData={data ?? []}
-                            title={"Request Details"}
-                            onSuccess={() => {}}
-                        />
+                        {inputFields?.map((field) => <div key={field.name}>{renderInput(field)}</div>)}
 
-                        <Button className="w-full" size="sm" type="submit" disabled={isLoading} loading={isLoading}>
-                            Export
-                        </Button>
-                    </form>
-                ) : dialogType === "Select" ? (
-                    <SAMTable
-                        columns={previewColumns ?? {}}
-                        tableData={data ?? []}
-                        title={"Cost Code"}
-                        select
-                        onRowSelect={handleRowSelect}
-                        onSuccess={() => {}}
-                    />
-                ) : dialogType === "Approve" ? (
-                    <div className="space-y-5">
-                        <SAMTable
-                            columns={previewColumns ?? {}}
-                            tableData={data ?? []}
-                            title={"Request Details"}
-                            onSuccess={() => {}}
-                        />
-                        {showRejectionNote && (
-                            <>
-                                <label className="input input-sm input-bordered flex flex-col items-center gap-2 sm:flex-row">
-                                    <span className="min-w-16 text-sm font-normal opacity-45 md:w-28">
-                                        Rejection Note
-                                    </span>
-                                    <input
-                                        type="text"
-                                        className="grow"
-                                        value={rejectionNote}
-                                        required={false}
-                                        onChange={(e) => setRejectionNote(e.target.value)}
-                                    />
-                                </label>
-
-                                {showRejectionNote && rejectionNote === "" && (
-                                    <span className="label-text-alt text-error !-mt-2 text-sm">
-                                        Enter the rejection reason
-                                    </span>
-                                )}
-                            </>
+                        {(dialogType === "Add" || dialogType === "Edit") && (
+                            <Button
+                                className="mt-2 w-full"
+                                size="sm"
+                                type="submit"
+                                disabled={isLoading}
+                                loading={isLoading}>
+                                {dialogType === "Add" ? "Add" : "Save"}
+                            </Button>
                         )}
-                        <div className="text-right">
-                            <div className="flex items-center justify-end space-x-4">
-                                <Button
-                                    color="success"
-                                    size="sm"
-                                    type="button"
-                                    disabled={isLoading}
-                                    loading={isLoading}
-                                    onClick={handleApprove}>
-                                    Approve
-                                </Button>
-                                <Button
-                                    className="disabled:bg-error/30"
-                                    size="sm"
-                                    type="button"
-                                    color="error"
-                                    disabled={isLoading || (showRejectionNote && rejectionNote === "")}
-                                    loading={isLoading}
-                                    onClick={handleReject}>
-                                    Reject
-                                </Button>
-                            </div>
-                        </div>
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="py-4">
-                        <div className="space-y-4">
-                            {inputFields?.map((field) => <div key={field.name}>{renderInput(field)}</div>)}
+                </form>
+            )}
+        </div>
+    );
 
-                            {(dialogType === "Add" || dialogType === "Edit") && (
-                                <Button
-                                    className="mt-2 w-full"
-                                    size="sm"
-                                    type="submit"
-                                    disabled={isLoading}
-                                    loading={isLoading}>
-                                    {dialogType === "Add" ? "Add" : "Save"}
-                                </Button>
-                            )}
-                        </div>
-                    </form>
-                )}
-            </div>
+    return (
+        <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
+            {dialogContent}
         </dialog>
     );
 };

@@ -114,3 +114,35 @@ export const fetchManagerMachines = async (token: string): Promise<Machine[] | A
         token: token,
     });
 };
+
+export const addManagerLabor = async (
+    laborData: Omit<LaborDataBase, "id">,
+    token: string,
+): Promise<LaborDataBase | ApiErrorResponse> => {
+    return apiRequest<LaborDataBase>({
+        endpoint: `DeductionsManager/labors`,
+        method: "POST",
+        token: token,
+        data: laborData,
+    });
+};
+
+export const updateManagerLabor = async (
+    laborData: LaborDataBase,
+    token: string,
+): Promise<LaborDataBase | ApiErrorResponse> => {
+    return apiRequest<LaborDataBase>({
+        endpoint: `DeductionsManager/labors`,
+        method: "POST",
+        token: token,
+        data: laborData,
+    });
+};
+
+export const deleteManagerLabor = async (id: number, token: string): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `DeductionsManager/labors/${id}`,
+        method: "DELETE",
+        token: token,
+    });
+};
