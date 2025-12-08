@@ -296,23 +296,6 @@ const DeductionsDatabase = memo(() => {
                             editAction={true}
                             deleteAction={true}
                             addBtn={true}
-                            onAdd={
-                                modalView === "Labor" ? addLabor : modalView === "Materials" ? addMaterial : addMachine
-                            }
-                            onEdit={
-                                modalView === "Labor"
-                                    ? saveLabor
-                                    : modalView === "Materials"
-                                      ? saveMaterial
-                                      : saveMachine
-                            }
-                            onDelete={
-                                modalView === "Labor"
-                                    ? deleteLabor
-                                    : modalView === "Materials"
-                                      ? deleteMaterial
-                                      : deleteMachine
-                            }
                             createEndPoint={
                                 modalView === "Labor"
                                     ? "DeductionsManager/labors"
