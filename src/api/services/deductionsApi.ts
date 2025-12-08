@@ -25,6 +25,14 @@ interface LaborDataBase {
     unitPrice: number;
 }
 
+interface MachineDataBase {
+    id: number;
+    acronym: string;
+    type: string;
+    unit: string;
+    unitPrice: number;
+}
+
 interface Material {
     id: number;
     bc: string;
@@ -107,8 +115,8 @@ export const fetchManagerMaterials = async (token: string): Promise<Material[] |
     });
 };
 
-export const fetchManagerMachines = async (token: string): Promise<Machine[] | ApiErrorResponse> => {
-    return apiRequest<Machine[]>({
+export const fetchManagerMachines = async (token: string): Promise<MachineDataBase[] | ApiErrorResponse> => {
+    return apiRequest<MachineDataBase[]>({
         endpoint: `DeductionsManager/machines`,
         method: "GET",
         token: token,
@@ -139,9 +147,82 @@ export const updateManagerLabor = async (
     });
 };
 
-export const deleteManagerLabor = async (id: number, token: string): Promise<{ success: boolean } | ApiErrorResponse> => {
+export const deleteManagerLabor = async (
+    id: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
     return apiRequest<{ success: boolean }>({
         endpoint: `DeductionsManager/labors/${id}`,
+        method: "DELETE",
+        token: token,
+    });
+};
+
+export const addManagerMaterial = async (
+    materialData: Omit<Material, "id">,
+    token: string,
+): Promise<Material | ApiErrorResponse> => {
+    return apiRequest<Material>({
+        endpoint: `DeductionsManager/poe`,
+        method: "POST",
+        token: token,
+        data: materialData,
+    });
+};
+
+export const updateManagerMaterial = async (
+    materialData: Material,
+    token: string,
+): Promise<Material | ApiErrorResponse> => {
+    return apiRequest<Material>({
+        endpoint: `DeductionsManager/poe`,
+        method: "POST",
+        token: token,
+        data: materialData,
+    });
+};
+
+export const deleteManagerMaterial = async (
+    id: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `DeductionsManager/poe/${id}`,
+        method: "DELETE",
+        token: token,
+    });
+};
+
+export const addManagerMachine = async (
+    machineData: Omit<Machine, "id">,
+    token: string,
+): Promise<Machine | ApiErrorResponse> => {
+    return apiRequest<Machine>({
+        endpoint: `DeductionsManager/machines`,
+        method: "POST",
+        token: token,
+        data: machineData,
+    });
+};
+
+export const updateManagerMachine = async (
+    machineData: Machine,
+    token: string,
+): Promise<Machine | ApiErrorResponse> => {
+    return apiRequest<Machine>({
+        endpoint: `DeductionsManager/machines`,
+        method: "POST",
+        token: token,
+        data: machineData,
+    });
+};
+
+export const deleteManagerMachine = async (
+    id: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `DeductionsManager/machines/${id}`,
         method: "DELETE",
         token: token,
     });
