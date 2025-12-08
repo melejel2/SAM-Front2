@@ -18,8 +18,9 @@ export const ROLE_PERMISSIONS = {
   // Trades - only Admin can add/edit/delete
   TRADES_MANAGE: ['Admin'],
   
-  // Templates - only Admin can add/edit/delete, others can preview/download
-  TEMPLATES_MANAGE: ['Admin'],
+  // Templates - Admin and ContractsManager can add/edit, only Admin can delete, others can preview/download
+  TEMPLATES_ADD_EDIT: ['Admin', 'ContractsManager'],
+  TEMPLATES_DELETE: ['Admin'],
   TEMPLATES_VIEW: ['Admin', 'GeneralManager', 'RegionalOperationsManager', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor', 'Accountant'],
   
   // Units - only Admin can add/edit/delete
@@ -64,8 +65,16 @@ export const canManageTrades = (userRole: UserRole | undefined): boolean => {
   return checkPermission(userRole, 'TRADES_MANAGE');
 };
 
+export const canAddEditTemplates = (userRole: UserRole | undefined): boolean => {
+  return checkPermission(userRole, 'TEMPLATES_ADD_EDIT');
+};
+
+export const canDeleteTemplates = (userRole: UserRole | undefined): boolean => {
+  return checkPermission(userRole, 'TEMPLATES_DELETE');
+};
+
 export const canManageTemplates = (userRole: UserRole | undefined): boolean => {
-  return checkPermission(userRole, 'TEMPLATES_MANAGE');
+  return canAddEditTemplates(userRole);
 };
 
 export const canViewTemplates = (userRole: UserRole | undefined): boolean => {

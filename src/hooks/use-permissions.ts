@@ -12,6 +12,8 @@ import {
   canManageCostCodes,
   canManageTrades,
   canManageTemplates,
+  canAddEditTemplates,
+  canDeleteTemplates,
   canViewTemplates,
   canManageUnits,
   ROLE_PERMISSIONS
@@ -71,6 +73,8 @@ export const usePermissions = () => {
     
     // Templates
     canManageTemplates: canManageTemplates(userRole),
+    canAddEditTemplates: canAddEditTemplates(userRole),
+    canDeleteTemplates: canDeleteTemplates(userRole),
     canViewTemplates: canViewTemplates(userRole),
     
     // Units

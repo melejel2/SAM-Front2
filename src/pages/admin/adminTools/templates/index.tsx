@@ -141,7 +141,7 @@ const Templates = () => {
     const { getToken, authState } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
-    const { canManageTemplates, canViewTemplates, userRole, isAdmin } = usePermissions();
+    const { canManageTemplates, canDeleteTemplates, canViewTemplates, userRole, isAdmin } = usePermissions();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -419,7 +419,7 @@ const Templates = () => {
                                             inputFields={contractInputFields}
                                             actions={true}
                                             editAction={false}
-                                            deleteAction={canManageTemplates}
+                                            deleteAction={canDeleteTemplates}
                                             previewAction={true}
                                             title={"Contract Template"}
                                             loading={false}
@@ -448,7 +448,7 @@ const Templates = () => {
                                         inputFields={voInputFields}
                                         actions={true}
                                         editAction={false}
-                                        deleteAction={canManageTemplates}
+                                        deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"VO Template"}
                                         loading={false}
@@ -477,7 +477,7 @@ const Templates = () => {
                                         inputFields={otherInputFields}
                                         actions={true}
                                         editAction={false}
-                                        deleteAction={canManageTemplates}
+                                        deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"Other Templates"}
                                         loading={false}
