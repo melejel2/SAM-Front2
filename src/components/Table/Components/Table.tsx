@@ -147,6 +147,7 @@ interface TableProps {
 
     contractIdentifier?: string; // Added for VO editing navigation
     contractId?: string; // Added for VO editing navigation
+    isNested?: boolean;
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -190,7 +191,8 @@ const TableComponent: React.FC<TableProps> = ({
     inlineEditable,
     onInlineEdit,
     contractIdentifier, // Destructure here
-    contractId // Destructure here
+    contractId, // Destructure here
+    isNested, // Destructure new prop
 }) => {
     const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
     const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -1190,6 +1192,7 @@ const TableComponent: React.FC<TableProps> = ({
                     deleteEndPoint={deleteEndPoint}
                     onItemUpdate={onItemUpdate}
                     onItemDelete={onItemDelete}
+                    isNested={isNested}
                 />
             )}
         </>

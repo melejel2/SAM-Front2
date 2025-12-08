@@ -1,15 +1,29 @@
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
+import { addManagerLabor, deleteManagerLabor, updateManagerLabor } from "@/api/services/deductionsApi";
 import SAMTable from "@/components/Table";
-import { Button, Select, SelectOption } from "@/components/daisyui";
+import { TableInputField } from "@/components/Table/types";
+import { Button, Modal, ModalActions, ModalBody, ModalHeader, Select, SelectOption } from "@/components/daisyui";
+import { useAuth } from "@/contexts/auth";
 
 import useDeductionsDatabase from "./use-deductions-database";
+import useDeductionsManager from "./use-deductions-manager";
+
+const LABOR_INPUT_FIELDS: TableInputField[] = [
+    { name: "laborType", type: "text", placeholder: "e.g., Engineer", required: true, label: "Labor Type" },
+    { name: "unit", type: "text", placeholder: "e.g., Day", required: true, label: "Unit" },
+    { name: "unitPrice", type: "number", placeholder: "e.g., 500", required: true, label: "Unit Price" },
+];
 
 const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalView, setModalView] = useState<"Labor" | "Materials" | "Machines">("Labor");
+
     const navigate = useNavigate();
     const location = useLocation();
+    const { getToken } = useAuth();
 
     useEffect(() => {
         // This will trigger a re-render when navigating between dashboard pages
@@ -35,6 +49,17 @@ const DeductionsDatabase = memo(() => {
         setSelectedContract,
     } = useDeductionsDatabase();
 
+    const {
+        managerLoading,
+        managerLaborData,
+        managerMaterialsData,
+        managerMachinesData,
+        managerLaborColumns,
+        managerMaterialsColumns,
+        managerMachinesColumns,
+        fetchManagerData, // Destructure fetchManagerData
+    } = useDeductionsManager(isModalOpen);
+
     // Memoize column and data selection to prevent recalculation
     const columns = useMemo(() => {
         switch (activeView) {
@@ -58,8 +83,30 @@ const DeductionsDatabase = memo(() => {
         }
     }, [activeView, materialsData, machinesData, laborData]);
 
+    const modalColumns = useMemo(() => {
+        switch (modalView) {
+            case "Materials":
+                return managerMaterialsColumns;
+            case "Machines":
+                return managerMachinesColumns;
+            default:
+                return managerLaborColumns;
+        }
+    }, [modalView, managerLaborColumns, managerMaterialsColumns, managerMachinesColumns]);
+
+    const modalTableData = useMemo(() => {
+        switch (modalView) {
+            case "Materials":
+                return managerMaterialsData;
+            case "Machines":
+                return managerMachinesData;
+            default:
+                return managerLaborData;
+        }
+    }, [modalView, managerLaborData, managerMaterialsData, managerMachinesData]);
+
     const handleBackToDashboard = useCallback(() => {
-        navigate('/dashboard');
+        navigate("/dashboard");
     }, [navigate]);
 
     const handleSetLabor = useCallback(() => setActiveView("Labor"), []);
@@ -67,34 +114,63 @@ const DeductionsDatabase = memo(() => {
     const handleSetMachines = useCallback(() => setActiveView("Machines"), []);
 
     const handleSuccess = useCallback(() => {
-        // Empty success handler
+        // Empty success handler for main table, modal has its own
     }, []);
 
+    const onAddLabor = useCallback(
+        async (newData: any) => {
+            const token = getToken();
+            if (!token) return;
+            await addManagerLabor(newData, token);
+            await fetchManagerData();
+        },
+        [getToken, fetchManagerData],
+    );
+
+    const onEditLabor = useCallback(
+        async (updatedData: any) => {
+            const token = getToken();
+            if (!token) return;
+            await updateManagerLabor(updatedData, token);
+            await fetchManagerData();
+        },
+        [getToken, fetchManagerData],
+    );
+
+    const onDeleteLabor = useCallback(
+        async (id: number) => {
+            const token = getToken();
+            if (!token) return;
+            await deleteManagerLabor(id, token);
+            await fetchManagerData();
+        },
+        [getToken, fetchManagerData],
+    );
+
     return (
-        <div style={{
-            height: 'calc(100vh - 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
+        <div
+            style={{
+                height: "calc(100vh - 4rem)",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+            }}>
             {/* Fixed Header Section */}
             <div style={{ flexShrink: 0 }} className="pb-3">
                 {/* Header with Back Button and Category Cards */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleBackToDashboard}
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                        >
+                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
                             <span className="iconify lucide--arrow-left size-4"></span>
                             <span>Back</span>
                         </button>
 
                         <Select
-                            value={selectedProject || ''}
+                            value={selectedProject || ""}
                             onChange={(e) => setSelectedProject(e.target.value)}
-                            className="select select-bordered select-sm w-full max-w-xs"
-                        >
+                            className="select select-bordered select-sm w-full max-w-xs">
                             <SelectOption value="">Select Project</SelectOption>
                             {projects.map((project) => (
                                 <SelectOption key={project.id} value={project.id}>
@@ -104,10 +180,9 @@ const DeductionsDatabase = memo(() => {
                         </Select>
 
                         <Select
-                            value={selectedSubcontractor || ''}
+                            value={selectedSubcontractor || ""}
                             onChange={(e) => setSelectedSubcontractor(e.target.value)}
-                            className="select select-bordered select-sm w-full max-w-xs"
-                        >
+                            className="select select-bordered select-sm w-full max-w-xs">
                             <SelectOption value="">Select Subcontractor</SelectOption>
                             {subcontractors.map((subcontractor) => (
                                 <SelectOption key={subcontractor.id} value={subcontractor.id}>
@@ -117,10 +192,9 @@ const DeductionsDatabase = memo(() => {
                         </Select>
 
                         <Select
-                            value={selectedContract || ''}
+                            value={selectedContract || ""}
                             onChange={(e) => setSelectedContract(e.target.value)}
-                            className="select select-bordered select-sm w-full max-w-xs"
-                        >
+                            className="select select-bordered select-sm w-full max-w-xs">
                             <SelectOption value="">Select Contract</SelectOption>
                             {contracts.map((contract) => (
                                 <SelectOption key={contract.id} value={contract.id}>
@@ -128,6 +202,9 @@ const DeductionsDatabase = memo(() => {
                                 </SelectOption>
                             ))}
                         </Select>
+                        <Button className="btn btn-sm btn-outline" onClick={() => setIsModalOpen(true)}>
+                            DataBase
+                        </Button>
                     </div>
 
                     {/* Category Selection Cards */}
@@ -136,10 +213,9 @@ const DeductionsDatabase = memo(() => {
                             className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
                                 activeView === "Labor"
                                     ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    : "btn-ghost border-base-300 hover:border-primary/50 border"
                             }`}
-                            onClick={handleSetLabor}
-                        >
+                            onClick={handleSetLabor}>
                             <span className="iconify lucide--users size-4" />
                             <span>Labor ({laborData.length})</span>
                         </button>
@@ -148,10 +224,9 @@ const DeductionsDatabase = memo(() => {
                             className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
                                 activeView === "Materials"
                                     ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    : "btn-ghost border-base-300 hover:border-primary/50 border"
                             }`}
-                            onClick={handleSetMaterials}
-                        >
+                            onClick={handleSetMaterials}>
                             <span className="iconify lucide--package size-4" />
                             <span>Materials ({materialsData.length})</span>
                         </button>
@@ -160,10 +235,9 @@ const DeductionsDatabase = memo(() => {
                             className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
                                 activeView === "Machines"
                                     ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
+                                    : "btn-ghost border-base-300 hover:border-primary/50 border"
                             }`}
-                            onClick={handleSetMachines}
-                        >
+                            onClick={handleSetMachines}>
                             <span className="iconify lucide--cog size-4" />
                             <span>Machines ({machinesData.length})</span>
                         </button>
@@ -172,7 +246,7 @@ const DeductionsDatabase = memo(() => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
                 <SAMTable
                     columns={columns}
                     tableData={tableData}
@@ -186,10 +260,58 @@ const DeductionsDatabase = memo(() => {
                     onSuccess={handleSuccess}
                 />
             </div>
+
+            <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} className="w-11/12 max-w-5xl">
+                <ModalHeader>Deductions Database</ModalHeader>
+                <ModalBody>
+                    <div role="tablist" className="tabs tabs-lifted">
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === "Labor" ? "tab-active" : ""}`}
+                            onClick={() => setModalView("Labor")}>
+                            Labor
+                        </button>
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === "Materials" ? "tab-active" : ""}`}
+                            onClick={() => setModalView("Materials")}>
+                            Materials
+                        </button>
+                        <button
+                            role="tab"
+                            className={`tab ${modalView === "Machines" ? "tab-active" : ""}`}
+                            onClick={() => setModalView("Machines")}>
+                            Machines
+                        </button>
+                    </div>
+                    <div className="mt-4">
+                        <SAMTable
+                            columns={modalColumns}
+                            tableData={modalTableData}
+                            // Conditionally pass props for Labor
+                            inputFields={modalView === "Labor" ? LABOR_INPUT_FIELDS : []}
+                            actions={modalView === "Labor" ? true : false}
+                            editAction={modalView === "Labor" ? true : false}
+                            deleteAction={modalView === "Labor" ? true : false}
+                            addBtn={modalView === "Labor" ? true : false}
+                            onAdd={modalView === "Labor" ? onAddLabor : undefined}
+                            onEdit={modalView === "Labor" ? onEditLabor : undefined}
+                            onDelete={modalView === "Labor" ? onDeleteLabor : undefined}
+                            title={modalView}
+                            loading={managerLoading}
+                            onSuccess={handleSuccess}
+                            isNested={true}
+                        />
+                    </div>
+                </ModalBody>
+                <ModalActions>
+                    <Button onClick={() => setIsModalOpen(false)}>Close</Button>
+                </ModalActions>
+            </Modal>
         </div>
     );
 });
 
-DeductionsDatabase.displayName = 'DeductionsDatabase';
+DeductionsDatabase.displayName = "DeductionsDatabase";
 
 export default DeductionsDatabase;

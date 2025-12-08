@@ -1,18 +1,25 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { getContractsByProjectsAndSub, getSubcontractorsByProjectId } from '@/api/services/contracts-api';
-import useSubcontractors from '@/pages/admin/adminTools/subcontractors/use-subcontractors';
-import { useAuth } from '@/contexts/auth';
-import useProjects from '@/pages/admin/adminTools/projects/use-projects';
-import { fetchLabors, fetchMaterials, fetchMachines, fetchContracts as fetchAllContracts } from '../../../../api/services/deductionsApi';
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { getContractsByProjectsAndSub, getSubcontractorsByProjectId } from "@/api/services/contracts-api";
+import { useAuth } from "@/contexts/auth";
+import useProjects from "@/pages/admin/adminTools/projects/use-projects";
+import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
+
+import {
+    fetchContracts as fetchAllContracts,
+    fetchLabors,
+    fetchMachines,
+    fetchMaterials,
+} from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
 const LABOR_COLUMNS = {
-    ref_nb: "REF #",
-    type_of_worker: "Type of Worker",
-    description_of_activity: "Description of Activity",
+    ref: "REF #",
+    laborType: "Type of Worker",
+    activityDescription: "Description of Activity",
     unit: "Unit",
-    unit_price: "Unit Price",
-    qty: "Quantity",
+    unitPrice: "Unit Price",
+    quantity: "Quantity",
     amount: "Amount",
 };
 
@@ -20,24 +27,23 @@ const MATERIALS_COLUMNS = {
     bc: "REF #",
     designation: "Item",
     unit: "Unit",
-    sale_unit: "Unit Price",
+    saleUnit: "Unit Price",
     allocated: "Allocated Quantity",
-    transfered_qte: "Transferred Quantity",
-    transfered_to: "Transferred to",
-    stock_qte: "Stock Quantity",
+    transferedQte: "Transferred Quantity",
+    transferedTo: "Transferred to",
+    stockQte: "Stock Quantity",
     remark: "Remarks",
 };
 
 const MACHINES_COLUMNS = {
     ref: "REF #",
-    machine_acronym: "Machine Code",
-    machine_type: "Type of Machine",
+    machineAcronym: "Machine Code",
+    machineType: "Type of Machine",
     unit: "unit",
-    unit_price: "Unit Price",
+    unitPrice: "Unit Price",
     quantity: "Quantity",
     amount: "Amount",
 };
-
 
 const useDeductionsDatabase = () => {
     const { getProjects } = useProjects();
@@ -49,13 +55,13 @@ const useDeductionsDatabase = () => {
 
     // State for dropdowns
     const [projects, setProjects] = useState<any[]>([]);
-    const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [selectedProject, setSelectedProject] = useState<string>("");
 
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
-    const [selectedSubcontractor, setSelectedSubcontractor] = useState<string | null>(null);
+    const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>("");
 
     const [contracts, setContracts] = useState<any[]>([]);
-    const [selectedContract, setSelectedContract] = useState<string | null>(null);
+    const [selectedContract, setSelectedContract] = useState<string>("");
 
     const { getToken } = useAuth();
     const token = getToken();
@@ -63,14 +69,32 @@ const useDeductionsDatabase = () => {
     const fetchDeductionsData = useCallback(async (contractDataSetId: number) => {
         setLoading(true);
         try {
-            const [labors, materials, machines] = await Promise.all([
+            const [laborsResult, materialsResult, machinesResult] = await Promise.all([
                 fetchLabors(contractDataSetId, token),
                 fetchMaterials(contractDataSetId, token),
                 fetchMachines(contractDataSetId, token),
             ]);
-            setLaborData(labors);
-            setMaterialsData(materials);
-            setMachinesData(machines);
+
+            if ("success" in laborsResult && !laborsResult.success) {
+                console.error("Failed to fetch labors:", laborsResult.message);
+                setLaborData([]);
+            } else {
+                setLaborData(laborsResult);
+            }
+
+            if ("success" in materialsResult && !materialsResult.success) {
+                console.error("Failed to fetch materials:", materialsResult.message);
+                setMaterialsData([]);
+            } else {
+                setMaterialsData(materialsResult);
+            }
+
+            if ("success" in machinesResult && !machinesResult.success) {
+                console.error("Failed to fetch machines:", machinesResult.message);
+                setMachinesData([]);
+            } else {
+                setMachinesData(machinesResult);
+            }
         } catch (error) {
             console.error("Failed to fetch deductions data:", error);
         } finally {
@@ -95,9 +119,9 @@ const useDeductionsDatabase = () => {
             try {
                 const fetchedProjects = await getProjects();
                 setProjects(fetchedProjects);
-                setSelectedProject(null);
-                setSelectedSubcontractor(null); // Clear subcontractor selection when project changes
-                setSelectedContract(null); // Clear contract selection when project changes
+                setSelectedProject("");
+                setSelectedSubcontractor(""); // Clear subcontractor selection when project changes
+                setSelectedContract(""); // Clear contract selection when project changes
             } catch (error) {
                 console.error("Error fetching projects:", error);
             }
@@ -109,7 +133,8 @@ const useDeductionsDatabase = () => {
     useEffect(() => {
         const fetchSubcontractorData = async () => {
             const token = getToken(); // Get token here as well to be explicit
-            if (token) { // Ensure token is available before fetching
+            if (token) {
+                // Ensure token is available before fetching
                 try {
                     let fetchedSubcontractors: any[] = [];
                     if (selectedProject) {
@@ -126,15 +151,15 @@ const useDeductionsDatabase = () => {
                     }
 
                     setSubcontractors(fetchedSubcontractors);
-                    setSelectedSubcontractor(null);
+                    setSelectedSubcontractor("");
                 } catch (error) {
                     console.error("Error fetching subcontractors:", error); // Corrected error message
                     setSubcontractors([]);
-                    setSelectedSubcontractor(null);
+                    setSelectedSubcontractor("");
                 }
             } else {
                 setSubcontractors([]);
-                setSelectedSubcontractor(null);
+                setSelectedSubcontractor("");
             }
             setSelectedContract(null); // Clear contract selection whenever subcontractors are re-fetched
         };
@@ -151,56 +176,64 @@ const useDeductionsDatabase = () => {
                     const response = await getContractsByProjectsAndSub(
                         Number(selectedProject),
                         Number(selectedSubcontractor),
-                        token
+                        token,
                     );
                     if (response.success && response.data) {
                         setContracts(response.data);
-                        setSelectedContract(null);
+                        setSelectedContract("");
                     } else {
                         console.error("Error fetching contracts:", response.message);
                         setContracts([]);
-                        setSelectedContract(null);
+                        setSelectedContract("");
                     }
                 } catch (error) {
                     console.error("Error fetching contracts:", error);
                     setContracts([]);
-                    setSelectedContract(null);
+                    setSelectedContract("");
                 }
             } else {
                 setContracts([]);
-                setSelectedContract(null);
+                setSelectedContract("");
             }
         };
         fetchContracts();
     }, [selectedProject, selectedSubcontractor, getToken]);
 
+    const memoizedData = useMemo(
+        () => ({
+            laborColumns: LABOR_COLUMNS,
+            materialsColumns: MATERIALS_COLUMNS,
+            machinesColumns: MACHINES_COLUMNS,
+            laborData: laborData,
+            materialsData: materialsData,
+            machinesData: machinesData,
 
-
-
-    const memoizedData = useMemo(() => ({
-        laborColumns: LABOR_COLUMNS,
-        materialsColumns: MATERIALS_COLUMNS,
-        machinesColumns: MACHINES_COLUMNS,
-        laborData: laborData,
-        materialsData: materialsData,
-        machinesData: machinesData,
-
-        // Dropdown data and selections
-        projects,
-        selectedProject,
-        setSelectedProject,
-        subcontractors,
-        selectedSubcontractor,
-        setSelectedSubcontractor,
-        contracts,
-        selectedContract,
-        setSelectedContract,
-    }), [
-        laborData, materialsData, machinesData,
-        projects, selectedProject, setSelectedProject,
-        subcontractors, selectedSubcontractor, setSelectedSubcontractor,
-        contracts, selectedContract, setSelectedContract
-    ]);
+            // Dropdown data and selections
+            projects,
+            selectedProject,
+            setSelectedProject,
+            subcontractors,
+            selectedSubcontractor,
+            setSelectedSubcontractor,
+            contracts,
+            selectedContract,
+            setSelectedContract,
+        }),
+        [
+            laborData,
+            materialsData,
+            machinesData,
+            projects,
+            selectedProject,
+            setSelectedProject,
+            subcontractors,
+            selectedSubcontractor,
+            setSelectedSubcontractor,
+            contracts,
+            selectedContract,
+            setSelectedContract,
+        ],
+    );
 
     return { ...memoizedData, loading };
 };

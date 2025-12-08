@@ -1,14 +1,28 @@
 import apiRequest from "../api";
 
+type ApiErrorResponse = {
+    isSuccess: false;
+    success: false;
+    message: string;
+    status?: number;
+};
+
 interface Labor {
     id: number;
-    ref_nb: string;
-    type_of_worker: string;
-    description_of_activity: string;
+    ref: string;
+    laborType: string;
+    activityDescription: string;
     unit: string;
-    unit_price: number;
-    qty: number;
+    unitPrice: number;
+    quantity: number;
     amount: number;
+}
+
+interface LaborDataBase {
+    id: number;
+    laborType: string;
+    unit: string;
+    unitPrice: number;
 }
 
 interface Material {
@@ -16,27 +30,27 @@ interface Material {
     bc: string;
     designation: string;
     unit: string;
-    sale_unit: number;
+    saleUnit: number;
     quantity: number;
     allocated: number;
-    transfered_qte: number;
-    transfered_to: string;
-    stock_qte: number;
+    transferedQte: number;
+    transferedTo: string;
+    stockQte: number;
     remark: string;
 }
 
 interface Machine {
     id: number;
     ref: string;
-    machine_acronym: string;
-    machine_type: string;
+    machineAcronym: string;
+    machineType: string;
     unit: string;
-    unit_price: number;
+    unitPrice: number;
     quantity: number;
     amount: number;
 }
 
-export const fetchLabors = async (contractDataSetId: number, token: string): Promise<Labor[]> => {
+export const fetchLabors = async (contractDataSetId: number, token: string): Promise<Labor[] | ApiErrorResponse> => {
     return apiRequest<Labor[]>({
         endpoint: `Deductions/GetLaborsList/${contractDataSetId}`,
         method: "GET",
@@ -44,7 +58,10 @@ export const fetchLabors = async (contractDataSetId: number, token: string): Pro
     });
 };
 
-export const fetchMaterials = async (contractDataSetId: number, token: string): Promise<Material[]> => {
+export const fetchMaterials = async (
+    contractDataSetId: number,
+    token: string,
+): Promise<Material[] | ApiErrorResponse> => {
     return apiRequest<Material[]>({
         endpoint: `Deductions/GetVentesList/${contractDataSetId}`,
         method: "GET",
@@ -52,7 +69,10 @@ export const fetchMaterials = async (contractDataSetId: number, token: string): 
     });
 };
 
-export const fetchMachines = async (contractDataSetId: number, token: string): Promise<Machine[]> => {
+export const fetchMachines = async (
+    contractDataSetId: number,
+    token: string,
+): Promise<Machine[] | ApiErrorResponse> => {
     return apiRequest<Machine[]>({
         endpoint: `Deductions/GetMachinesList/${contractDataSetId}`,
         method: "GET",
@@ -69,4 +89,60 @@ export const fetchContracts = async (token: string): Promise<any[]> => {
         { id: 2, name: "Contract B", contractNumber: "C-002" },
         { id: 3, name: "Contract C", contractNumber: "C-003" },
     ];
+};
+
+export const fetchManagerLabors = async (token: string): Promise<LaborDataBase[] | ApiErrorResponse> => {
+    return apiRequest<LaborDataBase[]>({
+        endpoint: `DeductionsManager/labors`,
+        method: "GET",
+        token: token,
+    });
+};
+
+export const fetchManagerMaterials = async (token: string): Promise<Material[] | ApiErrorResponse> => {
+    return apiRequest<Material[]>({
+        endpoint: `DeductionsManager/poe`,
+        method: "GET",
+        token: token,
+    });
+};
+
+export const fetchManagerMachines = async (token: string): Promise<Machine[] | ApiErrorResponse> => {
+    return apiRequest<Machine[]>({
+        endpoint: `DeductionsManager/machines`,
+        method: "GET",
+        token: token,
+    });
+};
+
+export const addManagerLabor = async (
+    laborData: Omit<LaborDataBase, "id">,
+    token: string,
+): Promise<LaborDataBase | ApiErrorResponse> => {
+    return apiRequest<LaborDataBase>({
+        endpoint: `DeductionsManager/labors`,
+        method: "POST",
+        token: token,
+        data: laborData,
+    });
+};
+
+export const updateManagerLabor = async (
+    laborData: LaborDataBase,
+    token: string,
+): Promise<LaborDataBase | ApiErrorResponse> => {
+    return apiRequest<LaborDataBase>({
+        endpoint: `DeductionsManager/labors`,
+        method: "POST",
+        token: token,
+        data: laborData,
+    });
+};
+
+export const deleteManagerLabor = async (id: number, token: string): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `DeductionsManager/labors/${id}`,
+        method: "DELETE",
+        token: token,
+    });
 };
