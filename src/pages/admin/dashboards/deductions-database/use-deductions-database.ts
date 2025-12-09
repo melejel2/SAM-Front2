@@ -16,6 +16,14 @@ import {
     Labor,
     LaborDataBase,
     updateContractLabor,
+    Material,
+    Machine,
+    addContractMaterial,
+    updateContractMaterial,
+    deleteContractMaterial,
+    addContractMachine,
+    updateContractMachine,
+    deleteContractMachine,
 } from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
@@ -55,9 +63,9 @@ const useDeductionsDatabase = () => {
     const { getProjects } = useProjects();
     const { getSubcontractors: fetchAllSubcontractorsFromHook } = useSubcontractors(); // Renamed to avoid conflict
     const [loading, setLoading] = useState(true);
-    const [laborData, setLaborData] = useState<any[]>([]);
-    const [materialsData, setMaterialsData] = useState<any[]>([]);
-    const [machinesData, setMachinesData] = useState<any[]>([]);
+    const [laborData, setLaborData] = useState<Labor[]>([]);
+    const [materialsData, setMaterialsData] = useState<Material[]>([]);
+    const [machinesData, setMachinesData] = useState<Machine[]>([]);
 
     // State for dropdowns
     const [projects, setProjects] = useState<any[]>([]);
@@ -298,6 +306,105 @@ const useDeductionsDatabase = () => {
         }
     };
 
+    const addMaterialToContract = async (materialData: Omit<Material, "id">) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await addContractMaterial(Number(selectedContract), materialData, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to add material to contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateMaterialInContract = async (materialData: Material) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const { id, ...payload } = materialData;
+            await updateContractMaterial(materialData.id, payload, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to update material in contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteMaterialFromContract = async (materialId: number) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await deleteContractMaterial(materialId, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to delete material from contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addMachineToContract = async (machineData: Omit<Machine, "id">) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await addContractMachine(Number(selectedContract), machineData, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to add machine to contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateMachineInContract = async (machineData: Machine) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const { id, ...payload } = machineData;
+            await updateContractMachine(machineData.id, payload, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to update machine in contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteMachineFromContract = async (machineId: number) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await deleteContractMachine(machineId, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to delete machine from contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
     const memoizedData = useMemo(
         () => ({
             laborColumns: LABOR_COLUMNS,
@@ -325,6 +432,12 @@ const useDeductionsDatabase = () => {
             addLabor: addLaborToContract,
             updateLabor: updateLaborInContract,
             deleteLabor: deleteLaborFromContract,
+            addMaterial: addMaterialToContract,
+            updateMaterial: updateMaterialInContract,
+            deleteMaterial: deleteMaterialFromContract,
+            addMachine: addMachineToContract,
+            updateMachine: updateMachineInContract,
+            deleteMachine: deleteMachineFromContract,
         }),
         [
             laborData,
@@ -337,6 +450,8 @@ const useDeductionsDatabase = () => {
             contracts,
             selectedContract,
             laborTypeOptions,
+            fetchDeductionsData,
+            token
         ],
     );
 
@@ -344,3 +459,4 @@ const useDeductionsDatabase = () => {
 };
 
 export default useDeductionsDatabase;
+

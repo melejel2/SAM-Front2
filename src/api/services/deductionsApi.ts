@@ -237,7 +237,7 @@ export const addContractLabor = async (
         endpoint: `Deductions/labors/${contractDataSetId}`,
         method: "POST",
         token: token,
-        body: laborData as unknown as Record<string, unknown>,
+        body: { ...laborData, contractDataSetId } as unknown as Record<string, unknown>,
     });
 };
 
@@ -260,6 +260,80 @@ export const deleteContractLabor = async (
 ): Promise<{ success: boolean } | ApiErrorResponse> => {
     return apiRequest<{ success: boolean }>({
         endpoint: `Deductions/labors/${laborId}`,
+        method: "DELETE",
+        token: token,
+    });
+};
+
+export const addContractMaterial = async (
+    contractDataSetId: number,
+    materialData: Omit<Material, "id">,
+    token: string,
+): Promise<Material | ApiErrorResponse> => {
+    return apiRequest<Material>({
+        endpoint: `Deductions/materials/${contractDataSetId}`,
+        method: "POST",
+        token: token,
+        body: { ...materialData, contractDataSetId } as unknown as Record<string, unknown>,
+    });
+};
+
+export const updateContractMaterial = async (
+    materialId: number,
+    materialData: Omit<Material, "id">, // Omit id for the body, but use it in the URL
+    token: string,
+): Promise<Material | ApiErrorResponse> => {
+    return apiRequest<Material>({
+        endpoint: `Deductions/materials/${materialId}`,
+        method: "PUT",
+        token: token,
+        body: materialData as unknown as Record<string, unknown>,
+    });
+};
+
+export const deleteContractMaterial = async (
+    materialId: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `Deductions/materials/${materialId}`,
+        method: "DELETE",
+        token: token,
+    });
+};
+
+export const addContractMachine = async (
+    contractDataSetId: number,
+    machineData: Omit<Machine, "id">,
+    token: string,
+): Promise<Machine | ApiErrorResponse> => {
+    return apiRequest<Machine>({
+        endpoint: `Deductions/machines/${contractDataSetId}`,
+        method: "POST",
+        token: token,
+        body: { ...machineData, contractDataSetId } as unknown as Record<string, unknown>,
+    });
+};
+
+export const updateContractMachine = async (
+    machineId: number,
+    machineData: Omit<Machine, "id">, // Omit id for the body, but use it in the URL
+    token: string,
+): Promise<Machine | ApiErrorResponse> => {
+    return apiRequest<Machine>({
+        endpoint: `Deductions/machines/${machineId}`,
+        method: "PUT",
+        token: token,
+        body: machineData as unknown as Record<string, unknown>,
+    });
+};
+
+export const deleteContractMachine = async (
+    machineId: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `Deductions/machines/${machineId}`,
         method: "DELETE",
         token: token,
     });
