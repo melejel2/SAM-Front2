@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { fetchManagerLabors, fetchManagerMachines, fetchManagerMaterials } from "@/api/services/deductionsApi";
+import {
+    LaborDataBase,
+    Machine,
+    Material,
+    addManagerLabor,
+    addManagerMachine,
+    addManagerMaterial,
+    deleteManagerLabor,
+    deleteManagerMachine,
+    deleteManagerMaterial,
+    fetchManagerLabors,
+    fetchManagerMachines,
+    fetchManagerMaterials,
+    updateManagerLabor,
+    updateManagerMachine,
+    updateManagerMaterial,
+} from "@/api/services/deductionsApi";
 import { useAuth } from "@/contexts/auth";
 
 // Static column definitions for Manager Data
@@ -20,13 +36,10 @@ const MATERIALS_COLUMNS_MANAGER = {
 };
 
 const MACHINES_COLUMNS_MANAGER = {
-    ref: "REF #",
-    machineAcronym: "Machine Code",
-    machineType: "Type of Machine",
+    acronym: "Machine Code",
+    type: "Type of Machine",
     unit: "unit",
     unitPrice: "Unit Price",
-    quantity: "Quantity",
-    amount: "Amount",
 };
 
 const useDeductionsManager = (isOpen: boolean) => {
@@ -71,6 +84,171 @@ const useDeductionsManager = (isOpen: boolean) => {
         }
     }, [isOpen, fetchManagerData]);
 
+    // --- Labor Functions ---
+    const addLabor = async (labor: Omit<LaborDataBase, "id">) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await addManagerLabor(labor, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to add labor data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveLabor = async (labor: LaborDataBase) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await updateManagerLabor(labor, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to save labor data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteLabor = async (id: number) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await deleteManagerLabor(id, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to delete labor data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- Material Functions ---
+    const addMaterial = async (material: Omit<Material, "id">) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await addManagerMaterial(material, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to add material data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveMaterial = async (material: Material) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await updateManagerMaterial(material, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to save material data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteMaterial = async (id: number) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await deleteManagerMaterial(id, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to delete material data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- Machine Functions ---
+    const addMachine = async (machine: Omit<Machine, "id">) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await addManagerMachine(machine, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to add machine data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveMachine = async (machine: Machine) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await updateManagerMachine(machine, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to save machine data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteMachine = async (id: number) => {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            console.error("Authentication token not found.");
+            return;
+        }
+        try {
+            await deleteManagerMachine(id, token);
+            await fetchManagerData();
+        } catch (error) {
+            console.error("Failed to delete machine data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         managerLoading: loading,
         managerLaborData: laborData,
@@ -79,7 +257,16 @@ const useDeductionsManager = (isOpen: boolean) => {
         managerLaborColumns: LABOR_COLUMNS_MANAGER,
         managerMaterialsColumns: MATERIALS_COLUMNS_MANAGER,
         managerMachinesColumns: MACHINES_COLUMNS_MANAGER,
-        fetchManagerData, // Expose fetchManagerData
+        fetchManagerData,
+        addLabor,
+        saveLabor,
+        deleteLabor,
+        addMaterial,
+        saveMaterial,
+        deleteMaterial,
+        addMachine,
+        saveMachine,
+        deleteMachine,
     };
 };
 

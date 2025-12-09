@@ -1,10 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { addManagerLabor, deleteManagerLabor, updateManagerLabor } from "@/api/services/deductionsApi";
 import SAMTable from "@/components/Table";
 import { Button, Modal, ModalActions, ModalBody, ModalHeader, Select, SelectOption } from "@/components/daisyui";
-import { useAuth } from "@/contexts/auth";
 
 import useDeductionsDatabase from "./use-deductions-database";
 import useDeductionsManager from "./use-deductions-manager";
@@ -21,6 +19,31 @@ const LABOR_INPUT_FIELDS: Array<{
     { name: "unitPrice", type: "number", placeholder: "e.g., 500", required: true, label: "Unit Price" },
 ];
 
+interface TableInputField {
+    name: string;
+    type: string;
+    required: boolean;
+    label: string;
+    placeholder?: string;
+}
+
+const MATERIAL_INPUT_FIELDS: TableInputField[] = [
+    { name: "bc", type: "text", required: true, label: "REF #" },
+    { name: "designation", type: "text", required: true, label: "Item" },
+    { name: "unit", type: "text", required: true, label: "Unit" },
+    { name: "saleUnit", type: "number", required: true, label: "Unit Price" },
+    { name: "quantity", type: "number", required: true, label: "Ordered Qte" },
+    { name: "allocated", type: "number", required: true, label: "Allocated" },
+    { name: "remark", type: "text", required: false, label: "Remark" },
+];
+
+const MACHINE_INPUT_FIELDS: TableInputField[] = [
+    { name: "acronym", type: "text", required: true, label: "Machine Code" },
+    { name: "type", type: "text", required: true, label: "Type of Machine" },
+    { name: "unit", type: "text", required: true, label: "Unit" },
+    { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
+];
+
 const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,7 +51,6 @@ const DeductionsDatabase = memo(() => {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const { getToken } = useAuth();
 
     useEffect(() => {
         // This will trigger a re-render when navigating between dashboard pages
@@ -62,7 +84,15 @@ const DeductionsDatabase = memo(() => {
         managerLaborColumns,
         managerMaterialsColumns,
         managerMachinesColumns,
-        fetchManagerData, // Destructure fetchManagerData
+        addLabor,
+        saveLabor,
+        deleteLabor,
+        addMaterial,
+        saveMaterial,
+        deleteMaterial,
+        addMachine,
+        saveMachine,
+        deleteMachine,
     } = useDeductionsManager(isModalOpen);
 
     // Memoize column and data selection to prevent recalculation
@@ -122,35 +152,16 @@ const DeductionsDatabase = memo(() => {
         // Empty success handler for main table, modal has its own
     }, []);
 
-    const onAddLabor = useCallback(
-        async (newData: any) => {
-            const token = getToken();
-            if (!token) return;
-            await addManagerLabor(newData, token);
-            await fetchManagerData();
-        },
-        [getToken, fetchManagerData],
-    );
-
-    const onEditLabor = useCallback(
-        async (updatedData: any) => {
-            const token = getToken();
-            if (!token) return;
-            await updateManagerLabor(updatedData, token);
-            await fetchManagerData();
-        },
-        [getToken, fetchManagerData],
-    );
-
-    const onDeleteLabor = useCallback(
-        async (id: number) => {
-            const token = getToken();
-            if (!token) return;
-            await deleteManagerLabor(id, token);
-            await fetchManagerData();
-        },
-        [getToken, fetchManagerData],
-    );
+    const modalInputFields = useMemo(() => {
+        switch (modalView) {
+            case "Materials":
+                return MATERIAL_INPUT_FIELDS;
+            case "Machines":
+                return MACHINE_INPUT_FIELDS;
+            default:
+                return LABOR_INPUT_FIELDS;
+        }
+    }, [modalView]);
 
     const tableHeaderContent = (
         <div className="flex items-center gap-3 flex-1">
@@ -289,11 +300,32 @@ const DeductionsDatabase = memo(() => {
                         <SAMTable
                             columns={modalColumns}
                             tableData={modalTableData}
-                            inputFields={modalView === "Labor" ? LABOR_INPUT_FIELDS : []}
-                            actions={modalView === "Labor" ? true : false}
-                            editAction={modalView === "Labor" ? true : false}
-                            deleteAction={modalView === "Labor" ? true : false}
-                            addBtn={modalView === "Labor" ? true : false}
+                            inputFields={modalInputFields}
+                            actions={true}
+                            editAction={true}
+                            deleteAction={true}
+                            addBtn={true}
+                            createEndPoint={
+                                modalView === "Labor"
+                                    ? "DeductionsManager/labors"
+                                    : modalView === "Materials"
+                                      ? "DeductionsManager/poe"
+                                      : "DeductionsManager/machines"
+                            }
+                            editEndPoint={
+                                modalView === "Labor"
+                                    ? "DeductionsManager/labors"
+                                    : modalView === "Materials"
+                                      ? "DeductionsManager/poe"
+                                      : "DeductionsManager/machines"
+                            }
+                            deleteEndPoint={
+                                modalView === "Labor"
+                                    ? "DeductionsManager/labors"
+                                    : modalView === "Materials"
+                                      ? "DeductionsManager/poe"
+                                      : "DeductionsManager/machines"
+                            }
                             title={modalView}
                             loading={managerLoading}
                             onSuccess={handleSuccess}
