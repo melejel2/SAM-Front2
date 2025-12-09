@@ -697,6 +697,9 @@ const ContractsDatabase = () => {
                                         }}
                                         dynamicDialog={false}
                                         rowsPerPage={20}
+                                        rowActions={() => ({
+                                            deleteAction: false
+                                        })}
                                     />
                                 )}
 

@@ -1080,6 +1080,97 @@ export const getVoContracts = async (token: string) => {
   }
 };
 
+/**
+ * Update the VO contract file with user-edited Word document content
+ * @param id VO dataset ID
+ * @param file The edited Word document file (Blob)
+ * @param token Authentication token
+ */
+export const updateVoContractFile = async (
+  id: number,
+  file: Blob,
+  token: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file, `vo_contract_${id}.docx`);
+
+    const response = await apiRequest({
+      endpoint: `VoDataSet/UpdateVoContractFile/${id}`,
+      method: 'POST',
+      token,
+      body: formData,
+    });
+
+    return response as { success: boolean; message?: string; error?: string };
+  } catch (error) {
+    console.error('Update VO contract file API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get VO document in SFDT format for Document Editor
+ * @param id VO dataset ID
+ * @param token Authentication token
+ * @returns SFDT JSON string for Syncfusion Document Editor
+ */
+export const getVoSfdt = async (id: number, token: string): Promise<string> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `VoDataSet/GetVoSfdt/${id}`,
+      method: 'GET',
+      token,
+      responseType: 'json',
+    });
+
+    // Check for error response
+    if (response && typeof response === 'object' && 'success' in response && !response.success) {
+      throw new Error((response as any).message || 'Failed to load SFDT content');
+    }
+
+    // SFDT needs to be a JSON string for documentEditor.open()
+    // If the response is already an object (parsed by apiRequest), stringify it
+    if (typeof response === 'object') {
+      return JSON.stringify(response);
+    }
+
+    return response as string;
+  } catch (error) {
+    console.error('Get VO SFDT API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Save edited VO document from SFDT format
+ * @param id VO dataset ID
+ * @param sfdtContent SFDT JSON string from Document Editor
+ * @param token Authentication token
+ */
+export const saveVoFromSfdt = async (
+  id: number,
+  sfdtContent: string,
+  token: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `VoDataSet/SaveVoFromSfdt/${id}`,
+      method: 'POST',
+      token,
+      body: sfdtContent,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response as { success: boolean; message?: string; error?: string };
+  } catch (error) {
+    console.error('Save VO from SFDT API Error:', error);
+    throw error;
+  }
+};
+
 // Export types for use in components
 export type { 
   VoApiResponse, 

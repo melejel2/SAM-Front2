@@ -684,24 +684,22 @@ const TableComponent: React.FC<TableProps> = ({
                 style={{ height: '100%', width: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
             >
                 <div className="px-2 sm:px-3 lg:px-4 py-2 border-b border-base-300 flex-shrink-0">
-                    <div className="flex flex-col items-start justify-start space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                        {/* Left side with "New" button and custom content */}
-                        <div className="flex items-center space-x-2">
-                            {addBtn ? (
-                                <Button
-                                    onClick={openCreateDialog}
-                                    className="btn btn-primary btn-sm rounded table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
-                                    <span className={`iconify ${addBtnText?.toLowerCase().includes('upload') ? 'lucide--upload' : 'lucide--plus'} size-4`}></span>
-                                    <span className="text-xs">{addBtnText || `New ${title}`}</span>
-                                </Button>
-                            ) : (
-                                <span className="hidden lg:block"></span>
-                            )}
-                            {customHeaderContent}
-                        </div>
+                    <div className="flex items-center gap-4 w-full">
+                        {/* Add button (if enabled) */}
+                        {addBtn && (
+                            <Button
+                                onClick={openCreateDialog}
+                                className="btn btn-primary btn-sm rounded table-new-btn px-4 text-sm transition-all duration-200 text-primary-content">
+                                <span className={`iconify ${addBtnText?.toLowerCase().includes('upload') ? 'lucide--upload' : 'lucide--plus'} size-4`}></span>
+                                <span className="text-xs">{addBtnText || `New ${title}`}</span>
+                            </Button>
+                        )}
+
+                        {/* Custom header content - spans available space */}
+                        {customHeaderContent}
 
                         {/* Right side with search */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 ml-auto">
                             <SearchInput
                                 value={searchQuery}
                                 onChange={handleSearchChange}

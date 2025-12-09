@@ -296,70 +296,71 @@ const ContractsManagement = memo(() => {
         }
     }, [contractToGenerateFinal, generateFinalContract]);
 
-    return (
-        <div style={{
-            height: 'calc(100vh - 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
-            {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="pb-3">
-                {/* Header with Back Button and Tab Cards */}
-                <div className="flex justify-between items-center mb-0">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleBackToDashboard}
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                        >
-                            <Icon icon={arrowLeftIcon} className="size-4" />
-                            <span>Back</span>
-                        </button>
-                    </div>
+    const tableHeaderContent = (
+        <div className="flex items-center gap-2 flex-1">
+            {/* Back button on far left */}
+            <button
+                onClick={handleBackToDashboard}
+                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+            >
+                <Icon icon={arrowLeftIcon} className="size-4" />
+                <span>Back</span>
+            </button>
 
-                    {/* Category Selection Cards */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                activeTab === 'drafts'
-                                    ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
-                            }`}
-                            onClick={() => handleTabChange('drafts')}
-                        >
-                            <Icon icon={fileTextIcon} className="size-4" />
-                            <span>Drafts ({draftsData.length})</span>
-                        </button>
+            {/* Category Selection Cards - CENTERED */}
+            <div className="flex items-center gap-2 flex-1 justify-center">
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'drafts'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('drafts')}
+                >
+                    <Icon icon={fileTextIcon} className="size-4" />
+                    <span>Drafts ({draftsData.length})</span>
+                </button>
 
-                        <button
-                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                activeTab === 'active'
-                                    ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
-                            }`}
-                            onClick={() => handleTabChange('active')}
-                        >
-                            <Icon icon={checkCircleIcon} className="size-4" />
-                            <span>Active Contracts ({activeData.length})</span>
-                        </button>
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'active'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('active')}
+                >
+                    <Icon icon={checkCircleIcon} className="size-4" />
+                    <span>Active Contracts ({activeData.length})</span>
+                </button>
 
-                        <button
-                            className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                activeTab === 'terminated'
-                                    ? "btn-primary"
-                                    : "btn-ghost border border-base-300 hover:border-primary/50"
-                            }`}
-                            onClick={() => handleTabChange('terminated')}
-                        >
-                            <Icon icon={xCircleIcon} className="size-4" />
-                            <span>Terminated Contracts ({terminatedData.length})</span>
-                        </button>
-                    </div>
-                </div>
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'terminated'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('terminated')}
+                >
+                    <Icon icon={xCircleIcon} className="size-4" />
+                    <span>Terminated Contracts ({terminatedData.length})</span>
+                </button>
             </div>
 
+            {/* New Contract button on far right */}
+            <button
+                onClick={handleNewContract}
+                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+            >
+                <Icon icon={plusIcon} className="size-4" />
+                <span>New Contract</span>
+            </button>
+        </div>
+    );
+
+    return (
+        <div className="h-full flex flex-col overflow-hidden -mt-6">
             {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <div className="flex-1 min-h-0">
                 {loading ? (
                     <Loader />
                 ) : (
@@ -371,16 +372,13 @@ const ContractsManagement = memo(() => {
                                 tableData={draftsData}
                                 actions
                                 previewAction
-                                addBtn
-                                addBtnText="New Contract"
+                                customHeaderContent={tableHeaderContent}
                                 title="Draft Contract"
                                 loading={false}
                                 onSuccess={getDraftsContracts}
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreview(data);
-                                    } else if (type === "Add") {
-                                        return handleNewContract();
                                     }
                                 }}
                                 dynamicDialog={false}
@@ -394,6 +392,7 @@ const ContractsManagement = memo(() => {
                                 tableData={activeData}
                                 actions
                                 previewAction
+                                customHeaderContent={tableHeaderContent}
                                 title="Active Contract"
                                 loading={false}
                                 onSuccess={getActiveContracts}
@@ -413,6 +412,7 @@ const ContractsManagement = memo(() => {
                                 tableData={terminatedData}
                                 actions
                                 previewAction
+                                customHeaderContent={tableHeaderContent}
                                 title="Terminated Contract"
                                 loading={false}
                                 onSuccess={getTerminatedContracts}

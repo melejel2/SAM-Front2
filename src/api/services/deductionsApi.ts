@@ -123,7 +123,7 @@ export const addManagerLabor = async (
         endpoint: `DeductionsManager/labors`,
         method: "POST",
         token: token,
-        data: laborData,
+        body: laborData as unknown as Record<string, unknown>,
     });
 };
 
@@ -135,7 +135,7 @@ export const updateManagerLabor = async (
         endpoint: `DeductionsManager/labors`,
         method: "POST",
         token: token,
-        data: laborData,
+        body: laborData as unknown as Record<string, unknown>,
     });
 };
 

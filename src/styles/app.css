@@ -1,3 +1,6 @@
+/* Syncfusion Document Editor (must be first due to @import rules) */
+@import "./custom/syncfusion.css";
+
 /* Root Styling */
 @import "./typography.css";
 @import "./tailwind.css";

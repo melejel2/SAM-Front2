@@ -19,6 +19,8 @@
         "@azure/msal-react": "^3.0.23",
         "@iconify/icons-lucide": "^1.2.135",
         "@iconify/react": "^6.0.2",
+        "@syncfusion/ej2-base": "^31.2.12",
+        "@syncfusion/ej2-react-documenteditor": "^31.2.16",
         "@tanstack/react-query": "^5.90.12",
         "apexcharts": "^5.3.6",
         "clsx": "^2.1.1",
@@ -37,7 +39,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.1",
-        "@iconify-json/lucide": "^1.2.78",
+        "@iconify-json/lucide": "^1.2.79",
         "@iconify/tailwind": "^1.2.0",
         "@tailwindcss/vite": "^4.1.17",
         "@trivago/prettier-plugin-sort-imports": "^6.0.0",
@@ -45,7 +47,7 @@
         "@types/react": "^19.2.7",
         "@types/react-dom": "^19.2.3",
         "@typescript-eslint/parser": "^8.48.1",
-        "@vitejs/plugin-react": "^5.1.1",
+        "@vitejs/plugin-react": "^5.1.2",
         "daisyui": "^5.5.8",
         "eslint": "^9.39.1",
         "eslint-plugin-react-hooks": "^7.0.1",
@@ -57,6 +59,6 @@
         "tailwindcss": "^4.1.17",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.48.1",
-        "vite": "^7.2.6"
+        "vite": "^7.2.7"
     }
 }

@@ -8,8 +8,12 @@ import {
     generateVoDataSet,
     getContractVOs,
     previewVoDataSet,
+    getVoSfdt,
+    saveVoFromSfdt,
 } from "@/api/services/vo-api";
+import { getContractSfdt, saveContractFromSfdt, exportContractWord } from "@/api/services/contracts-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
+import DocumentEditorModal from "@/components/WordDocumentEditor/DocumentEditorModal";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
@@ -136,6 +140,17 @@ const ContractDetails = () => {
     const [exportingWordVO, setExportingWordVO] = useState(false);
     const [showVoPreview, setShowVoPreview] = useState(false);
     const [voPreviewData, setVoPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
+
+    // State for Document Editor (Contract and VO) - using SFDT format
+    const [showContractEditor, setShowContractEditor] = useState(false);
+    const [contractSfdt, setContractSfdt] = useState<string | null>(null);
+    const [loadingContractSfdt, setLoadingContractSfdt] = useState(false);
+    const [contractSfdtError, setContractSfdtError] = useState<string | null>(null);
+    const [showVoEditor, setShowVoEditor] = useState(false);
+    const [voSfdt, setVoSfdt] = useState<string | null>(null);
+    const [loadingVoSfdt, setLoadingVoSfdt] = useState(false);
+    const [voSfdtError, setVoSfdtError] = useState<string | null>(null);
+    const [currentVoId, setCurrentVoId] = useState<number | null>(null);
 
     // Get data passed from navigation state
     const navigationData = location.state as {
@@ -478,6 +493,134 @@ const ContractDetails = () => {
         } finally {
             setExportingWord(false);
         }
+    };
+
+    // ================ EDIT CONTRACT DOCUMENT (SFDT-based) ================
+    const handleEditContractDocument = async () => {
+        if (!contractId) {
+            toaster.error("Cannot edit: Contract ID is missing");
+            return;
+        }
+
+        setLoadingContractSfdt(true);
+        setContractSfdtError(null);
+        setShowContractEditor(true);
+        setShowPreview(false); // Close PDF preview
+
+        try {
+            const token = getToken();
+            const sfdt = await getContractSfdt(parseInt(contractId), token ?? "");
+
+            if (sfdt && typeof sfdt === "string") {
+                setContractSfdt(sfdt);
+            } else {
+                setContractSfdtError("Failed to load document for editing");
+                toaster.error("Failed to load Word document for editing");
+            }
+        } catch (error) {
+            console.error("Error loading SFDT document:", error);
+            const errorMessage = error instanceof Error ? error.message : "Failed to load document for editing";
+            setContractSfdtError(errorMessage);
+            toaster.error(errorMessage);
+        } finally {
+            setLoadingContractSfdt(false);
+        }
+    };
+
+    const handleContractEditorSave = async (sfdtContent: string, filename: string) => {
+        if (!contractId) {
+            toaster.error("Cannot save: Contract ID is missing");
+            return;
+        }
+
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return;
+        }
+
+        try {
+            const result = await saveContractFromSfdt(parseInt(contractId), sfdtContent, token);
+            if (result.success) {
+                toaster.success("Contract document saved successfully");
+            } else {
+                toaster.error(result.error || "Failed to save document");
+            }
+        } catch (error) {
+            console.error("Save error:", error);
+            toaster.error("Failed to save document to server");
+        }
+    };
+
+    const handleContractEditorClose = () => {
+        setShowContractEditor(false);
+        setContractSfdt(null);
+        setContractSfdtError(null);
+    };
+
+    // ================ EDIT VO DOCUMENT (SFDT-based) ================
+    const handleEditVoDocument = async (voId: number) => {
+        if (!voId) {
+            toaster.error("Cannot edit: VO ID is missing");
+            return;
+        }
+
+        setLoadingVoSfdt(true);
+        setVoSfdtError(null);
+        setCurrentVoId(voId);
+        setShowVoEditor(true);
+        setShowVoPreview(false); // Close PDF preview
+
+        try {
+            const token = getToken();
+            const sfdt = await getVoSfdt(voId, token ?? "");
+
+            if (sfdt && typeof sfdt === "string") {
+                setVoSfdt(sfdt);
+            } else {
+                setVoSfdtError("Failed to load VO document for editing");
+                toaster.error("Failed to load VO Word document for editing");
+            }
+        } catch (error) {
+            console.error("Error loading VO SFDT document:", error);
+            const errorMessage = error instanceof Error ? error.message : "Failed to load VO document for editing";
+            setVoSfdtError(errorMessage);
+            toaster.error(errorMessage);
+        } finally {
+            setLoadingVoSfdt(false);
+        }
+    };
+
+    const handleVoEditorSave = async (sfdtContent: string, filename: string) => {
+        if (!currentVoId) {
+            toaster.error("Cannot save: VO ID is missing");
+            return;
+        }
+
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return;
+        }
+
+        try {
+            const result = await saveVoFromSfdt(currentVoId, sfdtContent, token);
+            if (result.success) {
+                toaster.success("VO document saved successfully");
+            } else {
+                toaster.error(result.error || "Failed to save VO document");
+            }
+        } catch (error) {
+            console.error("Save error:", error);
+            toaster.error("Failed to save VO document to server");
+        }
+    };
+
+    const handleVoEditorClose = () => {
+        setShowVoEditor(false);
+        setVoSfdt(null);
+        setVoSfdtError(null);
+        setCurrentVoId(null);
     };
 
     const handleCreateVO = () => {
@@ -861,22 +1004,25 @@ const ContractDetails = () => {
                         </button>
                     )}
 
-                    <button
-                        onClick={handleDeleteContract}
-                        disabled={deletingContract}
-                        className="btn btn-sm btn-error text-error-content hover:bg-error/10 flex items-center gap-2">
-                        {deletingContract ? (
-                            <>
-                                <span className="loading loading-spinner loading-xs"></span>
-                                <span>Deleting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="iconify lucide--trash-2 size-4"></span>
-                                <span>Delete</span>
-                            </>
-                        )}
-                    </button>
+                    {/* Delete button - Only show for Editable contracts */}
+                    {contractData.contractDatasetStatus === "Editable" && (
+                        <button
+                            onClick={handleDeleteContract}
+                            disabled={deletingContract}
+                            className="btn btn-sm btn-error text-error-content hover:bg-error/10 flex items-center gap-2">
+                            {deletingContract ? (
+                                <>
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                    <span>Deleting...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="iconify lucide--trash-2 size-4"></span>
+                                    <span>Delete</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -1075,9 +1221,18 @@ const ContractDetails = () => {
                     <div className="modal-box h-[90vh] max-w-7xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-bold">Contract Preview</h3>
-                            <button onClick={() => setShowPreview(false)} className="btn btn-ghost btn-sm">
-                                <span className="iconify lucide--x size-5"></span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleEditContractDocument}
+                                    className="btn btn-sm bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+                                >
+                                    <span className="iconify lucide--file-pen size-4"></span>
+                                    Edit Document
+                                </button>
+                                <button onClick={() => setShowPreview(false)} className="btn btn-ghost btn-sm">
+                                    <span className="iconify lucide--x size-5"></span>
+                                </button>
+                            </div>
                         </div>
                         <div className="h-[calc(100%-60px)]">
                             <PDFViewer fileBlob={previewData.blob} fileName={previewData.fileName} />
@@ -1089,15 +1244,48 @@ const ContractDetails = () => {
                 </dialog>
             )}
 
+            {/* Contract Document Editor Modal (SFDT-based) */}
+            {showContractEditor && (
+                <DocumentEditorModal
+                    isOpen={true}
+                    onClose={handleContractEditorClose}
+                    sfdtContent={contractSfdt ?? undefined}
+                    documentName={`Contract_${contractData?.contractNumber || contractIdentifier}.docx`}
+                    title="Edit Contract Document"
+                    description={`Contract #${contractData?.contractNumber || contractIdentifier}`}
+                    onSaveSfdt={handleContractEditorSave}
+                    showSaveButton={true}
+                    isLoadingSfdt={loadingContractSfdt}
+                    loadError={contractSfdtError ?? undefined}
+                    metadata={[
+                        { label: "Contract #", value: contractData?.contractNumber || "-" },
+                        { label: "Project", value: contractData?.projectName || currentProject?.name || "-" },
+                        { label: "Subcontractor", value: contractData?.subcontractorName || currentSubcontractor?.name || "-" },
+                        { label: "Status", value: contractData?.contractDatasetStatus || "-" },
+                    ]}
+                />
+            )}
+
             {/* VO Preview Modal */}
             {showVoPreview && voPreviewData && (
                 <dialog className="modal modal-open">
                     <div className="modal-box h-[90vh] max-w-7xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-bold">VO Preview</h3>
-                            <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
-                                <span className="iconify lucide--x size-5"></span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {voPreviewData && (voPreviewData as any).voId && (
+                                    <button
+                                        onClick={() => handleEditVoDocument((voPreviewData as any).voId)}
+                                        className="btn btn-sm bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
+                                    >
+                                        <span className="iconify lucide--file-pen size-4"></span>
+                                        Edit Document
+                                    </button>
+                                )}
+                                <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
+                                    <span className="iconify lucide--x size-5"></span>
+                                </button>
+                            </div>
                         </div>
                         <div className="h-[calc(100%-60px)]">
                             <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
@@ -1107,6 +1295,27 @@ const ContractDetails = () => {
                         <button onClick={() => setShowVoPreview(false)}>close</button>
                     </form>
                 </dialog>
+            )}
+
+            {/* VO Document Editor Modal (SFDT-based) */}
+            {showVoEditor && currentVoId && (
+                <DocumentEditorModal
+                    isOpen={true}
+                    onClose={handleVoEditorClose}
+                    sfdtContent={voSfdt ?? undefined}
+                    documentName={`VO_${currentVoId}.docx`}
+                    title="Edit VO Document"
+                    description={`Variation Order Document`}
+                    onSaveSfdt={handleVoEditorSave}
+                    showSaveButton={true}
+                    isLoadingSfdt={loadingVoSfdt}
+                    loadError={voSfdtError ?? undefined}
+                    metadata={[
+                        { label: "Contract #", value: contractData?.contractNumber || "-" },
+                        { label: "Project", value: contractData?.projectName || currentProject?.name || "-" },
+                        { label: "Subcontractor", value: contractData?.subcontractorName || currentSubcontractor?.name || "-" },
+                    ]}
+                />
             )}
 
             {/* Terminate Contract Confirmation Modal */}

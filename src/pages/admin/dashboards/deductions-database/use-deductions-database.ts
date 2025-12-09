@@ -69,30 +69,31 @@ const useDeductionsDatabase = () => {
     const fetchDeductionsData = useCallback(async (contractDataSetId: number) => {
         setLoading(true);
         try {
+            const currentToken = token ?? "";
             const [laborsResult, materialsResult, machinesResult] = await Promise.all([
-                fetchLabors(contractDataSetId, token),
-                fetchMaterials(contractDataSetId, token),
-                fetchMachines(contractDataSetId, token),
+                fetchLabors(contractDataSetId, currentToken),
+                fetchMaterials(contractDataSetId, currentToken),
+                fetchMachines(contractDataSetId, currentToken),
             ]);
 
             if ("success" in laborsResult && !laborsResult.success) {
                 console.error("Failed to fetch labors:", laborsResult.message);
                 setLaborData([]);
-            } else {
+            } else if (Array.isArray(laborsResult)) {
                 setLaborData(laborsResult);
             }
 
             if ("success" in materialsResult && !materialsResult.success) {
                 console.error("Failed to fetch materials:", materialsResult.message);
                 setMaterialsData([]);
-            } else {
+            } else if (Array.isArray(materialsResult)) {
                 setMaterialsData(materialsResult);
             }
 
             if ("success" in machinesResult && !machinesResult.success) {
                 console.error("Failed to fetch machines:", machinesResult.message);
                 setMachinesData([]);
-            } else {
+            } else if (Array.isArray(machinesResult)) {
                 setMachinesData(machinesResult);
             }
         } catch (error) {
@@ -100,11 +101,11 @@ const useDeductionsDatabase = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [token]);
 
     // Effect to clear data when contract selection changes to null or fetch data when a contract is selected
     useEffect(() => {
-        if (selectedContract === null) {
+        if (!selectedContract || selectedContract === "") {
             setLaborData([]);
             setMaterialsData([]);
             setMachinesData([]);
@@ -161,7 +162,7 @@ const useDeductionsDatabase = () => {
                 setSubcontractors([]);
                 setSelectedSubcontractor("");
             }
-            setSelectedContract(null); // Clear contract selection whenever subcontractors are re-fetched
+            setSelectedContract(""); // Clear contract selection whenever subcontractors are re-fetched
         };
         fetchSubcontractorData();
     }, [token, fetchAllSubcontractorsFromHook, getToken]); // Added getToken and getSubcontractorsByProjectId to dependency array

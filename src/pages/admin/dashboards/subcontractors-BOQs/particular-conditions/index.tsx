@@ -366,18 +366,26 @@ const ParticularConditions = () => {
 
     return (
         <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Particular Conditions</h1>
-                <button
-                    onClick={() =>
-                        navigate(`/dashboard/contracts/details/${contractIdentifier}`, { state: { contractId } })
-                    }
-                    className="btn btn-sm btn-ghost">
-                    Back to Details
-                </button>
-            </div>
-
             <div className="card bg-base-100 border-base-300 border shadow-sm">
+                {/* Header with Back and Save buttons */}
+                <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-base-300">
+                    <button
+                        onClick={() =>
+                            navigate(`/dashboard/contracts/details/${contractIdentifier}`, { state: { contractId } })
+                        }
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2">
+                        <span className="iconify lucide--arrow-left size-4"></span>
+                        Back
+                    </button>
+                    <h1 className="text-2xl font-bold text-base-content">Particular Conditions</h1>
+                    <button
+                        onClick={handleSave}
+                        className="btn btn-sm btn-primary"
+                        disabled={saving}>
+                        {saving && <span className="loading loading-spinner loading-xs"></span>}
+                        Save Changes
+                    </button>
+                </div>
                 <div className="card-body">
 
             {/* Financial & Terms Section */}
@@ -519,16 +527,6 @@ const ParticularConditions = () => {
 
 
                 </div>
-            </div>
-
-            <div className="flex justify-end gap-4">
-                <button onClick={() => navigate(-1)} className="btn btn-ghost">
-                    Cancel
-                </button>
-                <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
-                    {saving && <span className="loading loading-spinner"></span>}
-                    Save Changes
-                </button>
             </div>
         </div>
     );

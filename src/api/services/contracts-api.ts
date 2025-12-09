@@ -685,6 +685,97 @@ export const previewContractFile = async (id: number, type: ContractType, token:
     }
 };
 
+/**
+ * Update the contract file with user-edited Word document content
+ * @param id Contract dataset ID
+ * @param file The edited Word document file (Blob)
+ * @param token Authentication token
+ */
+export const updateContractFile = async (
+    id: number,
+    file: Blob,
+    token: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+        const formData = new FormData();
+        formData.append("file", file, `contract_${id}.docx`);
+
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/UpdateContractFile/${id}`,
+            method: "POST",
+            token,
+            body: formData,
+        });
+
+        return response as { success: boolean; message?: string; error?: string };
+    } catch (error) {
+        console.error("Update contract file API Error:", error);
+        throw error;
+    }
+};
+
+/**
+ * Get contract document in SFDT format for Document Editor
+ * @param id Contract dataset ID
+ * @param token Authentication token
+ * @returns SFDT JSON string for Syncfusion Document Editor
+ */
+export const getContractSfdt = async (id: number, token: string): Promise<string> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/GetContractSfdt/${id}`,
+            method: "GET",
+            token,
+            responseType: "json",
+        });
+
+        // Check for error response
+        if (response && typeof response === 'object' && 'success' in response && !response.success) {
+            throw new Error((response as any).message || 'Failed to load SFDT content');
+        }
+
+        // SFDT needs to be a JSON string for documentEditor.open()
+        // If the response is already an object (parsed by apiRequest), stringify it
+        if (typeof response === 'object') {
+            return JSON.stringify(response);
+        }
+
+        return response as string;
+    } catch (error) {
+        console.error("Get contract SFDT API Error:", error);
+        throw error;
+    }
+};
+
+/**
+ * Save edited contract document from SFDT format
+ * @param id Contract dataset ID
+ * @param sfdtContent SFDT JSON string from Document Editor
+ * @param token Authentication token
+ */
+export const saveContractFromSfdt = async (
+    id: number,
+    sfdtContent: string,
+    token: string,
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/SaveContractFromSfdt/${id}`,
+            method: "POST",
+            token,
+            body: sfdtContent,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        return response as { success: boolean; message?: string; error?: string };
+    } catch (error) {
+        console.error("Save contract from SFDT API Error:", error);
+        throw error;
+    }
+};
+
 // Export all functions for easy importing
 export {
     ContractDatasetStatus,

@@ -3,6 +3,9 @@ import { Button } from "@/components/daisyui";
 import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
 import useDocumentGeneration from "../use-document-generation";
+import DocumentEditorModal from "@/components/WordDocumentEditor/DocumentEditorModal";
+import { useAuth } from "@/contexts/auth";
+import { livePreviewVoWord, exportVoDataSetWord, updateVoContractFile } from "@/api/services/vo-api";
 
 interface DocumentPreviewModalProps {
     isOpen: boolean;
@@ -13,6 +16,8 @@ interface DocumentPreviewModalProps {
         template?: any;
         voDataset?: any;
         voDatasetId?: number;
+        /** The model used for live preview (needed for Word generation) */
+        livePreviewModel?: any;
     };
 }
 
@@ -23,9 +28,14 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 }) => {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [downloadLoading, setDownloadLoading] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [showEditor, setShowEditor] = useState(false);
+    const [wordDocumentBlob, setWordDocumentBlob] = useState<Blob | null>(null);
 
     const { downloadDocument } = useDocumentGeneration();
     const { toaster } = useToast();
+    const { getToken } = useAuth();
+    const token = getToken();
 
     useEffect(() => {
         if (isOpen && previewData?.data) {
@@ -43,6 +53,14 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         };
     }, [isOpen, previewData, previewUrl]);
 
+    // Reset editor state when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setShowEditor(false);
+            setWordDocumentBlob(null);
+        }
+    }, [isOpen]);
+
     const handleDownload = async () => {
         if (!previewData) return;
 
@@ -56,17 +74,17 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 const url = URL.createObjectURL(previewData.data);
                 const a = document.createElement('a');
                 a.href = url;
-                
-                const fileName = previewData.type === 'live' 
+
+                const fileName = previewData.type === 'live'
                     ? `VO_Preview_${Date.now()}.zip`
                     : `VO_Document_${previewData.voDatasetId || 'Unknown'}.zip`;
-                    
+
                 a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                
+
                 toaster.success("Document downloaded successfully");
             }
         } catch (error) {
@@ -77,11 +95,91 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         }
     };
 
+    const handleEdit = async () => {
+        if (!previewData || !token) return;
+
+        setEditLoading(true);
+        try {
+            let wordBlob: Blob;
+
+            if (previewData.type === 'live' && previewData.livePreviewModel) {
+                // Generate Word document from live model
+                wordBlob = await livePreviewVoWord(previewData.livePreviewModel, token);
+            } else if (previewData.type === 'saved' && previewData.voDatasetId) {
+                // Get saved Word document
+                wordBlob = await exportVoDataSetWord(previewData.voDatasetId, token);
+            } else {
+                throw new Error("Cannot edit: No document source available");
+            }
+
+            setWordDocumentBlob(wordBlob);
+            setShowEditor(true);
+        } catch (error) {
+            console.error("Edit error:", error);
+            toaster.error("Failed to load document for editing");
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleEditorClose = () => {
+        setShowEditor(false);
+        setWordDocumentBlob(null);
+    };
+
+    const handleEditorSave = async (blob: Blob, filename: string) => {
+        if (!token || !previewData?.voDatasetId) {
+            toaster.error("Cannot save: Missing authentication or document ID");
+            return;
+        }
+
+        try {
+            // Call the API to save the edited document
+            const result = await updateVoContractFile(previewData.voDatasetId, blob, token);
+
+            if (result.success) {
+                toaster.success("Document saved successfully to server");
+            } else {
+                toaster.error(result.error || "Failed to save document");
+            }
+        } catch (error) {
+            console.error("Save error:", error);
+            toaster.error("Failed to save document to server");
+
+            // Fallback: offer to download locally
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toaster.info("Document downloaded locally as fallback");
+        }
+    };
+
+    const handleEditorDownload = (blob: Blob, filename: string) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toaster.success("Document downloaded successfully");
+    };
+
     const handleClose = () => {
         if (previewUrl) {
             URL.revokeObjectURL(previewUrl);
             setPreviewUrl(null);
         }
+        setShowEditor(false);
+        setWordDocumentBlob(null);
         onClose();
     };
 
@@ -91,11 +189,38 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     };
 
     const handleReject = () => {
-        // TODO: Implement rejection workflow  
+        // TODO: Implement rejection workflow
         toaster.info("Rejection functionality to be implemented");
     };
 
     if (!isOpen || !previewData) return null;
+
+    // Show the Word Editor Modal when editing
+    if (showEditor && wordDocumentBlob) {
+        const documentName = previewData.type === 'live'
+            ? `VO_Draft_${Date.now()}.docx`
+            : `VO_Document_${previewData.voDatasetId || 'Unknown'}.docx`;
+
+        return (
+            <DocumentEditorModal
+                isOpen={true}
+                onClose={handleEditorClose}
+                documentBlob={wordDocumentBlob}
+                documentName={documentName}
+                title="Edit VO Document"
+                description={previewData.template?.name || "Variation Order Document"}
+                onSave={handleEditorSave}
+                onDownload={handleEditorDownload}
+                showSaveButton={previewData.type === 'saved'}
+                metadata={previewData.voDataset ? [
+                    { label: "VO Number", value: previewData.voDataset.voNumber || "-" },
+                    { label: "Project", value: previewData.voDataset.projectName || "-" },
+                    { label: "Subcontractor", value: previewData.voDataset.subcontractorName || "-" },
+                    { label: "Template", value: previewData.template?.name || "-" }
+                ] : undefined}
+            />
+        );
+    }
 
     return (
         <dialog className="modal modal-open">
@@ -109,13 +234,32 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                         <div>
                             <h3 className="text-lg font-semibold text-base-content">Document Preview</h3>
                             <p className="text-sm text-base-content/70">
-                                {previewData.type === 'live' ? 'Live Preview' : 'Saved Document'} 
+                                {previewData.type === 'live' ? 'Live Preview' : 'Saved Document'}
                                 {previewData.template && ` - ${previewData.template.name}`}
                             </p>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="bg-purple-600 text-white hover:bg-purple-700"
+                            onClick={handleEdit}
+                            disabled={editLoading}
+                        >
+                            {editLoading ? (
+                                <>
+                                    <Loader />
+                                    Loading...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="iconify lucide--file-pen size-4"></span>
+                                    Edit Document
+                                </>
+                            )}
+                        </Button>
                         <Button
                             type="button"
                             size="sm"
@@ -156,7 +300,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                         <button
                             className="btn btn-sm btn-ghost"
                             onClick={handleClose}
-                            disabled={downloadLoading}
+                            disabled={downloadLoading || editLoading}
                         >
                             <span className="iconify lucide--x size-4"></span>
                         </button>
@@ -209,11 +353,11 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                             <div>
                                 <h4 className="text-lg font-semibold text-base-content">VO Document Package</h4>
                                 <p className="text-sm text-base-content/70 max-w-md">
-                                    This is a ZIP archive containing both Word and PDF versions of the VO document. 
-                                    Click the download button to save the complete document package.
+                                    This is a ZIP archive containing both Word and PDF versions of the VO document.
+                                    Click <strong>Edit Document</strong> to make changes, or <strong>Download</strong> to save the complete package.
                                 </p>
                             </div>
-                            
+
                             <div className="flex flex-wrap gap-2 justify-center">
                                 <span className="badge badge-info badge-sm">
                                     <span className="iconify lucide--file-text size-3 mr-1"></span>
@@ -233,6 +377,25 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                                 <Button
                                     type="button"
                                     size="sm"
+                                    className="bg-purple-600 text-white hover:bg-purple-700"
+                                    onClick={handleEdit}
+                                    disabled={editLoading}
+                                >
+                                    {editLoading ? (
+                                        <>
+                                            <Loader />
+                                            Loading Editor...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="iconify lucide--file-pen size-4"></span>
+                                            Edit in Word Editor
+                                        </>
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
                                     className="btn-primary"
                                     onClick={handleDownload}
                                     disabled={downloadLoading}
@@ -245,7 +408,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                                     ) : (
                                         <>
                                             <span className="iconify lucide--download size-4"></span>
-                                            Download Documents
+                                            Download Package
                                         </>
                                     )}
                                 </Button>
@@ -269,6 +432,20 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     </div>
                 </div>
 
+                {/* Edit Feature Highlight */}
+                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-start gap-3">
+                        <span className="iconify lucide--sparkles text-purple-600 dark:text-purple-400 size-5 mt-0.5"></span>
+                        <div>
+                            <h5 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-1">New: Edit Documents in Browser</h5>
+                            <p className="text-xs text-purple-700 dark:text-purple-300">
+                                Click "Edit Document" to open the Word editor with full formatting capabilities -
+                                add text, tables, images, and more. Save your changes and download the modified document.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Preview Type Information */}
                 {previewData.type === 'live' && (
                     <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
@@ -277,7 +454,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                             <div>
                                 <h5 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-1">Live Preview Notice</h5>
                                 <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                                    This is a live preview generated from current data. Changes have not been saved to the database. 
+                                    This is a live preview generated from current data. Changes have not been saved to the database.
                                     Use the Generate button to create and save the final document.
                                 </p>
                             </div>
@@ -286,7 +463,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 )}
             </div>
             <form method="dialog" className="modal-backdrop">
-                <button onClick={handleClose} disabled={downloadLoading}>close</button>
+                <button onClick={handleClose} disabled={downloadLoading || editLoading}>close</button>
             </form>
         </dialog>
     );

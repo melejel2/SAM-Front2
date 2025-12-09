@@ -285,89 +285,78 @@ const IPCsDatabase = () => {
         ? tableData
         : tableData.filter((ipc: any) => ipc.projectName === selectedProject);
 
-    return (
-        <div style={{
-            height: 'calc(100vh - 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
-            {viewMode === 'table' ? (
-                <>
-                    {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="pb-3">
-                        {/* Header with Back Button */}
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleBackToDashboard}
-                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                                >
-                                    <span className="iconify lucide--arrow-left size-4"></span>
-                                    <span>Back</span>
-                                </button>
+    // Header content for the table
+    const tableHeaderContent = (
+        <div className="flex items-center justify-between flex-1 gap-2">
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={handleBackToDashboard}
+                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                >
+                    <span className="iconify lucide--arrow-left size-4"></span>
+                    <span>Back</span>
+                </button>
 
-                                {/* Project Filter Dropdown */}
-                                <div className="dropdown">
-                                    <div
-                                        tabIndex={0}
-                                        role="button"
-                                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                {/* Project Filter Dropdown */}
+                <div className="dropdown">
+                    <div
+                        tabIndex={0}
+                        role="button"
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                    >
+                        <span className="iconify lucide--filter size-4"></span>
+                        <span>{selectedProject}</span>
+                        <span className="iconify lucide--chevron-down size-3.5"></span>
+                    </div>
+                    <div tabIndex={0} className="dropdown-content z-50 shadow bg-base-100 rounded-box w-80 mt-1 max-h-96 overflow-y-auto">
+                        <div className="p-2 space-y-1">
+                            <button
+                                onClick={() => setSelectedProject("All Projects")}
+                                className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                    selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                                }`}
+                            >
+                                <span className="iconify lucide--list size-4"></span>
+                                <span>All Projects ({tableData.length})</span>
+                            </button>
+                            <div className="divider my-1"></div>
+                            {uniqueProjects.map((projectName) => {
+                                const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
+                                return (
+                                    <button
+                                        key={projectName}
+                                        onClick={() => setSelectedProject(projectName as string)}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                            selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                        }`}
                                     >
-                                        <span className="iconify lucide--filter size-4"></span>
-                                        <span>{selectedProject}</span>
-                                        <span className="iconify lucide--chevron-down size-3.5"></span>
-                                    </div>
-                                    <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-64 mt-1 max-h-96 overflow-y-auto">
-                                        <li>
-                                            <button
-                                                onClick={() => setSelectedProject("All Projects")}
-                                                className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                    selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
-                                                }`}
-                                            >
-                                                <span className="iconify lucide--list size-4"></span>
-                                                <span>All Projects ({tableData.length})</span>
-                                            </button>
-                                        </li>
-                                        <li className="menu-title">
-                                            <span className="text-xs font-semibold">Projects</span>
-                                        </li>
-                                        {uniqueProjects.map((projectName) => {
-                                            const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
-                                            return (
-                                                <li key={projectName}>
-                                                    <button
-                                                        onClick={() => setSelectedProject(projectName as string)}
-                                                        className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                                            selectedProject === projectName ? "bg-base-200 font-semibold" : ""
-                                                        }`}
-                                                    >
-                                                        <span className="iconify lucide--folder size-4"></span>
-                                                        <span className="truncate flex-1">{projectName}</span>
-                                                        <span className="badge badge-sm badge-ghost">{count}</span>
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => navigate('/dashboard/IPCs-database/new')}
-                                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-                                >
-                                    <span className="iconify lucide--plus size-4"></span>
-                                    <span>Create IPC</span>
-                                </button>
-                            </div>
+                                        <span className="iconify lucide--folder size-4"></span>
+                                        <span className="truncate flex-1">{projectName}</span>
+                                        <span className="badge badge-sm badge-ghost">{count}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <button
+                onClick={() => navigate('/dashboard/IPCs-database/new')}
+                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+            >
+                <span className="iconify lucide--plus size-4"></span>
+                <span>Create IPC</span>
+            </button>
+        </div>
+    );
+
+    return (
+        <div className="h-full flex flex-col overflow-hidden -mt-6">
+            {viewMode === 'table' ? (
+                <>
+                    {/* Scrollable Content - Full Height */}
+                    <div className="flex-1 min-h-0">
                         {loading ? (
                             <Loader />
                         ) : (
@@ -379,6 +368,7 @@ const IPCsDatabase = () => {
                                 previewAction
                                 editAction
                                 detailsAction
+                                customHeaderContent={tableHeaderContent}
                                 rowActions={(row) => {
                                     const statusLower = (row._statusRaw || row.status || '').toLowerCase();
                                     const isEditable = statusLower.includes('editable') && !row.isGenerated;
@@ -421,11 +411,11 @@ const IPCsDatabase = () => {
                 </>
             ) : (
                 <>
-                    {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="pb-3">
-                        {/* Header */}
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
+                    {/* Scrollable Content */}
+                    <div className="flex-1 min-h-0 overflow-auto">
+                        {/* Preview Header Card */}
+                        <div className="sticky top-0 bg-base-100 border-b border-base-300 z-10 p-4">
+                            <div className="flex justify-between items-center">
                                 <button
                                     onClick={handleBackToTable}
                                     className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
@@ -433,23 +423,20 @@ const IPCsDatabase = () => {
                                     <span className="iconify lucide--arrow-left size-4"></span>
                                     <span>Back</span>
                                 </button>
-                            </div>
 
-                            <div className="flex gap-2">
-                                <ExportDropdown
-                                    exportingPdf={exportingPdf}
-                                    exportingExcel={exportingExcel}
-                                    onExportPdf={handleExportPdf}
-                                    onExportExcel={handleExportExcel}
-                                />
+                                <div className="flex gap-2">
+                                    <ExportDropdown
+                                        exportingPdf={exportingPdf}
+                                        exportingExcel={exportingExcel}
+                                        onExportPdf={handleExportPdf}
+                                        onExportExcel={handleExportExcel}
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         {/* Preview Card */}
-                        <div className="card bg-base-100 shadow-sm p-4">
+                        <div className="card bg-base-100 shadow-sm p-4 m-4">
                             <div className="flex items-center space-x-3 mb-4">
                                 <div className="p-2 bg-error/20 rounded-lg">
                                     <span className="iconify lucide--file-text text-error size-5"></span>

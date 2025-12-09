@@ -172,64 +172,73 @@ const Reports = () => {
         }
     };
 
-    return (
-        <div>
-            <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBackToDashboard}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        <span className="iconify lucide--arrow-left size-4"></span>
-                        <span>Back</span>
-                    </button>
-                    <select
-                        className="select select-bordered w-full max-w-xs"
-                        value={selectedTrade}
-                        onChange={(e) => setSelectedTrade(e.target.value)}
-                        disabled={tradesLoading}>
-                        <option disabled value="">
-                            {tradesLoading ? "Loading trades..." : "Select a trade"}
+    const tableHeaderContent = (
+        <div className="flex items-center gap-3 flex-1">
+            {/* Back button on far left */}
+            <button
+                onClick={handleBackToDashboard}
+                className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
+                <span className="iconify lucide--arrow-left size-4"></span>
+                <span>Back</span>
+            </button>
+
+            {/* Trade filter CENTERED */}
+            <div className="flex-1 flex justify-center">
+                <select
+                    className="select select-bordered select-sm max-w-xs"
+                    value={selectedTrade}
+                    onChange={(e) => setSelectedTrade(e.target.value)}
+                    disabled={tradesLoading}>
+                    <option disabled value="">
+                        {tradesLoading ? "Loading trades..." : "Select a trade"}
+                    </option>
+                    {sheets.map((sheet: any) => (
+                        <option key={sheet.id} value={sheet.id}>
+                            {sheet.name}
                         </option>
-                        {sheets.map((sheet: any) => (
-                            <option key={sheet.id} value={sheet.id}>
-                                {sheet.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                    ))}
+                </select>
             </div>
-            <div>
+
+            {/* Export buttons on far right */}
+            <div className="flex items-center gap-2">
+                <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => selectedRow && handleExport(selectedRow)}
+                    disabled={!selectedRow || !!exportingId}>
+                    {exportingId === `kpi_${selectedRow?.id}` ? "Exporting..." : "KPI"}
+                </button>
+                <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => selectedRow && handleExportComp(selectedRow)}
+                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
+                    {exportingId === `comp_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Contract"}
+                </button>
+                <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => selectedRow && handleExportProgress(selectedRow)}
+                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
+                    {exportingId === `progress_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Progress"}
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="h-full flex flex-col overflow-hidden -mt-6">
+            <div className="flex-1 min-h-0">
                 <SAMTable
                     columns={columns}
                     tableData={projects}
                     title={"Projects"}
                     loading={loading}
                     exportingRowId={exportingId}
+                    customHeaderContent={tableHeaderContent}
                     rowActions={() => ({ exportAction: false })}
                     onRowSelect={setSelectedRow}
                     selectedRowId={selectedRow?.id}
                     onSuccess={() => {}}
                 />
-            </div>
-            <div className="mt-4 flex items-center justify-end gap-3">
-                <button
-                    className="btn btn-primary"
-                    onClick={() => selectedRow && handleExport(selectedRow)}
-                    disabled={!selectedRow || !!exportingId}>
-                    {exportingId === `kpi_${selectedRow?.id}` ? "Exporting..." : "KPI"}
-                </button>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => selectedRow && handleExportComp(selectedRow)}
-                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
-                    {exportingId === `comp_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Contract"}
-                </button>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => selectedRow && handleExportProgress(selectedRow)}
-                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
-                    {exportingId === `progress_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Real progress"}
-                </button>
             </div>
         </div>
     );

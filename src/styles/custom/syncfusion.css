@@ -1,0 +1,63 @@
+/* Syncfusion Document Editor Styles */
+@import "@syncfusion/ej2-base/styles/material.css";
+@import "@syncfusion/ej2-buttons/styles/material.css";
+@import "@syncfusion/ej2-inputs/styles/material.css";
+@import "@syncfusion/ej2-popups/styles/material.css";
+@import "@syncfusion/ej2-lists/styles/material.css";
+@import "@syncfusion/ej2-navigations/styles/material.css";
+@import "@syncfusion/ej2-splitbuttons/styles/material.css";
+@import "@syncfusion/ej2-dropdowns/styles/material.css";
+@import "@syncfusion/ej2-documenteditor/styles/material.css";
+
+/* Custom overrides for better integration with DaisyUI themes */
+.e-documenteditorcontainer {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .e-documenteditorcontainer,
+[data-theme="dark"] .e-de-ctn,
+[data-theme="dark"] .e-toolbar,
+[data-theme="dark"] .e-de-status-bar {
+    background-color: oklch(var(--b2)) !important;
+    color: oklch(var(--bc)) !important;
+}
+
+[data-theme="dark"] .e-toolbar-item .e-tbar-btn {
+    color: oklch(var(--bc)) !important;
+}
+
+[data-theme="dark"] .e-de-status-bar {
+    border-top-color: oklch(var(--b3)) !important;
+}
+
+/* Ensure toolbar looks good */
+.e-documenteditorcontainer .e-toolbar {
+    border-bottom: 1px solid oklch(var(--b3));
+}
+
+/* Status bar styling */
+.e-de-status-bar {
+    border-top: 1px solid oklch(var(--b3));
+    padding: 4px 8px;
+}
+
+/* Scrollbar styling to match app */
+.e-de-viewer-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.e-de-viewer-container::-webkit-scrollbar-track {
+    background: oklch(var(--b2));
+}
+
+.e-de-viewer-container::-webkit-scrollbar-thumb {
+    background: oklch(var(--bc) / 0.3);
+    border-radius: 4px;
+}
+
+.e-de-viewer-container::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--bc) / 0.5);
+}
