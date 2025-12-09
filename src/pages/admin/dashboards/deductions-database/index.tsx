@@ -7,42 +7,14 @@ import { Button, Modal, ModalActions, ModalBody, ModalHeader, Select, SelectOpti
 import useDeductionsDatabase from "./use-deductions-database";
 import useDeductionsManager from "./use-deductions-manager";
 
-const LABOR_INPUT_FIELDS: Array<{
-    name: string;
-    type: string;
-    placeholder: string;
-    required: boolean;
-    label: string;
-}> = [
-    { name: "laborType", type: "text", placeholder: "e.g., Engineer", required: true, label: "Labor Type" },
-    { name: "unit", type: "text", placeholder: "e.g., Day", required: true, label: "Unit" },
-    { name: "unitPrice", type: "number", placeholder: "e.g., 500", required: true, label: "Unit Price" },
-];
-
 interface TableInputField {
     name: string;
     type: string;
     required: boolean;
     label: string;
     placeholder?: string;
+    options?: string[]; // Added options for select type
 }
-
-const MATERIAL_INPUT_FIELDS: TableInputField[] = [
-    { name: "bc", type: "text", required: true, label: "REF #" },
-    { name: "designation", type: "text", required: true, label: "Item" },
-    { name: "unit", type: "text", required: true, label: "Unit" },
-    { name: "saleUnit", type: "number", required: true, label: "Unit Price" },
-    { name: "quantity", type: "number", required: true, label: "Ordered Qte" },
-    { name: "allocated", type: "number", required: true, label: "Allocated" },
-    { name: "remark", type: "text", required: false, label: "Remark" },
-];
-
-const MACHINE_INPUT_FIELDS: TableInputField[] = [
-    { name: "acronym", type: "text", required: true, label: "Machine Code" },
-    { name: "type", type: "text", required: true, label: "Type of Machine" },
-    { name: "unit", type: "text", required: true, label: "Unit" },
-    { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
-];
 
 const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
@@ -93,6 +65,8 @@ const DeductionsDatabase = memo(() => {
         addMachine,
         saveMachine,
         deleteMachine,
+        unitOptions,
+        fetchManagerData,
     } = useDeductionsManager(isModalOpen);
 
     // Memoize column and data selection to prevent recalculation
@@ -152,19 +126,76 @@ const DeductionsDatabase = memo(() => {
         // Empty success handler for main table, modal has its own
     }, []);
 
+    const handleSave = async (data: any) => {
+        const isUpdate = data.id != null;
+
+        switch (modalView) {
+            case "Labor":
+                if (isUpdate) {
+                    await saveLabor(data);
+                } else {
+                    await addLabor(data);
+                }
+                break;
+            case "Materials":
+                if (isUpdate) {
+                    await saveMaterial(data);
+                } else {
+                    await addMaterial(data);
+                }
+                break;
+            case "Machines":
+                if (isUpdate) {
+                    await saveMachine(data);
+                } else {
+                    await addMachine(data);
+                }
+                break;
+        }
+    };
+
     const modalInputFields = useMemo(() => {
+        const laborInputFields: TableInputField[] = [
+            { name: "laborType", type: "text", placeholder: "e.g., Engineer", required: true, label: "Labor Type" },
+            {
+                name: "unit",
+                type: "select",
+                placeholder: "Select Unit",
+                required: true,
+                label: "Unit",
+                options: unitOptions,
+            },
+            { name: "unitPrice", type: "number", placeholder: "e.g., 500", required: true, label: "Unit Price" },
+        ];
+
+        const materialInputFields: TableInputField[] = [
+            { name: "bc", type: "text", required: true, label: "REF #" },
+            { name: "designation", type: "text", required: true, label: "Item" },
+            { name: "unit", type: "select", required: true, label: "Unit", options: unitOptions },
+            { name: "saleUnit", type: "number", required: true, label: "Unit Price" },
+            { name: "quantity", type: "number", required: true, label: "Ordered Qte" },
+            { name: "allocated", type: "number", required: true, label: "Allocated" },
+        ];
+
+        const machineInputFields: TableInputField[] = [
+            { name: "acronym", type: "text", required: true, label: "Machine Code" },
+            { name: "type", type: "text", required: true, label: "Type of Machine" },
+            { name: "unit", type: "select", required: true, label: "Unit", options: unitOptions },
+            { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
+        ];
+
         switch (modalView) {
             case "Materials":
-                return MATERIAL_INPUT_FIELDS;
+                return materialInputFields;
             case "Machines":
-                return MACHINE_INPUT_FIELDS;
+                return machineInputFields;
             default:
-                return LABOR_INPUT_FIELDS;
+                return laborInputFields;
         }
-    }, [modalView]);
+    }, [modalView, unitOptions]);
 
     const tableHeaderContent = (
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex flex-1 items-center gap-3">
             {/* Back button on far left */}
             <button
                 onClick={handleBackToDashboard}
@@ -174,7 +205,7 @@ const DeductionsDatabase = memo(() => {
             </button>
 
             {/* Dropdowns CENTERED */}
-            <div className="flex-1 flex justify-center gap-2">
+            <div className="flex flex-1 justify-center gap-2">
                 <Select
                     value={selectedProject || ""}
                     onChange={(e) => setSelectedProject(e.target.value)}
@@ -255,9 +286,9 @@ const DeductionsDatabase = memo(() => {
     );
 
     return (
-        <div className="h-full flex flex-col overflow-hidden -mt-6">
+        <div className="-mt-6 flex h-full flex-col overflow-hidden">
             {/* Scrollable Content - Full Height */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0 flex-1">
                 <SAMTable
                     columns={columns}
                     tableData={tableData}
@@ -305,6 +336,7 @@ const DeductionsDatabase = memo(() => {
                             editAction={true}
                             deleteAction={true}
                             addBtn={true}
+                            onItemUpdate={handleSave}
                             createEndPoint={
                                 modalView === "Labor"
                                     ? "DeductionsManager/labors"
@@ -328,7 +360,7 @@ const DeductionsDatabase = memo(() => {
                             }
                             title={modalView}
                             loading={managerLoading}
-                            onSuccess={handleSuccess}
+                            onSuccess={fetchManagerData}
                             isNested={true}
                         />
                     </div>

@@ -19,17 +19,41 @@ import {
 } from "@/api/services/deductionsApi";
 import { useAuth } from "@/contexts/auth";
 
+const UNIT_OPTIONS = [
+    "HR",
+    "DAY",
+    "WEEK",
+    "MONTH",
+    "LUMPSUM",
+    "M",
+    "M2",
+    "M3",
+    "KG",
+    "TON",
+    "PIECE",
+    "SET",
+    "UNIT",
+];
+
 // Static column definitions for Manager Data
 const LABOR_COLUMNS_MANAGER = {
     laborType: "Labor Type",
-    unit: "Unit",
+    unit: {
+        label: "Unit",
+        type: "select",
+        options: UNIT_OPTIONS,
+    },
     unitPrice: "Unit Price",
 };
 
 const MATERIALS_COLUMNS_MANAGER = {
     poRef: "REF #",
     item: "Item",
-    unit: "Unit",
+    unit: {
+        label: "Unit",
+        type: "select",
+        options: UNIT_OPTIONS,
+    },
     unitPrice: "Unit Price",
     orderdQte: "Orderd Qte",
     deliveredQte: "Delivered Qte",
@@ -38,7 +62,11 @@ const MATERIALS_COLUMNS_MANAGER = {
 const MACHINES_COLUMNS_MANAGER = {
     acronym: "Machine Code",
     type: "Type of Machine",
-    unit: "unit",
+    unit: {
+        label: "Unit",
+        type: "select",
+        options: UNIT_OPTIONS,
+    },
     unitPrice: "Unit Price",
 };
 
@@ -267,6 +295,7 @@ const useDeductionsManager = (isOpen: boolean) => {
         addMachine,
         saveMachine,
         deleteMachine,
+        unitOptions: UNIT_OPTIONS,
     };
 };
 

@@ -92,7 +92,7 @@ const getTextContent = (value: any): string => {
 
 interface TableProps {
     tableData: any[];
-    columns: Record<string, string>;
+    columns: Record<string, any>;
     previewColumns?: Record<string, string>;
     actions?: boolean;
     previewAction?: boolean;
@@ -759,7 +759,10 @@ const TableComponent: React.FC<TableProps> = ({
                                             Select
                                         </th>
                                     )}
-                                    {columns && Object.entries(columns).map(([columnKey, columnLabel], index) => (
+                                    {columns && Object.entries(columns).map(([columnKey, columnLabel], index) => {
+                                        const columnDisplayLabel = typeof columnLabel === 'string' ? columnLabel : columnLabel.label;
+                                        
+                                        return (
                                         <th
                                             key={columnKey}
                                             className={cn(
@@ -775,7 +778,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 <div
                                                     className="flex cursor-pointer items-center justify-center flex-1"
                                                     onClick={() => handleSort(columnKey)}>
-                                                    <span>{columnLabel}</span>
+                                                    <span>{columnDisplayLabel}</span>
                                                     {sortColumn === columnKey && (
                                                         <span
                                                             className={cn("iconify text-base-content/70 ml-1 size-4", {
@@ -787,7 +790,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 <div className="flex-1 flex justify-end">
                                                     <ColumnFilterDropdown
                                                         columnKey={columnKey}
-                                                        columnLabel={columnLabel}
+                                                        columnLabel={columnDisplayLabel}
                                                         uniqueValues={getUniqueColumnValues(columnKey)}
                                                         selectedValues={columnFilters[columnKey] || []}
                                                         isOpen={openFilterDropdown === columnKey}
@@ -810,7 +813,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                 </div>
                                             </div>
                                         </th>
-                                    ))}
+                                    )})}
                                     {showActionsColumn && (
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider w-24 sm:w-28">
                                             Actions
