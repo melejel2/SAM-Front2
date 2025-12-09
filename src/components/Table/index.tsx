@@ -3,14 +3,15 @@ import AccordionComponent from "./Components/Accordion";
 import TableComponent from "./Components/Table";
 
 interface SAMTableProps {
-    columns: Record<string, string>;
-    previewColumns?: Record<string, string>;
+    columns: Record<string, any>;
+    previewColumns?: Record<string, any>;
     tableData: any[];
     inputFields?: Array<{
         name: string;
         label: string;
         type: string;
         required: boolean;
+        placeholder?: string;
         options?: string[];
     }>;
     actions?: boolean;

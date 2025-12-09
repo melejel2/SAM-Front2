@@ -6,10 +6,16 @@ import useProjects from "@/pages/admin/adminTools/projects/use-projects";
 import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
 
 import {
+    addContractLabor,
+    deleteContractLabor,
     fetchContracts as fetchAllContracts,
     fetchLabors,
     fetchMachines,
     fetchMaterials,
+    fetchManagerLabors,
+    Labor,
+    LaborDataBase,
+    updateContractLabor,
 } from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
@@ -58,50 +64,91 @@ const useDeductionsDatabase = () => {
     const [selectedProject, setSelectedProject] = useState<string>("");
 
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
+    const [allSubcontractors, setAllSubcontractors] = useState<any[]>([]);
     const [selectedSubcontractor, setSelectedSubcontractor] = useState<string>("");
 
     const [contracts, setContracts] = useState<any[]>([]);
     const [selectedContract, setSelectedContract] = useState<string>("");
 
+    const [laborTypeOptions, setLaborTypeOptions] = useState<string[]>([]);
+
     const { getToken } = useAuth();
     const token = getToken();
 
-    const fetchDeductionsData = useCallback(async (contractDataSetId: number) => {
-        setLoading(true);
-        try {
-            const currentToken = token ?? "";
-            const [laborsResult, materialsResult, machinesResult] = await Promise.all([
-                fetchLabors(contractDataSetId, currentToken),
-                fetchMaterials(contractDataSetId, currentToken),
-                fetchMachines(contractDataSetId, currentToken),
-            ]);
-
-            if ("success" in laborsResult && !laborsResult.success) {
-                console.error("Failed to fetch labors:", laborsResult.message);
-                setLaborData([]);
-            } else if (Array.isArray(laborsResult)) {
-                setLaborData(laborsResult);
+    // Effect to fetch all subcontractors initially
+    useEffect(() => {
+        const fetchAllSubs = async () => {
+            const currentToken = getToken();
+            if (currentToken) {
+                try {
+                    const subs = await fetchAllSubcontractorsFromHook();
+                    setAllSubcontractors(subs);
+                } catch (error) {
+                    console.error("Error fetching all subcontractors:", error);
+                    setAllSubcontractors([]);
+                }
             }
+        };
+        fetchAllSubs();
+    }, [fetchAllSubcontractorsFromHook, getToken]);
 
-            if ("success" in materialsResult && !materialsResult.success) {
-                console.error("Failed to fetch materials:", materialsResult.message);
-                setMaterialsData([]);
-            } else if (Array.isArray(materialsResult)) {
-                setMaterialsData(materialsResult);
+    useEffect(() => {
+        const fetchLaborTypes = async () => {
+            const currentToken = getToken();
+            if (currentToken) {
+                try {
+                    const managerLabors = await fetchManagerLabors(currentToken);
+                    if (Array.isArray(managerLabors)) {
+                        const uniqueTypes = [...new Set(managerLabors.map((l: LaborDataBase) => l.laborType))];
+                        setLaborTypeOptions(uniqueTypes);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch manager labor types:", error);
+                }
             }
+        };
+        fetchLaborTypes();
+    }, [getToken]);
 
-            if ("success" in machinesResult && !machinesResult.success) {
-                console.error("Failed to fetch machines:", machinesResult.message);
-                setMachinesData([]);
-            } else if (Array.isArray(machinesResult)) {
-                setMachinesData(machinesResult);
+    const fetchDeductionsData = useCallback(
+        async (contractDataSetId: number) => {
+            setLoading(true);
+            try {
+                const currentToken = token ?? "";
+                const [laborsResult, materialsResult, machinesResult] = await Promise.all([
+                    fetchLabors(contractDataSetId, currentToken),
+                    fetchMaterials(contractDataSetId, currentToken),
+                    fetchMachines(contractDataSetId, currentToken),
+                ]);
+
+                if ("success" in laborsResult && !laborsResult.success) {
+                    console.error("Failed to fetch labors:", laborsResult.message);
+                    setLaborData([]);
+                } else if (Array.isArray(laborsResult)) {
+                    setLaborData(laborsResult);
+                }
+
+                if ("success" in materialsResult && !materialsResult.success) {
+                    console.error("Failed to fetch materials:", materialsResult.message);
+                    setMaterialsData([]);
+                } else if (Array.isArray(materialsResult)) {
+                    setMaterialsData(materialsResult);
+                }
+
+                if ("success" in machinesResult && !machinesResult.success) {
+                    console.error("Failed to fetch machines:", machinesResult.message);
+                    setMachinesData([]);
+                } else if (Array.isArray(machinesResult)) {
+                    setMachinesData(machinesResult);
+                }
+            } catch (error) {
+                console.error("Failed to fetch deductions data:", error);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Failed to fetch deductions data:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [token]);
+        },
+        [token],
+    );
 
     // Effect to clear data when contract selection changes to null or fetch data when a contract is selected
     useEffect(() => {
@@ -110,7 +157,8 @@ const useDeductionsDatabase = () => {
             setMaterialsData([]);
             setMachinesData([]);
             setLoading(false);
-        } else {
+        }
+        else {
             fetchDeductionsData(Number(selectedContract));
         }
     }, [selectedContract, fetchDeductionsData]);
@@ -130,42 +178,42 @@ const useDeductionsDatabase = () => {
         fetchProjects();
     }, [getProjects]);
 
-    // Fetch Subcontractors
+    // Effect to set subcontractors based on selectedProject and allSubcontractors
     useEffect(() => {
-        const fetchSubcontractorData = async () => {
-            const token = getToken(); // Get token here as well to be explicit
-            if (token) {
-                // Ensure token is available before fetching
-                try {
-                    let fetchedSubcontractors: any[] = [];
-                    if (selectedProject) {
-                        // If a project is selected, fetch subcontractors for that project
-                        const response = await getSubcontractorsByProjectId(Number(selectedProject), token);
-                        if (response.success && response.data) {
-                            fetchedSubcontractors = response.data;
-                        } else {
-                            console.error("Error fetching subcontractors by project:", response.message);
-                        }
-                    } else {
-                        // If no project is selected, fetch all subcontractors
-                        fetchedSubcontractors = await fetchAllSubcontractorsFromHook();
-                    }
+        const updateSubcontractorsBasedOnProject = async () => {
+            const currentToken = getToken(); // Get fresh token
 
-                    setSubcontractors(fetchedSubcontractors);
-                    setSelectedSubcontractor("");
-                } catch (error) {
-                    console.error("Error fetching subcontractors:", error); // Corrected error message
-                    setSubcontractors([]);
-                    setSelectedSubcontractor("");
-                }
-            } else {
+            if (!currentToken || allSubcontractors.length === 0) {
                 setSubcontractors([]);
                 setSelectedSubcontractor("");
+                setSelectedContract("");
+                return;
             }
-            setSelectedContract(""); // Clear contract selection whenever subcontractors are re-fetched
+
+            let finalSubcontractors: any[] = [];
+            if (selectedProject) {
+                try {
+                    const response = await getSubcontractorsByProjectId(Number(selectedProject), currentToken);
+                    if (response.success && response.data && response.data.length > 0) {
+                        finalSubcontractors = response.data;
+                    } else {
+                        console.warn("Project-specific subcontractors not found or fetch failed. Falling back to all subcontractors.");
+                        finalSubcontractors = allSubcontractors; // Fallback
+                    }
+                } catch (error) {
+                    console.error("Error fetching project-specific subcontractors:", error);
+                    finalSubcontractors = allSubcontractors; // Fallback on error
+                }
+            } else {
+                finalSubcontractors = allSubcontractors; // If no project selected, show all
+            }
+            
+            setSubcontractors(finalSubcontractors);
+            setSelectedSubcontractor("");
+            setSelectedContract("");
         };
-        fetchSubcontractorData();
-    }, [token, fetchAllSubcontractorsFromHook, getToken]); // Added getToken and getSubcontractorsByProjectId to dependency array
+        updateSubcontractorsBasedOnProject();
+    }, [selectedProject, allSubcontractors, getToken]); // Depend on selectedProject and allSubcontractors
 
     // Fetch Contracts based on selected Project and Subcontractor
     useEffect(() => {
@@ -200,6 +248,56 @@ const useDeductionsDatabase = () => {
         fetchContracts();
     }, [selectedProject, selectedSubcontractor, getToken]);
 
+    const addLaborToContract = async (laborData: Omit<Labor, "id" | "amount">) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await addContractLabor(Number(selectedContract), laborData, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to add labor to contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateLaborInContract = async (laborData: Labor) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            // The update function expects Omit<Labor, "id" | "amount">, so let's create that
+            const { id, amount, ...payload } = laborData;
+            await updateContractLabor(laborData.id, payload, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to update labor in contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteLaborFromContract = async (laborId: number) => {
+        if (!selectedContract) {
+            console.error("No contract selected.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await deleteContractLabor(laborId, token ?? "");
+            await fetchDeductionsData(Number(selectedContract)); // Refetch
+        } catch (error) {
+            console.error("Failed to delete labor from contract:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const memoizedData = useMemo(
         () => ({
             laborColumns: LABOR_COLUMNS,
@@ -219,6 +317,14 @@ const useDeductionsDatabase = () => {
             contracts,
             selectedContract,
             setSelectedContract,
+
+            // Labor type options
+            laborTypeOptions,
+
+            // Mutation functions
+            addLabor: addLaborToContract,
+            updateLabor: updateLaborInContract,
+            deleteLabor: deleteLaborFromContract,
         }),
         [
             laborData,
@@ -226,13 +332,11 @@ const useDeductionsDatabase = () => {
             machinesData,
             projects,
             selectedProject,
-            setSelectedProject,
             subcontractors,
             selectedSubcontractor,
-            setSelectedSubcontractor,
             contracts,
             selectedContract,
-            setSelectedContract,
+            laborTypeOptions,
         ],
     );
 

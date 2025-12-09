@@ -7,7 +7,7 @@ type ApiErrorResponse = {
     status?: number;
 };
 
-interface Labor {
+export interface Labor {
     id: number;
     ref: string;
     laborType: string;
@@ -223,6 +223,43 @@ export const deleteManagerMachine = async (
 ): Promise<{ success: boolean } | ApiErrorResponse> => {
     return apiRequest<{ success: boolean }>({
         endpoint: `DeductionsManager/machines/${id}`,
+        method: "DELETE",
+        token: token,
+    });
+};
+
+export const addContractLabor = async (
+    contractDataSetId: number,
+    laborData: Omit<Labor, "id" | "amount">,
+    token: string,
+): Promise<Labor | ApiErrorResponse> => {
+    return apiRequest<Labor>({
+        endpoint: `Deductions/labors/${contractDataSetId}`,
+        method: "POST",
+        token: token,
+        body: laborData as unknown as Record<string, unknown>,
+    });
+};
+
+export const updateContractLabor = async (
+    laborId: number,
+    laborData: Omit<Labor, "id" | "amount">,
+    token: string,
+): Promise<Labor | ApiErrorResponse> => {
+    return apiRequest<Labor>({
+        endpoint: `Deductions/labors/${laborId}`,
+        method: "PUT",
+        token: token,
+        body: laborData as unknown as Record<string, unknown>,
+    });
+};
+
+export const deleteContractLabor = async (
+    laborId: number,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    return apiRequest<{ success: boolean }>({
+        endpoint: `Deductions/labors/${laborId}`,
         method: "DELETE",
         token: token,
     });

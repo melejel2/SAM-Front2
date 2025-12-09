@@ -46,7 +46,28 @@ const DeductionsDatabase = memo(() => {
         contracts,
         selectedContract,
         setSelectedContract,
+        addLabor: addContractLabor,
+        updateLabor: updateContractLabor,
+        deleteLabor: deleteContractLabor,
+        laborTypeOptions,
     } = useDeductionsDatabase();
+
+    const contractLaborInputFields: TableInputField[] = [
+        { name: "ref", type: "text", required: true, label: "REF #" },
+        { name: "laborType", type: "select", required: true, label: "Type of Worker", options: laborTypeOptions },
+        { name: "activityDescription", type: "text", required: true, label: "Description of Activity" },
+        { name: "unit", type: "text", required: true, label: "Unit" },
+        { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
+        { name: "quantity", type: "number", required: true, label: "Quantity" },
+    ];
+
+    const handleSaveContractLabor = async (data: any) => {
+        if (data.id) {
+            await updateContractLabor(data);
+        } else {
+            await addContractLabor(data);
+        }
+    };
 
     const {
         managerLoading,
@@ -292,15 +313,24 @@ const DeductionsDatabase = memo(() => {
                 <SAMTable
                     columns={columns}
                     tableData={tableData}
-                    inputFields={[]}
-                    actions={false}
-                    editAction={false}
-                    deleteAction={false}
+                    inputFields={activeView === "Labor" ? contractLaborInputFields : []}
+                    actions={activeView === "Labor" && !!selectedContract}
+                    editAction={activeView === "Labor" && !!selectedContract}
+                    deleteAction={activeView === "Labor" && !!selectedContract}
+                    addBtn={activeView === "Labor" && !!selectedContract}
+                    onItemUpdate={activeView === "Labor" ? handleSaveContractLabor : undefined}
+                    onItemDelete={activeView === "Labor" ? (item) => deleteContractLabor(item.id) : undefined}
                     title={activeView}
                     loading={loading}
                     customHeaderContent={tableHeaderContent}
-                    addBtn={false}
                     onSuccess={handleSuccess}
+                    createEndPoint={
+                        modalView === "Labor"
+                            ? "Deductions/CreateLabor"
+                            : modalView === "Materials"
+                              ? "Deductions/CreateMaterial"
+                              : "Deductions/CreateMachine"
+                    }
                 />
             </div>
 
