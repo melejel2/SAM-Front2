@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { MetaData } from "@/components/MetaData";
 import { ACTIVE_API_URL } from "@/api/api";
 
@@ -21,6 +21,7 @@ interface VerificationResult {
 
 const VerifyPage = () => {
     const { token } = useParams<{ token: string }>();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [result, setResult] = useState<VerificationResult | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,11 @@ const VerifyPage = () => {
             }
 
             try {
-                const response = await fetch(`${ACTIVE_API_URL}public/Verification/${token}`, {
+                // Get database region from URL query parameter (for multi-tenant routing)
+                const dbRegion = searchParams.get("db");
+                const dbParam = dbRegion ? `?dbConnection=${encodeURIComponent(dbRegion)}` : "";
+
+                const response = await fetch(`${ACTIVE_API_URL}public/Verification/${token}${dbParam}`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -64,7 +69,7 @@ const VerifyPage = () => {
         };
 
         verifyDocument();
-    }, [token]);
+    }, [token, searchParams]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return "-";
