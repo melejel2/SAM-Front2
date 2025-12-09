@@ -7,6 +7,8 @@ interface DocumentEditorModalProps {
     onClose: () => void;
     /** The SFDT content to edit (from backend conversion) */
     sfdtContent?: string;
+    /** The document blob to edit (legacy - will be converted to SFDT) */
+    documentBlob?: Blob;
     /** The document filename */
     documentName?: string;
     /** Title shown in the modal header */
@@ -15,6 +17,8 @@ interface DocumentEditorModalProps {
     description?: string;
     /** Callback when document is saved - receives the SFDT content */
     onSaveSfdt?: (sfdtContent: string, filename: string) => Promise<void>;
+    /** Legacy callback when document is saved - receives blob */
+    onSave?: (blob: Blob, filename: string) => Promise<void>;
     /** Callback when document is downloaded */
     onDownload?: (blob: Blob, filename: string) => void;
     /** Whether to show save button (for saving back to server) */
@@ -34,10 +38,12 @@ const DocumentEditorModal: React.FC<DocumentEditorModalProps> = ({
     isOpen,
     onClose,
     sfdtContent,
+    documentBlob,
     documentName = "Document.docx",
     title = "Edit Document",
     description,
     onSaveSfdt,
+    onSave,
     onDownload,
     showSaveButton = true,
     metadata,

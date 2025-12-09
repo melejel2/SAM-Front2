@@ -18,7 +18,7 @@ interface Labor {
     amount: number;
 }
 
-interface LaborDataBase {
+export interface LaborDataBase {
     id: number;
     laborType: string;
     unit: string;
@@ -33,7 +33,7 @@ interface MachineDataBase {
     unitPrice: number;
 }
 
-interface Material {
+export interface Material {
     id: number;
     bc: string;
     designation: string;
@@ -47,7 +47,7 @@ interface Material {
     remark: string;
 }
 
-interface Machine {
+export interface Machine {
     id: number;
     ref: string;
     machineAcronym: string;
@@ -166,7 +166,7 @@ export const addManagerMaterial = async (
         endpoint: `DeductionsManager/poe`,
         method: "POST",
         token: token,
-        data: materialData,
+        body: materialData as unknown as Record<string, unknown>,
     });
 };
 
@@ -178,7 +178,7 @@ export const updateManagerMaterial = async (
         endpoint: `DeductionsManager/poe`,
         method: "POST",
         token: token,
-        data: materialData,
+        body: materialData as unknown as Record<string, unknown>,
     });
 };
 
@@ -201,7 +201,7 @@ export const addManagerMachine = async (
         endpoint: `DeductionsManager/machines`,
         method: "POST",
         token: token,
-        data: machineData,
+        body: machineData as unknown as Record<string, unknown>,
     });
 };
 
@@ -213,7 +213,7 @@ export const updateManagerMachine = async (
         endpoint: `DeductionsManager/machines`,
         method: "POST",
         token: token,
-        data: machineData,
+        body: machineData as unknown as Record<string, unknown>,
     });
 };
 

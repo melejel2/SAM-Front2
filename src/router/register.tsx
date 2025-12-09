@@ -202,6 +202,10 @@ const otherRoutes: IRoutesProps[] = [
         path: "/privacy-policy",
         element: cw(lazy(() => import("@/pages/PrivacyPolicy"))),
     },
+    {
+        path: "/verify/:token",
+        element: cw(lazy(() => import("@/pages/verify"))),
+    },
 ];
 
 export const registerRoutes = {
