@@ -333,8 +333,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         const filename = `IPC_BOQ_${buildingName}_${dateStr}.xlsx`;
 
         // Download the file
-        XLSX.writeFile(wb, filename);
-        toaster.success(`BOQ exported: ${filename}`);
+        try {
+            XLSX.writeFile(wb, filename);
+            toaster.success(`BOQ exported: ${filename}`);
+        } catch (error) {
+            console.error("Export error:", error);
+            toaster.error("Failed to save Excel file. Check browser permissions.");
+        }
     };
 
     // Import BOQ progress from Excel file
@@ -392,6 +397,11 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         return boq;
                     }
 
+                    // Skip header rows - don't allow updates to rows with qte=0 and unitPrice=0
+                    if (boq.qte === 0 && boq.unitPrice === 0) {
+                        return boq;
+                    }
+
                     // Only read editable columns: Actual Qty, Cumul Qty, or Cumul %
                     const importedActualQty = parseFloat(String(matchingRow["Actual Qty"] || "0")) || 0;
                     const importedCumulQty = parseFloat(String(matchingRow["Cumul Qty"] || "0")) || 0;
@@ -399,26 +409,26 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
                     const precedQte = boq.precedQte || 0;
 
-                    // Determine which value was edited by comparing with expected values
-                    // Priority: Actual Qty > Cumul Qty > Cumul %
-                    let finalActualQte = boq.actualQte || 0;
+                    // Calculate what cumul values SHOULD be based on imported Actual Qty
+                    // This allows us to detect which field was edited by checking consistency
+                    const expectedCumulFromActual = precedQte + importedActualQty;
+                    const expectedPercentFromActual = boq.qte === 0 ? 0 : (expectedCumulFromActual / boq.qte) * 100;
 
-                    // Calculate expected values from current actual
-                    const expectedCumulQty = precedQte + finalActualQte;
-                    const expectedCumulPercent = boq.qte === 0 ? 0 : (expectedCumulQty / boq.qte) * 100;
+                    // Detect which field was edited by checking consistency between imported values
+                    let finalActualQte: number;
 
-                    // Check if Actual Qty was changed (simplest - direct use)
-                    if (importedActualQty !== finalActualQte) {
-                        finalActualQte = Math.max(0, importedActualQty);
-                    }
-                    // Check if Cumul Qty was changed
-                    else if (Math.abs(importedCumulQty - expectedCumulQty) > 0.001) {
+                    // If Cumul Qty is inconsistent with Actual Qty, user edited Cumul Qty
+                    if (Math.abs(importedCumulQty - expectedCumulFromActual) > 0.001) {
                         finalActualQte = Math.max(0, importedCumulQty - precedQte);
                     }
-                    // Check if Cumul % was changed
-                    else if (Math.abs(importedCumulPercent - expectedCumulPercent) > 0.001 && boq.qte > 0) {
+                    // If Cumul % is inconsistent with Actual Qty, user edited Cumul %
+                    else if (Math.abs(importedCumulPercent - expectedPercentFromActual) > 0.1 && boq.qte > 0) {
                         const cumulQtyFromPercent = (importedCumulPercent / 100) * boq.qte;
                         finalActualQte = Math.max(0, cumulQtyFromPercent - precedQte);
+                    }
+                    // All values are consistent, use Actual Qty directly
+                    else {
+                        finalActualQte = Math.max(0, importedActualQty);
                     }
 
                     // Calculate all derived values
@@ -452,7 +462,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
             } catch (error) {
                 console.error("Import error:", error);
-                toaster.error("Failed to parse Excel file");
+                const errorMsg = error instanceof Error ? error.message : "Unknown error";
+                toaster.error(`Failed to import: ${errorMsg}`);
             }
         };
 
