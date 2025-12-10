@@ -8,6 +8,7 @@ import {
     VoDatasetBoqDetailsVM, // Added for VO dataset type
     createContractVO,
     generateVONumber,
+    getAllProjectBuildings,
     getContractBOQItems,
     getContractBuildings,
     getContractForVO,
@@ -24,7 +25,11 @@ type ContractData = ContractContext & {
     buildings: (ContractBuilding & { selected: boolean })[];
 };
 
-type Building = ContractBuilding & { selected: boolean };
+type Building = ContractBuilding & {
+    selected: boolean;
+    /** Whether this building is linked to the contract */
+    isContractLinked?: boolean;
+};
 
 interface VOLineItem {
     id?: number;
@@ -319,16 +324,37 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
                 initialFormState.voNumber = voNumberResponse.success ? voNumberResponse.data! : generateVONumberLocal();
             }
 
-            // 1. Load Contract Details and update building selection based on VO data if in edit mode
+            // 3. Load ALL project buildings (not just contract-linked)
+            const contractLinkedBuildingIds = new Set(contractContext.buildings.map((b) => b.id));
+            let allBuildings: Building[] = [];
+
+            if (contractContext.projectId) {
+                const allBuildingsResponse = await getAllProjectBuildings(contractContext.projectId, memoizedToken || "");
+                if (allBuildingsResponse.success && allBuildingsResponse.data) {
+                    allBuildings = allBuildingsResponse.data.map((building) => ({
+                        ...building,
+                        selected: selectedBuildingIdsFromVo.includes(building.id),
+                        isContractLinked: contractLinkedBuildingIds.has(building.id),
+                    }));
+                }
+            }
+
+            // Fallback to contract buildings if all buildings fetch fails
+            if (allBuildings.length === 0) {
+                allBuildings = contractContext.buildings.map((building) => ({
+                    ...building,
+                    selected: selectedBuildingIdsFromVo.includes(building.id),
+                    isContractLinked: true,
+                }));
+            }
+
+            // Update contract data with all buildings
             const contractInfo: ContractData = {
                 ...contractContext,
-                buildings: contractContext.buildings.map((building) => ({
-                    ...building,
-                    selected: selectedBuildingIdsFromVo.includes(building.id), // Mark as selected if in VO dataset
-                })),
+                buildings: allBuildings,
             };
             setContractData(contractInfo);
-            setAvailableBuildings(contractInfo.buildings); // Set available buildings with correct selection state
+            setAvailableBuildings(allBuildings); // Set ALL buildings, with contract-linked flag
 
             // 3. Update form data with contract context and (if editing) VO data
             setFormDataState((prev) => {
@@ -387,12 +413,12 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     // Validation functions for 3-step wizard
     const validateStep1 = (): boolean => {
         // Step 1: VO Details + Buildings
+        // Note: Description is optional
         return (
             formData.voNumber.trim() !== "" &&
             formData.voDate !== "" &&
             (formData.voType === "Addition" || formData.voType === "Omission") && // VO Type is required
             formData.voContractId !== undefined && formData.voContractId > 0 && // VO Contract is required
-            formData.description.trim() !== "" &&
             formData.selectedBuildingIds.length > 0
         );
     };

@@ -53,190 +53,157 @@ const PenaltyForm: React.FC<PenaltyFormProps> = ({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg dark:bg-red-900/30">
-              <span className="iconify lucide--alert-triangle text-red-600 dark:text-red-400 size-5"></span>
+      <div className="modal-box w-11/12 max-w-xl p-0 overflow-hidden">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-red-600 to-red-500 dark:from-red-700 dark:to-red-600 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <span className="iconify lucide--alert-triangle text-white size-5"></span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Penalty Management</h2>
+                <p className="text-xs text-white/80">Manage cumulative penalties for this IPC</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-base-content">Penalty Management</h2>
-              <p className="text-sm text-base-content/70">Manage penalties for this IPC</p>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20"
+              disabled={loading}
+            >
+              <span className="iconify lucide--x size-5"></span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-sm btn-circle btn-ghost"
-            disabled={loading}
-          >
-            <span className="iconify lucide--x size-4"></span>
-          </button>
         </div>
 
-        {/* Form Content */}
-        <div className="space-y-6">
-          {/* Enhanced Desktop-Style Summary Cards */}
-          <div className="bg-base-200 p-4 rounded-lg border border-base-300">
-            <h3 className="text-sm font-semibold text-base-content mb-3 uppercase tracking-wider">Penalty Calculation Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Previous Penalty */}
-              <div className="bg-base-100 p-3 rounded-lg border border-base-300">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="iconify lucide--history text-base-content/60 size-4"></span>
-                  <div className="text-xs font-medium text-base-content/60 uppercase tracking-wider">Previous Penalty</div>
-                </div>
-                <div className="text-lg font-bold text-base-content">
-                  {new Intl.NumberFormat('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(previousPenalty)}
-                </div>
-                <div className="text-xs text-base-content/50 mt-1">From previous IPCs</div>
+        <div className="p-5">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {/* Previous Penalty */}
+            <div className="bg-base-200/50 border border-base-300 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="iconify lucide--history text-base-content/50 size-4"></span>
+                <span className="text-xs font-medium text-base-content/60 uppercase tracking-wide">Previous</span>
               </div>
-
-              {/* Current Penalty */}
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="iconify lucide--alert-triangle text-red-600 dark:text-red-400 size-4"></span>
-                  <div className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Total Penalty</div>
-                </div>
-                <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                  {new Intl.NumberFormat('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(currentPenalty)}
-                </div>
-                <div className="text-xs text-red-600/70 dark:text-red-400/70 mt-1">Cumulative amount</div>
+              <div className="text-xl font-bold text-base-content">
+                {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(previousPenalty)}
               </div>
+            </div>
 
-              {/* Penalty Difference */}
-              <div className={`p-3 rounded-lg border ${
-                penaltyDifference > 0 
-                  ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' 
-                  : penaltyDifference < 0
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : 'bg-base-100 border-base-300'
+            {/* Total Penalty */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="iconify lucide--alert-circle text-red-500 size-4"></span>
+                <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Total</span>
+              </div>
+              <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(currentPenalty)}
+              </div>
+            </div>
+
+            {/* Change */}
+            <div className={`rounded-xl p-3 border ${
+              penaltyDifference > 0
+                ? 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/20 border-orange-200 dark:border-orange-800'
+                : penaltyDifference < 0
+                ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/20 border-green-200 dark:border-green-800'
+                : 'bg-base-200/50 border-base-300'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`iconify size-4 ${
+                  penaltyDifference > 0 ? 'lucide--trending-up text-orange-500' :
+                  penaltyDifference < 0 ? 'lucide--trending-down text-green-500' :
+                  'lucide--minus text-base-content/50'
+                }`}></span>
+                <span className={`text-xs font-medium uppercase tracking-wide ${
+                  penaltyDifference > 0 ? 'text-orange-600 dark:text-orange-400' :
+                  penaltyDifference < 0 ? 'text-green-600 dark:text-green-400' :
+                  'text-base-content/60'
+                }`}>Change</span>
+              </div>
+              <div className={`text-xl font-bold ${
+                penaltyDifference > 0 ? 'text-orange-600 dark:text-orange-400' :
+                penaltyDifference < 0 ? 'text-green-600 dark:text-green-400' :
+                'text-base-content'
               }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`iconify ${
-                    penaltyDifference > 0 ? 'lucide--trending-up text-orange-600 dark:text-orange-400' :
-                    penaltyDifference < 0 ? 'lucide--trending-down text-green-600 dark:text-green-400' :
-                    'lucide--minus text-base-content/60'
-                  } size-4`}></span>
-                  <div className={`text-xs font-medium uppercase tracking-wider ${
-                    penaltyDifference > 0 
-                      ? 'text-orange-600 dark:text-orange-400' 
-                      : penaltyDifference < 0
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-base-content/60'
-                  }`}>
-                    {penaltyDifference > 0 ? 'Additional Penalty' : penaltyDifference < 0 ? 'Penalty Reduction' : 'No Change'}
-                  </div>
-                </div>
-                <div className={`text-lg font-bold ${
-                  penaltyDifference > 0 
-                    ? 'text-orange-600 dark:text-orange-400' 
-                    : penaltyDifference < 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-base-content'
-                }`}>
-                  {penaltyDifference > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(penaltyDifference)}
-                </div>
-                <div className={`text-xs mt-1 ${
-                  penaltyDifference > 0 
-                    ? 'text-orange-600/70 dark:text-orange-400/70' 
-                    : penaltyDifference < 0
-                    ? 'text-green-600/70 dark:text-green-400/70'
-                    : 'text-base-content/50'
-                }`}>
-                  {penaltyDifference === 0 ? 'No change from previous' : 'Difference from previous'}
-                </div>
+                {penaltyDifference > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(penaltyDifference)}
               </div>
             </div>
           </div>
 
+          {/* Divider */}
+          <div className="divider my-4 text-xs text-base-content/50">Enter Penalty Details</div>
+
           {/* Form Fields */}
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             {/* Previous Penalty (Read-only) */}
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">Previous Penalty Amount</span>
+                <span className="label-text text-sm font-medium">Previous Penalty</span>
               </label>
-              <input
-                type="number"
-                value={formData.previousPenalty}
-                readOnly
-                className="input input-bordered bg-base-200 cursor-not-allowed"
-                placeholder="0"
-              />
-              <label className="label">
-                <span className="label-text-alt text-base-content/60">This is the penalty amount from previous IPCs (read-only)</span>
-              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40 iconify lucide--lock size-4"></span>
+                <input
+                  type="number"
+                  value={formData.previousPenalty}
+                  readOnly
+                  className="input input-bordered bg-base-200/50 w-full pl-9 cursor-not-allowed"
+                />
+              </div>
             </div>
 
-            {/* Current Penalty */}
+            {/* Total Penalty */}
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">Total Penalty Amount *</span>
+                <span className="label-text text-sm font-medium">Total Penalty <span className="text-red-500">*</span></span>
               </label>
-              <input
-                type="number"
-                value={formData.penalty}
-                onChange={(e) => handleInputChange('penalty', parseFloat(e.target.value) || 0)}
-                className="input input-bordered focus:input-error"
-                placeholder="Enter total penalty amount"
-                min="0"
-                step="0.01"
-                disabled={loading}
-              />
-              <label className="label">
-                <span className="label-text-alt text-base-content/60">Enter the total cumulative penalty amount</span>
-              </label>
-            </div>
-
-            {/* Penalty Reason */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Penalty Reason</span>
-              </label>
-              <textarea
-                value={formData.reason}
-                onChange={(e) => handleInputChange('reason', e.target.value)}
-                className="textarea textarea-bordered h-24 resize-none"
-                placeholder="Enter the reason for this penalty (optional)"
-                disabled={loading}
-              />
-              <label className="label">
-                <span className="label-text-alt text-base-content/60">Provide context for the penalty calculation</span>
-              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 iconify lucide--calculator size-4"></span>
+                <input
+                  type="number"
+                  value={formData.penalty}
+                  onChange={(e) => handleInputChange('penalty', parseFloat(e.target.value) || 0)}
+                  className="input input-bordered w-full pl-9 focus:border-red-400 focus:ring-red-400"
+                  min="0"
+                  step="0.01"
+                  disabled={loading}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer Actions */}
-        <div className="modal-action">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn-error"
-            disabled={loading}
-          >
-            {loading && <span className="loading loading-spinner loading-sm"></span>}
-            Apply Penalty
-          </button>
+          {/* Reason */}
+          <div className="form-control mb-5">
+            <label className="label">
+              <span className="label-text text-sm font-medium">Reason</span>
+              <span className="label-text-alt text-base-content/50">Optional</span>
+            </label>
+            <textarea
+              value={formData.reason}
+              onChange={(e) => handleInputChange('reason', e.target.value)}
+              className="textarea textarea-bordered h-20 resize-none"
+              placeholder="Describe the reason for this penalty..."
+              disabled={loading}
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end pt-2 border-t border-base-300">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="btn btn-error gap-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : (
+                <span className="iconify lucide--check size-4"></span>
+              )}
+              Apply Penalty
+            </button>
+          </div>
         </div>
       </div>
     </div>

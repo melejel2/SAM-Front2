@@ -160,6 +160,8 @@ export interface ImportVoRequest {
   sheetId: number;
   voLevel?: number;
   isFromBudgetBoq?: boolean;
+  /** When true, applies VO data to all buildings with the same Type (identical buildings). Default: false */
+  applyToIdenticalBuildings?: boolean;
   excelFile?: File;
 }
 

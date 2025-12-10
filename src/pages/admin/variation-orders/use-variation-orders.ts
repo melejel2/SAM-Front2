@@ -179,7 +179,7 @@ const useVariationOrders = () => {
    */
   const uploadVo = async (request: ImportVoRequest): Promise<UploadVoResponse> => {
     setUploadLoading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('ProjectId', request.projectId.toString());
@@ -187,7 +187,8 @@ const useVariationOrders = () => {
       formData.append('SheetId', request.sheetId.toString());
       formData.append('VoLevel', (request.voLevel || 1).toString());
       formData.append('IsFromBudgetBoq', (request.isFromBudgetBoq || false).toString());
-      
+      formData.append('ApplyToIdenticalBuildings', (request.applyToIdenticalBuildings || false).toString());
+
       if (request.excelFile) {
         formData.append('excelFile', request.excelFile);
       }

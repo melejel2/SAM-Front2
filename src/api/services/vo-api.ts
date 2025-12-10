@@ -73,6 +73,8 @@ export interface ContractBuilding {
   id: number;
   name: string;
   buildingName: string;
+  /** Building type identifier. Buildings with the same type are "identical" */
+  type?: string;
 }
 
 export interface VOGenerationRequest {
@@ -1171,8 +1173,62 @@ export const saveVoFromSfdt = async (
   }
 };
 
+/**
+ * Get all buildings for a project (not just contract-linked)
+ * Use this when creating VOs to allow selection of any project building
+ * @param projectId Project ID
+ * @param token Authentication token
+ */
+export const getAllProjectBuildings = async (projectId: number, token: string): Promise<VoApiResponse<ContractBuilding[]> | VoApiError> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
+      method: 'GET',
+      token
+    });
+
+    // The backend returns data directly
+    if (response && Array.isArray(response)) {
+      const buildings: ContractBuilding[] = response.map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        buildingName: b.name,
+        type: b.type, // Include type for identical building detection
+      }));
+
+      return {
+        success: true,
+        data: buildings,
+        message: `Found ${buildings.length} buildings for this project`
+      };
+    }
+
+    // Handle wrapped response
+    if (response && response.success && Array.isArray(response.data)) {
+      return response;
+    }
+
+    if (response && !response.success) {
+      return response;
+    }
+
+    return {
+      success: true,
+      data: [],
+      message: 'No buildings found for this project'
+    };
+  } catch (error) {
+    console.error('Get all project buildings API Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to load project buildings',
+      message: 'An error occurred while loading project buildings'
+    };
+  }
+};
+
 // Export types for use in components
-export type { 
-  VoApiResponse, 
+export type {
+  VoApiResponse,
   VoApiError
 };

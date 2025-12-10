@@ -8,6 +8,10 @@ export interface Building {
   id: number;
   name: string;
   buildingName?: string;
+  projectLevel?: number;
+  subContractorLevel?: number;
+  /** Building type identifier. Buildings with the same type are "identical" */
+  type?: string;
 }
 
 // Building Sheet interface (matches backend BuildingSheetVM with camelCase)
@@ -46,17 +50,36 @@ const useBuildings = () => {
   const getBuildingsByProject = useCallback(async (projectId: number): Promise<Building[]> => {
     setLoading(true);
     try {
-      // TODO: Implement actual API call when backend endpoint is ready
-      
-      // Mock data for now
-      const mockBuildings: Building[] = [
-        { id: 1, name: 'Building A', buildingName: 'Building A' },
-        { id: 2, name: 'Building B', buildingName: 'Building B' },
-        { id: 3, name: 'Building C', buildingName: 'Building C' }
-      ];
-      
-      setBuildings(mockBuildings);
-      return mockBuildings;
+      const token = getToken();
+      if (!token) {
+        throw new Error('Authentication token not available');
+      }
+
+      const response = await apiRequest({
+        endpoint: `Building/GetBuildingsList?projectId=${projectId}`,
+        method: 'GET',
+        token,
+      });
+
+      // Check if response indicates error
+      if (response && 'success' in response && !response.success) {
+        throw new Error(response.message || 'Failed to fetch buildings');
+      }
+
+      // Handle successful response - map backend fields to frontend interface
+      const buildingsData: Building[] = Array.isArray(response)
+        ? response.map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            buildingName: b.name,
+            projectLevel: b.projectLevel,
+            subContractorLevel: b.subContractorLevel,
+            type: b.type,
+          }))
+        : [];
+
+      setBuildings(buildingsData);
+      return buildingsData;
     } catch (error) {
       console.error('API Error getting buildings:', error);
       toaster.error('Failed to load buildings');

@@ -30,6 +30,7 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
     const [selectedSheet, setSelectedSheet] = useState<number | null>(null);
     const [voLevel, setVoLevel] = useState<number>(1);
     const [isFromBudgetBoq, setIsFromBudgetBoq] = useState<boolean>(false);
+    const [applyToIdenticalBuildings, setApplyToIdenticalBuildings] = useState<boolean>(false);
     const [files, setFiles] = useState<any[]>([]);
 
     const handleProjectChange = async (projectId: number) => {
@@ -55,6 +56,7 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
             sheetId: selectedSheet,
             voLevel,
             isFromBudgetBoq,
+            applyToIdenticalBuildings,
             excelFile: files[0].file
         };
 
@@ -78,6 +80,7 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
         setSelectedSheet(null);
         setVoLevel(1);
         setIsFromBudgetBoq(false);
+        setApplyToIdenticalBuildings(false);
         setFiles([]);
         onClose();
     };
@@ -185,8 +188,8 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
                     {/* From Budget BOQ Checkbox */}
                     <div className="form-control">
                         <label className="cursor-pointer label justify-start gap-3">
-                            <input 
-                                type="checkbox" 
+                            <input
+                                type="checkbox"
                                 className="checkbox checkbox-primary"
                                 checked={isFromBudgetBoq}
                                 onChange={(e) => setIsFromBudgetBoq(e.target.checked)}
@@ -195,6 +198,27 @@ const VOUploadModal = ({ isOpen, onClose, onSuccess }: VOUploadModalProps) => {
                             <div>
                                 <span className="label-text font-medium">From Budget BOQ</span>
                                 <p className="text-sm text-base-content/70">Check if this VO is derived from budget BOQ</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    {/* Apply to Identical Buildings Checkbox */}
+                    <div className="form-control">
+                        <label className="cursor-pointer label justify-start gap-3">
+                            <input
+                                type="checkbox"
+                                className="checkbox checkbox-warning"
+                                checked={applyToIdenticalBuildings}
+                                onChange={(e) => setApplyToIdenticalBuildings(e.target.checked)}
+                                disabled={uploadLoading || isFromBudgetBoq}
+                            />
+                            <div>
+                                <span className="label-text font-medium">Apply to Identical Buildings</span>
+                                <p className="text-sm text-base-content/70">
+                                    When checked, imports VO data to all buildings with the same type (identical buildings).
+                                    <br/>
+                                    <span className="text-warning font-medium">⚠️ Use with caution - affects multiple buildings!</span>
+                                </p>
                             </div>
                         </label>
                     </div>
