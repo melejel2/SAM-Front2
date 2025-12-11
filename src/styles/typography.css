@@ -1,17 +1,62 @@
-/** Importing font files: Google Fonts **/
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;1000&display=swap");
+/**
+ * Typography Configuration
+ * Note: Google Font is loaded in index.html for proper CSS ordering
+ **/
 
 /** Typography config for tailwindcss **/
 @theme {
-    --font-body: "DM Sans", sans-serif;
+    --font-body: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
-    --text-xs: 12px;
-    --text-sm: 14px;
-    --text-base: 16px;
-    --text-lg: 18px;
-    --text-xl: 20px;
+    /* Font sizes with better scale */
+    --text-xs: 0.75rem;    /* 12px */
+    --text-sm: 0.875rem;   /* 14px */
+    --text-base: 1rem;     /* 16px */
+    --text-lg: 1.125rem;   /* 18px */
+    --text-xl: 1.25rem;    /* 20px */
+    --text-2xl: 1.5rem;    /* 24px */
+    --text-3xl: 1.875rem;  /* 30px */
+
+    /* Line heights for better readability */
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+
+    /* Letter spacing */
+    --tracking-tight: -0.01em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.01em;
 }
 
 body {
     @apply font-body text-base;
+    font-weight: 450;  /* Slightly heavier than 400 for better readability */
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "pnum" 1, "tnum" 0, "onum" 0, "lnum" 1;
+}
+
+/* Headings - tighter spacing, bolder weight */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+}
+
+/* Small text optimization */
+.text-xs, .text-sm {
+    letter-spacing: 0.015em;  /* Slightly wider for small text */
+}
+
+/* Tabular numbers for data/tables */
+.tabular-nums {
+    font-feature-settings: "kern" 1, "liga" 1, "tnum" 1, "lnum" 1;
+}
+
+/* Proportional numbers for body text */
+.proportional-nums {
+    font-feature-settings: "kern" 1, "liga" 1, "pnum" 1, "onum" 0;
 }

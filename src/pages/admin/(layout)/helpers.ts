@@ -32,7 +32,7 @@ export const dashboardMenuItems: INavMenuItem[] = [
         label: "Contracts",
         url: "/dashboard/contracts",
         category: "project",
-        activePaths: ["/dashboard/contracts", "/dashboard/subcontractors-boqs"],
+        activePaths: ["/dashboard/contracts", "/dashboard/subcontractors-boqs", "/dashboard/contracts-database"],
     },
     {
         id: "dashboard-deductions-database",

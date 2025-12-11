@@ -4,6 +4,8 @@
 
 .btn {
     @apply font-medium rounded-md;
+    letter-spacing: 0.02em;
+    font-weight: 500;
 }
 
 /* Keep topbar buttons fully circular */
@@ -32,9 +34,11 @@
 
 .card {
     @apply rounded-lg;
-    
+
     .card-title {
-        @apply text-base font-medium;
+        @apply text-base;
+        font-weight: 600;
+        letter-spacing: -0.01em;
     }
 
     .card-body {
@@ -45,14 +49,21 @@
 /* Form Elements */
 .input {
     @apply rounded-md;
+    font-weight: 450;
+    letter-spacing: 0.01em;
 }
 
 .select {
     @apply rounded-md;
+    font-weight: 450;
+    letter-spacing: 0.01em;
 }
 
 .textarea {
     @apply rounded-md;
+    font-weight: 450;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
 }
 
 .modal-box {
@@ -97,8 +108,25 @@
 }
 
 .table {
+    /* Use tabular numbers in tables for aligned columns */
+    font-feature-settings: "kern" 1, "liga" 1, "tnum" 1, "lnum" 1;
+
     th {
-        @apply font-medium;
+        @apply font-semibold;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        color: oklch(var(--bc) / 0.7);
+    }
+
+    td {
+        font-weight: 450;
+    }
+
+    /* Numeric columns should be right-aligned */
+    td.numeric, th.numeric {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
 }
 

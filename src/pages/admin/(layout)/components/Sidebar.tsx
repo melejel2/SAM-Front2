@@ -36,23 +36,38 @@ export const Sidebar = () => {
   }, []);
 
   // Memoize the isActive function to prevent recreation and fix the logic
-  const isActive = React.useCallback((item: ISidebarMenuItem) => {
+  const isActive = React.useCallback((item: ISidebarMenuItem & { activePaths?: string[] }) => {
     if (!item.url) return false;
-    
+
+    // Normalize pathname to lowercase for comparison
+    const normalizedPathname = pathname.toLowerCase();
+
+    // Check activePaths first if available (handles merged pages like contracts)
+    if (item.activePaths && item.activePaths.length > 0) {
+      for (const activePath of item.activePaths) {
+        const normalizedActivePath = activePath.toLowerCase();
+        // Exact match or path starts with activePath
+        if (normalizedPathname === normalizedActivePath ||
+            normalizedPathname.startsWith(normalizedActivePath + '/')) {
+          return true;
+        }
+      }
+    }
+
     // Exact match
     if (item.url === pathname) return true;
-    
+
     // For dashboard items, check if we're on any dashboard route
     if (item.url === '/dashboard' && pathname.startsWith('/dashboard')) {
       // Only highlight main dashboard if we're exactly on /dashboard
       return pathname === '/dashboard';
     }
-    
+
     // For specific dashboard routes, check if current path starts with the item's URL
     if (item.url.startsWith('/dashboard/') && pathname.startsWith(item.url)) {
       return true;
     }
-    
+
     // For admin tools, check for specific matches
     if (pathname.startsWith('/admin-tools')) {
       // Handle specific admin tool routes
@@ -60,7 +75,7 @@ export const Sidebar = () => {
         return true;
       }
     }
-    
+
     return false;
   }, [pathname]);
 
