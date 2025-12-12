@@ -140,9 +140,9 @@ interface TableProps {
     previewLoadingRowId?: string | null;
     exportingRowId?: string | null;
     selectedRowId?: number | string | null;
-    onItemUpdate?: (item: any) => void;
-    onItemCreate?: (item: any) => void;
-    onItemDelete?: (item: any) => void;
+    onItemCreate?: (item: any) => void | Promise<void>;
+    onItemUpdate?: (item: any) => void | Promise<void>;
+    onItemDelete?: (item: any) => void | Promise<void>;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
 

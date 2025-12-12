@@ -57,9 +57,9 @@ interface SAMTableProps {
     rowsPerPage?: number;
     previewLoadingRowId?: string | null;
     exportingRowId?: string | null;
-    onItemUpdate?: (item: any) => void;
-    onItemCreate?: (item: any) => void;
-    onItemDelete?: (item: any) => void;
+    onItemUpdate?: (item: any) => void | Promise<void>;
+    onItemCreate?: (item: any) => void | Promise<void>;
+    onItemDelete?: (item: any) => void | Promise<void>;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
 

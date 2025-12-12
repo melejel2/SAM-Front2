@@ -38,9 +38,9 @@ interface DialogProps {
     editEndPoint?: string;
     createEndPoint?: string;
     deleteEndPoint?: string;
-    onItemCreate?: (item: any) => void;
-    onItemUpdate?: (item: any) => void;
-    onItemDelete?: (item: any) => void;
+    onItemCreate?: (item: any) => void | Promise<void>;
+    onItemUpdate?: (item: any) => void | Promise<void>;
+    onItemDelete?: (item: any) => void | Promise<void>;
     isNested?: boolean;
 }
 
@@ -146,7 +146,7 @@ const DialogComponent: React.FC<DialogProps> = ({
 
             if (dialogType === "Edit" && current) {
                 if (onItemUpdate) {
-                    onItemUpdate(formData);
+                    await onItemUpdate(formData);
                     toaster.success("Updated successfully.");
                     onSuccess();
                     return;
@@ -171,7 +171,7 @@ const DialogComponent: React.FC<DialogProps> = ({
                 }
             } else if (dialogType === "Add") {
                 if (onItemCreate) {
-                    onItemCreate(formData);
+                    await onItemCreate(formData);
                     toaster.success("Created successfully.");
                     onSuccess();
                     return;
@@ -303,7 +303,7 @@ const DialogComponent: React.FC<DialogProps> = ({
 
     const handleDelete = async () => {
         if (onItemDelete && current) {
-            onItemDelete(current);
+            await onItemDelete(current);
             toaster.success("Item removed.");
             onSuccess();
             handleClose();
