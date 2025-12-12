@@ -6,24 +6,24 @@ import useProjects from "@/pages/admin/adminTools/projects/use-projects";
 import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
 
 import {
+    Labor,
+    LaborDataBase,
+    Machine,
+    Material,
     addContractLabor,
+    addContractMachine,
+    addContractMaterial,
     deleteContractLabor,
+    deleteContractMachine,
+    deleteContractMaterial,
     fetchContracts as fetchAllContracts,
     fetchLabors,
     fetchMachines,
-    fetchMaterials,
     fetchManagerLabors,
-    Labor,
-    LaborDataBase,
+    fetchMaterials,
     updateContractLabor,
-    Material,
-    Machine,
-    addContractMaterial,
-    updateContractMaterial,
-    deleteContractMaterial,
-    addContractMachine,
     updateContractMachine,
-    deleteContractMachine,
+    updateContractMaterial,
 } from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
@@ -167,8 +167,7 @@ const useDeductionsDatabase = () => {
             setMaterialsData([]);
             setMachinesData([]);
             setLoading(false);
-        }
-        else {
+        } else {
             fetchDeductionsData(Number(selectedContract));
         }
     }, [selectedContract, fetchDeductionsData]);
@@ -207,7 +206,9 @@ const useDeductionsDatabase = () => {
                     if (response.success && response.data && response.data.length > 0) {
                         finalSubcontractors = response.data;
                     } else {
-                        console.warn("Project-specific subcontractors not found or fetch failed. Falling back to all subcontractors.");
+                        console.warn(
+                            "Project-specific subcontractors not found or fetch failed. Falling back to all subcontractors.",
+                        );
                         finalSubcontractors = allSubcontractors; // Fallback
                     }
                 } catch (error) {
@@ -217,7 +218,7 @@ const useDeductionsDatabase = () => {
             } else {
                 finalSubcontractors = allSubcontractors; // If no project selected, show all
             }
-            
+
             setSubcontractors(finalSubcontractors);
             setSelectedSubcontractor("");
             setSelectedContract("");
@@ -280,9 +281,7 @@ const useDeductionsDatabase = () => {
         }
         setLoading(true);
         try {
-            // The update function expects Omit<Labor, "id" | "amount">, so let's create that
-            const { id, amount, ...payload } = laborData;
-            await updateContractLabor(laborData.id, payload, token ?? "");
+            await updateContractLabor(Number(selectedContract), laborData, token ?? "");
         } catch (error) {
             console.error("Failed to update labor in contract:", error);
         } finally {
@@ -397,7 +396,6 @@ const useDeductionsDatabase = () => {
         }
     };
 
-
     const memoizedData = useMemo(
         () => ({
             laborColumns: LABOR_COLUMNS,
@@ -446,7 +444,7 @@ const useDeductionsDatabase = () => {
             selectedContract,
             laborTypeOptions,
             fetchDeductionsData,
-            token
+            token,
         ],
     );
 
@@ -454,4 +452,3 @@ const useDeductionsDatabase = () => {
 };
 
 export default useDeductionsDatabase;
-

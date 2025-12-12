@@ -1,3 +1,4 @@
+import { idProperty } from "@syncfusion/ej2-react-documenteditor";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -67,16 +68,17 @@ const DeductionsDatabase = memo(() => {
         // Find the corresponding labor type object from the manager data
         const selectedLaborType = managerLaborTypes.find((lt) => lt.laborType === data.laborType);
 
-        if (!selectedLaborType) {
+        if (!selectedLaborType && data.id == 0) {
             console.error("Could not find laborTypeId for the selected labor type.");
             // Here you might want to show an error to the user
             return;
         }
-
+        console.log("Selected Labor Type:", selectedLaborType);
+        console.log("Data to be saved:", data);
         // Add the laborTypeId to the data payload
         const payload = {
             ...data,
-            laborTypeId: selectedLaborType.id,
+            laborTypeId: data.id > 0 ? data.laborTypeId : selectedLaborType!.id,
         };
 
         if (payload.id) {

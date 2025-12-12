@@ -10,6 +10,7 @@ type ApiErrorResponse = {
 export interface Labor {
     id: number;
     laborTypeId: number;
+    contractDataSetId: number;
     ref: string;
     laborType: string;
     activityDescription: string;
@@ -243,15 +244,15 @@ export const addContractLabor = async (
 };
 
 export const updateContractLabor = async (
-    laborId: number,
-    laborData: Omit<Labor, "id" | "amount">,
+    contractDataSetId: number,
+    laborData: Labor,
     token: string,
 ): Promise<Labor | ApiErrorResponse> => {
     return apiRequest<Labor>({
-        endpoint: `Deductions/labors/${laborId}`,
+        endpoint: `Deductions/labors`,
         method: "PUT",
         token: token,
-        body: laborData as unknown as Record<string, unknown>,
+        body: { ...laborData, contractDataSetId } as unknown as Record<string, unknown>,
     });
 };
 
