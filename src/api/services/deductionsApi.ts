@@ -51,6 +51,8 @@ export interface Material {
 
 export interface Machine {
     id: number;
+    contractDataSetId: number;
+    MachineCodeId: number;
     ref: string;
     machineAcronym: string;
     machineType: string;
@@ -318,15 +320,15 @@ export const addContractMachine = async (
 };
 
 export const updateContractMachine = async (
-    machineId: number,
-    machineData: Omit<Machine, "id">, // Omit id for the body, but use it in the URL
+    contractDataSetId: number,
+    machineData: Machine, // Omit id for the body, but use it in the URL
     token: string,
 ): Promise<Machine | ApiErrorResponse> => {
     return apiRequest<Machine>({
-        endpoint: `Deductions/machines/${machineId}`,
+        endpoint: `Deductions/machines`,
         method: "PUT",
         token: token,
-        body: machineData as unknown as Record<string, unknown>,
+        body: { ...machineData, contractDataSetId } as unknown as Record<string, unknown>,
     });
 };
 

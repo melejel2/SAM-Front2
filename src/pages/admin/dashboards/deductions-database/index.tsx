@@ -53,12 +53,24 @@ const DeductionsDatabase = memo(() => {
         laborTypeOptions,
         managerLaborTypes,
         fetchDeductionsData,
+        addMachine: addContractMachine,
+        updateMachine: updateContractMachine,
+        deleteMachine: deleteContractMachine,
     } = useDeductionsDatabase();
 
     const contractLaborInputFields: TableInputField[] = [
         { name: "ref", type: "text", required: true, label: "REF #" },
         { name: "laborType", type: "select", required: true, label: "Type of Worker", options: laborTypeOptions },
         { name: "activityDescription", type: "text", required: true, label: "Description of Activity" },
+        { name: "unit", type: "text", required: true, label: "Unit" },
+        { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
+        { name: "quantity", type: "number", required: true, label: "Quantity" },
+    ];
+
+    const contractMachineInputFields: TableInputField[] = [
+        { name: "ref", type: "text", required: true, label: "REF #" },
+        { name: "machineAcronym", type: "text", required: true, label: "Machine Code" },
+        { name: "machineType", type: "text", required: true, label: "Type of Machine" },
         { name: "unit", type: "text", required: true, label: "Unit" },
         { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
         { name: "quantity", type: "number", required: true, label: "Quantity" },
@@ -84,6 +96,21 @@ const DeductionsDatabase = memo(() => {
         } else {
             await addContractLabor(payload);
         }
+    };
+
+    const handleSaveContractMachine = async (data: any) => {
+        // No specific lookup for machineType ID needed, assuming data contains what's required
+        const payload = { ...data };
+
+        if (payload.id) {
+            await updateContractMachine(payload);
+        } else {
+            await addContractMachine(payload);
+        }
+    };
+
+    const handleDeleteContractMachine = async (machineId: number) => {
+        await deleteContractMachine(machineId);
     };
 
     const {
@@ -332,14 +359,38 @@ const DeductionsDatabase = memo(() => {
                 <SAMTable
                     columns={columns}
                     tableData={tableData}
-                    inputFields={activeView === "Labor" ? contractLaborInputFields : []}
-                    actions={activeView === "Labor" && !!selectedContract}
-                    editAction={activeView === "Labor" && !!selectedContract}
-                    deleteAction={activeView === "Labor" && !!selectedContract}
-                    addBtn={activeView === "Labor" && !!selectedContract}
-                    onItemCreate={activeView === "Labor" ? handleSaveContractLabor : undefined}
-                    onItemUpdate={activeView === "Labor" ? handleSaveContractLabor : undefined}
-                    onItemDelete={activeView === "Labor" ? (item) => deleteContractLabor(item.id) : undefined}
+                    inputFields={
+                        activeView === "Labor"
+                            ? contractLaborInputFields
+                            : activeView === "Machines"
+                                ? contractMachineInputFields
+                                : []
+                    }
+                    actions={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
+                    editAction={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
+                    deleteAction={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
+                    addBtn={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
+                    onItemCreate={
+                        activeView === "Labor"
+                            ? handleSaveContractLabor
+                            : activeView === "Machines"
+                                ? handleSaveContractMachine
+                                : undefined
+                    }
+                    onItemUpdate={
+                        activeView === "Labor"
+                            ? handleSaveContractLabor
+                            : activeView === "Machines"
+                                ? handleSaveContractMachine
+                                : undefined
+                    }
+                    onItemDelete={
+                        activeView === "Labor"
+                            ? (item) => deleteContractLabor(item.id)
+                            : activeView === "Machines"
+                                ? (item) => handleDeleteContractMachine(item.id)
+                                : undefined
+                    }
                     title={activeView}
                     loading={loading}
                     customHeaderContent={tableHeaderContent}

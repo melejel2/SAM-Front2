@@ -372,8 +372,7 @@ const useDeductionsDatabase = () => {
         }
         setLoading(true);
         try {
-            const { id, ...payload } = machineData;
-            await updateContractMachine(machineData.id, payload, token ?? "");
+            await updateContractMachine(Number(selectedContract), machineData, token ?? "");
         } catch (error) {
             console.error("Failed to update machine in contract:", error);
         } finally {
