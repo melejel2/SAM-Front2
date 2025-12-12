@@ -50,6 +50,8 @@ const DeductionsDatabase = memo(() => {
         updateLabor: updateContractLabor,
         deleteLabor: deleteContractLabor,
         laborTypeOptions,
+        managerLaborTypes,
+        fetchDeductionsData,
     } = useDeductionsDatabase();
 
     const contractLaborInputFields: TableInputField[] = [
@@ -62,10 +64,25 @@ const DeductionsDatabase = memo(() => {
     ];
 
     const handleSaveContractLabor = async (data: any) => {
-        if (data.id) {
-            await updateContractLabor(data);
+        // Find the corresponding labor type object from the manager data
+        const selectedLaborType = managerLaborTypes.find((lt) => lt.laborType === data.laborType);
+
+        if (!selectedLaborType) {
+            console.error("Could not find laborTypeId for the selected labor type.");
+            // Here you might want to show an error to the user
+            return;
+        }
+
+        // Add the laborTypeId to the data payload
+        const payload = {
+            ...data,
+            laborTypeId: selectedLaborType.id,
+        };
+
+        if (payload.id) {
+            await updateContractLabor(payload);
         } else {
-            await addContractLabor(data);
+            await addContractLabor(payload);
         }
     };
 
@@ -144,8 +161,10 @@ const DeductionsDatabase = memo(() => {
     const handleSetMachines = useCallback(() => setActiveView("Machines"), []);
 
     const handleSuccess = useCallback(() => {
-        // Empty success handler for main table, modal has its own
-    }, []);
+        if (selectedContract) {
+            fetchDeductionsData(Number(selectedContract));
+        }
+    }, [selectedContract, fetchDeductionsData]);
 
     const handleSave = async (data: any) => {
         const isUpdate = data.id != null;
@@ -318,19 +337,13 @@ const DeductionsDatabase = memo(() => {
                     editAction={activeView === "Labor" && !!selectedContract}
                     deleteAction={activeView === "Labor" && !!selectedContract}
                     addBtn={activeView === "Labor" && !!selectedContract}
+                    onItemCreate={activeView === "Labor" ? handleSaveContractLabor : undefined}
                     onItemUpdate={activeView === "Labor" ? handleSaveContractLabor : undefined}
                     onItemDelete={activeView === "Labor" ? (item) => deleteContractLabor(item.id) : undefined}
                     title={activeView}
                     loading={loading}
                     customHeaderContent={tableHeaderContent}
                     onSuccess={handleSuccess}
-                    createEndPoint={
-                        modalView === "Labor"
-                            ? "Deductions/CreateLabor"
-                            : modalView === "Materials"
-                              ? "Deductions/CreateMaterial"
-                              : "Deductions/CreateMachine"
-                    }
                 />
             </div>
 

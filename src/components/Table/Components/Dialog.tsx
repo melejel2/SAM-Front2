@@ -38,6 +38,7 @@ interface DialogProps {
     editEndPoint?: string;
     createEndPoint?: string;
     deleteEndPoint?: string;
+    onItemCreate?: (item: any) => void;
     onItemUpdate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
     isNested?: boolean;
@@ -58,6 +59,7 @@ const DialogComponent: React.FC<DialogProps> = ({
     editEndPoint,
     createEndPoint,
     deleteEndPoint,
+    onItemCreate,
     onItemUpdate,
     onItemDelete,
     isNested, // Destructure new prop
@@ -168,6 +170,12 @@ const DialogComponent: React.FC<DialogProps> = ({
                     handleHide();
                 }
             } else if (dialogType === "Add") {
+                if (onItemCreate) {
+                    onItemCreate(formData);
+                    toaster.success("Created successfully.");
+                    onSuccess();
+                    return;
+                }
                 try {
                     const response = await apiRequest({
                         endpoint: createEndPoint ?? "",

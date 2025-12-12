@@ -141,6 +141,7 @@ interface TableProps {
     exportingRowId?: string | null;
     selectedRowId?: number | string | null;
     onItemUpdate?: (item: any) => void;
+    onItemCreate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
@@ -187,6 +188,7 @@ const TableComponent: React.FC<TableProps> = ({
     exportingRowId,
     selectedRowId,
     onItemUpdate,
+    onItemCreate,
     onItemDelete,
     inlineEditable,
     onInlineEdit,
@@ -1191,6 +1193,7 @@ const TableComponent: React.FC<TableProps> = ({
                     editEndPoint={editEndPoint}
                     createEndPoint={createEndPoint}
                     deleteEndPoint={deleteEndPoint}
+                    onItemCreate={onItemCreate}
                     onItemUpdate={onItemUpdate}
                     onItemDelete={onItemDelete}
                     isNested={isNested}
