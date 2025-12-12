@@ -6,24 +6,25 @@ import useProjects from "@/pages/admin/adminTools/projects/use-projects";
 import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
 
 import {
-    Labor,
-    LaborDataBase,
-    Machine,
-    Material,
     addContractLabor,
-    addContractMachine,
-    addContractMaterial,
     deleteContractLabor,
-    deleteContractMachine,
-    deleteContractMaterial,
-    fetchContracts as fetchAllContracts,
     fetchLabors,
     fetchMachines,
-    fetchManagerLabors,
     fetchMaterials,
+    fetchManagerLabors,
+    Labor,
+    LaborDataBase,
     updateContractLabor,
-    updateContractMachine,
+    Material,
+    Machine,
+    MachineDataBase,
+    addContractMaterial,
     updateContractMaterial,
+    deleteContractMaterial,
+    addContractMachine,
+    updateContractMachine,
+    deleteContractMachine,
+    fetchManagerMachines,
 } from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
@@ -80,6 +81,8 @@ const useDeductionsDatabase = () => {
 
     const [laborTypeOptions, setLaborTypeOptions] = useState<string[]>([]);
     const [managerLaborTypes, setManagerLaborTypes] = useState<LaborDataBase[]>([]);
+    const [machineAcronymOptions, setMachineAcronymOptions] = useState<string[]>([]);
+    const [managerMachines, setManagerMachines] = useState<MachineDataBase[]>([]);
 
     const { getToken } = useAuth();
     const token = getToken();
@@ -118,6 +121,25 @@ const useDeductionsDatabase = () => {
             }
         };
         fetchLaborTypes();
+    }, [getToken]);
+
+    useEffect(() => {
+        const fetchMachineTypes = async () => {
+            const currentToken = getToken();
+            if (currentToken) {
+                try {
+                    const managerMachinesResult = await fetchManagerMachines(currentToken);
+                    if (Array.isArray(managerMachinesResult)) {
+                        setManagerMachines(managerMachinesResult);
+                        const uniqueAcronyms = [...new Set(managerMachinesResult.map((m: MachineDataBase) => m.acronym))];
+                        setMachineAcronymOptions(uniqueAcronyms);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch manager machine types:", error);
+                }
+            }
+        };
+        fetchMachineTypes();
     }, [getToken]);
 
     const fetchDeductionsData = useCallback(
@@ -418,6 +440,8 @@ const useDeductionsDatabase = () => {
             // Labor type options
             laborTypeOptions,
             managerLaborTypes,
+            machineAcronymOptions,
+            managerMachines,
 
             // Mutation functions
             addLabor: addLaborToContract,

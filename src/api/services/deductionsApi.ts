@@ -51,8 +51,7 @@ export interface Material {
 
 export interface Machine {
     id: number;
-    contractDataSetId: number;
-    MachineCodeId: number;
+    machineCodeId: number;
     ref: string;
     machineAcronym: string;
     machineType: string;

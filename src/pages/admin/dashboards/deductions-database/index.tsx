@@ -56,6 +56,8 @@ const DeductionsDatabase = memo(() => {
         addMachine: addContractMachine,
         updateMachine: updateContractMachine,
         deleteMachine: deleteContractMachine,
+        machineAcronymOptions,
+        managerMachines,
     } = useDeductionsDatabase();
 
     const contractLaborInputFields: TableInputField[] = [
@@ -69,7 +71,13 @@ const DeductionsDatabase = memo(() => {
 
     const contractMachineInputFields: TableInputField[] = [
         { name: "ref", type: "text", required: true, label: "REF #" },
-        { name: "machineAcronym", type: "text", required: true, label: "Machine Code" },
+        {
+            name: "machineAcronym",
+            type: "select",
+            required: true,
+            label: "Machine Code",
+            options: machineAcronymOptions,
+        },
         { name: "machineType", type: "text", required: true, label: "Type of Machine" },
         { name: "unit", type: "text", required: true, label: "Unit" },
         { name: "unitPrice", type: "number", required: true, label: "Unit Price" },
@@ -99,8 +107,24 @@ const DeductionsDatabase = memo(() => {
     };
 
     const handleSaveContractMachine = async (data: any) => {
-        // No specific lookup for machineType ID needed, assuming data contains what's required
-        const payload = { ...data };
+        // Find the corresponding machine object from the manager data
+        console.log("Manager Machines:", managerMachines);
+        console.log(data);
+        const selectedMachine = managerMachines.find((m) => m.acronym === data.machineAcronym);
+
+        if (!selectedMachine) {
+            console.error("Could not find machineCodeId for the selected machine acronym.");
+            return;
+        }
+
+        const payload = {
+            ...data,
+            machineCodeId: selectedMachine!.id,
+            // Auto-populate other fields from the selected machine
+            machineType: selectedMachine.type,
+            unit: selectedMachine.unit,
+            unitPrice: selectedMachine.unitPrice,
+        };
 
         if (payload.id) {
             await updateContractMachine(payload);
@@ -363,8 +387,8 @@ const DeductionsDatabase = memo(() => {
                         activeView === "Labor"
                             ? contractLaborInputFields
                             : activeView === "Machines"
-                                ? contractMachineInputFields
-                                : []
+                              ? contractMachineInputFields
+                              : []
                     }
                     actions={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
                     editAction={(activeView === "Labor" || activeView === "Machines") && !!selectedContract}
@@ -374,22 +398,22 @@ const DeductionsDatabase = memo(() => {
                         activeView === "Labor"
                             ? handleSaveContractLabor
                             : activeView === "Machines"
-                                ? handleSaveContractMachine
-                                : undefined
+                              ? handleSaveContractMachine
+                              : undefined
                     }
                     onItemUpdate={
                         activeView === "Labor"
                             ? handleSaveContractLabor
                             : activeView === "Machines"
-                                ? handleSaveContractMachine
-                                : undefined
+                              ? handleSaveContractMachine
+                              : undefined
                     }
                     onItemDelete={
                         activeView === "Labor"
                             ? (item) => deleteContractLabor(item.id)
                             : activeView === "Machines"
-                                ? (item) => handleDeleteContractMachine(item.id)
-                                : undefined
+                              ? (item) => handleDeleteContractMachine(item.id)
+                              : undefined
                     }
                     title={activeView}
                     loading={loading}
