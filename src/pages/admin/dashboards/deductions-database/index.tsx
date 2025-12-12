@@ -73,12 +73,10 @@ const DeductionsDatabase = memo(() => {
             // Here you might want to show an error to the user
             return;
         }
-        console.log("Selected Labor Type:", selectedLaborType);
-        console.log("Data to be saved:", data);
         // Add the laborTypeId to the data payload
         const payload = {
             ...data,
-            laborTypeId: data.id > 0 ? data.laborTypeId : selectedLaborType!.id,
+            laborTypeId: selectedLaborType!.id,
         };
 
         if (payload.id) {
