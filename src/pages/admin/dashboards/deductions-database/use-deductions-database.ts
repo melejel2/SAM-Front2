@@ -79,6 +79,7 @@ const useDeductionsDatabase = () => {
     const [selectedContract, setSelectedContract] = useState<string>("");
 
     const [laborTypeOptions, setLaborTypeOptions] = useState<string[]>([]);
+    const [managerLaborTypes, setManagerLaborTypes] = useState<LaborDataBase[]>([]);
 
     const { getToken } = useAuth();
     const token = getToken();
@@ -107,6 +108,7 @@ const useDeductionsDatabase = () => {
                 try {
                     const managerLabors = await fetchManagerLabors(currentToken);
                     if (Array.isArray(managerLabors)) {
+                        setManagerLaborTypes(managerLabors); // Store the full objects
                         const uniqueTypes = [...new Set(managerLabors.map((l: LaborDataBase) => l.laborType))];
                         setLaborTypeOptions(uniqueTypes);
                     }
@@ -264,7 +266,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await addContractLabor(Number(selectedContract), laborData, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to add labor to contract:", error);
         } finally {
@@ -282,7 +283,6 @@ const useDeductionsDatabase = () => {
             // The update function expects Omit<Labor, "id" | "amount">, so let's create that
             const { id, amount, ...payload } = laborData;
             await updateContractLabor(laborData.id, payload, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to update labor in contract:", error);
         } finally {
@@ -298,7 +298,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await deleteContractLabor(laborId, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to delete labor from contract:", error);
         } finally {
@@ -314,7 +313,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await addContractMaterial(Number(selectedContract), materialData, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to add material to contract:", error);
         } finally {
@@ -331,7 +329,6 @@ const useDeductionsDatabase = () => {
         try {
             const { id, ...payload } = materialData;
             await updateContractMaterial(materialData.id, payload, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to update material in contract:", error);
         } finally {
@@ -347,7 +344,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await deleteContractMaterial(materialId, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to delete material from contract:", error);
         } finally {
@@ -363,7 +359,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await addContractMachine(Number(selectedContract), machineData, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to add machine to contract:", error);
         } finally {
@@ -380,7 +375,6 @@ const useDeductionsDatabase = () => {
         try {
             const { id, ...payload } = machineData;
             await updateContractMachine(machineData.id, payload, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to update machine in contract:", error);
         } finally {
@@ -396,7 +390,6 @@ const useDeductionsDatabase = () => {
         setLoading(true);
         try {
             await deleteContractMachine(machineId, token ?? "");
-            await fetchDeductionsData(Number(selectedContract)); // Refetch
         } catch (error) {
             console.error("Failed to delete machine from contract:", error);
         } finally {
@@ -427,6 +420,7 @@ const useDeductionsDatabase = () => {
 
             // Labor type options
             laborTypeOptions,
+            managerLaborTypes,
 
             // Mutation functions
             addLabor: addLaborToContract,
@@ -438,6 +432,7 @@ const useDeductionsDatabase = () => {
             addMachine: addMachineToContract,
             updateMachine: updateMachineInContract,
             deleteMachine: deleteMachineFromContract,
+            fetchDeductionsData,
         }),
         [
             laborData,

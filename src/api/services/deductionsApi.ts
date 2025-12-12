@@ -9,6 +9,7 @@ type ApiErrorResponse = {
 
 export interface Labor {
     id: number;
+    laborTypeId: number;
     ref: string;
     laborType: string;
     activityDescription: string;
@@ -234,7 +235,7 @@ export const addContractLabor = async (
     token: string,
 ): Promise<Labor | ApiErrorResponse> => {
     return apiRequest<Labor>({
-        endpoint: `Deductions/labors/${contractDataSetId}`,
+        endpoint: `Deductions/labors`,
         method: "POST",
         token: token,
         body: { ...laborData, contractDataSetId } as unknown as Record<string, unknown>,
@@ -271,7 +272,7 @@ export const addContractMaterial = async (
     token: string,
 ): Promise<Material | ApiErrorResponse> => {
     return apiRequest<Material>({
-        endpoint: `Deductions/materials/${contractDataSetId}`,
+        endpoint: `Deductions/materials`,
         method: "POST",
         token: token,
         body: { ...materialData, contractDataSetId } as unknown as Record<string, unknown>,
@@ -308,7 +309,7 @@ export const addContractMachine = async (
     token: string,
 ): Promise<Machine | ApiErrorResponse> => {
     return apiRequest<Machine>({
-        endpoint: `Deductions/machines/${contractDataSetId}`,
+        endpoint: `Deductions/machines`,
         method: "POST",
         token: token,
         body: { ...machineData, contractDataSetId } as unknown as Record<string, unknown>,

@@ -58,6 +58,7 @@ interface SAMTableProps {
     previewLoadingRowId?: string | null;
     exportingRowId?: string | null;
     onItemUpdate?: (item: any) => void;
+    onItemCreate?: (item: any) => void;
     onItemDelete?: (item: any) => void;
     inlineEditable?: boolean;
     onInlineEdit?: (rowId: any, field: string, value: any) => void;
@@ -102,8 +103,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
     exportingRowId,
     selectedRowId,
     onItemUpdate,
+    onItemCreate,
     onItemDelete,
-    inlineEditable = false,
+    inlineEditable,
     onInlineEdit,
     contractIdentifier,
     contractId,
@@ -151,6 +153,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             exportingRowId={exportingRowId}
                             selectedRowId={selectedRowId}
                             onItemUpdate={onItemUpdate}
+                            onItemCreate={onItemCreate}
                             onItemDelete={onItemDelete}
                             inlineEditable={inlineEditable}
                             onInlineEdit={onInlineEdit}
