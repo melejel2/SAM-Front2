@@ -24,8 +24,6 @@ const DeductionsDatabase = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
 
-
-
     const {
         laborColumns,
         materialsColumns,
@@ -104,18 +102,21 @@ const DeductionsDatabase = memo(() => {
         fetchManagerData,
     } = useDeductionsManager(isModalOpen);
 
-    const contractMaterialInputFields = useMemo(() => ([
-        { name: "bc", type: "text", required: true, label: "REF #" },
-        { name: "designation", type: "text", required: true, label: "Item" },
-        { name: "unit", type: "select", required: true, label: "Unit", options: unitOptions },
-        { name: "saleUnit", type: "number", required: true, label: "Unit Price" },
-        { name: "quantity", type: "number", required: true, label: "Quantity" },
-        { name: "allocated", type: "number", required: true, label: "Allocated Quantity" },
-        { name: "transferedQte", type: "number", required: false, label: "Transferred Quantity" },
-        { name: "transferedTo", type: "text", required: false, label: "Transferred To" },
-        { name: "stockQte", type: "number", required: false, label: "Stock Quantity" },
-        { name: "remark", type: "text", required: false, label: "Remarks" },
-    ]), [unitOptions]);
+    const contractMaterialInputFields = useMemo(
+        () => [
+            { name: "bc", type: "text", required: true, label: "REF #" },
+            { name: "designation", type: "text", required: true, label: "Item" },
+            { name: "unit", type: "select", required: true, label: "Unit", options: unitOptions },
+            { name: "saleUnit", type: "number", required: true, label: "Unit Price" },
+            { name: "quantity", type: "number", required: true, label: "Quantity" },
+            { name: "allocated", type: "number", required: true, label: "Allocated Quantity" },
+            { name: "transferedQte", type: "number", required: false, label: "Transferred Quantity" },
+            { name: "transferedTo", type: "text", required: false, label: "Transferred To" },
+            { name: "stockQte", type: "number", required: false, label: "Stock Quantity" },
+            { name: "remark", type: "text", required: false, label: "Remarks" },
+        ],
+        [unitOptions],
+    );
 
     const handleSaveContractLabor = async (data: any) => {
         // Find the corresponding labor type object from the manager data
@@ -143,6 +144,7 @@ const DeductionsDatabase = memo(() => {
         const payload = {
             ...data,
             contractDataSetId: Number(selectedContract),
+            contract: contracts.find((c) => c.id === Number(selectedContract))?.contractNumber || "",
             saleUnit: data.saleUnit !== "" ? Number(data.saleUnit) : null,
             quantity: data.quantity !== "" ? Number(data.quantity) : null,
             allocated: data.allocated !== "" ? Number(data.allocated) : null,
@@ -274,8 +276,7 @@ const DeductionsDatabase = memo(() => {
 
                 if (isUpdate) {
                     await saveMaterial(materialData);
-                }
-                else {
+                } else {
                     await addMaterial(materialData);
                 }
                 break;
@@ -283,8 +284,7 @@ const DeductionsDatabase = memo(() => {
             case "Machines":
                 if (isUpdate) {
                     await saveMachine(data);
-                }
-                else {
+                } else {
                     await addMachine(data);
                 }
                 break;
@@ -306,8 +306,8 @@ const DeductionsDatabase = memo(() => {
         ];
 
         const materialInputFields: TableInputField[] = (() => {
-            const materialUnitOptions = unitOptions.filter(option =>
-                !["HR", "DAY", "WEEK", "MONTH", "LUMPSUM"].includes(option)
+            const materialUnitOptions = unitOptions.filter(
+                (option) => !["HR", "DAY", "WEEK", "MONTH", "LUMPSUM"].includes(option),
             );
             return [
                 { name: "poRef", type: "text", required: true, label: "REF #" },
@@ -443,10 +443,22 @@ const DeductionsDatabase = memo(() => {
                                 ? contractMachineInputFields
                                 : []
                     }
-                    actions={(activeView === "Labor" || activeView === "Materials" || activeView === "Machines") && !!selectedContract}
-                    editAction={(activeView === "Labor" || activeView === "Materials" || activeView === "Machines") && !!selectedContract}
-                    deleteAction={(activeView === "Labor" || activeView === "Materials" || activeView === "Machines") && !!selectedContract}
-                    addBtn={(activeView === "Labor" || activeView === "Materials" || activeView === "Machines") && !!selectedContract}
+                    actions={
+                        (activeView === "Labor" || activeView === "Materials" || activeView === "Machines") &&
+                        !!selectedContract
+                    }
+                    editAction={
+                        (activeView === "Labor" || activeView === "Materials" || activeView === "Machines") &&
+                        !!selectedContract
+                    }
+                    deleteAction={
+                        (activeView === "Labor" || activeView === "Materials" || activeView === "Machines") &&
+                        !!selectedContract
+                    }
+                    addBtn={
+                        (activeView === "Labor" || activeView === "Materials" || activeView === "Machines") &&
+                        !!selectedContract
+                    }
                     onItemCreate={
                         activeView === "Labor"
                             ? handleSaveContractLabor

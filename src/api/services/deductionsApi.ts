@@ -46,6 +46,7 @@ export interface Material {
     transferedQte: number;
     transferedTo: string;
     stockQte: number;
+    contract: string;
     remark: string;
 }
 
