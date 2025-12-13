@@ -49,6 +49,7 @@ const LABOR_COLUMNS_MANAGER = {
 const MATERIALS_COLUMNS_MANAGER = {
     poRef: "REF #",
     item: "Item",
+    contractNumber: "Contract",
     unit: {
         label: "Unit",
         type: "select",

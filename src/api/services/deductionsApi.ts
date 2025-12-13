@@ -282,12 +282,11 @@ export const addContractMaterial = async (
 };
 
 export const updateContractMaterial = async (
-    materialId: number,
-    materialData: Omit<Material, "id">, // Omit id for the body, but use it in the URL
+    materialData: Material, // Omit id for the body, but use it in the URL
     token: string,
 ): Promise<Material | ApiErrorResponse> => {
     return apiRequest<Material>({
-        endpoint: `Deductions/materials/${materialId}`,
+        endpoint: `Deductions/materials`,
         method: "PUT",
         token: token,
         body: materialData as unknown as Record<string, unknown>,

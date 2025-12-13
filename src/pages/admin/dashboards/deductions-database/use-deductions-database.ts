@@ -6,25 +6,25 @@ import useProjects from "@/pages/admin/adminTools/projects/use-projects";
 import useSubcontractors from "@/pages/admin/adminTools/subcontractors/use-subcontractors";
 
 import {
-    addContractLabor,
-    deleteContractLabor,
-    fetchLabors,
-    fetchMachines,
-    fetchMaterials,
-    fetchManagerLabors,
     Labor,
     LaborDataBase,
-    updateContractLabor,
-    Material,
     Machine,
     MachineDataBase,
-    addContractMaterial,
-    updateContractMaterial,
-    deleteContractMaterial,
+    Material,
+    addContractLabor,
     addContractMachine,
-    updateContractMachine,
+    addContractMaterial,
+    deleteContractLabor,
     deleteContractMachine,
+    deleteContractMaterial,
+    fetchLabors,
+    fetchMachines,
+    fetchManagerLabors,
     fetchManagerMachines,
+    fetchMaterials,
+    updateContractLabor,
+    updateContractMachine,
+    updateContractMaterial,
 } from "../../../../api/services/deductionsApi";
 
 // Move static column definitions outside hook to prevent recreation
@@ -131,7 +131,9 @@ const useDeductionsDatabase = () => {
                     const managerMachinesResult = await fetchManagerMachines(currentToken);
                     if (Array.isArray(managerMachinesResult)) {
                         setManagerMachines(managerMachinesResult);
-                        const uniqueAcronyms = [...new Set(managerMachinesResult.map((m: MachineDataBase) => m.acronym))];
+                        const uniqueAcronyms = [
+                            ...new Set(managerMachinesResult.map((m: MachineDataBase) => m.acronym)),
+                        ];
                         setMachineAcronymOptions(uniqueAcronyms);
                     }
                 } catch (error) {
@@ -348,8 +350,7 @@ const useDeductionsDatabase = () => {
         }
         setLoading(true);
         try {
-            const { id, ...payload } = materialData;
-            await updateContractMaterial(materialData.id, payload, token ?? "");
+            await updateContractMaterial(materialData, token ?? "");
         } catch (error) {
             console.error("Failed to update material in contract:", error);
         } finally {
