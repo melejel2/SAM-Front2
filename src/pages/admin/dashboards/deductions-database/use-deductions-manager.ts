@@ -16,24 +16,11 @@ import {
     updateManagerLabor,
     updateManagerMachine,
     updateManagerMaterial,
+    uploadManagerPoe,
 } from "@/api/services/deductionsApi";
 import { useAuth } from "@/contexts/auth";
 
-const UNIT_OPTIONS = [
-    "HR",
-    "DAY",
-    "WEEK",
-    "MONTH",
-    "LUMPSUM",
-    "M",
-    "M2",
-    "M3",
-    "KG",
-    "TON",
-    "PIECE",
-    "SET",
-    "UNIT",
-];
+const UNIT_OPTIONS = ["HR", "DAY", "WEEK", "MONTH", "LUMPSUM", "M", "M2", "M3", "KG", "TON", "PIECE", "SET", "UNIT"];
 
 // Static column definitions for Manager Data
 const LABOR_COLUMNS_MANAGER = {
@@ -278,6 +265,38 @@ const useDeductionsManager = (isOpen: boolean) => {
         }
     };
 
+    const importPoeFile = () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
+
+        input.onchange = async (event) => {
+            const target = event.target as HTMLInputElement;
+            if (!target.files?.length) {
+                return;
+            }
+            const file = target.files[0];
+
+            setLoading(true);
+            const token = getToken();
+            if (!token) {
+                setLoading(false);
+                console.error("Authentication token not found.");
+                return;
+            }
+            try {
+                await uploadManagerPoe(file, token);
+                await fetchManagerData();
+            } catch (error) {
+                console.error("Failed to upload POE file:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        input.click();
+    };
+
     return {
         managerLoading: loading,
         managerLaborData: laborData,
@@ -297,6 +316,7 @@ const useDeductionsManager = (isOpen: boolean) => {
         saveMachine,
         deleteMachine,
         unitOptions: UNIT_OPTIONS,
+        importPoeFile,
     };
 };
 

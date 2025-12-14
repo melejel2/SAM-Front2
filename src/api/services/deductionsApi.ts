@@ -232,6 +232,21 @@ export const deleteManagerMachine = async (
     });
 };
 
+export const uploadManagerPoe = async (
+    excelFile: File,
+    token: string,
+): Promise<{ success: boolean } | ApiErrorResponse> => {
+    const formData = new FormData();
+    formData.append("excelFile", excelFile);
+
+    return apiRequest<{ success: boolean }>({
+        endpoint: `DeductionsManager/UploadPoe`,
+        method: "POST",
+        token: token,
+        body: formData,
+    });
+};
+
 export const addContractLabor = async (
     contractDataSetId: number,
     laborData: Omit<Labor, "id" | "amount">,

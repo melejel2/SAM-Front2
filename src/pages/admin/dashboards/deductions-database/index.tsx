@@ -20,7 +20,6 @@ const DeductionsDatabase = memo(() => {
     const [activeView, setActiveView] = useState<"Labor" | "Materials" | "Machines">("Labor");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalView, setModalView] = useState<"Labor" | "Materials" | "Machines">("Labor");
-
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -100,7 +99,14 @@ const DeductionsDatabase = memo(() => {
         deleteMachine,
         unitOptions,
         fetchManagerData,
+        importPoeFile,
     } = useDeductionsManager(isModalOpen);
+
+    const handleImport = () => {
+        if (importPoeFile) {
+            importPoeFile();
+        }
+    };
 
     const contractMaterialInputFields = useMemo(
         () => [
@@ -525,6 +531,13 @@ const DeductionsDatabase = memo(() => {
                             editAction={true}
                             deleteAction={true}
                             addBtn={true}
+                            customHeaderContent={
+                                modalView === "Materials" ? (
+                                    <Button onClick={handleImport} disabled={managerLoading} className="ml-2">
+                                        {managerLoading ? "Importing..." : "Import POE"}
+                                    </Button>
+                                ) : null
+                            }
                             onItemUpdate={handleSave}
                             createEndPoint={
                                 modalView === "Labor"
