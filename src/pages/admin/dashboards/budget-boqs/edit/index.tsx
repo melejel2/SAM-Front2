@@ -46,6 +46,7 @@ const BudgetBOQEdit = () => {
         openProject,
         saveProject,
         createBuildings,
+        updateBuilding,
         getBoqPreview,
         clearBoq,
         selectedTrade,
@@ -231,6 +232,7 @@ const BudgetBOQEdit = () => {
                     saving={saving}
                     hasUnsavedChanges={hasUnsavedChanges}
                     createBuildings={createBuildings}
+                    updateBuilding={updateBuilding}
                     getBoqPreview={getBoqPreview}
                     clearBoq={clearBoq}
                     selectedTrade={selectedTrade}

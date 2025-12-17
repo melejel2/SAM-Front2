@@ -36,6 +36,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         getBuildingsList,
         openProject,
         createBuildings,
+        updateBuilding,
         getBoqPreview,
         clearBoq,
         selectedTrade,
@@ -177,6 +178,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                                     projectData={projectData}
                                     setProjectData={setProjectData}
                                     createBuildings={createBuildings}
+                                    updateBuilding={updateBuilding}
                                     getBoqPreview={getBoqPreview}
                                     clearBoq={clearBoq}
                                     selectedTrade={selectedTrade}

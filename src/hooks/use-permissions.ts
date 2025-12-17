@@ -16,6 +16,7 @@ import {
   canDeleteTemplates,
   canViewTemplates,
   canManageUnits,
+  canCorrectPreviousValues,
   ROLE_PERMISSIONS
 } from '@/utils/permissions';
 
@@ -79,7 +80,10 @@ export const usePermissions = () => {
     
     // Units
     canManageUnits: canManageUnits(userRole),
-    
+
+    // IPC Previous Value Corrections
+    canCorrectPreviousValues: canCorrectPreviousValues(userRole),
+
     // Generic permission checker
     hasPermission: (permission: keyof typeof ROLE_PERMISSIONS) => checkPermission(userRole, permission),
   }), [userRole]);

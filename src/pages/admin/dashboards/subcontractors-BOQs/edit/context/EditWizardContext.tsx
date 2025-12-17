@@ -539,7 +539,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         [contractsApi, fetchBuildingsWithSheets],
     );
 
-    // Validation functions (6 steps)
+    // Validation functions (5 steps)
     const validateStep1 = (): boolean => {
         return formData.projectId !== null;
     };
@@ -563,10 +563,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     };
 
     const validateStep5 = (): boolean => {
-        return true; // Review step doesn't require validation
-    };
-
-    const validateStep6 = (): boolean => {
         return true; // Preview step doesn't require validation
     };
 
@@ -582,8 +578,6 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                 return validateStep4();
             case 5:
                 return validateStep5();
-            case 6:
-                return validateStep6();
             default:
                 return false;
         }
@@ -591,7 +585,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
 
     // Navigation functions
     const goToNextStep = useCallback(() => {
-        if (validateCurrentStep() && currentStep < 6) {
+        if (validateCurrentStep() && currentStep < 5) {
             setCurrentStep(currentStep + 1);
         }
     }, [validateCurrentStep, currentStep]);

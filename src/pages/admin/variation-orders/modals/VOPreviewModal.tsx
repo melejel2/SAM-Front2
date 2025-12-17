@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 import { VoDatasetBoqDetailsVM } from "@/types/variation-order";
 
 interface VOPreviewModalProps {
@@ -19,23 +20,6 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
     }, [isOpen, voData]);
 
     if (!isOpen || !voData) return null;
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            maximumFractionDigits: 0
-        }).format(amount || 0);
-    };
-
-    const formatDate = (dateString: string | null) => {
-        if (!dateString) return '-';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString();
-        } catch {
-            return dateString;
-        }
-    };
 
     const calculateBuildingTotal = (building: any) => {
         return building.contractVoes?.reduce((total: number, vo: any) => {
@@ -83,7 +67,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                         </div>
                         <div>
                             <p className="text-sm text-base-content/70">Date</p>
-                            <p className="font-semibold">{formatDate(voData.date)}</p>
+                            <p className="font-semibold">{formatDate(voData.date, 'short')}</p>
                         </div>
                         <div>
                             <p className="text-sm text-base-content/70">Status</p>
@@ -112,7 +96,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                     <div className="mt-4 pt-4 border-t border-base-300">
                         <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold">Total Amount:</span>
-                            <span className="text-xl font-bold text-primary">{formatCurrency(calculateGrandTotal())}</span>
+                            <span className="text-xl font-bold text-primary">{formatCurrency(calculateGrandTotal(), { decimals: 'never' })}</span>
                         </div>
                     </div>
                 </div>
@@ -154,7 +138,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-primary">{formatCurrency(calculateBuildingTotal(building))}</p>
+                                            <p className="font-bold text-primary">{formatCurrency(calculateBuildingTotal(building), { decimals: 'never' })}</p>
                                         </div>
                                     </div>
                                     
@@ -183,8 +167,8 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                                                 <td className="font-medium">{vo.key || '-'}</td>
                                                                 <td>{vo.unite || '-'}</td>
                                                                 <td className="text-right">{vo.qte?.toFixed(2) || '0.00'}</td>
-                                                                <td className="text-right">{formatCurrency(vo.pu)}</td>
-                                                                <td className="text-right font-semibold text-primary">{formatCurrency(vo.totalPrice)}</td>
+                                                                <td className="text-right">{formatCurrency(vo.pu, { decimals: 'never' })}</td>
+                                                                <td className="text-right font-semibold text-primary">{formatCurrency(vo.totalPrice, { decimals: 'never' })}</td>
                                                                 <td>{vo.costCode || '-'}</td>
                                                                 <td>{vo.sheetName || '-'}</td>
                                                             </tr>
@@ -226,7 +210,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                         <span className="iconify lucide--dollar-sign size-8"></span>
                                     </div>
                                     <div className="stat-title">Total Value</div>
-                                    <div className="stat-value text-success">{formatCurrency(calculateGrandTotal())}</div>
+                                    <div className="stat-value text-success">{formatCurrency(calculateGrandTotal(), { decimals: 'never' })}</div>
                                 </div>
                             </div>
 
@@ -259,7 +243,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                                         <tr key={building.id} className="hover">
                                                             <td className="font-medium">{building.buildingName}</td>
                                                             <td className="text-right">{building.contractVoes?.length || 0}</td>
-                                                            <td className="text-right font-semibold">{formatCurrency(buildingTotal)}</td>
+                                                            <td className="text-right font-semibold">{formatCurrency(buildingTotal, { decimals: 'never' })}</td>
                                                             <td className="text-right">
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-16 bg-base-300 rounded-full h-2">

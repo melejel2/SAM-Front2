@@ -101,7 +101,6 @@ export interface MaterialsVM {
   id: number;
   bc?: string;
   designation?: string;
-  acronym?: string;
   subcontractor?: string;
   contract?: string;
   unit?: string;
@@ -339,4 +338,116 @@ export const IpcStatusOptions: IpcTypeOption[] = [
   { value: "Pending Approval", label: "Pending Approval" },
   { value: "Issued", label: "Issued" }
 ];
+
+// ============================================
+// Previous Value Correction Types
+// ============================================
+
+/**
+ * Entity types that can have their previous values corrected.
+ * Maps to backend CorrectionEntityType enum.
+ */
+export enum CorrectionEntityType {
+  ContractBoqItem = 0,
+  ContractVo = 1,
+  Labor = 2,
+  Machine = 3,
+  Material = 4
+}
+
+/**
+ * Request DTO for correcting a previous value.
+ * Only Contract Managers and Quantity Surveyors can make corrections.
+ */
+export interface CorrectPreviousValueRequest {
+  entityType: CorrectionEntityType;
+  entityId: number;
+  contractDatasetId: number;
+  fieldName: 'PrecedQte' | 'PrecedentAmount';
+  newValue: number;
+  reason: string;
+}
+
+/**
+ * Response DTO showing the result of a correction.
+ */
+export interface CorrectionResultDTO {
+  correctionId: number;
+  oldValue: number;
+  newValue: number;
+  fieldName: string;
+  correctedAt: string;
+  recalculatedValues?: RecalculatedValuesDTO;
+}
+
+/**
+ * Recalculated values after a correction is applied.
+ */
+export interface RecalculatedValuesDTO {
+  // For BOQ/VO items
+  precedAmount?: number;
+  actualQte?: number;
+  cumulQte?: number;
+  actualAmount?: number;
+  // For Deductions
+  previousDeduction?: number;
+  actualDeduction?: number;
+}
+
+/**
+ * DTO for displaying correction history in the audit trail.
+ */
+export interface CorrectionHistoryDTO {
+  id: number;
+  entityType: string;
+  entityId: number;
+  entityDescription: string;
+  fieldName: string;
+  oldValue: number;
+  newValue: number;
+  reason: string;
+  correctedByName: string;
+  correctedAt: string;
+  contractDatasetId: number;
+}
+
+/**
+ * Request DTO for querying correction history.
+ */
+export interface CorrectionHistoryRequest {
+  contractDatasetId?: number;
+  entityType?: CorrectionEntityType;
+  entityId?: number;
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+}
+
+/**
+ * Props for the correction modal component.
+ */
+export interface CorrectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  entityType: CorrectionEntityType;
+  entityId: number;
+  contractDatasetId: number;
+  fieldName: 'PrecedQte' | 'PrecedentAmount';
+  fieldLabel: string;
+  currentValue: number;
+  entityDescription: string;
+  onCorrect: (request: CorrectPreviousValueRequest) => Promise<CorrectionResultDTO | null>;
+}
+
+/**
+ * Props for the correction history modal component.
+ */
+export interface CorrectionHistoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contractDatasetId: number;
+  entityType?: CorrectionEntityType;
+  entityId?: number;
+  onFetchHistory: (request: CorrectionHistoryRequest) => Promise<CorrectionHistoryDTO[]>;
+}
 

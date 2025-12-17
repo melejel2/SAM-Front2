@@ -3,15 +3,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import type { IpcListItem } from "@/types/ipc";
-
-// Memoized formatter functions (created once, reused forever)
-const formatCurrency = (amount: number): string => {
-    if (amount == null || isNaN(amount) || amount === 0) return "-";
-    return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-};
+import { formatCurrency } from "@/utils/formatters";
 
 const getStatusText = (status: string): string => {
     const statusLower = status?.toLowerCase() || '';

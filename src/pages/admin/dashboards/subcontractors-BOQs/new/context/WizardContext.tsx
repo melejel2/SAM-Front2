@@ -528,10 +528,6 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
     };
 
     const validateStep5 = (): boolean => {
-        return true; // Review step doesn't require validation
-    };
-
-    const validateStep6 = (): boolean => {
         return true; // Preview step doesn't require validation
     };
 
@@ -540,15 +536,13 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
             case 1:
                 return validateStep1();
             case 2:
-                return validateStep2(); // Subcontractor (was Step4)
+                return validateStep2(); // Subcontractor
             case 3:
-                return validateStep3(); // Contract Details (was Step5)
+                return validateStep3(); // Contract Details
             case 4:
-                return validateStep4(); // BOQ Items (was Step6)
+                return validateStep4(); // BOQ Items
             case 5:
-                return validateStep5(); // Review (was Step7)
-            case 6:
-                return validateStep6(); // Preview (was Step8)
+                return validateStep5(); // Preview
             default:
                 return false;
         }
@@ -556,7 +550,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
 
     // Navigation functions
     const goToNextStep = () => {
-        if (validateCurrentStep() && currentStep < 6) {
+        if (validateCurrentStep() && currentStep < 5) {
             setCurrentStep(currentStep + 1);
         }
     };

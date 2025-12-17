@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { formatDate } from "@/utils/formatters";
 import apiRequest from "@/api/api";
-import { 
+import {
     ContractType,
     VOContractVM,
     UploadVOTemplateRequest,
@@ -67,7 +68,7 @@ const useVOTemplates = () => {
             const formattedTemplates = templatesArray.map((template) => ({
                 ...template,
                 type: getContractTypeDisplay(template.type),
-                created: formatDate(template.created),
+                created: formatDate(template.created, 'numeric'),
                 fileSize: template.content ? formatFileSize(template.content.length) : '-',
                 // Add display fields for consistent table formatting
                 templateNumber: template.templateNumber || '-',
@@ -222,20 +223,6 @@ const useVOTemplates = () => {
                 return "Final";
             default:
                 return "Unknown";
-        }
-    };
-
-    const formatDate = (dateString: string | null): string => {
-        if (!dateString) return '-';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return '-';
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear().toString().slice(-2);
-            return `${day}/${month}/${year}`;
-        } catch (error) {
-            return '-';
         }
     };
 

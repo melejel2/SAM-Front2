@@ -4,7 +4,6 @@ import folderIcon from "@iconify/icons-lucide/folder";
 import userIcon from "@iconify/icons-lucide/user";
 import fileTextIcon from "@iconify/icons-lucide/file-text";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
-import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import eyeIcon from "@iconify/icons-lucide/eye";
 
 interface StepIndicatorProps {
@@ -16,8 +15,7 @@ const steps = [
     { number: 2, title: "Subcontractor", icon: userIcon },
     { number: 3, title: "Contract", icon: fileTextIcon },
     { number: 4, title: "BOQ Items", icon: calculatorIcon },
-    { number: 5, title: "Review", icon: checkCircleIcon },
-    { number: 6, title: "Preview", icon: eyeIcon }
+    { number: 5, title: "Preview", icon: eyeIcon }
 ];
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {

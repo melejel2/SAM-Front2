@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import React, { useState, useMemo } from "react";
 
 import { Loader } from "@/components/Loader";
+import { formatCurrency } from "@/utils/formatters";
 
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 
@@ -72,16 +73,6 @@ export const Step1_ContractAndType: React.FC = () => {
             setFormData({ dateIpc: today });
         }
     }, [formData.dateIpc, setFormData]);
-
-    const formatCurrency = (amount: number | undefined) => {
-        if (amount === undefined) {
-            return "N/A";
-        }
-        return new Intl.NumberFormat("en-US", {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
 
     const getStatusBadgeClass = (status: string) => {
         switch (status.toLowerCase()) {

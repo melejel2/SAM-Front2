@@ -1,3 +1,5 @@
+import { formatCurrency } from "@/utils/formatters";
+
 const useBOQ = () => {
     const columns = {
         order: "Order",
@@ -64,14 +66,6 @@ const useBOQ = () => {
             const price = parseFloat(item.total_price.replace(/,/g, ''));
             return sum + (isNaN(price) ? 0 : price);
         }, 0);
-    };
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount);
     };
 
     return {

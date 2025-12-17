@@ -19,6 +19,7 @@ import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import { generateContractFileName, generateVOFileName } from "@/utils/ipc-filename";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 import TerminatedContracts from "../TerminatedContracts";
 import { useContractsApi } from "../hooks/use-contracts-api";
@@ -76,31 +77,6 @@ const useContractVOs = (contractId: string) => {
 };
 
 // Helper functions
-const formatCurrency = (amount: number | string | undefined) => {
-    if (!amount || amount === "-") return "-";
-    const numAmount = typeof amount === "string" ? parseFloat(amount.replace(/,/g, "")) : amount;
-    if (isNaN(numAmount)) return "-";
-    return new Intl.NumberFormat("en-US", {
-        style: "decimal",
-        maximumFractionDigits: 0,
-    }).format(Math.round(numAmount));
-};
-
-const formatDate = (dateString: string | undefined) => {
-    if (!dateString || dateString === "-") return "-";
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return "-";
-        return date.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        });
-    } catch (error) {
-        return "-";
-    }
-};
-
 const formatPercentage = (value: number | undefined) => {
     if (!value || value === 0) return "0%";
     return `${value}%`;

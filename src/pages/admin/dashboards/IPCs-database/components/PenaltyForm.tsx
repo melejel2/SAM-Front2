@@ -1,4 +1,5 @@
 import React from "react";
+import { formatCurrency } from "@/utils/formatters";
 
 interface PenaltyFormProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ const PenaltyForm: React.FC<PenaltyFormProps> = ({
                 <span className="text-xs font-medium text-base-content/60 uppercase tracking-wide">Previous</span>
               </div>
               <div className="text-xl font-bold text-base-content">
-                {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(previousPenalty)}
+                {formatCurrency(previousPenalty)}
               </div>
             </div>
 
@@ -98,7 +99,7 @@ const PenaltyForm: React.FC<PenaltyFormProps> = ({
                 <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Total</span>
               </div>
               <div className="text-xl font-bold text-red-600 dark:text-red-400">
-                {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(currentPenalty)}
+                {formatCurrency(currentPenalty)}
               </div>
             </div>
 
@@ -127,7 +128,7 @@ const PenaltyForm: React.FC<PenaltyFormProps> = ({
                 penaltyDifference < 0 ? 'text-green-600 dark:text-green-400' :
                 'text-base-content'
               }`}>
-                {penaltyDifference > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(penaltyDifference)}
+                {formatCurrency(penaltyDifference, { showPositiveSign: true })}
               </div>
             </div>
           </div>

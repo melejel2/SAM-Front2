@@ -332,9 +332,6 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 // Deductions - Financial calculations are automatic
                 return true;
             case 4:
-                // Review - Ready to proceed to preview
-                return true;
-            case 5:
                 // Preview & Save - Ready to submit
                 return true;
             default:
@@ -342,9 +339,9 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
     }, [currentStep, formData]);
 
-    // Navigation for 5-step workflow
+    // Navigation for 4-step workflow
     const goToNextStep = useCallback(() => {
-        if (currentStep < 5 && validateCurrentStep()) {
+        if (currentStep < 4 && validateCurrentStep()) {
             setCurrentStep((prev) => prev + 1);
             if (currentStep === 2) {
                 calculateFinancials(); // Auto-calculate when moving to deductions step

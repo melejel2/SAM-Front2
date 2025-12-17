@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
-import eyeIcon from "@iconify/icons-lucide/eye";
 import checkIcon from "@iconify/icons-lucide/check";
 import { WizardProvider, useWizardContext } from "./context/WizardContext";
 import { StepIndicator } from "../shared/components/StepIndicator";
@@ -184,7 +183,7 @@ const NewSubcontractWizardContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 6 ? (
+                    {currentStep < 5 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -212,17 +211,8 @@ const NewSubcontractWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 5 ? (
-                                <>
-                                    <span>Preview</span>
-                                    <Icon icon={eyeIcon} className="w-4 h-4" />
-                                </>
-                            ) : (
-                                <>
-                                    <span>Next</span>
-                                    <Icon icon={arrowRightIcon} className="w-4 h-4" />
-                                </>
-                            )}
+                            <span>Next</span>
+                            <Icon icon={arrowRightIcon} className="w-4 h-4" />
                         </button>
                     ) : (
                         <button

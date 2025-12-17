@@ -186,7 +186,7 @@ const EditSubcontractWizardContent: React.FC = () => {
 
                 {/* Next/Save Button */}
                 <div>
-                    {currentStep < 6 ? (
+                    {currentStep < 5 ? (
                         <button
                             className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                             onClick={() => {
@@ -214,17 +214,8 @@ const EditSubcontractWizardContent: React.FC = () => {
                             }}
                             disabled={loading}
                         >
-                            {currentStep === 5 ? (
-                                <>
-                                    <span>Preview</span>
-                                    <span className="iconify lucide--eye size-4"></span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Next</span>
-                                    <span className="iconify lucide--arrow-right size-4"></span>
-                                </>
-                            )}
+                            <span>Next</span>
+                            <span className="iconify lucide--arrow-right size-4"></span>
                         </button>
                     ) : (
                         <button

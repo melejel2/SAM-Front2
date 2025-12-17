@@ -3,9 +3,10 @@ import { useState } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
-import { 
-  getVoDatasetsList, 
-  getVoDatasetWithBoqs as getVoDatasetWithBoqsApi, 
+import { formatCurrency, formatDate } from "@/utils/formatters";
+import {
+  getVoDatasetsList,
+  getVoDatasetWithBoqs as getVoDatasetWithBoqsApi,
   saveVoDataset as saveVoDatasetApi,
   previewVoDataSet as previewVoDataSetApi,
   copyVoProjectToVoDataSet as copyVoProjectToVoDataSetApi,
@@ -42,28 +43,6 @@ const useVoDatasets = () => {
   const token = getToken();
 
   // Utility functions
-  const formatCurrency = (amount: number): string => {
-    if (!amount || isNaN(amount)) return '-';
-    return new Intl.NumberFormat('en-US', {
-      style: 'decimal',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '-';
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear().toString().slice(-2);
-      return `${day}/${month}/${year}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
   const formatStatusBadge = (status: string): string => {
     const statusLower = status?.toLowerCase() || '';
     let badgeClass = '';
@@ -101,8 +80,8 @@ const useVoDatasets = () => {
       projectName: vo.projectName || '-',
       tradeName: vo.tradeName || '-',
       subcontractorName: vo.subcontractorName || '-',
-      date: vo.date ? formatDate(vo.date) : '-',
-      amount: vo.amount ? formatCurrency(vo.amount) : '-',
+      date: vo.date ? formatDate(vo.date, 'numeric') : '-',
+      amount: vo.amount ? formatCurrency(vo.amount, { decimals: 'never' }) : '-',
       originalStatus: vo.status || '',
       status: formatStatusBadge(vo.status),
     }));

@@ -27,7 +27,7 @@ export interface LaborDataBase {
     unitPrice: number;
 }
 
-interface MachineDataBase {
+export interface MachineDataBase {
     id: number;
     acronym: string;
     type: string;

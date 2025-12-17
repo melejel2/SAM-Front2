@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { formatCurrency } from "@/utils/formatters";
 import useVoBOQ from "../../use-vo-boq";
-import { 
-    ContractVoesVM, 
+import {
+    ContractVoesVM,
     VoItemsModel,
-    BOQType 
+    BOQType
 } from "@/types/variation-order";
 
 interface VOLineItemsHookProps {
@@ -90,15 +91,6 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
         }, 0);
     };
 
-    // Format currency display
-    const formatCurrency = (amount: number): string => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount);
-    };
-
     // Add new VO line item
     const addVoItem = () => {
         const newItem = {
@@ -134,7 +126,7 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
                 if (field === 'qte' || field === 'pu') {
                     const qte = parseFloat(field === 'qte' ? value : item.qte) || 0;
                     const pu = parseFloat(field === 'pu' ? value : item.pu) || 0;
-                    updatedItem.pt = formatCurrency(calculatePt(qte, pu));
+                    updatedItem.pt = formatCurrency(calculatePt(qte, pu), { decimals: 'always' });
                 }
                 
                 return updatedItem;

@@ -11,6 +11,7 @@ import checkIcon from "@iconify/icons-lucide/check";
 import xIcon from "@iconify/icons-lucide/x";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
+import { formatCurrency } from "@/utils/formatters";
 import { 
   getBudgetVosByBuilding, 
   getVoLevelData,
@@ -54,20 +55,7 @@ const VODialog: React.FC<VODialogProps> = ({
   const [voLevel, setVoLevel] = useState(1);
   const [isFromBudgetBoq, setIsFromBudgetBoq] = useState(true);
 
-  // Number formatting functions
-  const formatCurrency = (amount: number) => {
-    if (!amount || isNaN(amount) || amount === 0) return '-';
-    
-    // Check if the number has meaningful decimals
-    const hasDecimals = amount % 1 !== 0;
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'decimal',
-      minimumFractionDigits: hasDecimals ? 1 : 0,
-      maximumFractionDigits: hasDecimals ? 2 : 0
-    }).format(amount);
-  };
-
+  // Number formatting function
   const formatQuantity = (quantity: number) => {
     if (!quantity || isNaN(quantity) || quantity === 0) return '-';
     

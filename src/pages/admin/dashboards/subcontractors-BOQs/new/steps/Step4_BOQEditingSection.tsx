@@ -13,6 +13,7 @@ import useCostCodeSelection from "../../hooks/use-cost-code-selection";
 import BudgetBOQSelectionModal from "../../components/BudgetBOQSelectionModal";
 import { useContractsApi } from "../../hooks/use-contracts-api";
 import DescriptionModal from "../../components/DescriptionModal";
+import { formatCurrency } from "@/utils/formatters";
 
 interface BOQEditingSectionProps {
     tabs: Array<{ key: string; label: string; buildingId: number; tradeName: string }>;
@@ -303,14 +304,6 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
     const activeTabInfo = useMemo(() => {
         return tabs.find(t => t.key === activeTab);
     }, [tabs, activeTab]);
-
-    // Number formatting function - memoized
-    const formatNumber = useCallback((value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        }).format(value || 0);
-    }, []);
 
     // Format input value for display (handles numbers and strings)
     const formatInputValue = useCallback((value: number | string | undefined) => {
@@ -623,12 +616,12 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="tabs tabs-boxed mb-4 overflow-x-auto">
+            {/* Tabs as Toggle Buttons */}
+            <div className="join mb-4 flex-wrap">
                 {tabs.map(tab => (
                     <button
                         key={tab.key}
-                        className={`tab ${activeTab === tab.key ? 'tab-active' : ''}`}
+                        className={`join-item btn btn-sm ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
                         onClick={() => onTabChange(tab.key)}
                     >
                         {tab.label}
@@ -663,7 +656,7 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                                         index={index}
                                         units={units}
                                         isEmptyRow={isEmptyRow}
-                                        formatNumber={formatNumber}
+                                        formatNumber={formatCurrency}
                                         formatInputValue={formatInputValue}
                                         parseInputValue={parseInputValue}
                                         updateBOQItem={updateBOQItem}
@@ -688,7 +681,7 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                                         <tr className="bg-base-200 border-t-2 border-base-300 font-bold text-base-content">
                                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center" colSpan={6}>TOTAL</td>
                                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-center text-lg font-bold text-primary">
-                                                {formatNumber(total)}
+                                                {formatCurrency(total)}
                                             </td>
                                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3"></td>
                                         </tr>

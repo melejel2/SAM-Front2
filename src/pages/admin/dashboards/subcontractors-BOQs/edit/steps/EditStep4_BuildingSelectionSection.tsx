@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import buildingIcon from "@iconify/icons-lucide/building";
 import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
 import chevronRightIcon from "@iconify/icons-lucide/chevron-right";
-import layersIcon from "@iconify/icons-lucide/layers";
 
 interface BuildingSelectionSectionProps {
     tradeName: string;
@@ -19,7 +18,28 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
     selectedBuildings,
     onBuildingToggle
 }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    // Start expanded if no buildings selected, collapsed if buildings already selected
+    const [isExpanded, setIsExpanded] = useState(selectedBuildings.length === 0);
+
+    // Auto-collapse when a building is selected
+    useEffect(() => {
+        if (selectedBuildings.length > 0) {
+            setIsExpanded(false);
+        }
+    }, [selectedBuildings.length]);
+
+    const handleBuildingToggle = (buildingId: number, checked: boolean) => {
+        onBuildingToggle(buildingId, checked);
+        // Auto-collapse after selecting a building
+        if (checked) {
+            setIsExpanded(false);
+        }
+    };
+
+    // Get selected building names for display
+    const selectedBuildingNames = selectedBuildings
+        .map(id => buildings.find(b => b.id === id)?.name)
+        .filter(Boolean);
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
@@ -33,17 +53,22 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
                         icon={isExpanded ? chevronDownIcon : chevronRightIcon}
                         className="w-5 h-5 text-base-content/60"
                     />
-                    <Icon icon={layersIcon} className="w-5 h-5 text-secondary" />
-                    <span className="font-semibold text-base-content">{tradeName}</span>
-                    <div className="badge badge-neutral badge-sm">
-                        {buildings.length} building{buildings.length !== 1 ? 's' : ''} available
-                    </div>
+                    <Icon icon={buildingIcon} className="w-5 h-5 text-secondary" />
+                    <span className="font-semibold text-base-content">Select Buildings</span>
+                    {selectedBuildings.length === 0 ? (
+                        <div className="badge badge-neutral badge-sm">
+                            {buildings.length} building{buildings.length !== 1 ? 's' : ''} available
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {selectedBuildingNames.map(name => (
+                                <div key={name} className="badge badge-primary badge-sm">
+                                    {name}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                {selectedBuildings.length > 0 && (
-                    <div className="badge badge-primary badge-sm">
-                        {selectedBuildings.length} selected
-                    </div>
-                )}
             </button>
 
             {/* Expandable Content */}
@@ -71,7 +96,7 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
                                                     type="checkbox"
                                                     className="checkbox checkbox-primary"
                                                     checked={isSelected}
-                                                    onChange={(e) => onBuildingToggle(building.id, e.target.checked)}
+                                                    onChange={(e) => handleBuildingToggle(building.id, e.target.checked)}
                                                 />
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">

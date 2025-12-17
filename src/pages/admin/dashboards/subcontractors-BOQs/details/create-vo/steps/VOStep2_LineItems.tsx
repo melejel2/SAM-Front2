@@ -4,6 +4,7 @@ import trashIcon from "@iconify/icons-lucide/trash";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import { Icon } from "@iconify/react";
 import React, { useEffect, useRef, useState } from "react";
+import { formatCurrency } from "@/utils/formatters";
 
 import {
     BuildingsVOs,
@@ -211,20 +212,6 @@ export const VOStep2_LineItems: React.FC = () => {
             toaster.error((error as any).message || "An error occurred while clearing BOQ items.");
         } finally {
             setLoadingBOQItems(false);
-        }
-    };
-
-    const formatNumber = (value: number, forceDecimals: boolean = false) => {
-        if (value === 0) return "0";
-        const hasDecimals = value % 1 !== 0;
-        if (forceDecimals || hasDecimals) {
-            return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-                value || 0,
-            );
-        } else {
-            return new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(
-                value || 0,
-            );
         }
     };
 
@@ -508,7 +495,7 @@ export const VOStep2_LineItems: React.FC = () => {
                                                 type="text"
                                                 className={`focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm ${!item.unit && !isEmptyRow ? "cursor-not-allowed opacity-50" : ""}`}
                                                 value={
-                                                    isEmptyRow ? "" : item.quantity ? formatNumber(item.quantity) : ""
+                                                    isEmptyRow ? "" : item.quantity ? formatCurrency(item.quantity) : ""
                                                 }
                                                 onChange={(e) => {
                                                     if (!item.unit && !isEmptyRow) return;
@@ -529,7 +516,7 @@ export const VOStep2_LineItems: React.FC = () => {
                                                 type="text"
                                                 className={`focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm ${!item.unit && !isEmptyRow ? "cursor-not-allowed opacity-50" : ""}`}
                                                 value={
-                                                    isEmptyRow ? "" : item.unitPrice ? formatNumber(item.unitPrice) : ""
+                                                    isEmptyRow ? "" : item.unitPrice ? formatCurrency(item.unitPrice) : ""
                                                 }
                                                 onChange={(e) => {
                                                     if (!item.unit && !isEmptyRow) return;
@@ -547,7 +534,7 @@ export const VOStep2_LineItems: React.FC = () => {
                                         </td>
                                         <td
                                             className={`px-2 py-1 text-center text-xs font-medium sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3 ${isAddition ? "text-success" : "text-error"}`}>
-                                            {isEmptyRow || !item.unit ? "-" : formatNumber(itemTotal)}
+                                            {isEmptyRow || !item.unit ? "-" : formatCurrency(itemTotal)}
                                         </td>
                                         <td className="text-base-content w-24 px-2 py-1 text-center text-xs font-medium sm:w-28 sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
                                             {!isEmptyRow && (
@@ -573,7 +560,7 @@ export const VOStep2_LineItems: React.FC = () => {
                                     </td>
                                     <td
                                         className={`px-2 py-2 text-center text-xs font-bold sm:px-3 sm:py-3 sm:text-sm lg:px-4 ${isAddition ? "text-primary" : "text-error"}`}>
-                                        {formatNumber(totalAmount)}
+                                        {formatCurrency(totalAmount)}
                                     </td>
                                     <td className="px-2 py-2 sm:px-3 sm:py-3 lg:px-4"></td>
                                 </tr>

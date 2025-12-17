@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 const useContractsDatabase = () => {
     const [activeContractsData, setActiveContractsData] = useState<any[]>([]);
@@ -11,30 +12,6 @@ const useContractsDatabase = () => {
 
     const { getToken } = useAuth();
     const token = getToken();
-
-    // Memoize formatting functions to prevent recreation on every render
-    const formatCurrency = useCallback((amount: number) => {
-        if (!amount || isNaN(amount)) return '-';
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            maximumFractionDigits: 0
-        }).format(amount);
-    }, []);
-
-    const formatDate = useCallback((dateString: string) => {
-        if (!dateString) return '-';
-        try {
-            // Handle ISO datetime format like "2020-01-27T00:00:00"
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return '-';
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear().toString().slice(-2);
-            return `${day}/${month}/${year}`;
-        } catch (error) {
-            return '-';
-        }
-    }, []);
 
     const formatStatusBadge = useCallback((status: any) => {
         // Convert status to string and handle different types

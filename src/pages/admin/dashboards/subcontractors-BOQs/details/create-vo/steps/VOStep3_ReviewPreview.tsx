@@ -5,6 +5,7 @@ import PDFViewer from '@/components/ExcelPreview/PDFViewer';
 import { Loader } from '@/components/Loader';
 import useToast from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { formatCurrency } from '@/utils/formatters';
 
 /**
  * VOStep3_ReviewPreview - Combined Review and Preview Step
@@ -19,26 +20,6 @@ export const VOStep3_ReviewPreview: React.FC = () => {
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
-
-    // Number formatting function - shows decimals only if needed
-    const formatNumber = (value: number, forceDecimals: boolean = false) => {
-        if (value === 0) return '0';
-
-        // Check if the number has decimals
-        const hasDecimals = value % 1 !== 0;
-
-        if (forceDecimals || hasDecimals) {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(Math.abs(value));
-        } else {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(Math.abs(value));
-        }
-    };
 
     const selectedBuildings = contractData?.buildings.filter(b =>
         formData.selectedBuildingIds.includes(b.id)
@@ -92,7 +73,7 @@ export const VOStep3_ReviewPreview: React.FC = () => {
                             <span className="text-sm">{new Date(formData.voDate).toLocaleDateString('en-GB')}</span>
                         </div>
                         <div className={`text-lg font-bold ${isAddition ? 'text-success' : 'text-error'}`}>
-                            {contractData?.currencySymbol} {formatNumber(Math.abs(formData.totalAmount))}
+                            {contractData?.currencySymbol} {formatCurrency(Math.abs(formData.totalAmount))}
                         </div>
                     </div>
                 </div>
@@ -156,12 +137,12 @@ export const VOStep3_ReviewPreview: React.FC = () => {
                                                 <td className="px-3 py-2 text-xs">{item.no}</td>
                                                 <td className="px-3 py-2 text-xs">{item.description}</td>
                                                 <td className="px-3 py-2 text-xs text-center">{item.unit}</td>
-                                                <td className="px-3 py-2 text-xs text-center">{formatNumber(item.quantity)}</td>
-                                                <td className="px-3 py-2 text-xs text-center">{formatNumber(item.unitPrice)}</td>
+                                                <td className="px-3 py-2 text-xs text-center">{formatCurrency(item.quantity)}</td>
+                                                <td className="px-3 py-2 text-xs text-center">{formatCurrency(item.unitPrice)}</td>
                                                 <td className={`px-3 py-2 text-xs text-center font-medium ${
                                                     isAddition ? 'text-success' : 'text-error'
                                                 }`}>
-                                                    {formatNumber(itemTotal)}
+                                                    {formatCurrency(itemTotal)}
                                                 </td>
                                             </tr>
                                         );
@@ -173,7 +154,7 @@ export const VOStep3_ReviewPreview: React.FC = () => {
                                         <td className={`px-3 py-2 text-xs text-center ${
                                             isAddition ? 'text-primary' : 'text-error'
                                         }`}>
-                                            {formatNumber(Math.abs(formData.totalAmount))}
+                                            {formatCurrency(Math.abs(formData.totalAmount))}
                                         </td>
                                     </tr>
                                 </tfoot>

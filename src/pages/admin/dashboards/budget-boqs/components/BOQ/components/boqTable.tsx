@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, memo } from "
 import { Icon } from "@iconify/react";
 import { Button } from "@/components/daisyui";
 import trashIcon from "@iconify/icons-lucide/trash";
+import { formatCurrency } from "@/utils/formatters";
 
 import useTrades from "@/pages/admin/adminTools/trades/use-trades";
 import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
@@ -474,13 +475,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
                 if (!total || Number.isNaN(total)) {
                     return '-';
                 }
-
-                const hasDecimals = total % 1 !== 0;
-                return new Intl.NumberFormat('en-US', {
-                    style: 'decimal',
-                    minimumFractionDigits: hasDecimals ? 1 : 0,
-                    maximumFractionDigits: hasDecimals ? 2 : 0,
-                }).format(total);
+                return formatCurrency(total);
             }
         }
 
@@ -597,16 +592,6 @@ const BOQTable: React.FC<BOQTableProps> = ({
         return { totalPrice, hasData: true };
     }, [projectData, selectedBuilding, selectedTrade]);
 
-    const formatTotalPrice = (amount: number) => {
-        if (!amount || isNaN(amount) || amount === 0) return '-';
-        const hasDecimals = amount % 1 !== 0;
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            minimumFractionDigits: hasDecimals ? 1 : 0,
-            maximumFractionDigits: hasDecimals ? 2 : 0
-        }).format(amount);
-    };
-
     // Excel-like table rendering with direct cell editing
     const renderExcelLikeTable = () => {
         if (tableData.length === 0) {
@@ -626,7 +611,7 @@ const BOQTable: React.FC<BOQTableProps> = ({
                     <span className="text-primary">TOTAL</span>
                 ) : columnKey === 'pt' || columnKey === 'total_price' ? (
                     <span className="text-primary">
-                        {formatTotalPrice(calculateTotals.totalPrice)}
+                        {formatCurrency(calculateTotals.totalPrice)}
                     </span>
                 ) : (
                     ''

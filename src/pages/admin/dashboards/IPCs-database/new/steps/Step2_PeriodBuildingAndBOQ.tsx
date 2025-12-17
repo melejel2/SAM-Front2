@@ -1,19 +1,47 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
-import type { Vos } from "@/types/ipc";
+import type { Vos, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
+import { CorrectionEntityType } from "@/types/ipc";
 import { Icon } from "@iconify/react";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import useToast from "@/hooks/use-toast";
+import { formatCurrency } from "@/utils/formatters";
+import { usePermissions } from "@/hooks/use-permissions";
+import CorrectPreviousValueModal from "../../components/CorrectPreviousValueModal";
+import CorrectionHistoryModal from "../../components/CorrectionHistoryModal";
+
+function cellValueToPrimitive(value: ExcelJS.CellValue): unknown {
+    if (value === null || value === undefined) return "";
+    if (value instanceof Date) return value;
+    if (typeof value === "object") {
+        if ("result" in value) return (value as ExcelJS.CellFormulaValue).result ?? "";
+        if ("text" in value) return (value as ExcelJS.CellHyperlinkValue).text ?? (value as ExcelJS.CellHyperlinkValue).hyperlink ?? "";
+        if ("richText" in value) return (value as ExcelJS.CellRichTextValue).richText.map((t: ExcelJS.RichText) => t.text).join("");
+        return "";
+    }
+    return value;
+}
+
+function downloadXlsx(buffer: ArrayBuffer, filename: string) {
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
 
 export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const { formData, setFormData, selectedContract } = useIPCWizardContext();
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { canCorrectPreviousValues } = usePermissions();
 
     // Legacy: Both quantity and percentage inputs are now always visible (no toggle needed)
     // This mirrors the SAM-Desktop behavior where users can edit either field
@@ -23,6 +51,22 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const [activeVOId, setActiveVOId] = useState<number | null>(null);
     const [activeVOBuildingId, setActiveVOBuildingId] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<"contract" | "vo">("contract");
+
+    // Previous Value Correction Modal State
+    const [correctionModal, setCorrectionModal] = useState<{
+        isOpen: boolean;
+        entityType: CorrectionEntityType;
+        entityId: number;
+        fieldName: 'PrecedQte' | 'PrecedentAmount';
+        fieldLabel: string;
+        currentValue: number;
+        entityDescription: string;
+    } | null>(null);
+    const [historyModal, setHistoryModal] = useState<{
+        isOpen: boolean;
+        entityType?: CorrectionEntityType;
+        entityId?: number;
+    } | null>(null);
 
     // Effect to fetch all buildings for the selected contract
     useEffect(() => {
@@ -261,17 +305,135 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         });
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
+    // ==================== Previous Value Correction Functions ====================
+
+    /**
+     * Open the correction modal for a BOQ or VO item.
+     * This allows authorized users (CM, QS, Admin) to correct PrecedQte values.
+     */
+    const openCorrectionModal = (
+        entityType: CorrectionEntityType,
+        entityId: number,
+        currentValue: number,
+        entityDescription: string
+    ) => {
+        const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
+        if (!contractDatasetId) {
+            toaster.error("Contract dataset ID not found");
+            return;
+        }
+        setCorrectionModal({
+            isOpen: true,
+            entityType,
+            entityId,
+            fieldName: 'PrecedQte',
+            fieldLabel: 'Previous Quantity',
+            currentValue,
+            entityDescription,
+        });
+    };
+
+    /**
+     * Handle the correction submission.
+     * Calls the API and updates local state on success.
+     */
+    const handleCorrection = async (request: CorrectPreviousValueRequest): Promise<CorrectionResultDTO | null> => {
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return null;
+        }
+
+        const response = await ipcApiService.correctPreviousValue(request, token);
+
+        if (!response.success || !response.data) {
+            toaster.error(response.error?.message || "Failed to apply correction");
+            return null;
+        }
+
+        // Update local state with the corrected value
+        const correctionResult = response.data;
+
+        if (request.entityType === CorrectionEntityType.ContractBoqItem) {
+            // Update BOQ item in local state
+            const safeBuildings = formData.buildings || [];
+            const updatedBuildings = safeBuildings.map(building => ({
+                ...building,
+                boqsContract: (building.boqsContract || []).map(boq => {
+                    if (boq.id === request.entityId) {
+                        const newPrecedQte = request.newValue;
+                        const actualQte = boq.actualQte || 0;
+                        const newCumulQte = newPrecedQte + actualQte;
+                        const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
+                        return {
+                            ...boq,
+                            precedQte: newPrecedQte,
+                            cumulQte: newCumulQte,
+                            cumulAmount: newCumulQte * boq.unitPrice,
+                            cumulPercent: newCumulPercent,
+                        };
+                    }
+                    return boq;
+                })
+            }));
+            setFormData({ buildings: updatedBuildings });
+        } else if (request.entityType === CorrectionEntityType.ContractVo) {
+            // Update VO item in local state
+            const vos = (formData.vos || []) as Vos[];
+            const updatedVos = vos.map(vo => ({
+                ...vo,
+                buildings: vo.buildings.map(building => ({
+                    ...building,
+                    boqs: building.boqs.map(boq => {
+                        if (boq.id === request.entityId) {
+                            const newPrecedQte = request.newValue;
+                            const actualQte = boq.actualQte || 0;
+                            const newCumulQte = newPrecedQte + actualQte;
+                            const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
+                            return {
+                                ...boq,
+                                precedQte: newPrecedQte,
+                                cumulQte: newCumulQte,
+                                cumulAmount: newCumulQte * boq.unitPrice,
+                                cumulPercent: newCumulPercent,
+                            };
+                        }
+                        return boq;
+                    })
+                }))
+            }));
+            setFormData({ vos: updatedVos });
+        }
+
+        toaster.success("Previous value corrected successfully. Audit record created.");
+        return correctionResult;
+    };
+
+    /**
+     * Fetch correction history for the audit trail display.
+     */
+    const handleFetchHistory = async (request: CorrectionHistoryRequest): Promise<CorrectionHistoryDTO[]> => {
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return [];
+        }
+
+        const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
+        const response = await ipcApiService.getCorrectionHistory({ ...request, contractDatasetId }, token);
+
+        if (!response.success || !response.data) {
+            toaster.error(response.error?.message || "Failed to fetch correction history");
+            return [];
+        }
+
+        return response.data;
     };
 
     // ==================== Excel Export/Import Functions ====================
 
     // Export BOQ progress to Excel for the active building
-    const handleExportBOQ = () => {
+    const handleExportBOQ = async () => {
         const safeBuildings = formData.buildings || [];
         const building = safeBuildings.find(b => b.id === activeBuildingId);
 
@@ -305,27 +467,33 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         });
 
         // Create workbook and worksheet
-        const ws = XLSX.utils.json_to_sheet(exportData);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("BOQ Progress");
+
+        // Add headers
+        worksheet.addRow(Object.keys(exportData[0]));
+
+        // Add data rows
+        exportData.forEach(row => {
+            worksheet.addRow(Object.values(row));
+        });
 
         // Set column widths
-        ws["!cols"] = [
-            { wch: 8 },   // N°
-            { wch: 40 },  // Item
-            { wch: 8 },   // Unit
-            { wch: 12 },  // Contract Qty
-            { wch: 12 },  // Unit Price
-            { wch: 14 },  // Total Amt
-            { wch: 10 },  // Prev Qty
-            { wch: 12 },  // Actual Qty
-            { wch: 12 },  // Cumul Qty
-            { wch: 10 },  // Cumul %
-            { wch: 14 },  // Prev Amt
-            { wch: 14 },  // Actual Amt
-            { wch: 14 },  // Cumul Amt
+        worksheet.columns = [
+            { key: 'no', width: 8 },
+            { key: 'item', width: 40 },
+            { key: 'unit', width: 8 },
+            { key: 'contractQty', width: 12 },
+            { key: 'unitPrice', width: 12 },
+            { key: 'totalAmt', width: 14 },
+            { key: 'prevQty', width: 10 },
+            { key: 'actualQty', width: 12 },
+            { key: 'cumulQty', width: 12 },
+            { key: 'cumulPercent', width: 10 },
+            { key: 'prevAmt', width: 14 },
+            { key: 'actualAmt', width: 14 },
+            { key: 'cumulAmt', width: 14 },
         ];
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "BOQ Progress");
 
         // Generate filename with building name and date
         const buildingName = building.buildingName?.replace(/[^a-zA-Z0-9]/g, "_") || `Building_${building.id}`;
@@ -334,7 +502,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
         // Download the file
         try {
-            XLSX.writeFile(wb, filename);
+            const buffer = await workbook.xlsx.writeBuffer();
+            downloadXlsx(buffer, filename);
             toaster.success(`BOQ exported: ${filename}`);
         } catch (error) {
             console.error("Export error:", error);
@@ -348,17 +517,34 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: "array" });
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
 
                 // Get first sheet
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
+                const worksheet = workbook.worksheets[0];
+                if (!worksheet) {
+                    toaster.error("Excel file has no sheets");
+                    return;
+                }
 
-                // Convert to JSON
-                const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+                // Convert to JSON-like array using headers from the first row
+                const headerRow = worksheet.getRow(1);
+                const headers = (headerRow.values as any[]).slice(1).map(h => String(h ?? "").trim());
+
+                const jsonData: Record<string, unknown>[] = [];
+                worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                    if (rowNumber === 1) return; // skip header
+                    const rowObj: Record<string, unknown> = {};
+                    headers.forEach((key, idx) => {
+                        const cell = row.getCell(idx + 1);
+                        rowObj[key] = cellValueToPrimitive(cell.value as ExcelJS.CellValue);
+                    });
+                    const allEmpty = Object.values(rowObj).every(v => v === "" || v === null || v === undefined);
+                    if (!allEmpty) jsonData.push(rowObj);
+                });
 
                 if (!jsonData.length) {
                     toaster.error("Excel file is empty");
@@ -381,7 +567,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 // Update BOQ items based on imported data
                 const updatedBoqs = (building.boqsContract || []).map((boq, index) => {
                     // Find matching row by N° and Item (key) - must match both for safety
-                    const matchingRow = jsonData.find((row, rowIndex) => {
+                    const matchingRow = jsonData.find((row: Record<string, unknown>, rowIndex: number) => {
                         const rowNo = String(row["N°"] || "").trim();
                         const rowItem = String(row["Item"] || "").trim();
                         const boqNo = String(boq.no || "").trim();
@@ -627,42 +813,35 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 </div>
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setViewMode("contract")}
-                        className={`btn btn-sm ${viewMode === "contract" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
-                    >
-                        Contract BOQ
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setViewMode("vo");
-                            if (safeVOs.length > 0 && !activeVOId) {
-                                setActiveVOId(safeVOs[0].id);
-                                if (safeVOs[0].buildings.length > 0) {
-                                    setActiveVOBuildingId(safeVOs[0].buildings[0].id);
+            {/* View Mode Toggle - Only show if there are VOs */}
+            {safeVOs.length > 0 && (
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode("contract")}
+                            className={`btn btn-sm ${viewMode === "contract" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
+                        >
+                            Contract BOQ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewMode("vo");
+                                if (!activeVOId) {
+                                    setActiveVOId(safeVOs[0].id);
+                                    if (safeVOs[0].buildings.length > 0) {
+                                        setActiveVOBuildingId(safeVOs[0].buildings[0].id);
+                                    }
                                 }
-                            }
-                        }}
-                        className={`btn btn-sm ${viewMode === "vo" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
-                        disabled={safeVOs.length === 0}
-                    >
-                        Variation Orders ({safeVOs.length})
-                    </button>
+                            }}
+                            className={`btn btn-sm ${viewMode === "vo" ? "btn-primary" : "bg-base-200 text-base-content hover:bg-base-300 border-base-300"}`}
+                        >
+                            Variation Orders ({safeVOs.length})
+                        </button>
+                    </div>
                 </div>
-
-                {/* Info about input modes */}
-                <div className="flex items-center gap-2 border-l border-base-300 pl-4">
-                    <Icon icon={infoIcon} className="text-blue-500 size-4" />
-                    <span className="text-xs text-base-content/70">
-                        Enter <span className="text-green-600 font-medium">Actual Qty</span>, <span className="text-purple-600 font-medium">Cumul Qty</span>, or <span className="text-blue-600 font-medium">Cumul %</span> - all fields sync automatically
-                    </span>
-                </div>
-            </div>
+            )}
 
             {/* BOQ Table - Full Page View (Legacy SAM Pattern) */}
             {viewMode === "contract" && activeBuilding && (
@@ -704,9 +883,6 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                         onChange={handleImportBOQ}
                                         className="hidden"
                                     />
-                                </div>
-                                <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                    Building Total: {formatCurrency(activeBuildingTotal)}
                                 </div>
                             </div>
                         </div>
@@ -753,7 +929,27 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                             <td className="text-right text-xs font-medium">{boq.qte || ''}</td>
                                             <td className="text-right text-xs">{formatCurrency(boq.unitPrice)}</td>
                                             <td className="text-right text-xs font-medium">{formatCurrency(boq.qte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs">{precedQte || ''}</td>
+                                            {/* Prev Qty - with correction button for authorized users */}
+                                            <td className="text-right text-xs">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span>{precedQte || ''}</span>
+                                                    {canCorrectPreviousValues && !isHeaderRow && precedQte > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCorrectionModal(
+                                                                CorrectionEntityType.ContractBoqItem,
+                                                                boq.id,
+                                                                precedQte,
+                                                                `${boq.no || ''} - ${boq.key || 'BOQ Item'}`
+                                                            )}
+                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                                            title="Correct previous quantity (audit trail)"
+                                                        >
+                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             {/* Actual Qty Input - Green highlight */}
                                             <td className="text-right bg-green-50/50 dark:bg-green-900/10">
                                                 <input
@@ -895,7 +1091,27 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                             <td className="text-right text-xs font-medium">{boq.qte || ''}</td>
                                             <td className="text-right text-xs">{formatCurrency(boq.unitPrice)}</td>
                                             <td className="text-right text-xs font-medium">{formatCurrency(boq.qte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs">{precedQte || ''}</td>
+                                            {/* Prev Qty - with correction button for authorized users */}
+                                            <td className="text-right text-xs">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span>{precedQte || ''}</span>
+                                                    {canCorrectPreviousValues && !isHeaderRow && precedQte > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCorrectionModal(
+                                                                CorrectionEntityType.ContractVo,
+                                                                boq.id,
+                                                                precedQte,
+                                                                `VO ${activeVO.voNumber} - ${boq.no || ''} - ${boq.key || 'VO Item'}`
+                                                            )}
+                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                                            title="Correct previous quantity (audit trail)"
+                                                        >
+                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             {/* Actual Qty Input - Green highlight */}
                                             <td className="text-right bg-green-50/50 dark:bg-green-900/10">
                                                 <input
@@ -1055,6 +1271,33 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Correction Modals */}
+            {correctionModal && (
+                <CorrectPreviousValueModal
+                    isOpen={correctionModal.isOpen}
+                    onClose={() => setCorrectionModal(null)}
+                    entityType={correctionModal.entityType}
+                    entityId={correctionModal.entityId}
+                    contractDatasetId={selectedContract?.id || (formData as any).contractsDatasetId}
+                    fieldName={correctionModal.fieldName}
+                    fieldLabel={correctionModal.fieldLabel}
+                    currentValue={correctionModal.currentValue}
+                    entityDescription={correctionModal.entityDescription}
+                    onCorrect={handleCorrection}
+                />
+            )}
+
+            {historyModal && (
+                <CorrectionHistoryModal
+                    isOpen={historyModal.isOpen}
+                    onClose={() => setHistoryModal(null)}
+                    contractDatasetId={selectedContract?.id || (formData as any).contractsDatasetId}
+                    entityType={historyModal.entityType}
+                    entityId={historyModal.entityId}
+                    onFetchHistory={handleFetchHistory}
+                />
             )}
         </div>
     );

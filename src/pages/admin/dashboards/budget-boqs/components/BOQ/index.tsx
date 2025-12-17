@@ -32,6 +32,7 @@ interface BOQStepProps {
     saving?: boolean;
     hasUnsavedChanges?: boolean;
     createBuildings: (buildingData: any) => Promise<any>;
+    updateBuilding?: (buildingData: any) => Promise<any>;
     getBoqPreview: (importData: any) => Promise<any>;
     clearBoq: (clearData: any) => Promise<any>;
     currencies: Currency[];
@@ -54,6 +55,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
     saving,
     hasUnsavedChanges,
     createBuildings,
+    updateBuilding,
     getBoqPreview,
     clearBoq,
     currencies,
@@ -187,6 +189,31 @@ const BOQStep: React.FC<BOQStepProps> = ({
             onDataRefresh(); // Refresh project data to get updated buildings list
         } else {
             toaster.error(result.message || "Failed to create buildings");
+        }
+
+        return result;
+    };
+
+    const handleUpdateBuilding = async (buildingData: any) => {
+        if (!updateBuilding) {
+            toaster.error("Update building functionality not available");
+            return { success: false };
+        }
+
+        const result = await updateBuilding(buildingData);
+
+        if (result.success) {
+            toaster.success("Building updated successfully");
+            // Update selectedBuilding if it was the one being edited
+            if (result.data && selectedBuilding?.id === result.data.id) {
+                setSelectedBuilding({
+                    ...selectedBuilding,
+                    ...result.data
+                });
+            }
+            onDataRefresh(); // Refresh project data to get updated buildings list
+        } else {
+            toaster.error(result.message || "Failed to update building");
         }
 
         return result;
@@ -737,6 +764,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         projectName={selectedProject?.name}
                         projectId={selectedProject?.id}
                         onCreateBuildings={handleCreateBuildings}
+                        onUpdateBuilding={updateBuilding ? handleUpdateBuilding : undefined}
                     />
                 </Suspense>
             )}

@@ -1,12 +1,15 @@
 import { useState, useCallback } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+import { formatCurrency } from "@/utils/formatters";
 
 interface Building {
     id: number;
     name: string;
     projectLevel: number;
     subContractorLevel: number;
+    type?: string;
+    [key: string]: any;
 }
 
 interface BOQItem {
@@ -119,6 +122,44 @@ const useBudgetBOQsDialog = () => {
         }
     };
 
+    const updateBuilding = async (buildingData: Building) => {
+        try {
+            const result = await apiRequest({
+                endpoint: "Building/UpdateBuilding",
+                method: "PUT",
+                token: token ?? "",
+                body: buildingData,
+            });
+
+            if (result && (result as any).value) {
+                const updatedBuilding = (result as any).value;
+                // Update buildings list
+                setBuildings((prev) =>
+                    prev.map((b) => (b.id === updatedBuilding.id ? updatedBuilding : b))
+                );
+                // Update project data
+                setProjectData((prev) => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        buildings: prev.buildings.map((b: any) =>
+                            b.id === updatedBuilding.id ? { ...b, ...updatedBuilding } : b
+                        ),
+                    };
+                });
+                return { success: true, data: updatedBuilding };
+            }
+
+            if (result && (result as any).success !== false) {
+                return { success: true };
+            }
+            return { success: false, message: (result as any)?.message || "Failed to update building" };
+        } catch (error) {
+            console.error("Error updating building:", error);
+            return { success: false, message: "Error updating building" };
+        }
+    };
+
     const previewBuildings = async (buildingData: BuildingRequestModel) => {
         try {
             const data = await apiRequest({
@@ -199,19 +240,6 @@ const useBudgetBOQsDialog = () => {
 
     const calculateTotal = (item: BOQItem) => {
         return item.qte * item.pu;
-    };
-
-    const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount) || amount === 0) return '-';
-        
-        // Check if the number has meaningful decimals
-        const hasDecimals = amount % 1 !== 0;
-        
-        return new Intl.NumberFormat('en-US', {
-            style: 'decimal',
-            minimumFractionDigits: hasDecimals ? 1 : 0,
-            maximumFractionDigits: hasDecimals ? 2 : 0
-        }).format(amount);
     };
 
     const formatQuantity = (quantity: number) => {
@@ -318,6 +346,7 @@ const useBudgetBOQsDialog = () => {
         setBoqSheets,
         setProjectData,
         createBuildings,
+        updateBuilding,
         previewBuildings,
         getBoqPreview,
         saveProject,

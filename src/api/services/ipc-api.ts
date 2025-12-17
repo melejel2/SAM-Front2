@@ -1,6 +1,10 @@
 import type {
     BackendDataWrapper,
     ContractBuildingsVM,
+    CorrectPreviousValueRequest,
+    CorrectionHistoryDTO,
+    CorrectionHistoryRequest,
+    CorrectionResultDTO,
     CreateIpcRequest,
     IpcApiResponse,
     IpcListItem,
@@ -407,6 +411,95 @@ class IpcApiService {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Failed to export IPC Excel",
+            };
+        }
+    }
+
+    // ============================================
+    // Previous Value Corrections
+    // ============================================
+
+    /**
+     * Correct a previous value for BOQ, VO, or Deduction items.
+     * Only ContractsManager, QuantitySurveyor, and Admin can perform corrections.
+     * POST /api/Ipc/CorrectPreviousValue
+     */
+    async correctPreviousValue(
+        request: CorrectPreviousValueRequest,
+        token: string,
+    ): Promise<IpcApiResponse<CorrectionResultDTO>> {
+        try {
+            const response = await apiRequest<BackendDataWrapper<CorrectionResultDTO>>({
+                endpoint: "Ipc/CorrectPreviousValue",
+                method: "POST",
+                token,
+                body: request as unknown as Record<string, unknown>,
+            });
+
+            if (response.isSuccess && response.value) {
+                return {
+                    success: true,
+                    data: response.value,
+                };
+            } else {
+                const errorMessage =
+                    ("error" in response && response.error?.message) ||
+                    ("message" in response && response.message) ||
+                    "Failed to correct previous value";
+                return {
+                    success: false,
+                    error: { message: errorMessage },
+                };
+            }
+        } catch (error) {
+            console.error("Error correcting previous value:", error);
+            return {
+                success: false,
+                error: {
+                    message: error instanceof Error ? error.message : "Failed to correct previous value",
+                },
+            };
+        }
+    }
+
+    /**
+     * Get correction history for audit trail.
+     * POST /api/Ipc/GetCorrectionHistory
+     */
+    async getCorrectionHistory(
+        request: CorrectionHistoryRequest,
+        token: string,
+    ): Promise<IpcApiResponse<CorrectionHistoryDTO[]>> {
+        try {
+            const response = await apiRequest<BackendDataWrapper<CorrectionHistoryDTO[]>>({
+                endpoint: "Ipc/GetCorrectionHistory",
+                method: "POST",
+                token,
+                body: request as unknown as Record<string, unknown>,
+            });
+
+            if (response.isSuccess && response.value) {
+                return {
+                    success: true,
+                    data: response.value,
+                };
+            } else {
+                const errorMessage =
+                    ("error" in response && response.error?.message) ||
+                    ("message" in response && response.message) ||
+                    "Failed to fetch correction history";
+                return {
+                    success: false,
+                    error: { message: errorMessage },
+                };
+            }
+        } catch (error) {
+            console.error("Error fetching correction history:", error);
+            return {
+                success: false,
+                error: {
+                    message: error instanceof Error ? error.message : "Failed to fetch correction history",
+                },
             };
         }
     }

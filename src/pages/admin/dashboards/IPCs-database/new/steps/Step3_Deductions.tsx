@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
-import type { Vos, LaborsVM, MachinesVM, MaterialsVM } from "@/types/ipc";
+import type { Vos, LaborsVM, MachinesVM, MaterialsVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
+import { CorrectionEntityType } from "@/types/ipc";
 import { Icon } from "@iconify/react";
 import minusCircleIcon from "@iconify/icons-lucide/minus-circle";
 import infoIcon from "@iconify/icons-lucide/info";
@@ -8,8 +9,35 @@ import usersIcon from "@iconify/icons-lucide/users";
 import truckIcon from "@iconify/icons-lucide/truck";
 import packageIcon from "@iconify/icons-lucide/package";
 import calculatorIcon from "@iconify/icons-lucide/calculator";
+import plusIcon from "@iconify/icons-lucide/plus";
+import trashIcon from "@iconify/icons-lucide/trash-2";
+import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
+import { formatCurrency } from "@/utils/formatters";
+import { useAuth } from "@/contexts/auth";
+import { usePermissions } from "@/hooks/use-permissions";
+import useToast from "@/hooks/use-toast";
+import { ipcApiService } from "@/api/services/ipc-api";
+import CorrectPreviousValueModal from "../../components/CorrectPreviousValueModal";
+import CorrectionHistoryModal from "../../components/CorrectionHistoryModal";
 
 type DeductionTab = "labor" | "materials" | "machines";
+
+// Common unit options for deductions
+const UNIT_OPTIONS = [
+    { value: 'HR', label: 'HR (Hour)' },
+    { value: 'DAY', label: 'DAY' },
+    { value: 'EA', label: 'EA (Each)' },
+    { value: 'M', label: 'M (Meter)' },
+    { value: 'M2', label: 'M² (Square Meter)' },
+    { value: 'M3', label: 'M³ (Cubic Meter)' },
+    { value: 'KG', label: 'KG (Kilogram)' },
+    { value: 'TON', label: 'TON' },
+    { value: 'L', label: 'L (Liter)' },
+    { value: 'SET', label: 'SET' },
+    { value: 'LOT', label: 'LOT' },
+    { value: 'LS', label: 'LS (Lump Sum)' },
+    { value: 'U', label: 'U (Unit)' },
+];
 
 /**
  * Calculate dynamic deduction values for Labor/Machine items.
@@ -87,7 +115,34 @@ const calculateMaterialDeductions = (item: MaterialsVM) => {
 
 export const Step3_Deductions: React.FC = () => {
     const { formData, setFormData, selectedContract, setHasUnsavedChanges } = useIPCWizardContext();
+    const { getToken } = useAuth();
+    const { toaster } = useToast();
+    const { canCorrectPreviousValues } = usePermissions();
     const [activeTab, setActiveTab] = useState<DeductionTab>("labor");
+
+    // Previous Value Correction Modal State
+    const [correctionModal, setCorrectionModal] = useState<{
+        isOpen: boolean;
+        entityType: CorrectionEntityType;
+        entityId: number;
+        fieldName: 'PrecedQte' | 'PrecedentAmount';
+        fieldLabel: string;
+        currentValue: number;
+        entityDescription: string;
+    } | null>(null);
+    const [historyModal, setHistoryModal] = useState<{
+        isOpen: boolean;
+        entityType?: CorrectionEntityType;
+        entityId?: number;
+    } | null>(null);
+
+    // Delete Confirmation Modal State
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{
+        isOpen: boolean;
+        type: 'labors' | 'machines' | 'materials';
+        index: number;
+        itemDescription: string;
+    } | null>(null);
 
     const safeBuildings = formData.buildings || [];
     const safeVOs = (formData.vos || []) as Vos[];
@@ -106,15 +161,6 @@ export const Step3_Deductions: React.FC = () => {
     }, 0);
 
     const totalIPCAmount = totalContractAmount + totalVoAmount;
-
-    const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
-    const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
-    const netPayableAmount = totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty;
-
-    const handleInputChange = (field: string, value: number) => {
-        setFormData({ [field]: value });
-        if (setHasUnsavedChanges) setHasUnsavedChanges(true);
-    };
 
     const handleItemChange = (
         type: 'labors' | 'materials' | 'machines',
@@ -178,8 +224,41 @@ export const Step3_Deductions: React.FC = () => {
         if (type !== 'materials') {
             item.quantity = quantity;
             item.unitPrice = unitPrice;
+
+            // Calculate derived fields for Labor/Machine (required for Excel generation)
+            const amount = quantity * unitPrice;
+            item.amount = amount;
+            item.consumedAmount = amount;
+
+            // Calculate deduction amounts
+            const precedentAmount = item.precedentAmount || 0;
+            const previousDeductionPercent = amount !== 0 ? (precedentAmount / amount) * 100 : 0;
+            const actualDeductionPercent = deductionPercent - previousDeductionPercent;
+
+            item.previousDeduction = previousDeductionPercent;
+            item.actualDeduction = actualDeductionPercent;
+            item.actualAmount = (deductionPercent * amount) / 100;
         } else {
             item.saleUnit = unitPrice;
+
+            // Calculate derived fields for Materials (required for Excel generation)
+            const stockQte = item.stockQte || 0;
+            const transferedQte = item.transferedQte || 0;
+            const allocated = item.allocated || 0;
+
+            // ConsumedAmount for materials = SaleUnit * (Allocated - StockQte - TransferedQte)
+            const consumedAmount = unitPrice * (allocated - stockQte - transferedQte);
+            item.consumedAmount = consumedAmount;
+            item.totalSale = quantity * unitPrice;
+
+            // Calculate deduction amounts
+            const precedentAmount = item.precedentAmount || 0;
+            const previousDeductionPercent = consumedAmount !== 0 ? (precedentAmount / consumedAmount) * 100 : 0;
+            const actualDeductionPercent = deductionPercent - previousDeductionPercent;
+
+            item.previousDeduction = previousDeductionPercent;
+            item.actualDeduction = actualDeductionPercent;
+            item.actualAmount = (deductionPercent * consumedAmount) / 100;
         }
 
         // IMPORTANT: Update both 'deduction' (backend field) and 'deductionPercentage' (frontend field)
@@ -209,33 +288,310 @@ export const Step3_Deductions: React.FC = () => {
         if (setHasUnsavedChanges) setHasUnsavedChanges(true);
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
+    // ==================== Previous Value Correction Functions ====================
+
+    /**
+     * Open the correction modal for a deduction item (Labor, Machine, or Material).
+     * This allows authorized users (CM, QS, Admin) to correct PrecedentAmount values.
+     */
+    const openCorrectionModal = (
+        entityType: CorrectionEntityType,
+        entityId: number,
+        currentValue: number,
+        entityDescription: string
+    ) => {
+        const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
+        if (!contractDatasetId) {
+            toaster.error("Contract dataset ID not found");
+            return;
+        }
+        setCorrectionModal({
+            isOpen: true,
+            entityType,
+            entityId,
+            fieldName: 'PrecedentAmount',
+            fieldLabel: 'Previous Amount',
+            currentValue,
+            entityDescription,
+        });
+    };
+
+    /**
+     * Handle the correction submission.
+     * Calls the API and updates local state on success.
+     */
+    const handleCorrection = async (request: CorrectPreviousValueRequest): Promise<CorrectionResultDTO | null> => {
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return null;
+        }
+
+        const response = await ipcApiService.correctPreviousValue(request, token);
+
+        if (!response.success || !response.data) {
+            toaster.error(response.error?.message || "Failed to apply correction");
+            return null;
+        }
+
+        // Update local state with the corrected value
+        const correctionResult = response.data;
+
+        if (request.entityType === CorrectionEntityType.Labor) {
+            // Update Labor item in local state
+            const updatedLabors = (formData.labors || []).map(labor => {
+                if (labor.id === request.entityId) {
+                    return { ...labor, precedentAmount: request.newValue };
+                }
+                return labor;
+            });
+            setFormData({ labors: updatedLabors });
+        } else if (request.entityType === CorrectionEntityType.Machine) {
+            // Update Machine item in local state
+            const updatedMachines = (formData.machines || []).map(machine => {
+                if (machine.id === request.entityId) {
+                    return { ...machine, precedentAmount: request.newValue };
+                }
+                return machine;
+            });
+            setFormData({ machines: updatedMachines });
+        } else if (request.entityType === CorrectionEntityType.Material) {
+            // Update Material item in local state
+            const updatedMaterials = (formData.materials || []).map(material => {
+                if (material.id === request.entityId) {
+                    return { ...material, precedentAmount: request.newValue };
+                }
+                return material;
+            });
+            setFormData({ materials: updatedMaterials });
+        }
+
+        toaster.success("Previous amount corrected successfully. Audit record created.");
+        return correctionResult;
+    };
+
+    /**
+     * Fetch correction history for the audit trail display.
+     */
+    const handleFetchHistory = async (request: CorrectionHistoryRequest): Promise<CorrectionHistoryDTO[]> => {
+        const token = getToken();
+        if (!token) {
+            toaster.error("Authentication required");
+            return [];
+        }
+
+        const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
+        const response = await ipcApiService.getCorrectionHistory({ ...request, contractDatasetId }, token);
+
+        if (!response.success || !response.data) {
+            toaster.error(response.error?.message || "Failed to fetch correction history");
+            return [];
+        }
+
+        return response.data;
+    };
+
+    // ==================== Add/Delete Deduction Functions ====================
+
+    /**
+     * Generate the next reference number for a deduction type
+     */
+    const generateNextRef = (type: 'labors' | 'machines' | 'materials'): string => {
+        const items = formData[type] || [];
+        const prefix = type === 'labors' ? 'L' : type === 'machines' ? 'M' : 'MAT';
+        const nextNum = items.length + 1;
+        return `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    };
+
+    /**
+     * Create default values for new Labor item
+     */
+    const createDefaultLabor = (): LaborsVM => ({
+        id: 0,
+        ref: generateNextRef('labors'),
+        activityDescription: '',
+        workerType: '',
+        laborType: '',
+        unit: 'HR',
+        unitPrice: 0,
+        quantity: 0,
+        amount: 0,
+        consumedAmount: 0,
+        actualAmount: 0,
+        deduction: 0,
+        deductionPercentage: 0,
+        precedentAmount: 0,
+        precedentAmountOld: 0,
+        previousDeduction: 0,
+        actualDeduction: 0,
+    });
+
+    /**
+     * Create default values for new Machine item
+     */
+    const createDefaultMachine = (): MachinesVM => ({
+        id: 0,
+        ref: generateNextRef('machines'),
+        machineAcronym: '',
+        machineType: '',
+        unit: 'HR',
+        unitPrice: 0,
+        quantity: 0,
+        amount: 0,
+        consumedAmount: 0,
+        actualAmount: 0,
+        deduction: 0,
+        deductionPercentage: 0,
+        precedentAmount: 0,
+        precedentAmountOld: 0,
+        previousDeduction: 0,
+        actualDeduction: 0,
+    });
+
+    /**
+     * Create default values for new Material item
+     */
+    const createDefaultMaterial = (): MaterialsVM => ({
+        id: 0,
+        bc: generateNextRef('materials'),
+        designation: '',
+        unit: 'EA',
+        saleUnit: 0,
+        quantity: 0,
+        allocated: 0,
+        stockQte: 0,
+        transferedQte: 0,
+        livree: 0,
+        totalSale: 0,
+        consumedAmount: 0,
+        consumes: 0,
+        actualAmount: 0,
+        deduction: 0,
+        deductionPercentage: 0,
+        precedentAmount: 0,
+        precedentAmountOld: 0,
+        previousDeduction: 0,
+        actualDeduction: 0,
+        isTransferred: false,
+        remark: '',
+    });
+
+    /**
+     * Add new deduction item to the specified type
+     */
+    const handleAddItem = (type: 'labors' | 'machines' | 'materials') => {
+        const currentItems = [...(formData[type] || [])] as any[];
+        let newItem: LaborsVM | MachinesVM | MaterialsVM;
+
+        switch (type) {
+            case 'labors':
+                newItem = createDefaultLabor();
+                break;
+            case 'machines':
+                newItem = createDefaultMachine();
+                break;
+            case 'materials':
+                newItem = createDefaultMaterial();
+                break;
+        }
+
+        currentItems.push(newItem);
+        setFormData({ [type]: currentItems });
+        if (setHasUnsavedChanges) setHasUnsavedChanges(true);
+    };
+
+    /**
+     * Open delete confirmation dialog
+     */
+    const handleDeleteClick = (
+        type: 'labors' | 'machines' | 'materials',
+        index: number,
+        item: LaborsVM | MachinesVM | MaterialsVM
+    ) => {
+        let description = '';
+        if (type === 'labors') {
+            const labor = item as LaborsVM;
+            description = `${labor.ref || ''} - ${labor.activityDescription || labor.workerType || 'Labor Item'}`;
+        } else if (type === 'machines') {
+            const machine = item as MachinesVM;
+            description = `${machine.ref || ''} - ${machine.machineType || machine.machineAcronym || 'Machine Item'}`;
+        } else {
+            const material = item as MaterialsVM;
+            description = `${material.bc || ''} - ${material.designation || 'Material Item'}`;
+        }
+
+        setDeleteConfirmation({
+            isOpen: true,
+            type,
+            index,
+            itemDescription: description.trim() || 'Deduction Item',
+        });
+    };
+
+    /**
+     * Confirm and execute deletion
+     */
+    const handleConfirmDelete = () => {
+        if (!deleteConfirmation) return;
+
+        const { type, index } = deleteConfirmation;
+        const currentItems = [...(formData[type] || [])] as any[];
+        currentItems.splice(index, 1);
+        setFormData({ [type]: currentItems });
+        if (setHasUnsavedChanges) setHasUnsavedChanges(true);
+
+        setDeleteConfirmation(null);
+    };
+
+    /**
+     * Cancel deletion
+     */
+    const handleCancelDelete = () => {
+        setDeleteConfirmation(null);
     };
 
     const safeLabors = formData.labors || [];
     const safeMachines = formData.machines || [];
     const safeMaterials = formData.materials || [];
 
-    // Calculate totals using the dynamic calculation functions
-    // ActualDeductionAmount = current IPC deduction only (not cumulative)
-    const laborTotal = safeLabors.reduce((sum, labor) => {
+    // Calculate comprehensive totals for each deduction type
+    const laborTotals = safeLabors.reduce((totals, labor) => {
         const calc = calculateLaborMachineDeductions(labor);
-        return sum + calc.actualDeductionAmount;
-    }, 0);
+        return {
+            consumedAmount: totals.consumedAmount + calc.amount,
+            deductionAmount: totals.deductionAmount + calc.cumulativeDeductionAmount,
+            previousAmount: totals.previousAmount + calc.previousDeductionAmount,
+            actualAmount: totals.actualAmount + calc.actualDeductionAmount,
+            cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
+        };
+    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
 
-    const machineTotal = safeMachines.reduce((sum, machine) => {
+    const machineTotals = safeMachines.reduce((totals, machine) => {
         const calc = calculateLaborMachineDeductions(machine);
-        return sum + calc.actualDeductionAmount;
-    }, 0);
+        return {
+            consumedAmount: totals.consumedAmount + calc.amount,
+            deductionAmount: totals.deductionAmount + calc.cumulativeDeductionAmount,
+            previousAmount: totals.previousAmount + calc.previousDeductionAmount,
+            actualAmount: totals.actualAmount + calc.actualDeductionAmount,
+            cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
+        };
+    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
 
-    const materialTotal = safeMaterials.reduce((sum, material) => {
+    const materialTotals = safeMaterials.reduce((totals, material) => {
         const calc = calculateMaterialDeductions(material);
-        return sum + calc.actualDeductionAmount;
-    }, 0);
+        return {
+            totalSale: totals.totalSale + calc.consumedAmount,
+            deductionAmount: totals.deductionAmount + calc.cumulativeDeductionAmount,
+            previousAmount: totals.previousAmount + calc.previousDeductionAmount,
+            actualAmount: totals.actualAmount + calc.actualDeductionAmount,
+            cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
+        };
+    }, { totalSale: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
+
+    // Keep backward compatible totals for header display
+    const laborTotal = laborTotals.actualAmount;
+    const machineTotal = machineTotals.actualAmount;
+    const materialTotal = materialTotals.actualAmount;
 
 
     const isEditMode = (formData as any).id && (formData as any).id > 0;
@@ -263,7 +619,6 @@ export const Step3_Deductions: React.FC = () => {
                 </div>
                 <div>
                     <h2 className="text-lg font-semibold text-base-content">Deductions & Financial Adjustments</h2>
-                    <p className="text-sm text-base-content/70">Configure deductions, retention, advance recovery, and penalties</p>
                 </div>
             </div>
 
@@ -291,14 +646,23 @@ export const Step3_Deductions: React.FC = () => {
                     <div className="bg-red-50 dark:bg-red-900/20 p-3 border-b border-red-200 dark:border-red-800">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2"><Icon icon={usersIcon} className="text-red-600 dark:text-red-400 size-5" /><h3 className="font-semibold text-red-600 dark:text-red-400">Labor Deductions</h3><span className="text-sm text-red-600/70 dark:text-red-400/70">• {safeLabors.length} items</span></div>
-                            <div className="text-sm font-semibold text-red-600 dark:text-red-400">Total Deductions: {formatCurrency(laborTotal)}</div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleAddItem('labors')}
+                                    className="btn btn-sm bg-red-600 text-white hover:bg-red-700 flex items-center gap-1"
+                                >
+                                    <Icon icon={plusIcon} className="size-4" />
+                                    <span>Add New</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {safeLabors.length > 0 ? (
                         <div className="overflow-x-auto"><table className="table table-xs w-full">
                             <thead className="bg-base-200 sticky top-0">
                                 <tr>
-                                    <th className="text-left w-20">Ref No</th><th className="text-left min-w-[150px]">Worker Type</th><th className="text-left min-w-[200px]">Activity Description</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Unit Price</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Consumed Amount</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th>
+                                    <th className="text-center w-12"></th><th className="text-left w-20">Ref No</th><th className="text-left min-w-[150px]">Worker Type</th><th className="text-left min-w-[200px]">Activity Description</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Unit Price</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Consumed Amount</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -309,8 +673,36 @@ export const Step3_Deductions: React.FC = () => {
 
                                     return (
                                         <tr key={labor.id || index} className="hover:bg-base-200/50">
-                                            <td className="font-mono text-xs">{labor.ref || '-'}</td>
-                                            <td className="text-xs">{labor.workerType || labor.laborType || '-'}</td>
+                                            <td className="text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteClick('labors', index, labor)}
+                                                    className="btn btn-ghost btn-xs p-0 min-h-0 h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                                    title="Delete item"
+                                                >
+                                                    <Icon icon={trashIcon} className="size-4" />
+                                                </button>
+                                            </td>
+                                            <td className="w-24 p-1">
+                                                <input
+                                                    type="text"
+                                                    className="input input-bordered input-xs w-full font-mono"
+                                                    value={labor.ref || ''}
+                                                    onChange={(e) => handleTextChange('labors', index, 'ref', e.target.value)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    placeholder="Ref"
+                                                />
+                                            </td>
+                                            <td className="w-28 p-1">
+                                                <input
+                                                    type="text"
+                                                    className="input input-bordered input-xs w-full"
+                                                    value={labor.workerType || labor.laborType || ''}
+                                                    onChange={(e) => handleTextChange('labors', index, 'workerType', e.target.value)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    placeholder="Worker Type"
+                                                />
+                                            </td>
                                             <td className="w-[200px] p-1">
                                                 <input
                                                     type="text"
@@ -320,22 +712,74 @@ export const Step3_Deductions: React.FC = () => {
                                                     onFocus={(e) => e.target.select()}
                                                 />
                                             </td>
-                                            <td className="text-center text-xs">{labor.unit || '-'}</td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(labor.unitPrice || 0).toFixed(2)} onChange={(e) => handleItemChange('labors', index, 'unitPrice', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(labor.quantity || 0).toFixed(2)} onChange={(e) => handleItemChange('labors', index, 'quantity', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1">
+                                                <select
+                                                    className="select select-bordered select-xs w-full"
+                                                    value={labor.unit || 'HR'}
+                                                    onChange={(e) => handleTextChange('labors', index, 'unit', e.target.value)}
+                                                >
+                                                    {UNIT_OPTIONS.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.unitPrice || ''} onChange={(e) => handleItemChange('labors', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.quantity || ''} onChange={(e) => handleItemChange('labors', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.amount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent.toFixed(1)} onChange={(e) => handleItemChange('labors', index, 'deductionPercentage', e.target.value)} step="0.1" min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('labors', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
-                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.previousDeductionAmount)}</td>
+                                            {/* Previous Amount - with correction button for authorized users */}
+                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span>{formatCurrency(calc.previousDeductionAmount)}</span>
+                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && labor.id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCorrectionModal(
+                                                                CorrectionEntityType.Labor,
+                                                                labor.id,
+                                                                calc.previousDeductionAmount,
+                                                                `Labor: ${labor.ref || ''} - ${labor.activityDescription || labor.workerType || 'Labor Item'}`
+                                                            )}
+                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                                            title="Correct previous amount (audit trail)"
+                                                        >
+                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="text-right text-xs font-medium text-green-600 dark:text-green-400" title={`Actual: ${calc.actualDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.actualDeductionAmount)}</td>
                                             <td className="text-right text-xs font-semibold bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
+                            <tfoot className="bg-red-100 dark:bg-red-900/30 border-t-2 border-red-300 dark:border-red-700">
+                                <tr className="font-semibold">
+                                    <td colSpan={7} className="text-right text-xs py-2 pr-2">TOTALS:</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(laborTotals.consumedAmount)}</td>
+                                    <td className="text-center text-xs py-2">-</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(laborTotals.deductionAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-blue-600 dark:text-blue-400">{formatCurrency(laborTotals.previousAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-green-600 dark:text-green-400">{formatCurrency(laborTotals.actualAmount)}</td>
+                                    <td className="text-right text-xs py-2 font-bold">{formatCurrency(laborTotals.cumulAmount)}</td>
+                                </tr>
+                            </tfoot>
                         </table></div>
                     ) : (
-                        <div className="p-8 text-center text-base-content/60"><Icon icon={usersIcon} className="size-12 mx-auto mb-3 opacity-30" /><p className="text-sm">No labor deductions found for this contract.</p></div>
+                        <div className="p-8 text-center text-base-content/60">
+                            <Icon icon={usersIcon} className="size-12 mx-auto mb-3 opacity-30" />
+                            <p className="text-sm mb-4">No labor deductions found for this contract.</p>
+                            <button
+                                type="button"
+                                onClick={() => handleAddItem('labors')}
+                                className="btn btn-sm bg-red-600 text-white hover:bg-red-700 flex items-center gap-1 mx-auto"
+                            >
+                                <Icon icon={plusIcon} className="size-4" />
+                                <span>Add Labor Deduction</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
@@ -345,14 +789,23 @@ export const Step3_Deductions: React.FC = () => {
                     <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 border-b border-yellow-200 dark:border-yellow-800">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2"><Icon icon={packageIcon} className="text-yellow-600 dark:text-yellow-400 size-5" /><h3 className="font-semibold text-yellow-600 dark:text-yellow-400">Material Deductions</h3><span className="text-sm text-yellow-600/70 dark:text-yellow-400/70">• {safeMaterials.length} items</span></div>
-                            <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">Total Deductions: {formatCurrency(materialTotal)}</div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleAddItem('materials')}
+                                    className="btn btn-sm bg-yellow-600 text-white hover:bg-yellow-700 flex items-center gap-1"
+                                >
+                                    <Icon icon={plusIcon} className="size-4" />
+                                    <span>Add New</span>
+                                </button>
+                                </div>
                         </div>
                     </div>
                     {safeMaterials.length > 0 ? (
                         <div className="overflow-x-auto"><table className="table table-xs w-full">
                             <thead className="bg-base-200 sticky top-0">
                                 <tr>
-                                    <th className="text-left w-20">BC/PO</th><th className="text-left min-w-[200px]">Designation</th><th className="text-left w-28">Acronym</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Sale Unit</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Total Sale</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th><th className="text-left min-w-[150px]">Remark</th>
+                                    <th className="text-center w-12"></th><th className="text-left w-20">BC/PO</th><th className="text-left min-w-[200px]">Designation</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Sale Unit</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Total Sale</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th><th className="text-left min-w-[150px]">Remark</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -363,7 +816,26 @@ export const Step3_Deductions: React.FC = () => {
 
                                     return (
                                         <tr key={material.id || index} className="hover:bg-base-200/50">
-                                            <td className="font-mono text-xs">{material.bc || '-'}</td>
+                                            <td className="text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteClick('materials', index, material)}
+                                                    className="btn btn-ghost btn-xs p-0 min-h-0 h-6 w-6 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
+                                                    title="Delete item"
+                                                >
+                                                    <Icon icon={trashIcon} className="size-4" />
+                                                </button>
+                                            </td>
+                                            <td className="w-24 p-1">
+                                                <input
+                                                    type="text"
+                                                    className="input input-bordered input-xs w-full font-mono"
+                                                    value={material.bc || ''}
+                                                    onChange={(e) => handleTextChange('materials', index, 'bc', e.target.value)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    placeholder="BC/PO"
+                                                />
+                                            </td>
                                             <td className="w-[200px] p-1">
                                                 <input
                                                     type="text"
@@ -373,22 +845,59 @@ export const Step3_Deductions: React.FC = () => {
                                                     onFocus={(e) => e.target.select()}
                                                 />
                                             </td>
-                                            <td className="w-28 p-1">
+                                            <td className="w-20 p-1">
+                                                <select
+                                                    className="select select-bordered select-xs w-full"
+                                                    value={material.unit || 'EA'}
+                                                    onChange={(e) => handleTextChange('materials', index, 'unit', e.target.value)}
+                                                >
+                                                    {UNIT_OPTIONS.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="w-24 p-1">
                                                 <input
-                                                    type="text"
-                                                    className="input input-bordered input-xs w-full"
-                                                    value={material.acronym || ''}
-                                                    onChange={(e) => handleTextChange('materials', index, 'acronym', e.target.value)}
+                                                    type="number"
+                                                    className="input input-bordered input-xs w-full text-right"
+                                                    value={material.saleUnit || ''}
+                                                    onChange={(e) => handleItemChange('materials', index, 'unitPrice', e.target.value)}
                                                     onFocus={(e) => e.target.select()}
                                                 />
                                             </td>
-                                            <td className="text-center text-xs">{material.unit || '-'}</td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(material.saleUnit || 0).toFixed(2)} onChange={(e) => handleItemChange('materials', index, 'unitPrice', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(material.allocated || 0).toFixed(2)} onChange={(e) => handleItemChange('materials', index, 'quantity', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
-                                            <td className="text-right text-xs bg-base-200/50" title="Consumed = SaleUnit × (Allocated - Stock - Transferred)">{formatCurrency(calc.consumedAmount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent.toFixed(1)} onChange={(e) => handleItemChange('materials', index, 'deductionPercentage', e.target.value)} step="0.1" min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-24 p-1">
+                                                <input
+                                                    type="number"
+                                                    className="input input-bordered input-xs w-full text-right"
+                                                    value={material.allocated || ''}
+                                                    onChange={(e) => handleItemChange('materials', index, 'quantity', e.target.value)}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </td>
+                                            <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.consumedAmount)}</td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('materials', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
-                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.previousDeductionAmount)}</td>
+                                            {/* Previous Amount - with correction button for authorized users */}
+                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span>{formatCurrency(calc.previousDeductionAmount)}</span>
+                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && material.id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCorrectionModal(
+                                                                CorrectionEntityType.Material,
+                                                                material.id,
+                                                                calc.previousDeductionAmount,
+                                                                `Material: ${material.bc || ''} - ${material.designation || 'Material Item'}`
+                                                            )}
+                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                                            title="Correct previous amount (audit trail)"
+                                                        >
+                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="text-right text-xs font-medium text-green-600 dark:text-green-400" title={`Actual: ${calc.actualDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.actualDeductionAmount)}</td>
                                             <td className="text-right text-xs font-semibold bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                             <td className="text-xs w-[150px] p-1">
@@ -404,9 +913,32 @@ export const Step3_Deductions: React.FC = () => {
                                     );
                                 })}
                             </tbody>
+                            <tfoot className="bg-yellow-100 dark:bg-yellow-900/30 border-t-2 border-yellow-300 dark:border-yellow-700">
+                                <tr className="font-semibold">
+                                    <td colSpan={6} className="text-right text-xs py-2 pr-2">TOTALS:</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(materialTotals.totalSale)}</td>
+                                    <td className="text-center text-xs py-2">-</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(materialTotals.deductionAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-blue-600 dark:text-blue-400">{formatCurrency(materialTotals.previousAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-green-600 dark:text-green-400">{formatCurrency(materialTotals.actualAmount)}</td>
+                                    <td className="text-right text-xs py-2 font-bold">{formatCurrency(materialTotals.cumulAmount)}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table></div>
                     ) : (
-                        <div className="p-8 text-center text-base-content/60"><Icon icon={packageIcon} className="size-12 mx-auto mb-3 opacity-30" /><p className="text-sm">No material deductions found for this contract.</p></div>
+                        <div className="p-8 text-center text-base-content/60">
+                            <Icon icon={packageIcon} className="size-12 mx-auto mb-3 opacity-30" />
+                            <p className="text-sm mb-4">No material deductions found for this contract.</p>
+                            <button
+                                type="button"
+                                onClick={() => handleAddItem('materials')}
+                                className="btn btn-sm bg-yellow-600 text-white hover:bg-yellow-700 flex items-center gap-1 mx-auto"
+                            >
+                                <Icon icon={plusIcon} className="size-4" />
+                                <span>Add Material Deduction</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
@@ -416,14 +948,22 @@ export const Step3_Deductions: React.FC = () => {
                     <div className="bg-orange-50 dark:bg-orange-900/20 p-3 border-b border-orange-200 dark:border-orange-800">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2"><Icon icon={truckIcon} className="text-orange-600 dark:text-orange-400 size-5" /><h3 className="font-semibold text-orange-600 dark:text-orange-400">Machine Deductions</h3><span className="text-sm text-orange-600/70 dark:text-orange-400/70">• {safeMachines.length} items</span></div>
-                            <div className="text-sm font-semibold text-orange-600 dark:text-orange-400">Total Deductions: {formatCurrency(machineTotal)}</div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleAddItem('machines')}
+                                    className="btn btn-sm bg-orange-600 text-white hover:bg-orange-700 flex items-center gap-1"
+                                >
+                                    <Icon icon={plusIcon} className="size-4" />
+                                    <span>Add New</span>
+                                </button>    </div>
                         </div>
                     </div>
                     {safeMachines.length > 0 ? (
                         <div className="overflow-x-auto"><table className="table table-xs w-full">
                             <thead className="bg-base-200 sticky top-0">
                                 <tr>
-                                    <th className="text-left w-20">Ref No</th><th className="text-left w-28">Machine Code</th><th className="text-left min-w-[200px]">Type of Machine</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Unit Price</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Consumed Amount</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th>
+                                    <th className="text-center w-12"></th><th className="text-left w-20">Ref No</th><th className="text-left w-28">Machine Code</th><th className="text-left min-w-[200px]">Type of Machine</th><th className="text-center w-16">Unit</th><th className="text-right w-24">Unit Price</th><th className="text-right w-24">Quantity</th><th className="text-right w-28">Consumed Amount</th><th className="text-right w-20">Deduct %</th><th className="text-right w-28">Deduction Amount</th><th className="text-right w-28">Previous Amount</th><th className="text-right w-28">Actual Amount</th><th className="text-right w-28">Cumul Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -434,7 +974,26 @@ export const Step3_Deductions: React.FC = () => {
 
                                     return (
                                         <tr key={machine.id || index} className="hover:bg-base-200/50">
-                                            <td className="font-mono text-xs">{machine.ref || '-'}</td>
+                                            <td className="text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteClick('machines', index, machine)}
+                                                    className="btn btn-ghost btn-xs p-0 min-h-0 h-6 w-6 text-orange-500 hover:text-orange-700 hover:bg-orange-100"
+                                                    title="Delete item"
+                                                >
+                                                    <Icon icon={trashIcon} className="size-4" />
+                                                </button>
+                                            </td>
+                                            <td className="w-24 p-1">
+                                                <input
+                                                    type="text"
+                                                    className="input input-bordered input-xs w-full font-mono"
+                                                    value={machine.ref || ''}
+                                                    onChange={(e) => handleTextChange('machines', index, 'ref', e.target.value)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    placeholder="Ref"
+                                                />
+                                            </td>
                                             <td className="w-28 p-1">
                                                 <input
                                                     type="text"
@@ -442,6 +1001,7 @@ export const Step3_Deductions: React.FC = () => {
                                                     value={machine.machineAcronym || ''}
                                                     onChange={(e) => handleTextChange('machines', index, 'machineAcronym', e.target.value)}
                                                     onFocus={(e) => e.target.select()}
+                                                    placeholder="Code"
                                                 />
                                             </td>
                                             <td className="w-[200px] p-1">
@@ -453,96 +1013,143 @@ export const Step3_Deductions: React.FC = () => {
                                                     onFocus={(e) => e.target.select()}
                                                 />
                                             </td>
-                                            <td className="text-center text-xs">{machine.unit || '-'}</td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(machine.unitPrice || 0).toFixed(2)} onChange={(e) => handleItemChange('machines', index, 'unitPrice', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={(machine.quantity || 0).toFixed(2)} onChange={(e) => handleItemChange('machines', index, 'quantity', e.target.value)} step="0.01" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1">
+                                                <select
+                                                    className="select select-bordered select-xs w-full"
+                                                    value={machine.unit || 'HR'}
+                                                    onChange={(e) => handleTextChange('machines', index, 'unit', e.target.value)}
+                                                >
+                                                    {UNIT_OPTIONS.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.value}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.unitPrice || ''} onChange={(e) => handleItemChange('machines', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.quantity || ''} onChange={(e) => handleItemChange('machines', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.amount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent.toFixed(1)} onChange={(e) => handleItemChange('machines', index, 'deductionPercentage', e.target.value)} step="0.1" min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('machines', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
-                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.previousDeductionAmount)}</td>
+                                            {/* Previous Amount - with correction button for authorized users */}
+                                            <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span>{formatCurrency(calc.previousDeductionAmount)}</span>
+                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && machine.id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCorrectionModal(
+                                                                CorrectionEntityType.Machine,
+                                                                machine.id,
+                                                                calc.previousDeductionAmount,
+                                                                `Machine: ${machine.ref || ''} - ${machine.machineType || machine.machineAcronym || 'Machine Item'}`
+                                                            )}
+                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                                            title="Correct previous amount (audit trail)"
+                                                        >
+                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="text-right text-xs font-medium text-green-600 dark:text-green-400" title={`Actual: ${calc.actualDeductionPercent.toFixed(1)}%`}>{formatCurrency(calc.actualDeductionAmount)}</td>
                                             <td className="text-right text-xs font-semibold bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
+                            <tfoot className="bg-orange-100 dark:bg-orange-900/30 border-t-2 border-orange-300 dark:border-orange-700">
+                                <tr className="font-semibold">
+                                    <td colSpan={7} className="text-right text-xs py-2 pr-2">TOTALS:</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(machineTotals.consumedAmount)}</td>
+                                    <td className="text-center text-xs py-2">-</td>
+                                    <td className="text-right text-xs py-2">{formatCurrency(machineTotals.deductionAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-blue-600 dark:text-blue-400">{formatCurrency(machineTotals.previousAmount)}</td>
+                                    <td className="text-right text-xs py-2 text-green-600 dark:text-green-400">{formatCurrency(machineTotals.actualAmount)}</td>
+                                    <td className="text-right text-xs py-2 font-bold">{formatCurrency(machineTotals.cumulAmount)}</td>
+                                </tr>
+                            </tfoot>
                         </table></div>
                     ) : (
-                        <div className="p-8 text-center text-base-content/60"><Icon icon={truckIcon} className="size-12 mx-auto mb-3 opacity-30" /><p className="text-sm">No machine deductions found for this contract.</p></div>
+                        <div className="p-8 text-center text-base-content/60">
+                            <Icon icon={truckIcon} className="size-12 mx-auto mb-3 opacity-30" />
+                            <p className="text-sm mb-4">No machine deductions found for this contract.</p>
+                            <button
+                                type="button"
+                                onClick={() => handleAddItem('machines')}
+                                className="btn btn-sm bg-orange-600 text-white hover:bg-orange-700 flex items-center gap-1 mx-auto"
+                            >
+                                <Icon icon={plusIcon} className="size-4" />
+                                <span>Add Machine Deduction</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
 
-            {/* ... Rest of the component ... */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-base-100 p-4 rounded-lg border border-base-300">
-                    <h3 className="font-semibold text-base-content mb-4 flex items-center gap-2"><Icon icon={calculatorIcon} className="size-4" />Retention & Advance Recovery</h3>
-                    <div className="space-y-3">
-                        <div className="floating-label-group">
-                            <input type="number" value={formData.retentionPercentage} onChange={(e) => handleInputChange('retentionPercentage', parseFloat(e.target.value) || 0)} className="input input-sm bg-base-100 border-base-300 floating-input w-full" placeholder=" " min="0" max="100" step="0.1" />
-                            <label className="floating-label">Retention Percentage (%)</label>
-                        </div>
-                        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
-                            <div className="flex justify-between items-center"><span className="text-sm text-red-600/70 dark:text-red-400/70">Retention Amount:</span><span className="font-semibold text-red-600 dark:text-red-400">-{formatCurrency(retentionAmount)}</span></div>
-                            <div className="text-xs text-red-600/60 dark:text-red-400/60 mt-1">{formData.retentionPercentage}% of {formatCurrency(totalIPCAmount)}</div>
-                        </div>
-                        <div className="floating-label-group">
-                            <input type="number" value={formData.advancePaymentPercentage} onChange={(e) => handleInputChange('advancePaymentPercentage', parseFloat(e.target.value) || 0)} className="input input-sm bg-base-100 border-base-300 floating-input w-full" placeholder=" " min="0" max="100" step="0.1" />
-                            <label className="floating-label">Advance Payment Recovery (%)</label>
-                        </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded border border-orange-200 dark:border-orange-800">
-                            <div className="flex justify-between items-center"><span className="text-sm text-orange-600/70 dark:text-orange-400/70">Advance Recovery:</span><span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(advanceDeduction)}</span></div>
-                            <div className="text-xs text-orange-600/60 dark:text-orange-400/60 mt-1">{formData.advancePaymentPercentage}% of {formatCurrency(totalIPCAmount)}</div>
+            {/* Correction Modals */}
+            {correctionModal && (
+                <CorrectPreviousValueModal
+                    isOpen={correctionModal.isOpen}
+                    onClose={() => setCorrectionModal(null)}
+                    entityType={correctionModal.entityType}
+                    entityId={correctionModal.entityId}
+                    contractDatasetId={selectedContract?.id || (formData as any).contractsDatasetId}
+                    fieldName={correctionModal.fieldName}
+                    fieldLabel={correctionModal.fieldLabel}
+                    currentValue={correctionModal.currentValue}
+                    entityDescription={correctionModal.entityDescription}
+                    onCorrect={handleCorrection}
+                />
+            )}
+
+            {historyModal && (
+                <CorrectionHistoryModal
+                    isOpen={historyModal.isOpen}
+                    onClose={() => setHistoryModal(null)}
+                    contractDatasetId={selectedContract?.id || (formData as any).contractsDatasetId}
+                    entityType={historyModal.entityType}
+                    entityId={historyModal.entityId}
+                    onFetchHistory={handleFetchHistory}
+                />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmation && (
+                <div className="modal modal-open">
+                    <div className="modal-box max-w-md">
+                        <h3 className="font-bold text-lg flex items-center gap-2">
+                            <Icon icon={alertTriangleIcon} className="text-red-500 size-6" />
+                            Confirm Deletion
+                        </h3>
+                        <p className="py-4">
+                            Are you sure you want to delete this item?
+                            <br />
+                            <span className="font-medium text-base-content/80">
+                                {deleteConfirmation.itemDescription}
+                            </span>
+                        </p>
+                        <p className="text-sm text-base-content/60">
+                            This action cannot be undone.
+                        </p>
+                        <div className="modal-action">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={handleCancelDelete}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-error"
+                                onClick={handleConfirmDelete}
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
+                    <div className="modal-backdrop bg-black/20" onClick={handleCancelDelete}></div>
                 </div>
-                <div className="bg-base-100 p-4 rounded-lg border border-base-300">
-                    <h3 className="font-semibold text-base-content mb-4 flex items-center gap-2"><Icon icon={minusCircleIcon} className="size-4" />Penalties</h3>
-                    <div className="space-y-3">
-                        <div className="floating-label-group">
-                            <input type="number" value={formData.penalty} onChange={(e) => handleInputChange('penalty', parseFloat(e.target.value) || 0)} className="input input-sm bg-base-100 border-base-300 floating-input w-full" placeholder=" " min="0" step="0.01" />
-                            <label className="floating-label">Current Penalty Amount</label>
-                        </div>
-                        <div className="floating-label-group">
-                            <input type="number" value={formData.previousPenalty} onChange={(e) => handleInputChange('previousPenalty', parseFloat(e.target.value) || 0)} className="input input-sm bg-base-100 border-base-300 floating-input w-full" placeholder=" " min="0" step="0.01" />
-                            <label className="floating-label">Previous Penalty Amount</label>
-                        </div>
-                        {formData.penalty > 0 && (
-                            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
-                                <div className="flex justify-between items-center"><span className="text-sm text-yellow-600/70 dark:text-yellow-400/70">Penalty Deduction:</span><span className="font-semibold text-yellow-600 dark:text-yellow-400">-{formatCurrency(formData.penalty)}</span></div>
-                            </div>
-                        )}
-                        {formData.penalty !== formData.previousPenalty && (
-                            <div className="bg-yellow-100 dark:bg-yellow-800/30 p-3 rounded border border-yellow-300 dark:border-yellow-700">
-                                <div className="flex justify-between items-center"><span className="text-sm text-yellow-700/70 dark:text-yellow-300/70">Penalty Change:</span><span className={`font-semibold ${formData.penalty > formData.previousPenalty ? 'text-red-600' : 'text-green-600'}`}>{formData.penalty - formData.previousPenalty >= 0 ? '+' : ''}{formatCurrency(formData.penalty - formData.previousPenalty)}</span></div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-            <div className={`p-6 rounded-lg border-2 ${netPayableAmount >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-700' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-700'}`}>
-                <div className="flex items-center justify-between mb-4"><h3 className={`text-xl font-bold ${netPayableAmount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>Financial Summary</h3></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-base-content/70">Gross IPC Amount:</span><span className="font-semibold text-green-600">{formatCurrency(totalIPCAmount)}</span></div>
-                        {retentionAmount > 0 && (<div className="flex justify-between"><span className="text-base-content/70">Less: Retention ({formData.retentionPercentage}%):</span><span className="font-medium text-red-600">-{formatCurrency(retentionAmount)}</span></div>)}
-                        {advanceDeduction > 0 && (<div className="flex justify-between"><span className="text-base-content/70">Less: Advance Recovery ({formData.advancePaymentPercentage}%):</span><span className="font-medium text-orange-600">-{formatCurrency(advanceDeduction)}</span></div>)}
-                        {formData.penalty > 0 && (<div className="flex justify-between"><span className="text-base-content/70">Less: Penalty:</span><span className="font-medium text-yellow-600">-{formatCurrency(formData.penalty)}</span></div>)}
-                    </div>
-                    <div className="flex flex-col justify-center">
-                        <div className="text-right">
-                            <div className="text-sm text-base-content/60 mb-1">Net Payable Amount</div>
-                            <div className={`text-4xl font-bold ${netPayableAmount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(netPayableAmount)}</div>
-                            {totalIPCAmount > 0 && (<div className="text-sm text-base-content/60 mt-1">{((netPayableAmount / totalIPCAmount) * 100).toFixed(1)}% of gross amount</div>)}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="space-y-2">
-                {netPayableAmount < 0 && (<div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800"><span className="iconify lucide--alert-circle size-4"></span><span className="text-sm">Warning: Net payable amount is negative. Please review deductions.</span></div>)}
-                {totalIPCAmount === 0 && (<div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800"><span className="iconify lucide--alert-triangle size-4"></span><span className="text-sm">No work progress has been entered. Please go back and update BOQ quantities.</span></div>)}
-                {formData.retentionPercentage > 20 && (<div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800"><span className="iconify lucide--alert-triangle size-4"></span><span className="text-sm">High retention percentage ({formData.retentionPercentage}%). Please verify this is correct.</span></div>)}
-            </div>
+            )}
         </div>
     );
 };

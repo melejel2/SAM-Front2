@@ -172,8 +172,8 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                         <span>Penalties</span>
                     </button>
 
-                    {/* Next/Save Navigation Button - Edit mode has 4 steps (2, 3, 4, 5) */}
-                    {currentStep < 5 ? (
+                    {/* Next/Save Navigation Button - Edit mode has 3 steps (2, 3, 4) */}
+                    {currentStep < 4 ? (
                         <button
                             className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
                             onClick={() => {
@@ -187,9 +187,6 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                                             break;
                                         case 3:
                                             toaster.error("Please review deductions and financial calculations");
-                                            break;
-                                        case 4:
-                                            toaster.error("Please review all details before proceeding");
                                             break;
                                         default:
                                             toaster.error("Please complete all required fields");

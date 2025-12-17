@@ -5,6 +5,7 @@ import uploadIcon from "@iconify/icons-lucide/upload";
 import xIcon from "@iconify/icons-lucide/x";
 import { Icon } from "@iconify/react";
 import React, { useEffect, useRef, useState } from "react";
+import { formatCurrency } from "@/utils/formatters";
 
 import { BudgetVO, BudgetVOSheet, BudgetVOItem, ClearBudgetVORequest, BoqDeletionScope } from '@/api/services/budget-vo-api';
 import { saveBudgetVo, uploadBudgetVo, clearBudgetVo } from '@/api/services/budget-vo-api';
@@ -201,12 +202,6 @@ const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>
     } finally {
         setLoading(false);
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    if (!amount || isNaN(amount) || amount === 0) return '-';
-    const hasDecimals = amount % 1 !== 0;
-    return new Intl.NumberFormat('en-US', { style: 'decimal', minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 }).format(amount);
   };
 
   const formatQuantity = (quantity: number) => {

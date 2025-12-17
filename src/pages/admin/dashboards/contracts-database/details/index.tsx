@@ -9,37 +9,7 @@ import { useAuth } from "@/contexts/auth";
 import apiRequest from "@/api/api";
 import { useContractsApi } from "../../subcontractors-BOQs/hooks/use-contracts-api";
 import { getContractVOs as fetchContractVOs } from "@/api/services/vo-api";
-
-// Memoized helper functions (created once, reused forever)
-const formatCurrency = (amount: number | string | undefined): string => {
-    if (!amount || amount === '-') return '-';
-    const numAmount = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
-    if (isNaN(numAmount)) return '-';
-    return new Intl.NumberFormat('en-US', {
-        style: 'decimal',
-        maximumFractionDigits: 0
-    }).format(Math.round(numAmount));
-};
-
-const formatDate = (dateString: string | undefined): string => {
-    if (!dateString || dateString === '-') return '-';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '-';
-        return date.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-    } catch (error) {
-        return '-';
-    }
-};
-
-const formatPercentage = (value: number | undefined): string => {
-    if (!value || value === 0) return '0%';
-    return `${value}%`;
-};
+import { formatCurrency, formatDate, formatPercentage } from "@/utils/formatters";
 
 const ContractDatabaseDetails = () => {
     const { contractIdentifier } = useParams<{ contractIdentifier: string }>();

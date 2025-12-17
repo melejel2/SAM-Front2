@@ -1,5 +1,6 @@
 import React from "react";
 import type { IpcSummaryData } from "@/types/ipc";
+import { formatCurrency } from "@/utils/formatters";
 
 interface IpcSummaryProps {
   summaryData: IpcSummaryData | null;
@@ -16,12 +17,6 @@ const IpcSummary: React.FC<IpcSummaryProps> = ({
   loading = false,
   className = ""
 }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   if (loading) {
     return (

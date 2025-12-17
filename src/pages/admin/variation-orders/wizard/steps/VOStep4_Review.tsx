@@ -1,4 +1,5 @@
 import React from "react";
+import { formatCurrency } from "@/utils/formatters";
 import { useVOWizardContext } from "../context/VOWizardContext";
 
 export const VOStep4_Review: React.FC = () => {
@@ -105,7 +106,7 @@ export const VOStep4_Review: React.FC = () => {
                                 <div>
                                     <div className="font-bold">Manual Entry</div>
                                     <div className="text-sm">{formData.voItems.length} items entered manually</div>
-                                    <div className="text-sm">Total Amount: ${totalAmount.toFixed(2)}</div>
+                                    <div className="text-sm">Total Amount: ${formatCurrency(totalAmount, { decimals: 'always' })}</div>
                                 </div>
                             </div>
                             
@@ -126,16 +127,16 @@ export const VOStep4_Review: React.FC = () => {
                                             <tr key={item.id || index}>
                                                 <td className="max-w-xs truncate">{item.description}</td>
                                                 <td>{item.quantity}</td>
-                                                <td>${item.unitPrice?.toFixed(2) || '0.00'}</td>
+                                                <td>${formatCurrency(item.unitPrice, { decimals: 'always' })}</td>
                                                 <td>{item.unit}</td>
-                                                <td className="font-medium">${item.total?.toFixed(2) || '0.00'}</td>
+                                                <td className="font-medium">${formatCurrency(item.total, { decimals: 'always' })}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
                                         <tr>
                                             <th colSpan={4}>Total</th>
-                                            <th className="text-primary">${totalAmount.toFixed(2)}</th>
+                                            <th className="text-primary">${formatCurrency(totalAmount, { decimals: 'always' })}</th>
                                         </tr>
                                     </tfoot>
                                 </table>

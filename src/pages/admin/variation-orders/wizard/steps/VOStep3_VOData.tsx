@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatCurrency } from "@/utils/formatters";
 import { useVOWizardContext } from "../context/VOWizardContext";
 import { FilePond, registerPlugin } from "react-filepond";
 import FilePondPluginFileValidateType from "filepond-plugin-file-validate-type";
@@ -210,10 +211,10 @@ export const VOStep3_VOData: React.FC = () => {
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex justify-between items-center mt-4">
                                         <div className="font-medium">
-                                            Total: ${item.total.toFixed(2)}
+                                            Total: ${formatCurrency(item.total, { decimals: 'always' })}
                                         </div>
                                         <button 
                                             className="btn btn-sm btn-error"
@@ -229,7 +230,7 @@ export const VOStep3_VOData: React.FC = () => {
                             <div className="alert alert-success">
                                 <span className="iconify lucide--calculator size-5"></span>
                                 <div>
-                                    <div className="font-bold">Total VO Amount: ${totalAmount.toFixed(2)}</div>
+                                    <div className="font-bold">Total VO Amount: ${formatCurrency(totalAmount, { decimals: 'always' })}</div>
                                     <div className="text-sm">{manualItems.length} items added</div>
                                 </div>
                             </div>
