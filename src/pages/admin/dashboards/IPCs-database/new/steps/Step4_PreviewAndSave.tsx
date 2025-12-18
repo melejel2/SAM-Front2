@@ -123,16 +123,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
                     <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900/30">
                         <span className="iconify lucide--eye text-blue-600 dark:text-blue-400 size-5"></span>
                     </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-base-content">
-                            {isEditMode ? "IPC Preview - Ready to Save" : "Preview & Save IPC"}
-                        </h2>
-                        <p className="text-sm text-base-content/70">
-                            {isEditMode
-                                ? "Review the IPC preview and click 'Save and Close' in the header to save your changes."
-                                : "Preview the generated IPC and click 'Create IPC' to save it."}
-                        </p>
-                    </div>
+
                 </div>
 
                 {/* Export Dropdown */}
