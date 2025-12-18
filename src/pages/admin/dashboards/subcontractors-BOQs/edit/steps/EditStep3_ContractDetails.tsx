@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
 import { AttachmentsDialog, AttachmentsType } from "../../shared/components/AttachmentsDialog";
+import { PAYMENT_TERMS_OPTIONS } from "../../../../../../types/contracts";
 
 
 export const EditStep3_ContractDetails: React.FC = () => {
@@ -252,9 +253,20 @@ export const EditStep3_ContractDetails: React.FC = () => {
 
                 <div className="form-control">
                     <label className="label">
-                        <span className="label-text">Payment Terms</span>
+                        <span className="label-text">Payment Method</span>
                     </label>
-                    <input type="text" className="input input-bordered" value={formData.paymentsTerm || ''} onChange={(e) => handleFieldChange('paymentsTerm', e.target.value)} placeholder="Enter payment terms" />
+                    <select
+                        className="select select-bordered"
+                        value={formData.paymentsTerm || ''}
+                        onChange={(e) => handleFieldChange('paymentsTerm', e.target.value)}
+                    >
+                        <option value="">Select payment method</option>
+                        {PAYMENT_TERMS_OPTIONS.map(option => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 

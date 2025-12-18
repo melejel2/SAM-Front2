@@ -173,14 +173,19 @@ const useLogin = () => {
         setIsMicrosoftLoading(true);
         setError(null);
 
+        let msalAccount: any = null;
+
         try {
-            // Step 1: Microsoft popup login
-            const response = await instance.loginPopup(loginRequest);
-            
+            // Step 1: Microsoft popup login - force account selection to let user choose different account
+            const response = await instance.loginPopup({
+                ...loginRequest,
+                prompt: "select_account" // Always show account picker so user can choose different account
+            });
+
             // Step 2: Extract email from Microsoft account
-            const msalAccount = response.account;
+            msalAccount = response.account;
             const email = msalAccount?.idTokenClaims?.email || msalAccount?.username;
-            
+
             if (!email) {
                 throw new Error("Email not found in Microsoft account.");
             }
@@ -194,7 +199,7 @@ const useLogin = () => {
             const backendResponse: any = await apiRequest({
                 endpoint: "Auth/microsoft-login", // Backend endpoint created by your team
                 method: "POST",
-                body: { 
+                body: {
                     email: email,
                     dataBaseName: selectedDb
                 },
@@ -202,13 +207,13 @@ const useLogin = () => {
 
             if (backendResponse.isSuccess === true) {
                 toaster.success("Microsoft sign-in successful!");
-                
+
                 // Step 4: Add database info to user object
                 const userWithDatabase = {
                     ...backendResponse.value,
                     database: selectedDb
                 };
-                
+
                 // Step 5: Set logged in user and navigate
                 setLoggedInUser(userWithDatabase);
                 navigate("/dashboard");
@@ -216,10 +221,37 @@ const useLogin = () => {
                 const errorMessage = getErrorMessage(backendResponse, true);
                 toaster.error(errorMessage);
                 setError(errorMessage);
+
+                // Clear the MSAL account from cache since backend auth failed
+                // This allows user to select a different account on next attempt
+                if (msalAccount) {
+                    // Clear active account - combined with prompt: "select_account"
+                    // this ensures user can pick a different account
+                    instance.setActiveAccount(null);
+
+                    // Silently logout to clear Microsoft session for this account
+                    // Using redirect to avoid popup blockers, but staying on same page
+                    try {
+                        await instance.logoutRedirect({
+                            account: msalAccount,
+                            onRedirectNavigate: () => {
+                                // Return false to prevent navigation - just clear local cache
+                                return false;
+                            }
+                        });
+                    } catch {
+                        // Ignore logout errors - prompt: "select_account" will still work
+                    }
+                }
             }
-            
+
         } catch (error: any) {
             console.error("Microsoft login error:", error);
+
+            // Clear cached account on any error to allow fresh selection
+            if (msalAccount) {
+                instance.setActiveAccount(null);
+            }
             
             // Handle specific MSAL errors
             if (error.name === "BrowserAuthError" || error.name === "InteractionRequiredAuthError") {

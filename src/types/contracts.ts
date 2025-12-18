@@ -23,6 +23,14 @@ export enum AttachmentsType {
 // Keep the old name for backward compatibility
 export const AttachmentType = AttachmentsType;
 
+// Payment Terms/Method options - matches SAM-Desktop dropdown
+export const PAYMENT_TERMS_OPTIONS = [
+  { value: "Effet / Trade Bill", label: "Effet / Trade Bill" },
+  { value: "Chèque ou effet / Check or Bill", label: "Chèque ou effet / Check or Bill" },
+  { value: "Chèque ou virement / Check or Transfer", label: "Chèque ou virement / Check or Transfer" },
+  { value: "Paiement en Espèces / Cash Payment", label: "Paiement en Espèces / Cash Payment" },
+] as const;
+
 // Particular Conditions VM - matches backend ContractsDataSetBase + Id
 export interface ParticularConditionVM {
   // Index signature required for apiRequest body parameter compatibility

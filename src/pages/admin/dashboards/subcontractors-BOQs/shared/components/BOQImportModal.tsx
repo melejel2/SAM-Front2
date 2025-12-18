@@ -517,27 +517,31 @@ const BOQImportModal: React.FC<BOQImportModalProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {previewItems.slice(0, 10).map((item, index) => (
-                                            <tr key={index} className="hover:bg-base-100">
-                                                <td className="text-base-content font-mono text-sm">
-                                                    {item.no || (index + 1).toString()}
-                                                </td>
-                                                <td className="text-base-content">{item.description}</td>
-                                                <td className="text-base-content text-center">{item.unit || "-"}</td>
-                                                <td className="text-base-content text-center text-sm">
-                                                    {item.costCodeName || "-"}
-                                                </td>
-                                                <td className="text-base-content text-right">
-                                                    {item.quantity.toLocaleString()}
-                                                </td>
-                                                <td className="text-base-content text-right">
-                                                    ${item.unitPrice.toLocaleString()}
-                                                </td>
-                                                <td className="text-base-content text-right font-medium">
-                                                    ${item.totalPrice.toLocaleString()}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {previewItems.slice(0, 10).map((item, index) => {
+                                            // Title rows have no unit, no quantity, and no unit price
+                                            const isTitleRow = !item.unit && (item.quantity === 0 || !item.quantity) && (item.unitPrice === 0 || !item.unitPrice);
+                                            return (
+                                                <tr key={index} className={`hover:bg-base-100 ${isTitleRow ? 'font-bold' : ''}`}>
+                                                    <td className="text-base-content font-mono text-sm">
+                                                        {item.no || (index + 1).toString()}
+                                                    </td>
+                                                    <td className="text-base-content">{item.description}</td>
+                                                    <td className="text-base-content text-center">{item.unit || "-"}</td>
+                                                    <td className="text-base-content text-center text-sm">
+                                                        {item.costCodeName || "-"}
+                                                    </td>
+                                                    <td className="text-base-content text-right">
+                                                        {item.quantity.toLocaleString()}
+                                                    </td>
+                                                    <td className="text-base-content text-right">
+                                                        ${item.unitPrice.toLocaleString()}
+                                                    </td>
+                                                    <td className="text-base-content text-right font-medium">
+                                                        ${item.totalPrice.toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

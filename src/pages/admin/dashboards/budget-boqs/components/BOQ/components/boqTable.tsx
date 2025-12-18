@@ -72,6 +72,13 @@ const TableRow = memo(({
 }: any) => {
     const rawItem = getRawItem(row.id);
 
+    // Title row detection: rows with no unit, no quantity, and no unit price are section headers
+    const isTitleRow = rawItem && (
+        (!rawItem.unite || rawItem.unite === '') &&
+        (!rawItem.qte || rawItem.qte === 0 || rawItem.qte === '0') &&
+        (!rawItem.pu || rawItem.pu === 0 || rawItem.pu === '0')
+    );
+
     const rowCells = columnKeys.map((columnKey: string, columnIndex: number) => {
         const fieldConfig = inputFields.find((f: any) => f.name === columnKey);
         const isEditing = editingCell?.rowId === row.id && editingCell?.columnKey === columnKey;
@@ -143,7 +150,7 @@ const TableRow = memo(({
     return (
         <tr
             key={row.id}
-            className="bg-base-100 hover:bg-primary/10 transition-colors"
+            className={`bg-base-100 hover:bg-primary/10 transition-colors ${isTitleRow ? 'font-bold' : ''}`}
         >
             {rowCells}
             <td className="border border-base-300 text-center align-middle px-1 py-1 bg-base-100">
@@ -167,6 +174,7 @@ const TableRow = memo(({
     );
 }, (prevProps, nextProps) => {
     // Custom comparison for better performance
+    // Note: getRawItem changes affect title row detection, so we must compare raw items
     return (
         prevProps.row.id === nextProps.row.id &&
         prevProps.editingCell?.rowId === nextProps.editingCell?.rowId &&

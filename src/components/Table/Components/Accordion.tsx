@@ -79,6 +79,8 @@ interface AccordionProps {
     previewLoadingRowId?: string | null;
     // Added property for selectable mode
     select?: boolean;
+    // Added property for title rows (bold styling)
+    isTitleRow?: boolean;
 }
 
 interface AccordionsProps {
@@ -117,6 +119,7 @@ const Accordion: React.FC<AccordionProps> = ({
     editAction,
     previewLoadingRowId,
     select, // now destructured and used
+    isTitleRow, // for bold styling of title rows
 }) => {
     // Scroll indicator states
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -235,7 +238,10 @@ const Accordion: React.FC<AccordionProps> = ({
     };
 
     return (
-        <div className="bg-base-100 rounded-xl border border-base-300 overflow-hidden max-h-[80vh] flex flex-col">
+        <div className={cn(
+            "bg-base-100 rounded-xl border border-base-300 overflow-hidden max-h-[80vh] flex flex-col",
+            isTitleRow && "font-bold"
+        )}>
             <div className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4 border-b border-base-300 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-base-content">{title}</h3>
             </div>
@@ -418,22 +424,41 @@ const AccordionComponent: React.FC<AccordionsProps> = ({
                     </div>
                 )}
                 {accordionData.length > 0 &&
-                    accordionData.map((data, index) => (
-                        <Accordion
-                            rowData={data}
-                            key={index}
-                            onEdit={openEditDialog}
-                            onDelete={handleDelete}
-                            onShow={openPreviewDialog}
-                            title={"title"}
-                            actions={actions}
-                            previewAction={previewAction}
-                            editAction={editAction}
-                            deleteAction={deleteAction}
-                            previewLoadingRowId={previewLoadingRowId}
-                            select={select} // pass the prop to each Accordion
-                        />
-                    ))}
+                    accordionData.map((data, index) => {
+                        // Title row detection: rows with no unit, no unit price, and no quantity
+                        const isTitleRow = data.isTotal !== true && (
+                            data.isTitleRow === true ||
+                            (
+                                (!data.unit && !data.unite && !data.Unite) &&
+                                (!data.unitPrice && !data.unit_price && !data.pu && !data.Pu ||
+                                 data.unitPrice === 0 || data.unit_price === 0 || data.pu === 0 || data.Pu === 0 ||
+                                 data.unitPrice === '0' || data.unit_price === '0' || data.pu === '0' ||
+                                 data.unitPrice === '-' || data.unit_price === '-' || data.pu === '-') &&
+                                (!data.quantity && !data.qty && !data.qte && !data.Qte ||
+                                 data.quantity === 0 || data.qty === 0 || data.qte === 0 || data.Qte === 0 ||
+                                 data.quantity === '0' || data.qty === '0' || data.qte === '0' ||
+                                 data.quantity === '-' || data.qty === '-' || data.qte === '-')
+                            )
+                        );
+
+                        return (
+                            <Accordion
+                                rowData={data}
+                                key={index}
+                                onEdit={openEditDialog}
+                                onDelete={handleDelete}
+                                onShow={openPreviewDialog}
+                                title={"title"}
+                                actions={actions}
+                                previewAction={previewAction}
+                                editAction={editAction}
+                                deleteAction={deleteAction}
+                                previewLoadingRowId={previewLoadingRowId}
+                                select={select}
+                                isTitleRow={isTitleRow}
+                            />
+                        );
+                    })}
             </div>
 
             {(addBtn || actions) && (

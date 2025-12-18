@@ -838,17 +838,38 @@ const TableComponent: React.FC<TableProps> = ({
                                         const rowAction = rowActions?.(row);
                                         const isTotal = row.isTotal === true;
                                         const isSelected = !isTotal && selectedRow?.id === row.id;
+
+                                        // Title row detection: rows with no unit, no unit price, and no quantity
+                                        // These are section headers/titles in BOQ data
+                                        const isTitleRow = !isTotal && (
+                                            row.isTitleRow === true || // Explicit flag
+                                            (
+                                                // Auto-detect: check for empty unit and zero/empty price and quantity
+                                                // Support various field naming conventions
+                                                (!row.unit && !row.unite && !row.Unite) &&
+                                                (!row.unitPrice && !row.unit_price && !row.pu && !row.Pu ||
+                                                 row.unitPrice === 0 || row.unit_price === 0 || row.pu === 0 || row.Pu === 0 ||
+                                                 row.unitPrice === '0' || row.unit_price === '0' || row.pu === '0' ||
+                                                 row.unitPrice === '-' || row.unit_price === '-' || row.pu === '-') &&
+                                                (!row.quantity && !row.qty && !row.qte && !row.Qte ||
+                                                 row.quantity === 0 || row.qty === 0 || row.qte === 0 || row.Qte === 0 ||
+                                                 row.quantity === '0' || row.qty === '0' || row.qte === '0' ||
+                                                 row.quantity === '-' || row.qty === '-' || row.qte === '-')
+                                            )
+                                        );
                                         
 
                                         return (
                                             <tr
                                                 key={index}
                                                 data-selected={isSelected || undefined}
+                                                data-title-row={isTitleRow || undefined}
                                                 className={cn(
-                                                    isTotal 
-                                                        ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content" 
+                                                    isTotal
+                                                        ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content"
                                                         : "bg-base-100 hover:bg-base-200 cursor-pointer",
-                                                    isSelected && !isTotal && "!bg-blue-50 !border-2 !border-blue-300 dark:!bg-blue-900/30 dark:!border-blue-700/50"
+                                                    isSelected && !isTotal && "!bg-blue-50 !border-2 !border-blue-300 dark:!bg-blue-900/30 dark:!border-blue-700/50",
+                                                    isTitleRow && "font-bold bg-base-100"
                                                 )}
                                                 onClick={(e) => {
                                                     if (!isTotal) {

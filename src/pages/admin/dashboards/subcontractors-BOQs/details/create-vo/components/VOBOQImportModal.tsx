@@ -341,23 +341,27 @@ const VOBOQImportModal: React.FC<VOBOQImportModalProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {previewItems.slice(0, 10).map((item, index) => (
-                                            <tr key={index} className="hover:bg-base-100">
-                                                <td className="font-mono text-sm text-base-content">
-                                                    {item.no || `V${(index + 1).toString().padStart(3, '0')}`}
-                                                </td>
-                                                <td className="text-base-content">{item.key}</td>
-                                                <td className="text-center text-base-content">{item.unite || "-"}</td>
-                                                <td className="text-center text-sm text-base-content">
-                                                    {item.costCode || "-"}
-                                                </td>
-                                                <td className="text-right text-base-content">{item.qte.toLocaleString()}</td>
-                                                <td className="text-right text-base-content">${item.pu.toLocaleString()}</td>
-                                                <td className="text-right font-medium text-base-content">
-                                                    ${item.totalPrice.toLocaleString()}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {previewItems.slice(0, 10).map((item, index) => {
+                                            // Title rows have no unit, no quantity, and no unit price
+                                            const isTitleRow = !item.unite && (item.qte === 0 || !item.qte) && (item.pu === 0 || !item.pu);
+                                            return (
+                                                <tr key={index} className={`hover:bg-base-100 ${isTitleRow ? 'font-bold' : ''}`}>
+                                                    <td className="font-mono text-sm text-base-content">
+                                                        {item.no || `V${(index + 1).toString().padStart(3, '0')}`}
+                                                    </td>
+                                                    <td className="text-base-content">{item.key}</td>
+                                                    <td className="text-center text-base-content">{item.unite || "-"}</td>
+                                                    <td className="text-center text-sm text-base-content">
+                                                        {item.costCode || "-"}
+                                                    </td>
+                                                    <td className="text-right text-base-content">{item.qte.toLocaleString()}</td>
+                                                    <td className="text-right text-base-content">${item.pu.toLocaleString()}</td>
+                                                    <td className="text-right font-medium text-base-content">
+                                                        ${item.totalPrice.toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
