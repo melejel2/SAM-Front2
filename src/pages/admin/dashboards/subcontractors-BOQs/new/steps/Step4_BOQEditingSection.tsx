@@ -579,11 +579,25 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                     <Icon icon={calculatorIcon} className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold text-base-content">BOQ Items</h3>
                 </div>
+
+                {/* Tabs as Toggle Buttons - in same row */}
+                <div className="join flex-wrap">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.key}
+                            className={`join-item btn btn-sm ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
+                            onClick={() => onTabChange(tab.key)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowBudgetBOQModal(true)}
@@ -614,19 +628,6 @@ export const BOQEditingSection: React.FC<BOQEditingSectionProps> = ({
                         Import BOQ
                     </button>
                 </div>
-            </div>
-
-            {/* Tabs as Toggle Buttons */}
-            <div className="join mb-4 flex-wrap">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.key}
-                        className={`join-item btn btn-sm ${activeTab === tab.key ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
-                        onClick={() => onTabChange(tab.key)}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
             </div>
 
             {/* BOQ Table */}
