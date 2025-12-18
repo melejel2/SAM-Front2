@@ -363,7 +363,7 @@ export interface CorrectPreviousValueRequest {
   entityType: CorrectionEntityType;
   entityId: number;
   contractDatasetId: number;
-  fieldName: 'PrecedQte' | 'PrecedentAmount';
+  fieldName: 'PrecedQte' | 'CumulQte' | 'PrecedentAmount';
   newValue: number;
   reason: string;
 }
@@ -432,7 +432,7 @@ export interface CorrectionModalProps {
   entityType: CorrectionEntityType;
   entityId: number;
   contractDatasetId: number;
-  fieldName: 'PrecedQte' | 'PrecedentAmount';
+  fieldName: 'PrecedQte' | 'CumulQte' | 'PrecedentAmount';
   fieldLabel: string;
   currentValue: number;
   entityDescription: string;

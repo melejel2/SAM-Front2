@@ -57,7 +57,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         isOpen: boolean;
         entityType: CorrectionEntityType;
         entityId: number;
-        fieldName: 'PrecedQte' | 'PrecedentAmount';
+        fieldName: 'PrecedQte' | 'CumulQte' | 'PrecedentAmount';
         fieldLabel: string;
         currentValue: number;
         entityDescription: string;
@@ -317,6 +317,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         currentValue: number,
         entityDescription: string
     ) => {
+        const isEditMode = (formData as any).id && (formData as any).id > 0;
         const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
         if (!contractDatasetId) {
             toaster.error("Contract dataset ID not found");
@@ -326,7 +327,9 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             isOpen: true,
             entityType,
             entityId,
-            fieldName: 'PrecedQte',
+            // In NEW IPC mode, "Prev Qty" represents the last saved cumulative (CumulQte) from the previous IPC.
+            // In EDIT IPC mode, "Prev Qty" is the stored PrecedQte for the edited period.
+            fieldName: isEditMode ? 'PrecedQte' : 'CumulQte',
             fieldLabel: 'Previous Quantity',
             currentValue,
             entityDescription,
@@ -361,9 +364,12 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 ...building,
                 boqsContract: (building.boqsContract || []).map(boq => {
                     if (boq.id === request.entityId) {
-                        const newPrecedQte = request.newValue;
                         const actualQte = boq.actualQte || 0;
-                        const newCumulQte = newPrecedQte + actualQte;
+                        const newPrecedQte = request.newValue;
+                        const newCumulQte =
+                            request.fieldName === 'CumulQte'
+                                ? (request.newValue + actualQte)
+                                : (newPrecedQte + actualQte);
                         const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
                         return {
                             ...boq,
@@ -386,9 +392,12 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     ...building,
                     boqs: building.boqs.map(boq => {
                         if (boq.id === request.entityId) {
-                            const newPrecedQte = request.newValue;
                             const actualQte = boq.actualQte || 0;
-                            const newCumulQte = newPrecedQte + actualQte;
+                            const newPrecedQte = request.newValue;
+                            const newCumulQte =
+                                request.fieldName === 'CumulQte'
+                                    ? (request.newValue + actualQte)
+                                    : (newPrecedQte + actualQte);
                             const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
                             return {
                                 ...boq,

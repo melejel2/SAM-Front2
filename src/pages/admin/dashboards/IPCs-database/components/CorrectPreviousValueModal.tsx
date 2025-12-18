@@ -16,7 +16,7 @@ import {
  * - Captures server timestamp, user ID, IP address, and context snapshot
  *
  * What Gets Corrected:
- * - BOQs/VOs: PrecedQte (previous quantity) - affects ActualQte calculation
+ * - BOQs/VOs: PrecedQte (previous cumulative at period start) OR CumulQte (historical cumulative)
  * - Deductions: PrecedentAmount (previous deduction amount) - affects PreviousDeduction%
  */
 const CorrectPreviousValueModal: React.FC<CorrectionModalProps> = ({

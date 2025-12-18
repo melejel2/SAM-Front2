@@ -125,7 +125,7 @@ export const Step3_Deductions: React.FC = () => {
         isOpen: boolean;
         entityType: CorrectionEntityType;
         entityId: number;
-        fieldName: 'PrecedQte' | 'PrecedentAmount';
+        fieldName: 'PrecedQte' | 'CumulQte' | 'PrecedentAmount';
         fieldLabel: string;
         currentValue: number;
         entityDescription: string;
