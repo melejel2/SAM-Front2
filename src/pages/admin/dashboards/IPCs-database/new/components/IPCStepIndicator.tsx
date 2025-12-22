@@ -10,10 +10,10 @@ interface IPCStepIndicatorProps {
 }
 
 const steps = [
-    { number: 1, title: "Contract & Type", icon: fileTextIcon },
+    { number: 1, title: "Contract", icon: fileTextIcon },
     { number: 2, title: "Period & BOQ", icon: calendarDaysIcon },
     { number: 3, title: "Deductions", icon: minusCircleIcon },
-    { number: 4, title: "Preview & Save", icon: checkIcon }
+    { number: 4, title: "Preview", icon: checkIcon }
 ];
 
 export const IPCStepIndicator: React.FC<IPCStepIndicatorProps> = ({ currentStep }) => {

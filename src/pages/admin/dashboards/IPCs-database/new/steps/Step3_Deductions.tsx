@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, LaborsVM, MachinesVM, MaterialsVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
 import { CorrectionEntityType } from "@/types/ipc";
@@ -113,7 +113,7 @@ const calculateMaterialDeductions = (item: MaterialsVM) => {
     };
 };
 
-export const Step3_Deductions: React.FC = () => {
+export const Step3_Deductions: React.FC = memo(() => {
     const { formData, setFormData, selectedContract, setHasUnsavedChanges } = useIPCWizardContext();
     const { getToken } = useAuth();
     const { toaster } = useToast();
@@ -173,8 +173,10 @@ export const Step3_Deductions: React.FC = () => {
 
         const item = { ...items[index] };
         const numericValue = parseFloat(value);
+        // Allow empty strings, negative signs, and valid numbers
         if (isNaN(numericValue) && value !== '' && value !== '-') return;
-        const cleanValue = numericValue || 0;
+        // Keep empty values as 0 for calculations, but allow empty input
+        const cleanValue = value === '' ? 0 : (numericValue || 0);
 
         // For materials, use 'allocated' instead of 'quantity' for calculations
         let quantity = type === 'materials' ? (item.allocated || 0) : (item.quantity || 0);
@@ -413,13 +415,13 @@ export const Step3_Deductions: React.FC = () => {
         workerType: '',
         laborType: '',
         unit: 'HR',
-        unitPrice: 0,
-        quantity: 0,
+        unitPrice: undefined as any, // Start empty for better UX
+        quantity: undefined as any,   // Start empty for better UX
         amount: 0,
         consumedAmount: 0,
         actualAmount: 0,
-        deduction: 0,
-        deductionPercentage: 0,
+        deduction: undefined as any,  // Start empty for better UX
+        deductionPercentage: undefined as any,
         precedentAmount: 0,
         precedentAmountOld: 0,
         previousDeduction: 0,
@@ -435,13 +437,13 @@ export const Step3_Deductions: React.FC = () => {
         machineAcronym: '',
         machineType: '',
         unit: 'HR',
-        unitPrice: 0,
-        quantity: 0,
+        unitPrice: undefined as any, // Start empty for better UX
+        quantity: undefined as any,   // Start empty for better UX
         amount: 0,
         consumedAmount: 0,
         actualAmount: 0,
-        deduction: 0,
-        deductionPercentage: 0,
+        deduction: undefined as any,  // Start empty for better UX
+        deductionPercentage: undefined as any,
         precedentAmount: 0,
         precedentAmountOld: 0,
         previousDeduction: 0,
@@ -456,9 +458,9 @@ export const Step3_Deductions: React.FC = () => {
         bc: generateNextRef('materials'),
         designation: '',
         unit: 'EA',
-        saleUnit: 0,
-        quantity: 0,
-        allocated: 0,
+        saleUnit: undefined as any,   // Start empty for better UX
+        quantity: undefined as any,    // Start empty for better UX
+        allocated: undefined as any,   // Start empty for better UX
         stockQte: 0,
         transferedQte: 0,
         livree: 0,
@@ -466,8 +468,8 @@ export const Step3_Deductions: React.FC = () => {
         consumedAmount: 0,
         consumes: 0,
         actualAmount: 0,
-        deduction: 0,
-        deductionPercentage: 0,
+        deduction: undefined as any,   // Start empty for better UX
+        deductionPercentage: undefined as any,
         precedentAmount: 0,
         precedentAmountOld: 0,
         previousDeduction: 0,
@@ -723,10 +725,10 @@ export const Step3_Deductions: React.FC = () => {
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.unitPrice || ''} onChange={(e) => handleItemChange('labors', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} /></td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.quantity || ''} onChange={(e) => handleItemChange('labors', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.unitPrice || ''} onChange={(e) => handleItemChange('labors', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={labor.quantity || ''} onChange={(e) => handleItemChange('labors', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.amount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('labors', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('labors', index, 'deductionPercentage', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                             {/* Previous Amount - with correction button for authorized users */}
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
@@ -863,6 +865,7 @@ export const Step3_Deductions: React.FC = () => {
                                                     value={material.saleUnit || ''}
                                                     onChange={(e) => handleItemChange('materials', index, 'unitPrice', e.target.value)}
                                                     onFocus={(e) => e.target.select()}
+                                                    step="any"
                                                 />
                                             </td>
                                             <td className="w-24 p-1">
@@ -872,10 +875,11 @@ export const Step3_Deductions: React.FC = () => {
                                                     value={material.allocated || ''}
                                                     onChange={(e) => handleItemChange('materials', index, 'quantity', e.target.value)}
                                                     onFocus={(e) => e.target.select()}
+                                                    step="any"
                                                 />
                                             </td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.consumedAmount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('materials', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('materials', index, 'deductionPercentage', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                             {/* Previous Amount - with correction button for authorized users */}
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
@@ -1024,10 +1028,10 @@ export const Step3_Deductions: React.FC = () => {
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.unitPrice || ''} onChange={(e) => handleItemChange('machines', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} /></td>
-                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.quantity || ''} onChange={(e) => handleItemChange('machines', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.unitPrice || ''} onChange={(e) => handleItemChange('machines', index, 'unitPrice', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
+                                            <td className="w-24 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={machine.quantity || ''} onChange={(e) => handleItemChange('machines', index, 'quantity', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.amount)}</td>
-                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('machines', index, 'deductionPercentage', e.target.value)} min="0" max="100" onFocus={(e) => e.target.select()} /></td>
+                                            <td className="w-20 p-1"><input type="number" className="input input-bordered input-xs w-full text-right" value={deductionPercent || ''} onChange={(e) => handleItemChange('machines', index, 'deductionPercentage', e.target.value)} onFocus={(e) => e.target.select()} step="any" /></td>
                                             <td className="text-right text-xs bg-base-200/50">{formatCurrency(calc.cumulativeDeductionAmount)}</td>
                                             {/* Previous Amount - with correction button for authorized users */}
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
@@ -1152,4 +1156,4 @@ export const Step3_Deductions: React.FC = () => {
             )}
         </div>
     );
-};
+});

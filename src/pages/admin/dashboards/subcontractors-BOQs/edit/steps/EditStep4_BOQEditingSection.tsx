@@ -273,7 +273,7 @@ const BOQTableRow = memo<BOQTableRowProps>(({
 
 BOQTableRow.displayName = 'BOQTableRow';
 
-export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = ({
+export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = memo(({
     tabs,
     activeTab,
     onTabChange,
@@ -749,4 +749,4 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = ({
             />
         </div>
     );
-};
+});

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
 import { CorrectionEntityType } from "@/types/ipc";
@@ -697,14 +697,56 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         subcontractorName: (formData as any).subcontractorName || 'N/A',
     };
 
-    // Calculate totals for active building
-    const activeBuildingTotal = activeBuilding
-        ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
-        : 0;
+    // Calculate totals for active building (memoized for performance)
+    const activeBuildingTotal = useMemo(() => {
+        return activeBuilding
+            ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
+            : 0;
+    }, [activeBuilding]);
 
-    const activeVOBuildingTotal = activeVOBuilding
-        ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + ((boq.actualQte || 0) * boq.unitPrice), 0)
-        : 0;
+    const activeVOBuildingTotal = useMemo(() => {
+        return activeVOBuilding
+            ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + ((boq.actualQte || 0) * boq.unitPrice), 0)
+            : 0;
+    }, [activeVOBuilding]);
+
+    // Memoized table totals for contract BOQs
+    const contractBOQContractTotal = useMemo(() => {
+        return activeBuilding
+            ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (boq.qte * boq.unitPrice), 0)
+            : 0;
+    }, [activeBuilding]);
+
+    const contractBOQPrecedTotal = useMemo(() => {
+        return activeBuilding
+            ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + ((boq.precedQte || 0) * boq.unitPrice), 0)
+            : 0;
+    }, [activeBuilding]);
+
+    const contractBOQCumulTotal = useMemo(() => {
+        return activeBuilding
+            ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (((boq.precedQte || 0) + (boq.actualQte || 0)) * boq.unitPrice), 0)
+            : 0;
+    }, [activeBuilding]);
+
+    // Memoized table totals for VO BOQs
+    const voBOQContractTotal = useMemo(() => {
+        return activeVOBuilding
+            ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + (boq.qte * boq.unitPrice), 0)
+            : 0;
+    }, [activeVOBuilding]);
+
+    const voBOQPrecedTotal = useMemo(() => {
+        return activeVOBuilding
+            ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + ((boq.precedQte || 0) * boq.unitPrice), 0)
+            : 0;
+    }, [activeVOBuilding]);
+
+    const voBOQCumulTotal = useMemo(() => {
+        return activeVOBuilding
+            ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + (((boq.precedQte || 0) + (boq.actualQte || 0)) * boq.unitPrice), 0)
+            : 0;
+    }, [activeVOBuilding]);
 
     return (
         <div className="space-y-4">

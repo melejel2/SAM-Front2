@@ -749,4 +749,4 @@ const BuildingSelectionDialog: React.FC<BuildingSelectionDialogProps> = ({
     );
 };
 
-export default BuildingSelectionDialog;
+export default React.memo(BuildingSelectionDialog);

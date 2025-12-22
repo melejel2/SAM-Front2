@@ -197,47 +197,73 @@ const TableComponent: React.FC<TableProps> = ({
     isNested, // Destructure new prop
 }) => {
     const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
-    const [sortColumn, setSortColumn] = useState<string | null>(null);
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview">("Add");
-    const [currentRow, setCurrentRow] = useState<any | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
+
+    // Consolidated table state
+    const [tableState, setTableState] = useState({
+        sortColumn: null as string | null,
+        sortOrder: "asc" as "asc" | "desc",
+        searchQuery: "",
+        currentPage: 1,
+        selectedRow: undefined as any,
+        activeSheetId: externalActiveSheetId ?? sheets[0]?.id ?? 0,
+    });
+
+    // Consolidated dialog state
+    const [dialogState, setDialogState] = useState({
+        dialogType: "Add" as "Add" | "Edit" | "Delete" | "Preview",
+        currentRow: null as any | null,
+    });
+
     const { dialogRef, handleShow, handleHide } = useDialog();
-    const [selectedRow, setSelectedRow] = useState<any>();
-    const [activeSheetId, setActiveSheetId] = useState<number>(externalActiveSheetId ?? sheets[0]?.id ?? 0);
-    const [internalPreviewLoadingRowId, setInternalPreviewLoadingRowId] = useState<string | null>(null);
-    const previewLoadingRowId = externalPreviewLoadingRowId ?? internalPreviewLoadingRowId;
-    const [editLoadingRowId, setEditLoadingRowId] = useState<string | null>(null);
-    const [generateLoadingRowId, setGenerateLoadingRowId] = useState<string | null>(null);
-    const [deleteLoadingRowId, setDeleteLoadingRowId] = useState<string | null>(null);
-    
-    // Column filter states
-    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
-    const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null);
-    const [filterSearchTerms, setFilterSearchTerms] = useState<Record<string, string>>({});
-    const [filterDropdownPosition, setFilterDropdownPosition] = useState<{top: number, left: number} | null>(null);
-    
-    // Scroll indicator states
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
-    const [scrollPercentage, setScrollPercentage] = useState(0);
-    const [showInitialHint, setShowInitialHint] = useState(false);
-    const [hintShownOnce, setHintShownOnce] = useState(false);
-    const [isMouseDown, setIsMouseDown] = useState(false);
-    const [startX, setStartX] = useState(0);
-    const [scrollLeft, setScrollLeft] = useState(0);
+
+    // Consolidated loading state
+    const [loadingState, setLoadingState] = useState({
+        internalPreviewLoadingRowId: null as string | null,
+        editLoadingRowId: null as string | null,
+        generateLoadingRowId: null as string | null,
+        deleteLoadingRowId: null as string | null,
+    });
+
+    const previewLoadingRowId = externalPreviewLoadingRowId ?? loadingState.internalPreviewLoadingRowId;
+
+    // Consolidated filter state
+    const [filterState, setFilterState] = useState({
+        columnFilters: {} as Record<string, string[]>,
+        openFilterDropdown: null as string | null,
+        filterSearchTerms: {} as Record<string, string>,
+        filterDropdownPosition: null as {top: number, left: number} | null,
+    });
+
+    // Consolidated scroll state
+    const [scrollState, setScrollState] = useState({
+        canScrollLeft: false,
+        canScrollRight: false,
+        scrollPercentage: 0,
+        showInitialHint: false,
+        hintShownOnce: false,
+        isMouseDown: false,
+        startX: 0,
+        scrollLeft: 0,
+    });
+
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
+
+    // Destructure for backward compatibility
+    const { sortColumn, sortOrder, searchQuery, currentPage, selectedRow, activeSheetId } = tableState;
+    const { dialogType, currentRow } = dialogState;
+    const { editLoadingRowId, generateLoadingRowId, deleteLoadingRowId } = loadingState;
+    const { columnFilters, openFilterDropdown, filterSearchTerms, filterDropdownPosition } = filterState;
+    const { canScrollLeft, canScrollRight, scrollPercentage, showInitialHint, hintShownOnce, isMouseDown, startX, scrollLeft } = scrollState;
 
     const handleRowClick = useCallback((row: any) => {
         if (onRowSelect) {
             // Use functional update to prevent re-render loops
-            setSelectedRow((prevSelected: any) => {
+            setTableState(prev => {
                 // Only update if actually different
-                if (prevSelected?.id === row.id) {
-                    return prevSelected;
+                if (prev.selectedRow?.id === row.id) {
+                    return prev;
                 }
-                return row;
+                return { ...prev, selectedRow: row };
             });
             onRowSelect(row);
         }
@@ -248,18 +274,18 @@ const TableComponent: React.FC<TableProps> = ({
         if (selectedRowId !== undefined && selectedRowId !== null) {
             const matchingRow = tableData.find(row => row.id == selectedRowId);
             if (matchingRow) {
-                setSelectedRow((prevSelected: any) => {
+                setTableState(prev => {
                     // Only update if actually different to prevent re-renders
-                    if (prevSelected?.id === matchingRow.id) {
-                        return prevSelected;
+                    if (prev.selectedRow?.id === matchingRow.id) {
+                        return prev;
                     }
-                    return matchingRow;
+                    return { ...prev, selectedRow: matchingRow };
                 });
             }
         } else if (selectedRowId === null || selectedRowId === undefined) {
-            setSelectedRow((prevSelected: any) => {
+            setTableState(prev => {
                 // Only clear if not already null
-                return prevSelected ? null : prevSelected;
+                return prev.selectedRow ? { ...prev, selectedRow: null } : prev;
             });
         }
     }, [selectedRowId, tableData]);
@@ -270,24 +296,30 @@ const TableComponent: React.FC<TableProps> = ({
         if (container) {
             const { scrollLeft, scrollWidth, clientWidth } = container;
             const maxScroll = scrollWidth - clientWidth;
-            
-            setCanScrollLeft(scrollLeft > 0);
-            setCanScrollRight(scrollLeft < maxScroll);
-            
-            // Calculate scroll percentage for gradient opacity
-            if (maxScroll > 0) {
-                setScrollPercentage(scrollLeft / maxScroll);
-            }
-            
-            // Show initial hint only once when table becomes scrollable
-            if (!hintShownOnce && maxScroll > 0) {
-                setHintShownOnce(true);
-                setShowInitialHint(true);
-                // Hide hint after 3 seconds
-                setTimeout(() => setShowInitialHint(false), 3000);
-            }
+
+            setScrollState(prev => {
+                const updates: Partial<typeof prev> = {
+                    canScrollLeft: scrollLeft > 0,
+                    canScrollRight: scrollLeft < maxScroll,
+                };
+
+                // Calculate scroll percentage for gradient opacity
+                if (maxScroll > 0) {
+                    updates.scrollPercentage = scrollLeft / maxScroll;
+                }
+
+                // Show initial hint only once when table becomes scrollable
+                if (!prev.hintShownOnce && maxScroll > 0) {
+                    updates.hintShownOnce = true;
+                    updates.showInitialHint = true;
+                    // Hide hint after 3 seconds
+                    setTimeout(() => setScrollState(s => ({ ...s, showInitialHint: false })), 3000);
+                }
+
+                return { ...prev, ...updates };
+            });
         }
-    }, [hintShownOnce]);
+    }, []);
 
     // Mouse drag scrolling handlers
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -296,21 +328,24 @@ const TableComponent: React.FC<TableProps> = ({
         if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button') || target.closest('input') || target.closest('tr')) {
             return;
         }
-        
-        setIsMouseDown(true);
-        setStartX(e.pageX - (tableContainerRef.current?.offsetLeft || 0));
-        setScrollLeft(tableContainerRef.current?.scrollLeft || 0);
-        
+
+        setScrollState(prev => ({
+            ...prev,
+            isMouseDown: true,
+            startX: e.pageX - (tableContainerRef.current?.offsetLeft || 0),
+            scrollLeft: tableContainerRef.current?.scrollLeft || 0,
+        }));
+
         // Prevent text selection while dragging
         e.preventDefault();
     };
 
     const handleMouseLeave = () => {
-        setIsMouseDown(false);
+        setScrollState(prev => ({ ...prev, isMouseDown: false }));
     };
 
     const handleMouseUp = () => {
-        setIsMouseDown(false);
+        setScrollState(prev => ({ ...prev, isMouseDown: false }));
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -324,7 +359,7 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Cleanup mouse events
     React.useEffect(() => {
-        const handleGlobalMouseUp = () => setIsMouseDown(false);
+        const handleGlobalMouseUp = () => setScrollState(prev => ({ ...prev, isMouseDown: false }));
         document.addEventListener('mouseup', handleGlobalMouseUp);
         return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
     }, []);
@@ -367,41 +402,42 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Handle column filter changes
     const handleColumnFilterChange = useCallback((columnKey: string, value: string, checked: boolean) => {
-        setColumnFilters(prev => {
-            const currentFilters = prev[columnKey] || [];
-            if (checked) {
-                return {
-                    ...prev,
-                    [columnKey]: [...currentFilters, value]
-                };
-            } else {
-                return {
-                    ...prev,
-                    [columnKey]: currentFilters.filter(v => v !== value)
-                };
-            }
+        setFilterState(prev => {
+            const currentFilters = prev.columnFilters[columnKey] || [];
+            return {
+                ...prev,
+                columnFilters: {
+                    ...prev.columnFilters,
+                    [columnKey]: checked
+                        ? [...currentFilters, value]
+                        : currentFilters.filter(v => v !== value)
+                }
+            };
         });
-        setCurrentPage(1); // Reset to first page when filters change
+        setTableState(prev => ({ ...prev, currentPage: 1 })); // Reset to first page when filters change
     }, []);
 
     // Clear all filters for a column
     const clearColumnFilter = useCallback((columnKey: string) => {
-        setColumnFilters(prev => {
-            const newFilters = { ...prev };
+        setFilterState(prev => {
+            const newFilters = { ...prev.columnFilters };
             delete newFilters[columnKey];
-            return newFilters;
+            return { ...prev, columnFilters: newFilters };
         });
-        setCurrentPage(1);
+        setTableState(prev => ({ ...prev, currentPage: 1 }));
     }, []);
 
     // Select all values for a column filter
     const selectAllColumnValues = useCallback((columnKey: string) => {
         const allValues = getUniqueColumnValues(columnKey);
-        setColumnFilters(prev => ({
+        setFilterState(prev => ({
             ...prev,
-            [columnKey]: allValues
+            columnFilters: {
+                ...prev.columnFilters,
+                [columnKey]: allValues
+            }
         }));
-        setCurrentPage(1);
+        setTableState(prev => ({ ...prev, currentPage: 1 }));
     }, [getUniqueColumnValues]);
 
     // Filter the data by search and column filters - optimized with proper dependencies
@@ -525,25 +561,30 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Sorting behavior
     const handleSort = useCallback((column: string) => {
-        setSortOrder((prevOrder) => (sortColumn === column && prevOrder === "asc" ? "desc" : "asc"));
-        setSortColumn(column);
-    }, [sortColumn]);
+        setTableState(prev => ({
+            ...prev,
+            sortOrder: prev.sortColumn === column && prev.sortOrder === "asc" ? "desc" : "asc",
+            sortColumn: column,
+        }));
+    }, []);
 
     // Search behavior - reset to first page when search changes
     const handleSearchChange = useCallback((value: string) => {
-        setSearchQuery(value);
-        setCurrentPage(1);
+        setTableState(prev => ({
+            ...prev,
+            searchQuery: value,
+            currentPage: 1,
+        }));
     }, []);
 
     // Pagination controls
     const handlePageChange = useCallback((page: number) => {
-        setCurrentPage(page);
+        setTableState(prev => ({ ...prev, currentPage: page }));
     }, []);
 
     // Opening the Add/Edit/Preview dialogs
     const openCreateDialog = async () => {
-        setDialogType("Add");
-        setCurrentRow(null);
+        setDialogState({ dialogType: "Add", currentRow: null });
         // Check if using static dialog for navigation
         if (!dynamicDialog && openStaticDialog) {
             await openStaticDialog("Add");
@@ -554,18 +595,17 @@ const TableComponent: React.FC<TableProps> = ({
     };
 
     const openEditDialog = async (row: any) => {
-        setDialogType("Edit");
-        setCurrentRow(row);
+        setDialogState({ dialogType: "Edit", currentRow: row });
         if (dynamicDialog) {
             handleShow();
         } else {
             if (openStaticDialog) {
                 const rowId = row.id || row.contractId || row.projectId || String(row);
-                setEditLoadingRowId(rowId);
+                setLoadingState(prev => ({ ...prev, editLoadingRowId: rowId }));
                 try {
                     await openStaticDialog("Edit", row, { contractIdentifier, contractId }); // Pass contract context
                 } finally {
-                    setEditLoadingRowId(null);
+                    setLoadingState(prev => ({ ...prev, editLoadingRowId: null }));
                 }
             }
         }
@@ -574,11 +614,11 @@ const TableComponent: React.FC<TableProps> = ({
     const openGenerateDialog = async (row: any) => {
         if (openStaticDialog) {
             const rowId = row.id || row.contractId || row.projectId || String(row);
-            setGenerateLoadingRowId(rowId);
+            setLoadingState(prev => ({ ...prev, generateLoadingRowId: rowId }));
             try {
                 await openStaticDialog("Generate", row, { contractIdentifier, contractId });
             } finally {
-                setGenerateLoadingRowId(null);
+                setLoadingState(prev => ({ ...prev, generateLoadingRowId: null }));
             }
         }
     };
@@ -587,28 +627,27 @@ const TableComponent: React.FC<TableProps> = ({
         // This action is now hardcoded to use the static dialog for navigation purposes.
         if (openStaticDialog) {
             const rowId = row.id || row.contractId || row.projectId || String(row);
-            setInternalPreviewLoadingRowId(rowId);
+            setLoadingState(prev => ({ ...prev, internalPreviewLoadingRowId: rowId }));
             try {
                 await openStaticDialog("Preview", row);
             } finally {
-                setInternalPreviewLoadingRowId(null);
+                setLoadingState(prev => ({ ...prev, internalPreviewLoadingRowId: null }));
             }
         }
     };
 
     const openDeleteDialog = async (row: any) => {
-        setDialogType("Delete");
-        setCurrentRow(row);
+        setDialogState({ dialogType: "Delete", currentRow: row });
         if (dynamicDialog) {
             handleShow();
         } else {
             if (openStaticDialog) {
                 const rowId = row.id || row.contractId || row.projectId || String(row);
-                setDeleteLoadingRowId(rowId);
+                setLoadingState(prev => ({ ...prev, deleteLoadingRowId: rowId }));
                 try {
                     await openStaticDialog("Delete", row);
                 } finally {
-                    setDeleteLoadingRowId(null);
+                    setLoadingState(prev => ({ ...prev, deleteLoadingRowId: null }));
                 }
             }
         }
@@ -616,9 +655,12 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Handlers for ColumnFilterDropdown component
     const handleFilterSearchChange = useCallback((columnKey: string, value: string) => {
-        setFilterSearchTerms(prev => ({
+        setFilterState(prev => ({
             ...prev,
-            [columnKey]: value
+            filterSearchTerms: {
+                ...prev.filterSearchTerms,
+                [columnKey]: value
+            }
         }));
     }, []);
 
@@ -626,57 +668,63 @@ const TableComponent: React.FC<TableProps> = ({
         handleColumnFilterChange(columnKey, value, checked);
         const currentFilters = columnFilters[columnKey] || [];
         if (!checked && currentFilters.length === 1) {
-            setOpenFilterDropdown(null);
+            setFilterState(prev => ({ ...prev, openFilterDropdown: null }));
         }
     }, [columnFilters, handleColumnFilterChange]);
 
     const handleFilterSelectAll = useCallback((columnKey: string, filteredValues: string[], allSelected: boolean) => {
         if (filteredValues.length === 0) return;
 
-        setColumnFilters(prev => {
-            const currentFilters = prev[columnKey] || [];
-            if (allSelected) {
+        setFilterState(prev => {
+            const currentFilters = prev.columnFilters[columnKey] || [];
+            return {
+                ...prev,
+                columnFilters: {
+                    ...prev.columnFilters,
+                    [columnKey]: allSelected
+                        ? currentFilters.filter(value => !filteredValues.includes(value))
+                        : [...new Set([...currentFilters, ...filteredValues])]
+                },
+                openFilterDropdown: null
+            };
+        });
+
+        setTableState(prev => ({ ...prev, currentPage: 1 }));
+    }, []);
+
+    const handleFilterDropdownToggle = useCallback((columnKey: string, event?: React.MouseEvent<HTMLButtonElement>) => {
+        setFilterState(prev => {
+            const isCurrentlyOpen = prev.openFilterDropdown === columnKey;
+
+            if (isCurrentlyOpen) {
                 return {
                     ...prev,
-                    [columnKey]: currentFilters.filter(value => !filteredValues.includes(value))
+                    filterSearchTerms: {
+                        ...prev.filterSearchTerms,
+                        [columnKey]: ''
+                    },
+                    openFilterDropdown: null,
+                    filterDropdownPosition: null
                 };
             } else {
                 return {
                     ...prev,
-                    [columnKey]: [...new Set([...currentFilters, ...filteredValues])]
+                    filterDropdownPosition: event ? {
+                        top: event.currentTarget.getBoundingClientRect().bottom + 4,
+                        left: event.currentTarget.getBoundingClientRect().left
+                    } : null,
+                    openFilterDropdown: columnKey
                 };
             }
         });
-
-        setCurrentPage(1);
-        setOpenFilterDropdown(null);
     }, []);
 
-    const handleFilterDropdownToggle = useCallback((columnKey: string, event?: React.MouseEvent<HTMLButtonElement>) => {
-        const isCurrentlyOpen = openFilterDropdown === columnKey;
-
-        if (isCurrentlyOpen) {
-            setFilterSearchTerms(prev => ({
-                ...prev,
-                [columnKey]: ''
-            }));
-            setOpenFilterDropdown(null);
-            setFilterDropdownPosition(null);
-        } else {
-            if (event) {
-                const buttonRect = event.currentTarget.getBoundingClientRect();
-                setFilterDropdownPosition({
-                    top: buttonRect.bottom + 4,
-                    left: buttonRect.left
-                });
-            }
-            setOpenFilterDropdown(columnKey);
-        }
-    }, [openFilterDropdown]);
-
     const handleFilterDropdownClose = useCallback(() => {
-        setOpenFilterDropdown(null);
-        setFilterDropdownPosition(null);
+        setFilterState(prev => ({
+            ...prev,
+            openFilterDropdown: null,
+            filterDropdownPosition: null
+        }));
     }, []);
 
     return (
@@ -1185,7 +1233,7 @@ const TableComponent: React.FC<TableProps> = ({
                                             : "text-base-content/50 border-transparent hover:text-base-content/70",
                                 )}
                                 onClick={() => {
-                                    setActiveSheetId(sheet.id);
+                                    setTableState(prev => ({ ...prev, activeSheetId: sheet.id }));
                                     onSheetSelect?.(sheet.id);
                                 }}>
                                 {sheet.name}

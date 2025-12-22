@@ -11,7 +11,7 @@ const getStepName = (step: number): string => {
         case 1: return "Contract Selection";
         case 2: return "Period & BOQ Progress";
         case 3: return "Deductions";
-        case 4: return "Preview & Save";
+        case 4: return "Preview";
         default: return "Unknown Step";
     }
 };

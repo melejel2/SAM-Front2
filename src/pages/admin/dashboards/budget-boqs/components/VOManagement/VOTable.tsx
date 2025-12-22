@@ -4,7 +4,7 @@ import trashIcon from "@iconify/icons-lucide/trash";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import xIcon from "@iconify/icons-lucide/x";
 import { Icon } from "@iconify/react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, memo } from "react";
 import { formatCurrency } from "@/utils/formatters";
 
 import { BudgetVO, BudgetVOSheet, BudgetVOItem, ClearBudgetVORequest, BoqDeletionScope } from '@/api/services/budget-vo-api';
@@ -483,4 +483,4 @@ const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>
   );
 };
 
-export default VOTable;
+export default memo(VOTable);

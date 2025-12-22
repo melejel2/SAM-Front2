@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Button } from "@/components/daisyui";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
@@ -496,4 +496,4 @@ const VODialog: React.FC<VODialogProps> = ({
   );
 };
 
-export default VODialog;
+export default memo(VODialog);

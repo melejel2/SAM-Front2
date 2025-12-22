@@ -332,7 +332,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 // Deductions - Financial calculations are automatic
                 return true;
             case 4:
-                // Preview & Save - Ready to submit
+                // Preview - Ready to submit
                 return true;
             default:
                 return false;
