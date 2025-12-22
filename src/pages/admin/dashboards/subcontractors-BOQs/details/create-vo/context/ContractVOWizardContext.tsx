@@ -424,17 +424,22 @@ export const ContractVOWizardProvider: React.FC<ContractVOWizardProviderProps> =
     };
 
     const validateStep2 = (): boolean => {
-        // Step 2: BOQ Line Items - Enhanced validation
-        return (
-            formData.lineItems.length > 0 &&
-            formData.lineItems.every((item) =>
-                item.no.trim() !== "" &&
-                item.description.trim() !== "" &&
-                item.unit.trim() !== "" &&
-                item.quantity > 0 && // Must be greater than 0, not just >= 0
-                item.unitPrice > 0 // Unit price must be positive
-            )
-        );
+        // Step 2: BOQ Line Items - validate we have items
+        // Items without units are considered headers/groupings (e.g., "R+3", "R+4" floor levels)
+        // and don't need price validation - only items with units require pricing
+        if (formData.lineItems.length === 0) return false;
+
+        return !formData.lineItems.some((item) => {
+            // Must have an item number
+            if (!item.no || item.no.trim() === "") return true;
+
+            // If item has a unit, it must have valid quantity and price
+            if (item.unit && item.unit.trim() !== "") {
+                return item.quantity <= 0 || item.unitPrice <= 0;
+            }
+
+            return false;
+        });
     };
 
     const validateStep3 = (): boolean => {

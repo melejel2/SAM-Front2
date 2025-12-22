@@ -539,7 +539,7 @@ const ContractDatabaseDetails = () => {
                             <div className="flex justify-between">
                                 <span className="text-base-content/70">Retention:</span>
                                 <span className="text-base-content">
-                                    {contractData.holdBack || '5%'}
+                                    {contractData.holdWarranty ? `${contractData.holdWarranty}%` : '0%'}
                                 </span>
                             </div>
                             <div className="flex justify-between">

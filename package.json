@@ -40,7 +40,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",
-        "@iconify-json/lucide": "^1.2.81",
+        "@iconify-json/lucide": "^1.2.82",
         "@iconify/tailwind": "^1.2.0",
         "@tailwindcss/vite": "^4.1.18",
         "@trivago/prettier-plugin-sort-imports": "^6.0.0",

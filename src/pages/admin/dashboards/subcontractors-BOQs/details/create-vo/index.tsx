@@ -207,7 +207,7 @@ const CreateContractVOContent: React.FC = () => {
                                             toaster.error("Please fill in all required VO information and select at least one building");
                                             break;
                                         case 2:
-                                            toaster.error("Please add at least one VO line item");
+                                            toaster.error("Please add at least one VO line item. Items with units must have quantity and unit price greater than 0.");
                                             break;
                                         default:
                                             toaster.error("Please complete all required fields");
