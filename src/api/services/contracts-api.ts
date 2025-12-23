@@ -664,6 +664,28 @@ export const exportTerminatedContractFile = async (id: number, token: string): P
 };
 
 /**
+ * Export final discharge document as PDF
+ * @param id Contract dataset ID
+ * @param token Authentication token
+ */
+export const exportFinalDischargeFile = async (id: number, token: string): Promise<Blob> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/ExportFinalFile/${id}`,
+            method: "GET",
+            token,
+            responseType: "blob",
+            timeout: 180000, // 3 minutes for PDF conversion
+        });
+
+        return response as Blob;
+    } catch (error) {
+        console.error("Export final discharge PDF API Error:", error);
+        throw error;
+    }
+};
+
+/**
  * Preview a contract file
  * @param id Contract dataset ID
  * @param type Contract type

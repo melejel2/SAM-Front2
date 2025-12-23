@@ -2,7 +2,14 @@ import { Icon } from "@iconify/react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 
 import apiRequest from "@/api/api";
-import { ContractType, generateFinalContract, terminateContract } from "@/api/services/contracts-api";
+import {
+    ContractType,
+    generateFinalContract,
+    terminateContract,
+    exportTerminatedContractFile,
+    exportFinalDischargeFile,
+    previewContractFile,
+} from "@/api/services/contracts-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
@@ -28,21 +35,6 @@ interface TerminatedContract {
     hasRGFile?: boolean;
 }
 
-const PreviewContractFile = async (contractId: number, type: ContractType, token: string) => {
-    try {
-        const response = await apiRequest({
-            endpoint: `ContractsDatasets/PreviewContractFile?id=${contractId}&type=${type}`,
-            method: "GET",
-            responseType: "blob",
-            token: token ?? "",
-            timeout: 180000, // 3 minutes for PDF conversion
-        });
-        return { success: true, blob: response };
-    } catch (error) {
-        console.error("Error previewing contract file:", error);
-        return { success: false, error };
-    }
-};
 
 interface TerminatedContractsProps {
     selectedProject: string;
@@ -179,14 +171,19 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
         }
 
         setLoading(type);
+        // Show progress toast for long PDF operations
+        if (type !== ContractType.contract) {
+            toaster.info("Generating preview... This may take a moment for large documents.");
+        }
+
         try {
-            const result = await PreviewContractFile(selectedContractId, type, token ?? "");
-            if (result.success && result.blob) {
+            const blob = await previewContractFile(selectedContractId, type, token ?? "");
+            if (blob && blob.size > 0) {
                 const contractNumber = selectedContract?.contractNumber || `Contract_${selectedContractId}`;
                 const typeName = ContractType[type];
 
                 setPreviewData({
-                    blob: result.blob,
+                    blob: blob,
                     fileName: `${contractNumber}_${typeName}.pdf`,
                     type: typeName,
                 });
@@ -196,7 +193,8 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                 toaster.error(errorMessage);
             }
         } catch (error) {
-            toaster.error("Failed to generate preview: " + (error as Error).message);
+            const errorMessage = getDocumentNotFoundMessage(type);
+            toaster.error(errorMessage);
         } finally {
             setLoading(null);
         }
@@ -224,19 +222,14 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
         }
 
         try {
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportTerminateFile/${selectedContractId}`,
-                method: "GET",
-                responseType: "blob",
-                token: token ?? "",
-            });
+            const blob = await exportTerminatedContractFile(selectedContractId, token ?? "");
 
-            if (response instanceof Blob) {
+            if (blob && blob.size > 0) {
                 const contractNumber = selectedContract?.contractNumber || selectedContractId;
                 const projectName = selectedContract?.projectName || "document";
                 const fileName = `Termination_${contractNumber}_${projectName}.docx`;
 
-                const url = window.URL.createObjectURL(response);
+                const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = fileName;
@@ -249,11 +242,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                 toaster.error("Failed to download termination letter");
             }
         } catch (error: any) {
-            if (error?.response?.status === 404) {
-                toaster.error("Termination letter not found. Please regenerate it first.");
-            } else {
-                toaster.error("Failed to download termination letter");
-            }
+            toaster.error("Termination letter not found. Please regenerate it first.");
         }
     };
 
@@ -264,21 +253,17 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
             return;
         }
 
-        try {
-            const response = await apiRequest({
-                endpoint: `ContractsDatasets/ExportFinalFile/${selectedContractId}`,
-                method: "GET",
-                responseType: "blob",
-                token: token ?? "",
-                timeout: 180000,
-            });
+        toaster.info("Exporting final discharge... This may take a moment.");
 
-            if (response instanceof Blob) {
+        try {
+            const blob = await exportFinalDischargeFile(selectedContractId, token ?? "");
+
+            if (blob && blob.size > 0) {
                 const contractNumber = selectedContract?.contractNumber || selectedContractId;
                 const projectName = selectedContract?.projectName || "document";
                 const fileName = `FinalDischarge_${contractNumber}_${projectName}.pdf`;
 
-                const url = window.URL.createObjectURL(response);
+                const url = window.URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = fileName;
@@ -291,11 +276,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                 toaster.error("Failed to download final discharge document");
             }
         } catch (error: any) {
-            if (error?.response?.status === 404) {
-                toaster.error("Final discharge document not found. Please generate it first.");
-            } else {
-                toaster.error("Failed to download final discharge document");
-            }
+            toaster.error("Final discharge document not found. Please generate it first.");
         }
     };
 
