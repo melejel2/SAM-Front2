@@ -201,7 +201,9 @@ const IPCsDatabase = () => {
     const handleDeleteIpc = async (row: any) => {
         const confirmDelete = window.confirm(
             `Are you sure you want to delete IPC #${row.number}?\n\n` +
-            `This action cannot be undone.`
+            `Contract: ${row.contract}\n` +
+            `This action will rollback all BOQ quantities and deductions.\n\n` +
+            `Note: Only the last IPC of a contract can be deleted.`
         );
 
         if (!confirmDelete) return;
@@ -215,7 +217,9 @@ const IPCsDatabase = () => {
                 // Refresh the table to show updated list
                 await getIPCs();
             } else {
-                toaster.error(result.error?.message || "Failed to delete IPC");
+                // Show backend validation error (e.g., "Only the last IPC can be deleted")
+                const errorMessage = result.error?.message || result.message || "Failed to delete IPC";
+                toaster.error(errorMessage);
             }
         } catch (error) {
             console.error("Error deleting IPC:", error);
@@ -373,14 +377,16 @@ const IPCsDatabase = () => {
                                     const statusLower = (row._statusRaw || row.status || '').toLowerCase();
                                     const isEditable = statusLower.includes('editable') && !row.isGenerated;
                                     const isIssued = statusLower === 'issued';
+                                    // Only allow deleting the last IPC for a contract (highest number)
+                                    const canDelete = isEditable && row.isLastForContract;
 
                                     return {
                                         // Show Generate button only for Editable IPCs (not yet generated)
                                         generateAction: isEditable,
                                         // Hide Edit button for Issued IPCs
                                         editAction: !isIssued,
-                                        // Show Delete button only for Editable IPCs (not yet generated)
-                                        deleteAction: isEditable,
+                                        // Show Delete button only for last Editable IPC of a contract
+                                        deleteAction: canDelete,
                                     };
                                 }}
                                 title={"IPC"}

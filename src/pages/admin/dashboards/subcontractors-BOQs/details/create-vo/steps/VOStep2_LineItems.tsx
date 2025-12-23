@@ -259,9 +259,9 @@ export const VOStep2_LineItems: React.FC = () => {
             toaster.error("No items to import");
             return;
         }
-        const newVOItems: VOLineItem[] = importedItems.map((item, index) => ({
+        const newVOItems: VOLineItem[] = importedItems.map((item) => ({
             id: 0,
-            no: `VO-${formData.lineItems.length + index + 1}`,
+            no: item.no || "",
             description: item.key || item.description || "",
             costCode: item.costCode || "",
             costCodeId: item.costCodeId || undefined,

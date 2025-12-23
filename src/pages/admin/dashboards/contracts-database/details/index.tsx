@@ -465,7 +465,13 @@ const ContractDatabaseDetails = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-base-content/70">Status:</span>
-                                <span className="badge badge-sm badge-success">
+                                <span className={`badge badge-sm ${
+                                    (contractData.contractDatasetStatus || navigationData?.status) === "Terminated"
+                                        ? "badge-error"
+                                        : (contractData.contractDatasetStatus || navigationData?.status) === "Editable"
+                                            ? "badge-warning"
+                                            : "badge-success"
+                                }`}>
                                     {contractData.contractDatasetStatus || navigationData?.status || 'Active'}
                                 </span>
                             </div>

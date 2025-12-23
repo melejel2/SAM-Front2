@@ -734,7 +734,7 @@ export const Step3_Deductions: React.FC = memo(() => {
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span>{formatCurrency(calc.previousDeductionAmount)}</span>
-                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && labor.id && (
+                                                    {canCorrectPreviousValues && labor.id && (
                                                         <button
                                                             type="button"
                                                             onClick={() => openCorrectionModal(
@@ -885,7 +885,7 @@ export const Step3_Deductions: React.FC = memo(() => {
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span>{formatCurrency(calc.previousDeductionAmount)}</span>
-                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && material.id && (
+                                                    {canCorrectPreviousValues && material.id && (
                                                         <button
                                                             type="button"
                                                             onClick={() => openCorrectionModal(
@@ -1037,7 +1037,7 @@ export const Step3_Deductions: React.FC = memo(() => {
                                             <td className="text-right text-xs text-blue-600 dark:text-blue-400" title={`Previous: ${calc.previousDeductionPercent.toFixed(1)}%`}>
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span>{formatCurrency(calc.previousDeductionAmount)}</span>
-                                                    {canCorrectPreviousValues && calc.previousDeductionAmount > 0 && machine.id && (
+                                                    {canCorrectPreviousValues && machine.id && (
                                                         <button
                                                             type="button"
                                                             onClick={() => openCorrectionModal(

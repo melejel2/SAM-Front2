@@ -129,8 +129,25 @@ const useIPCsDatabase = () => {
                     type: getTypeText(ipc.type || "") as any,
                 }));
 
+                // Compute which IPC is the last (highest number) for each contract
+                // This is used to restrict delete action to only the last IPC
+                const maxNumberByContract = new Map<number, number>();
+                formattedData.forEach((ipc: any) => {
+                    const contractId = ipc.contractsDatasetId;
+                    const currentMax = maxNumberByContract.get(contractId) ?? 0;
+                    if (ipc.number > currentMax) {
+                        maxNumberByContract.set(contractId, ipc.number);
+                    }
+                });
+
+                // Mark each IPC with isLastForContract flag
+                const dataWithLastFlag = formattedData.map((ipc: any) => ({
+                    ...ipc,
+                    isLastForContract: ipc.number === maxNumberByContract.get(ipc.contractsDatasetId),
+                }));
+
                 // Reverse the order to show newest first
-                setTableData(formattedData.reverse() as any);
+                setTableData(dataWithLastFlag.reverse() as any);
             } else {
                 console.error("Failed to fetch IPCs:", response.error);
                 setTableData([]);

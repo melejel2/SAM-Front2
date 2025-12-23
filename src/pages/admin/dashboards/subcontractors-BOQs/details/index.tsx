@@ -890,18 +890,18 @@ const ContractDetails = () => {
                                 });
                                 setShowTerminatedPreviewModal(true);
                             }}
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                            <span className="iconify lucide--file-text size-4"></span>
-                            <span>Preview Files</span>
+                            className="btn btn-sm bg-red-600 text-white hover:bg-red-700 flex items-center gap-2">
+                            <span className="iconify lucide--file-x size-4"></span>
+                            <span>Termination Documents</span>
                         </button>
                     )}
 
-                    {/* Terminated Contracts Preview Modal */}
+                    {/* Terminated Contracts Documents Modal */}
                     {showTerminatedPreviewModal && terminatedPreviewData && (
                         <dialog className="modal modal-open">
                             <div className="modal-box h-[90vh] max-w-7xl">
                                 <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-lg font-bold">Terminated Contract Files</h3>
+                                    <h3 className="text-lg font-bold">Termination Documents - {terminatedPreviewData.contractNumber}</h3>
                                     <button
                                         onClick={() => setShowTerminatedPreviewModal(false)}
                                         className="btn btn-ghost btn-sm">
@@ -1020,7 +1020,13 @@ const ContractDetails = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-base-content/70">Status:</span>
-                                <span className="badge badge-sm badge-success">
+                                <span className={`badge badge-sm ${
+                                    contractData.contractDatasetStatus === "Terminated"
+                                        ? "badge-error"
+                                        : contractData.contractDatasetStatus === "Editable"
+                                            ? "badge-warning"
+                                            : "badge-success"
+                                }`}>
                                     {contractData.contractDatasetStatus || "Active"}
                                 </span>
                             </div>
