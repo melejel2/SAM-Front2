@@ -68,8 +68,6 @@ export interface LaborsVM {
   previousDeduction: number;
   actualDeduction: number;
   laborType?: string;
-  // Additional properties used in Step3_Deductions
-  deductionPercentage?: number;
   workerType?: string;
   previousAmount?: number;
 }
@@ -92,8 +90,6 @@ export interface MachinesVM {
   machineCode_Id?: number;
   precedentAmountOld: number;
   machineAcronym?: string;
-  // Additional properties used in Step3_Deductions
-  deductionPercentage?: number;
   previousAmount?: number;
 }
 
@@ -126,8 +122,6 @@ export interface MaterialsVM {
   po_Id?: number;
   precedentAmountOld: number;
   cumulAmount?: number; // New field for cumulative amount
-  // Additional properties used in Step3_Deductions
-  deductionPercentage?: number;
   previousAmount?: number;
 }
 
