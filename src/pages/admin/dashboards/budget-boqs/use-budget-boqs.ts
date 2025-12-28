@@ -1,7 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
+
+// Cache duration constant - defined outside hook for stable reference
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
 interface Project {
     id: number;
@@ -33,16 +36,16 @@ const useBudgetBOQs = () => {
     // Cache for projects and buildings to avoid redundant API calls
     const projectsCacheRef = useRef<{ data: Project[] | null; timestamp: number }>({ data: null, timestamp: 0 });
     const buildingsCacheRef = useRef<Map<number, { data: Building[]; timestamp: number }>>(new Map());
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-    const columns = {
+    // Memoize static column definitions to prevent recreation on every render
+    const columns = useMemo(() => ({
         code: "Code",
         name: "Name",
         acronym: "Acronym",
         city: "City",
-    };
+    }), []);
 
-    const inputFields = [
+    const inputFields = useMemo(() => [
         {
             name: "code",
             label: "Code",
@@ -67,7 +70,7 @@ const useBudgetBOQs = () => {
             type: "text",
             required: true,
         },
-    ];
+    ], []);
 
     const getProjectsList = useCallback(async (forceRefresh = false) => {
         // Check cache first
@@ -103,7 +106,7 @@ const useBudgetBOQs = () => {
         } finally {
             setLoading(false);
         }
-    }, [token, CACHE_DURATION]);
+    }, [token]);
 
     const getBuildingsList = useCallback(async (projectId: number, forceRefresh = false) => {
         // Check cache first
@@ -134,7 +137,7 @@ const useBudgetBOQs = () => {
             console.error("Error fetching buildings:", error);
             setBuildings([]);
         }
-    }, [token, CACHE_DURATION]);
+    }, [token]);
 
     const createProject = useCallback(async (projectData: Omit<Project, "id">) => {
         try {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import { Button, Select, SelectOption } from "@/components/daisyui";
 import useCurrencies from "@/pages/admin/adminTools/currencies/use-currencies";
@@ -15,7 +15,7 @@ interface VOLineItemsStepProps {
     showControls?: boolean;
 }
 
-const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({ 
+const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
     buildingId,
     voLevel = 1,
     buildings = [],
@@ -30,6 +30,33 @@ const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
         getCurrencies();
         getTrades();
     }, [getCurrencies, getTrades]);
+
+    // Memoize currency options to prevent recreation on every render
+    const currencyOptions = useMemo(() =>
+        (currencies ?? []).map((currency) => ({
+            id: currency.id,
+            label: currency.currencies
+        })),
+        [currencies]
+    );
+
+    // Memoize trade options to prevent recreation on every render
+    const tradeOptions = useMemo(() =>
+        sheets.map((sheet) => ({
+            id: sheet.id,
+            label: sheet.trade
+        })),
+        [sheets]
+    );
+
+    // Memoize building options to prevent recreation on every render
+    const buildingOptions = useMemo(() =>
+        buildings.map((building) => ({
+            id: building.id,
+            label: building.name
+        })),
+        [buildings]
+    );
 
     return (
         <div className="flex h-full flex-col bg-base-100">
@@ -58,9 +85,9 @@ const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
                                     }
                                 }}>
                                 <>
-                                    {sheets.map((sheet) => (
-                                        <SelectOption key={sheet.id} value={sheet.id} className="bg-base-100">
-                                            {sheet.trade}
+                                    {tradeOptions.map((option) => (
+                                        <SelectOption key={option.id} value={option.id} className="bg-base-100">
+                                            {option.label}
                                         </SelectOption>
                                     ))}
                                 </>
@@ -88,9 +115,9 @@ const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
                                     }
                                 }}>
                                 <>
-                                    {(currencies ?? []).map((currency) => (
-                                        <SelectOption key={currency.id} value={currency.id} className="bg-base-100">
-                                            {currency.currencies}
+                                    {currencyOptions.map((option) => (
+                                        <SelectOption key={option.id} value={option.id} className="bg-base-100">
+                                            {option.label}
                                         </SelectOption>
                                     ))}
                                 </>
@@ -111,9 +138,9 @@ const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
                                     }
                                 }}>
                                 <>
-                                    {buildings.map((building) => (
-                                        <SelectOption key={building.id} value={building.id} className="bg-base-100">
-                                            {building.name}
+                                    {buildingOptions.map((option) => (
+                                        <SelectOption key={option.id} value={option.id} className="bg-base-100">
+                                            {option.label}
                                         </SelectOption>
                                     ))}
                                 </>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import { useAuth } from "@/contexts/auth";
@@ -10,9 +10,19 @@ import { IPCStepRenderer } from "../new/components/IPCStepRenderer";
 import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 import PenaltyForm from "../components/PenaltyForm";
 
+interface NavigationState {
+    returnTo?: string;
+    returnTab?: string;
+}
+
 const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { toaster } = useToast();
+
+    // Get return navigation from state
+    const navigationState = location.state as NavigationState | null;
+    const backDestination = navigationState?.returnTo ?? "/dashboard/IPCs-database";
 
     const {
         formData,
@@ -55,7 +65,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate("/dashboard/IPCs-database");
+        navigate(backDestination);
     };
 
     const handleCancelBack = () => {
@@ -69,8 +79,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
             if (result.success) {
                 toaster.success("IPC updated successfully");
                 setHasUnsavedChanges(false);
-                // Navigate back to IPC list after successful save
-                navigate("/dashboard/IPCs-database");
+                navigate(backDestination);
             } else {
                 toaster.error(result.error || "Failed to update IPC");
             }
@@ -150,7 +159,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                         currentStep === 2 && hasUnsavedChanges
                             ? () => setShowBackConfirmDialog(true)
                             : currentStep === 2
-                              ? () => navigate("/dashboard/IPCs-database")
+                              ? () => navigate(backDestination)
                               : goToPreviousStep
                     }
                     className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">

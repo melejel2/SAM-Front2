@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import SAMTable from "@/components/Table";
@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import useTrades from "./use-trades";
 
-const Trades = () => {
+const Trades = memo(() => {
     const { columns, tableData, inputFields, getTrades } = useTrades();
     const navigate = useNavigate();
     const { canManageTrades } = usePermissions();
@@ -16,9 +16,9 @@ const Trades = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleBackToAdminTools = () => {
+    const handleBackToAdminTools = useCallback(() => {
         navigate('/admin-tools');
-    };
+    }, [navigate]);
 
     return (
         <div style={{
@@ -58,10 +58,15 @@ const Trades = () => {
                     createEndPoint="Sheets/AddSheet"
                     deleteEndPoint="Sheets/DeleteSheet"
                     onSuccess={getTrades}
+                    virtualized={true}
+                    rowHeight={40}
+                    overscan={5}
                 />
             </div>
         </div>
     );
-};
+});
+
+Trades.displayName = 'Trades';
 
 export default Trades;

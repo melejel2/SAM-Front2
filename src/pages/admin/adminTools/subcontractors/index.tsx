@@ -62,6 +62,9 @@ const Subcontractors = () => {
                         createEndPoint="Subcontractors/CreateSubcontractor"
                         deleteEndPoint="Subcontractors/DeleteSubcontractor/{id}"
                         onSuccess={getSubcontractors}
+                        virtualized={true}
+                        rowHeight={40}
+                        overscan={5}
                     />
                 )}
             </div>

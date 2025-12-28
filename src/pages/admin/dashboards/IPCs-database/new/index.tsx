@@ -23,11 +23,21 @@ const NewIPCWizardContent: React.FC = () => {
         goToNextStep,
         goToPreviousStep,
         handleSubmit,
+        preselectionState,
     } = useIPCWizardContext();
+
+    // Determine the back navigation destination (contract details or IPC list)
+    const backDestination = preselectionState?.returnTo || "/dashboard/IPCs-database";
+
+    // Determine if we should skip step 1 (when coming from contract details)
+    const isFromContract = !!preselectionState?.skipStep1;
+
+    // Get the first step (Step 2 when pre-selected, Step 1 otherwise)
+    const firstStep = isFromContract ? 2 : 1;
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
-        navigate("/dashboard/IPCs-database");
+        navigate(backDestination);
     };
 
     const handleCancelBack = () => {
@@ -38,13 +48,13 @@ const NewIPCWizardContent: React.FC = () => {
         const result = await handleSubmit();
         if (result.success) {
             toaster.success("IPC created successfully");
-            navigate("/dashboard/IPCs-database");
+            navigate(backDestination);
         } else {
             toaster.error(result.error || "Failed to create IPC");
         }
     };
 
-    if (loading && currentStep === 1) {
+    if (loading && currentStep === firstStep) {
         return <Loader />;
     }
 
@@ -91,10 +101,10 @@ const NewIPCWizardContent: React.FC = () => {
             <div className="mb-6 flex items-center justify-between">
                 <button
                     onClick={
-                        currentStep === 1 && hasUnsavedChanges
+                        currentStep === firstStep && hasUnsavedChanges
                             ? () => setShowBackConfirmDialog(true)
-                            : currentStep === 1
-                              ? () => navigate("/dashboard/IPCs-database")
+                            : currentStep === firstStep
+                              ? () => navigate(backDestination)
                               : goToPreviousStep
                     }
                     className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">

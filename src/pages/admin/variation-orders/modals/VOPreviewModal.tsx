@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { VoDatasetBoqDetailsVM } from "@/types/variation-order";
 
@@ -12,6 +12,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
     const [activeTab, setActiveTab] = useState(0);
     const [expandedBuilding, setExpandedBuilding] = useState<number | null>(null);
 
+    // Reset state when modal opens with new data
     useEffect(() => {
         if (isOpen && voData) {
             setActiveTab(0);
@@ -19,19 +20,65 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
         }
     }, [isOpen, voData]);
 
+    // Memoized calculation for building totals - prevents recalculation on every render
+    const buildingTotals = useMemo(() => {
+        if (!voData?.buildings) return new Map<number, number>();
+
+        const totals = new Map<number, number>();
+        voData.buildings.forEach((building: any) => {
+            const total = building.contractVoes?.reduce((sum: number, vo: any) => {
+                return sum + (vo.totalPrice || 0);
+            }, 0) || 0;
+            totals.set(building.id, total);
+        });
+        return totals;
+    }, [voData?.buildings]);
+
+    // Memoized grand total calculation
+    const grandTotal = useMemo(() => {
+        if (!voData?.buildings) return 0;
+        let total = 0;
+        buildingTotals.forEach((value) => {
+            total += value;
+        });
+        return total;
+    }, [buildingTotals, voData?.buildings]);
+
+    // Memoized total items count
+    const totalItemsCount = useMemo(() => {
+        if (!voData?.buildings) return 0;
+        return voData.buildings.reduce((total: number, building: any) =>
+            total + (building.contractVoes?.length || 0), 0);
+    }, [voData?.buildings]);
+
+    // Memoized building data with percentages for summary tab
+    const buildingSummaryData = useMemo(() => {
+        if (!voData?.buildings) return [];
+
+        return voData.buildings.map((building: any) => {
+            const buildingTotal = buildingTotals.get(building.id) || 0;
+            const percentage = grandTotal > 0 ? (buildingTotal / grandTotal) * 100 : 0;
+            return {
+                id: building.id,
+                buildingName: building.buildingName,
+                itemCount: building.contractVoes?.length || 0,
+                total: buildingTotal,
+                percentage
+            };
+        });
+    }, [voData?.buildings, buildingTotals, grandTotal]);
+
+    // Callback to get building total (uses memoized map)
+    const getBuildingTotal = useCallback((buildingId: number) => {
+        return buildingTotals.get(buildingId) || 0;
+    }, [buildingTotals]);
+
+    // Toggle expanded building
+    const toggleBuildingExpanded = useCallback((buildingId: number) => {
+        setExpandedBuilding(prev => prev === buildingId ? null : buildingId);
+    }, []);
+
     if (!isOpen || !voData) return null;
-
-    const calculateBuildingTotal = (building: any) => {
-        return building.contractVoes?.reduce((total: number, vo: any) => {
-            return total + (vo.totalPrice || 0);
-        }, 0) || 0;
-    };
-
-    const calculateGrandTotal = () => {
-        return voData.buildings?.reduce((total: number, building: any) => {
-            return total + calculateBuildingTotal(building);
-        }, 0) || 0;
-    };
 
     return (
         <div className="modal modal-open">
@@ -96,7 +143,7 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                     <div className="mt-4 pt-4 border-t border-base-300">
                         <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold">Total Amount:</span>
-                            <span className="text-xl font-bold text-primary">{formatCurrency(calculateGrandTotal(), { decimals: 'never' })}</span>
+                            <span className="text-xl font-bold text-primary">{formatCurrency(grandTotal, { decimals: 'never' })}</span>
                         </div>
                     </div>
                 </div>
@@ -119,15 +166,15 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                     </button>
                 </div>
 
-                {/* Tab Content */}
+                {/* Tab Content - uses ternary for efficient conditional rendering */}
                 <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
-                    {activeTab === 0 && (
+                    {activeTab === 0 ? (
                         <div className="space-y-4">
                             {voData.buildings?.map((building) => (
                                 <div key={building.id} className="card bg-base-100 border border-base-300">
-                                    <div 
+                                    <div
                                         className="card-header p-4 bg-base-200/50 cursor-pointer flex items-center justify-between"
-                                        onClick={() => setExpandedBuilding(expandedBuilding === building.id ? null : building.id)}
+                                        onClick={() => toggleBuildingExpanded(building.id)}
                                     >
                                         <div className="flex items-center gap-3">
                                             <span className={`iconify lucide--chevron-${expandedBuilding === building.id ? 'down' : 'right'} size-4`}></span>
@@ -138,10 +185,10 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-primary">{formatCurrency(calculateBuildingTotal(building), { decimals: 'never' })}</p>
+                                            <p className="font-bold text-primary">{formatCurrency(getBuildingTotal(building.id), { decimals: 'never' })}</p>
                                         </div>
                                     </div>
-                                    
+
                                     {expandedBuilding === building.id && building.contractVoes && (
                                         <div className="card-body p-0">
                                             <div className="overflow-x-auto">
@@ -181,11 +228,9 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                 </div>
                             ))}
                         </div>
-                    )}
-
-                    {activeTab === 1 && (
+                    ) : (
                         <div className="space-y-6">
-                            {/* Summary Statistics */}
+                            {/* Summary Statistics - uses memoized values */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="stat bg-base-200 rounded-lg">
                                     <div className="stat-figure text-primary">
@@ -194,27 +239,25 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                     <div className="stat-title">Buildings</div>
                                     <div className="stat-value text-primary">{voData.buildings?.length || 0}</div>
                                 </div>
-                                
+
                                 <div className="stat bg-base-200 rounded-lg">
                                     <div className="stat-figure text-secondary">
                                         <span className="iconify lucide--list size-8"></span>
                                     </div>
                                     <div className="stat-title">Total Items</div>
-                                    <div className="stat-value text-secondary">
-                                        {voData.buildings?.reduce((total, building) => total + (building.contractVoes?.length || 0), 0) || 0}
-                                    </div>
+                                    <div className="stat-value text-secondary">{totalItemsCount}</div>
                                 </div>
-                                
+
                                 <div className="stat bg-base-200 rounded-lg">
                                     <div className="stat-figure text-success">
                                         <span className="iconify lucide--dollar-sign size-8"></span>
                                     </div>
                                     <div className="stat-title">Total Value</div>
-                                    <div className="stat-value text-success">{formatCurrency(calculateGrandTotal(), { decimals: 'never' })}</div>
+                                    <div className="stat-value text-success">{formatCurrency(grandTotal, { decimals: 'never' })}</div>
                                 </div>
                             </div>
 
-                            {/* Building Summary */}
+                            {/* Building Summary - uses memoized buildingSummaryData */}
                             <div className="card bg-base-100 border border-base-300">
                                 <div className="card-header p-4 bg-base-200/50">
                                     <h4 className="font-semibold flex items-center gap-2">
@@ -234,30 +277,24 @@ const VOPreviewModal = ({ isOpen, onClose, voData }: VOPreviewModalProps) => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {voData.buildings?.map((building) => {
-                                                    const buildingTotal = calculateBuildingTotal(building);
-                                                    const grandTotal = calculateGrandTotal();
-                                                    const percentage = grandTotal > 0 ? (buildingTotal / grandTotal) * 100 : 0;
-                                                    
-                                                    return (
-                                                        <tr key={building.id} className="hover">
-                                                            <td className="font-medium">{building.buildingName}</td>
-                                                            <td className="text-right">{building.contractVoes?.length || 0}</td>
-                                                            <td className="text-right font-semibold">{formatCurrency(buildingTotal, { decimals: 'never' })}</td>
-                                                            <td className="text-right">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-16 bg-base-300 rounded-full h-2">
-                                                                        <div 
-                                                                            className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                                            style={{ width: `${percentage}%` }}
-                                                                        ></div>
-                                                                    </div>
-                                                                    <span className="text-sm">{percentage.toFixed(1)}%</span>
+                                                {buildingSummaryData.map((building) => (
+                                                    <tr key={building.id} className="hover">
+                                                        <td className="font-medium">{building.buildingName}</td>
+                                                        <td className="text-right">{building.itemCount}</td>
+                                                        <td className="text-right font-semibold">{formatCurrency(building.total, { decimals: 'never' })}</td>
+                                                        <td className="text-right">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-16 bg-base-300 rounded-full h-2">
+                                                                    <div
+                                                                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                                        style={{ width: `${building.percentage}%` }}
+                                                                    ></div>
                                                                 </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
+                                                                <span className="text-sm">{building.percentage.toFixed(1)}%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>

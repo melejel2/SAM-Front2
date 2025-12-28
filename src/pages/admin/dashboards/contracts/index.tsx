@@ -5,8 +5,6 @@ import { Icon } from "@iconify/react";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 
-import useToast from "@/hooks/use-toast";
-
 import useContractManagement from "./use-contract-management";
 
 // Import icons
@@ -22,7 +20,6 @@ type TabType = 'drafts' | 'active' | 'terminated';
 const ContractsManagement = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { toaster } = useToast();
 
     const {
         columns,
@@ -33,13 +30,9 @@ const ContractsManagement = memo(() => {
         getDraftsContracts,
         getActiveContracts,
         getTerminatedContracts,
-        deleteContract,
         generateContract,
         terminateContract,
         generateFinalContract,
-        exportContractDocument,
-        exportContractWord,
-        exportTerminatedContract,
     } = useContractManagement();
 
     const [activeTab, setActiveTab] = useState<TabType>('drafts');
@@ -52,35 +45,42 @@ const ContractsManagement = memo(() => {
     const [showFinalDischargeModal, setShowFinalDischargeModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
-    const [exportingWord, setExportingWord] = useState(false);
 
 
-    // Load all contracts on mount
+    // Track which tabs have been loaded
+    const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set());
+
+    // Load only active tab's data - lazy loading to reduce memory usage
     useEffect(() => {
-        const loadAllContracts = async () => {
-            await Promise.all([
-                getDraftsContracts(),
-                getActiveContracts(),
-                getTerminatedContracts(),
-            ]);
-        };
-        loadAllContracts();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname]);
+        const loadActiveTabData = async () => {
+            // Only load if not already loaded
+            if (loadedTabs.has(activeTab)) return;
 
-    // Get current tab data
-    const getCurrentTabData = () => {
-        switch (activeTab) {
-            case 'drafts':
-                return draftsData;
-            case 'active':
-                return activeData;
-            case 'terminated':
-                return terminatedData;
-            default:
-                return [];
+            switch (activeTab) {
+                case 'drafts':
+                    await getDraftsContracts();
+                    break;
+                case 'active':
+                    await getActiveContracts();
+                    break;
+                case 'terminated':
+                    await getTerminatedContracts();
+                    break;
+            }
+            setLoadedTabs(prev => new Set(prev).add(activeTab));
+        };
+        loadActiveTabData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    // Reload current tab when navigating back to page
+    useEffect(() => {
+        if (location.pathname.includes('/contracts')) {
+            // Force reload current tab
+            setLoadedTabs(new Set());
         }
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.key]);
 
     const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
@@ -144,23 +144,6 @@ const ContractsManagement = memo(() => {
         }
     }, [activeTab, navigate]);
 
-    // Handle Edit action (only for drafts)
-    const handleEdit = useCallback((row: any) => {
-        const contractNumber = row.contractNumber || row.id;
-        navigate(`/dashboard/subcontractors-boqs/edit/${contractNumber}`, {
-            state: {
-                contractId: row.id,
-                contractNumber: row.contractNumber
-            }
-        });
-    }, [navigate]);
-
-    // Handle Generate action (only for drafts)
-    const handleGenerateClick = useCallback((row: any) => {
-        setContractToGenerate(row);
-        setShowGenerateModal(true);
-    }, []);
-
     const handleGenerateConfirm = useCallback(async () => {
         if (!contractToGenerate) return;
 
@@ -178,84 +161,6 @@ const ContractsManagement = memo(() => {
         }
     }, [contractToGenerate, generateContract]);
 
-    // Handle Delete action (only for drafts)
-    const handleDelete = useCallback(async (row: any) => {
-        // SAMTable handles delete confirmation modal automatically
-        await deleteContract(row.id);
-    }, [deleteContract]);
-
-    // Handle Export Word action (for active and terminated contracts)
-    const handleExportTerminated = useCallback(async (row: any) => {
-        setExportingWord(true);
-        try {
-            const result = await exportTerminatedContract(Number(row.id)); // Use the exposed exportTerminatedContract from the hook
-            if (result.success && result.blob) {
-                const contractRef = row.contractNumber || row.id;
-                const fileName = `contract-${contractRef}-${row.projectName || 'document'}.docx`; // .docx for Word
-                const url = window.URL.createObjectURL(result.blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                toaster.error("Failed to export Word document.");
-            }
-        } catch (error) {
-            console.error("Export Word error:", error);
-            toaster.error("An error occurred while exporting the Word document.");
-        } finally {
-            setExportingWord(false);
-        }
-    }, [exportTerminatedContract, toaster]);
-
-    const handleExportWordFile = useCallback(async (row: any) => {
-        setExportingWord(true);
-        try {
-            const result = await exportContractWord(Number(row.id)); // Use the exposed exportContractWord from the hook
-            if (result.success && result.blob) {
-                const contractRef = row.contractNumber || row.id;
-                const fileName = `contract-${contractRef}-${row.projectName || 'document'}.docx`; // .docx for Word
-                const url = window.URL.createObjectURL(result.blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                toaster.error("Failed to export Word document.");
-            }
-        } catch (error) {
-            console.error("Export Word error:", error);
-            toaster.error("An error occurred while exporting the Word document.");
-        } finally {
-            setExportingWord(false);
-        }
-    }, [exportContractWord, toaster]);
-
-    // Handle Create VO action (only for active contracts)
-    const handleCreateVO = useCallback((row: any) => {
-        const contractNumber = row.contractNumber || row.id;
-        navigate(`/dashboard/contracts-database/details/${contractNumber}/create-vo`, {
-            state: {
-                contractId: row.id,
-                contractNumber: row.contractNumber,
-                projectName: row.projectName,
-                subcontractorName: row.subcontractorName,
-            }
-        });
-    }, [navigate]);
-
-    // Handle Terminate action (only for active contracts)
-    const handleTerminateClick = useCallback((row: any) => {
-        setContractToTerminate(row);
-        setShowTerminateModal(true);
-    }, []);
-
     const handleTerminateConfirm = useCallback(async () => {
         if (!contractToTerminate) return;
 
@@ -272,12 +177,6 @@ const ContractsManagement = memo(() => {
             setTerminating(false);
         }
     }, [contractToTerminate, terminateContract]);
-
-    // Handle Generate Final Discharge action (only for terminated contracts)
-    const handleGenerateFinalClick = useCallback((row: any) => {
-        setContractToGenerateFinal(row);
-        setShowFinalDischargeModal(true);
-    }, []);
 
     const handleGenerateFinalConfirm = useCallback(async () => {
         if (!contractToGenerateFinal) return;
@@ -365,8 +264,8 @@ const ContractsManagement = memo(() => {
                     <Loader />
                 ) : (
                     <>
-                        {/* Drafts Tab */}
-                        {activeTab === 'drafts' && (
+                        {/* Render ONLY active tab - reduces memory by not mounting all 3 tables */}
+                        {activeTab === 'drafts' ? (
                             <SAMTable
                                 columns={columns}
                                 tableData={draftsData}
@@ -382,11 +281,11 @@ const ContractsManagement = memo(() => {
                                     }
                                 }}
                                 dynamicDialog={false}
+                                virtualized={true}
+                                rowHeight={40}
+                                overscan={5}
                             />
-                        )}
-
-                        {/* Active Tab */}
-                        {activeTab === 'active' && (
+                        ) : activeTab === 'active' ? (
                             <SAMTable
                                 columns={columns}
                                 tableData={activeData}
@@ -402,11 +301,11 @@ const ContractsManagement = memo(() => {
                                     }
                                 }}
                                 dynamicDialog={false}
+                                virtualized={true}
+                                rowHeight={40}
+                                overscan={5}
                             />
-                        )}
-
-                        {/* Terminated Tab */}
-                        {activeTab === 'terminated' && (
+                        ) : (
                             <SAMTable
                                 columns={columns}
                                 tableData={terminatedData}
@@ -422,6 +321,9 @@ const ContractsManagement = memo(() => {
                                     }
                                 }}
                                 dynamicDialog={false}
+                                virtualized={true}
+                                rowHeight={40}
+                                overscan={5}
                             />
                         )}
                     </>

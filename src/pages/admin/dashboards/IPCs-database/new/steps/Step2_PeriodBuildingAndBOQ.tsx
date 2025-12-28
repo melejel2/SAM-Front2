@@ -672,32 +672,14 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
     // ==================== End Excel Functions ====================
 
-    // In Edit mode, selectedContract might not be set, but formData has the contract data
-    const isEditMode = (formData as any).id && (formData as any).id > 0;
-    if (!selectedContract && !isEditMode) {
-        return (
-            <div className="text-center py-12">
-                <span className="iconify lucide--building text-base-content/30 size-16 mb-4"></span>
-                <h3 className="text-lg font-semibold text-base-content mb-2">No Contract Selected</h3>
-                <p className="text-sm text-base-content/70">Please go back and select a contract first</p>
-            </div>
-        );
-    }
+    // Derived state - must be before useMemo hooks for consistency
+    const safeBuildings = useMemo(() => formData.buildings || [], [formData.buildings]);
+    const safeVOs = useMemo(() => (formData.vos || []) as Vos[], [formData.vos]);
+    const activeBuilding = useMemo(() => safeBuildings.find(b => b.id === activeBuildingId), [safeBuildings, activeBuildingId]);
+    const activeVO = useMemo(() => safeVOs.find(v => v.id === activeVOId), [safeVOs, activeVOId]);
+    const activeVOBuilding = useMemo(() => activeVO?.buildings.find(b => b.id === activeVOBuildingId), [activeVO, activeVOBuildingId]);
 
-    const safeBuildings = formData.buildings || [];
-    const safeVOs = (formData.vos || []) as Vos[];
-    const activeBuilding = safeBuildings.find(b => b.id === activeBuildingId);
-    const activeVO = safeVOs.find(v => v.id === activeVOId);
-    const activeVOBuilding = activeVO?.buildings.find(b => b.id === activeVOBuildingId);
-
-    // In Edit mode, get contract info from formData instead of selectedContract
-    const contractInfo = selectedContract || {
-        contractNumber: (formData as any).contract || 'N/A',
-        projectName: (formData as any).projectName || 'N/A',
-        subcontractorName: (formData as any).subcontractorName || 'N/A',
-    };
-
-    // Calculate totals for active building (memoized for performance)
+    // Calculate totals for active building (memoized for performance) - must be before early return
     const activeBuildingTotal = useMemo(() => {
         return activeBuilding
             ? (activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (boq.actualAmount || 0), 0)
@@ -747,6 +729,25 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             ? (activeVOBuilding.boqs || []).reduce((sum, boq) => sum + (((boq.precedQte || 0) + (boq.actualQte || 0)) * boq.unitPrice), 0)
             : 0;
     }, [activeVOBuilding]);
+
+    // In Edit mode, selectedContract might not be set, but formData has the contract data
+    const isEditMode = (formData as any).id && (formData as any).id > 0;
+    if (!selectedContract && !isEditMode) {
+        return (
+            <div className="text-center py-12">
+                <span className="iconify lucide--building text-base-content/30 size-16 mb-4"></span>
+                <h3 className="text-lg font-semibold text-base-content mb-2">No Contract Selected</h3>
+                <p className="text-sm text-base-content/70">Please go back and select a contract first</p>
+            </div>
+        );
+    }
+
+    // In Edit mode, get contract info from formData instead of selectedContract
+    const contractInfo = selectedContract || {
+        contractNumber: (formData as any).contract || 'N/A',
+        projectName: (formData as any).projectName || 'N/A',
+        subcontractorName: (formData as any).subcontractorName || 'N/A',
+    };
 
     return (
         <div className="space-y-4">
@@ -1059,25 +1060,25 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                     );
                                 })}
                             </tbody>
-                            {/* Totals Row */}
+                            {/* Totals Row - uses memoized values to avoid recalculation */}
                             <tfoot className="bg-base-200 border-t-2 border-base-300">
                                 <tr className="font-semibold">
                                     <td colSpan={5} className="text-right">Totals:</td>
                                     <td className="text-right">
-                                        {formatCurrency((activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (boq.qte * boq.unitPrice), 0))}
+                                        {formatCurrency(contractBOQContractTotal)}
                                     </td>
                                     <td className="text-right"></td>
                                     <td className="text-right bg-green-50/50 dark:bg-green-900/10"></td>
                                     <td className="text-right bg-purple-50/50 dark:bg-purple-900/10"></td>
                                     <td className="text-right bg-blue-50/50 dark:bg-blue-900/10"></td>
                                     <td className="text-right">
-                                        {formatCurrency((activeBuilding.boqsContract || []).reduce((sum, boq) => sum + ((boq.precedQte || 0) * boq.unitPrice), 0))}
+                                        {formatCurrency(contractBOQPrecedTotal)}
                                     </td>
                                     <td className="text-right text-green-600">
                                         {formatCurrency(activeBuildingTotal)}
                                     </td>
                                     <td className="text-right">
-                                        {formatCurrency((activeBuilding.boqsContract || []).reduce((sum, boq) => sum + (((boq.precedQte || 0) + (boq.actualQte || 0)) * boq.unitPrice), 0))}
+                                        {formatCurrency(contractBOQCumulTotal)}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -1224,24 +1225,25 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                     );
                                 })}
                             </tbody>
+                            {/* VO Totals Row - uses memoized values to avoid recalculation */}
                             <tfoot className="bg-base-200 border-t-2 border-base-300">
                                 <tr className="font-semibold">
                                     <td colSpan={5} className="text-right">Totals:</td>
                                     <td className="text-right">
-                                        {formatCurrency((activeVOBuilding.boqs || []).reduce((sum, boq) => sum + (boq.qte * boq.unitPrice), 0))}
+                                        {formatCurrency(voBOQContractTotal)}
                                     </td>
                                     <td className="text-right"></td>
                                     <td className="text-right bg-green-50/50 dark:bg-green-900/10"></td>
                                     <td className="text-right bg-purple-50/50 dark:bg-purple-900/10"></td>
                                     <td className="text-right bg-blue-50/50 dark:bg-blue-900/10"></td>
                                     <td className="text-right">
-                                        {formatCurrency((activeVOBuilding.boqs || []).reduce((sum, boq) => sum + ((boq.precedQte || 0) * boq.unitPrice), 0))}
+                                        {formatCurrency(voBOQPrecedTotal)}
                                     </td>
                                     <td className="text-right text-green-600">
                                         {formatCurrency(activeVOBuildingTotal)}
                                     </td>
                                     <td className="text-right">
-                                        {formatCurrency((activeVOBuilding.boqs || []).reduce((sum, boq) => sum + (((boq.precedQte || 0) + (boq.actualQte || 0)) * boq.unitPrice), 0))}
+                                        {formatCurrency(voBOQCumulTotal)}
                                     </td>
                                 </tr>
                             </tfoot>

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import { formatCurrency, formatDate } from "@/utils/formatters";
@@ -20,7 +20,6 @@ import {
   exportContractPdf,
   exportContractWord,
   exportTerminatedContractFile,
-  livePreview,
   livePreviewPdf,
   livePreviewWord,
   ContractDatasetStatus,
@@ -166,7 +165,7 @@ const useContractManagement = () => {
       originalStatus: contract.status || '', // Preserve original for filtering
       status: formatStatusBadge(contract.status),
     }));
-  }, [formatDate, formatCurrency, formatStatusBadge]);
+  }, [formatStatusBadge]);
 
   /**
    * Extract array from various API response formats

@@ -154,7 +154,7 @@ const useContractsDatabase = () => {
             setLoading(false);
             isApiCallInProgress.current = false;
         }
-    }, [token, formatDate, formatCurrency, formatStatusBadge]);
+    }, [token, formatStatusBadge]);
 
     const previewContract = useCallback(async (contractId: string) => {
         try {
@@ -217,13 +217,8 @@ const useContractsDatabase = () => {
         }
     }, [token]);
 
-    // Each tab has its own data state
-    const vosData: any[] = []; // Keep VOs empty for now
-    const terminatedData = terminatedContractsData; // Terminated contracts data
-    const contractsData = activeContractsData; // Active contracts data for compatibility
-    
-    // Use activeContractsData for the contracts tab
-    const contractsTabData = activeContractsData;
+    // VOs data placeholder (VOs are loaded per-contract in details page)
+    const vosData: any[] = [];
 
     const getActiveContracts = useCallback(async () => {
         try {
@@ -268,7 +263,7 @@ const useContractsDatabase = () => {
             console.error("API Error loading active contracts:", error);
             setActiveContractsData([]);
         }
-    }, [token, formatDate, formatCurrency, formatStatusBadge]);
+    }, [token, formatStatusBadge]);
 
     const getTerminatedContracts = useCallback(async () => {
         try {
@@ -313,15 +308,16 @@ const useContractsDatabase = () => {
             console.error("API Error loading terminated contracts:", error);
             setTerminatedContractsData([]);
         }
-    }, [token, formatDate, formatCurrency, formatStatusBadge]);
+    }, [token, formatStatusBadge]);
 
     return {
         contractsColumns,
         vosColumns,
         terminatedColumns,
-        contractsData: contractsTabData,
+        // Use state directly to avoid duplicate references
+        contractsData: activeContractsData,
         vosData,
-        terminatedData,
+        terminatedData: terminatedContractsData,
         loading,
         getContractsDatasets,
         getActiveContracts,

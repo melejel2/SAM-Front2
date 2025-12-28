@@ -25,12 +25,30 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
     setBuildings(newBuildings);
   }, []);
 
+  // Define calculation helpers BEFORE they are used
+  const calculateCumulPercent = useCallback((qte: number, cumulQte: number) => {
+    return qte === 0 ? 0 : (cumulQte / qte) * 100;
+  }, []);
+
+  const calculateBoqAmounts = useCallback((boq: BoqIpcVM): BoqIpcVM => {
+    const unitPrice = boq.unitPrice || 0;
+
+    return {
+      ...boq,
+      totalAmount: boq.qte * unitPrice,
+      cumulAmount: boq.cumulQte * unitPrice,
+      actualAmount: boq.actualQte * unitPrice,
+      precedAmount: boq.precedQte * unitPrice,
+      cumulPercent: calculateCumulPercent(boq.qte, boq.cumulQte)
+    };
+  }, [calculateCumulPercent]);
+
   /**
    * Update BOQ quantity with real-time calculations
    */
   const updateBoqQuantity = useCallback((buildingId: number, boqId: number, field: string, value: number) => {
     const changeKey = `${buildingId}-${boqId}-${field}`;
-    
+
     // Validate input
     if (value < 0) {
       setValidationErrors(prev => new Map(prev.set(changeKey, "Quantity cannot be negative")));
@@ -60,24 +78,7 @@ export const useBoqProgress = (initialBuildings?: ContractBuildingsVM[]) => {
 
     // Mark as unsaved
     setUnsavedChanges(prev => new Set(prev.add(changeKey)));
-  }, []);
-
-  const calculateBoqAmounts = (boq: BoqIpcVM): BoqIpcVM => {
-    const unitPrice = boq.unitPrice || 0;
-    
-    return {
-      ...boq,
-      totalAmount: boq.qte * unitPrice,
-      cumulAmount: boq.cumulQte * unitPrice,
-      actualAmount: boq.actualQte * unitPrice,
-      precedAmount: boq.precedQte * unitPrice,
-      cumulPercent: calculateCumulPercent(boq.qte, boq.cumulQte)
-    };
-  };
-
-  const calculateCumulPercent = useCallback((qte: number, cumulQte: number) => {
-    return qte === 0 ? 0 : (cumulQte / qte) * 100;
-  }, []);
+  }, [calculateBoqAmounts]);
 
   /**
    * Bulk update BOQ quantities for a building

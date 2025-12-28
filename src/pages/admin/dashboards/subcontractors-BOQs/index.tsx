@@ -1,25 +1,29 @@
-import { useEffect, useState, useMemo } from "react";
+import { memo, useCallback, useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 
 import useSubcontractorsBOQs from "./use-subcontractors-boqs";
-import TerminatedContracts from "./TerminatedContracts";
+
+// Lazy load TerminatedContracts to reduce initial bundle size
+const TerminatedContracts = lazy(() => import("./TerminatedContracts"));
 
 
-const SubcontractorsBOQs = () => {
+const SubcontractorsBOQs = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
 
     const [activeTab, setActiveTab] = useState(0);
     const [selectedProject, setSelectedProject] = useState<string>("All Projects");
+    // Track if terminated contracts tab has been loaded (lazy loading)
+    const [terminatedTabLoaded, setTerminatedTabLoaded] = useState(false);
 
-    const { 
-        columns, 
-        tableData: activeContractsData, 
-        inputFields, 
-        loading, 
+    const {
+        columns,
+        tableData: activeContractsData,
+        inputFields,
+        loading,
         getContractsDatasets
     } = useSubcontractorsBOQs();
 
@@ -28,7 +32,7 @@ const SubcontractorsBOQs = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
 
-    const handleViewContractDetails = (row: any) => {
+    const handleViewContractDetails = useCallback((row: any) => {
         // Navigate to contract details page using contract number (user-friendly) instead of ID
         const contractNumber = row.contractNumber || row.id; // Fallback to ID if no contract number
         navigate(`/dashboard/contracts/details/${contractNumber}`, {
@@ -44,23 +48,30 @@ const SubcontractorsBOQs = () => {
                 status: row.status
             }
         });
-    };
+    }, [navigate]);
 
-    const handleBackToDashboard = () => {
+    const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
-    };
+    }, [navigate]);
 
-    const allContracts = useMemo(() => [...activeContractsData], [activeContractsData]);
-
+    // Memoize unique projects for filter dropdown (prevents recalculation on every render)
     const uniqueProjects = useMemo(() => {
-        return Array.from(new Set(allContracts.map((contract: any) => contract.projectName).filter(name => name && name !== '-'))).sort();
-    }, [allContracts]);
+        return Array.from(new Set(activeContractsData.map((contract: any) => contract.projectName).filter(name => name && name !== '-'))).sort();
+    }, [activeContractsData]);
 
+    // Memoize filtered contracts data
     const filteredContractsData = useMemo(() => {
         return selectedProject === "All Projects"
             ? activeContractsData
             : activeContractsData.filter((contract: any) => contract.projectName === selectedProject);
     }, [selectedProject, activeContractsData]);
+
+    // When switching to terminated tab, mark it as loaded for lazy loading
+    useEffect(() => {
+        if (activeTab === 1 && !terminatedTabLoaded) {
+            setTerminatedTabLoaded(true);
+        }
+    }, [activeTab, terminatedTabLoaded]);
 
 
     return (
@@ -103,16 +114,16 @@ const SubcontractorsBOQs = () => {
                                         }`}
                                     >
                                         <span className="iconify lucide--list size-4"></span>
-                                        <span>All Projects ({allContracts.length})</span>
+                                        <span>All Projects ({activeContractsData.length})</span>
                                     </button>
                                 </li>
                                 <li className="menu-title">
                                     <span className="text-xs font-semibold">Projects</span>
                                 </li>
                                 {uniqueProjects.map((projectName) => {
-                                    const count = allContracts.filter((contract: any) => contract.projectName === projectName).length;
+                                    const count = activeContractsData.filter((contract: any) => contract.projectName === projectName).length;
                                     return (
-                                        <li key={projectName}>
+                                        <li key={String(projectName)}>
                                             <button
                                                 onClick={() => setSelectedProject(projectName as string)}
                                                 className={`flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200 ${
@@ -174,34 +185,40 @@ const SubcontractorsBOQs = () => {
                 {loading ? (
                     <Loader />
                 ) : (
-                    <div>
-                        {activeTab === 0 && (
-                            <SAMTable
-                                columns={columns}
-                                tableData={filteredContractsData}
-                                actions
-                                previewAction
-                                title={"Subcontractor BOQ"}
-                                loading={false}
-                                onSuccess={getContractsDatasets}
-                                openStaticDialog={(type, data) => {
-                                    if (type === "Preview" && data) {
-                                        return handleViewContractDetails(data);
-                                    }
-                                }}
-                                dynamicDialog={false}
-                            />
-                        )}
-
-                        {activeTab === 1 && (
-                            <TerminatedContracts selectedProject={selectedProject} />
-                        )}
-                    </div>
+                    activeTab === 0 ? (
+                        <SAMTable
+                            columns={columns}
+                            tableData={filteredContractsData}
+                            actions
+                            previewAction
+                            title={"Subcontractor BOQ"}
+                            loading={false}
+                            onSuccess={getContractsDatasets}
+                            openStaticDialog={(type, data) => {
+                                if (type === "Preview" && data) {
+                                    return handleViewContractDetails(data);
+                                }
+                            }}
+                            dynamicDialog={false}
+                            virtualized={true}
+                            rowHeight={40}
+                            overscan={5}
+                        />
+                    ) : (
+                        // Only render TerminatedContracts when tab is active (lazy loading)
+                        terminatedTabLoaded && (
+                            <Suspense fallback={<Loader />}>
+                                <TerminatedContracts selectedProject={selectedProject} />
+                            </Suspense>
+                        )
+                    )
                 )}
             </div>
         </div>
     );
-};
+});
+
+SubcontractorsBOQs.displayName = 'SubcontractorsBOQs';
 
 export default SubcontractorsBOQs;
 

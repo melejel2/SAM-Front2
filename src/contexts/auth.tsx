@@ -55,26 +55,24 @@ export const AuthConfigProvider = ({ children }: { children: ReactNode }) => {
 
     const accessToken: string | null = authState.user?.token ?? null;
 
-    const updateState = (changes: Partial<IAuthState>) => {
+    // Use setState directly in callbacks to avoid stale closure issues
+    const setLoggedInUser = useCallback((user: AuthUser) => {
         setState((prevState: IAuthState) => ({
             ...prevState,
-            ...changes,
+            user,
         }));
-    };
-
-    const setLoggedInUser = useCallback((user: AuthUser) => {
-        updateState({ user });
-    }, []);
+    }, [setState]);
 
     const isLoggedIn = useCallback(() => {
         return authState.user != null && accessToken != null;
     }, [accessToken, authState.user]);
 
     const logout = useCallback(() => {
-        updateState({
+        setState((prevState: IAuthState) => ({
+            ...prevState,
             user: undefined,
-        });
-    }, []);
+        }));
+    }, [setState]);
 
     const roleId = authState.user?.roleid;
     const getToken = useCallback(() => accessToken, [accessToken]);

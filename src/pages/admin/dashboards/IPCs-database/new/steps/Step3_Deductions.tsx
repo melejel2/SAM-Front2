@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from "react";
+import React, { useState, useCallback, memo, useMemo } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, LaborsVM, MachinesVM, MaterialsVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
 import { CorrectionEntityType } from "@/types/ipc";
@@ -144,23 +144,33 @@ export const Step3_Deductions: React.FC = memo(() => {
         itemDescription: string;
     } | null>(null);
 
-    const safeBuildings = formData.buildings || [];
-    const safeVOs = (formData.vos || []) as Vos[];
+    // Memoize derived arrays to prevent recreation on every render
+    const safeBuildings = useMemo(() => formData.buildings || [], [formData.buildings]);
+    const safeVOs = useMemo(() => (formData.vos || []) as Vos[], [formData.vos]);
 
-    // Calculate totals
-    const totalContractAmount = safeBuildings.reduce((sum, building) =>
-        sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
-    );
+    // Memoize IPC totals - only recalculate when buildings/VOs change
+    const { totalContractAmount, totalVoAmount, totalIPCAmount } = useMemo(() => {
+        const buildings = formData.buildings || [];
+        const vos = (formData.vos || []) as Vos[];
 
-    const totalVoAmount = safeVOs.reduce((voSum, vo) => {
-        return voSum + (vo.buildings || []).reduce((buildSum, building) => {
-            return buildSum + (building.boqs || []).reduce((boqSum, boq) => {
-                return boqSum + (boq.actualAmount || 0);
+        const contractAmount = buildings.reduce((sum, building) =>
+            sum + (building.boqsContract || []).reduce((boqSum, boq) => boqSum + (boq.actualAmount || 0), 0), 0
+        );
+
+        const voAmount = vos.reduce((voSum, vo) => {
+            return voSum + (vo.buildings || []).reduce((buildSum, building) => {
+                return buildSum + (building.boqs || []).reduce((boqSum, boq) => {
+                    return boqSum + (boq.actualAmount || 0);
+                }, 0);
             }, 0);
         }, 0);
-    }, 0);
 
-    const totalIPCAmount = totalContractAmount + totalVoAmount;
+        return {
+            totalContractAmount: contractAmount,
+            totalVoAmount: voAmount,
+            totalIPCAmount: contractAmount + voAmount
+        };
+    }, [formData.buildings, formData.vos]);
 
     const handleItemChange = (
         type: 'labors' | 'materials' | 'machines',
@@ -566,12 +576,13 @@ export const Step3_Deductions: React.FC = memo(() => {
         setDeleteConfirmation(null);
     };
 
-    const safeLabors = formData.labors || [];
-    const safeMachines = formData.machines || [];
-    const safeMaterials = formData.materials || [];
+    // Memoize deduction arrays to prevent recreation on every render
+    const safeLabors = useMemo(() => formData.labors || [], [formData.labors]);
+    const safeMachines = useMemo(() => formData.machines || [], [formData.machines]);
+    const safeMaterials = useMemo(() => formData.materials || [], [formData.materials]);
 
-    // Calculate comprehensive totals for each deduction type
-    const laborTotals = safeLabors.reduce((totals, labor) => {
+    // Memoize comprehensive totals for each deduction type - only recalculate when data changes
+    const laborTotals = useMemo(() => safeLabors.reduce((totals, labor) => {
         const calc = calculateLaborMachineDeductions(labor);
         return {
             consumedAmount: totals.consumedAmount + calc.amount,
@@ -580,9 +591,9 @@ export const Step3_Deductions: React.FC = memo(() => {
             actualAmount: totals.actualAmount + calc.actualDeductionAmount,
             cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
         };
-    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
+    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 }), [safeLabors]);
 
-    const machineTotals = safeMachines.reduce((totals, machine) => {
+    const machineTotals = useMemo(() => safeMachines.reduce((totals, machine) => {
         const calc = calculateLaborMachineDeductions(machine);
         return {
             consumedAmount: totals.consumedAmount + calc.amount,
@@ -591,9 +602,9 @@ export const Step3_Deductions: React.FC = memo(() => {
             actualAmount: totals.actualAmount + calc.actualDeductionAmount,
             cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
         };
-    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
+    }, { consumedAmount: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 }), [safeMachines]);
 
-    const materialTotals = safeMaterials.reduce((totals, material) => {
+    const materialTotals = useMemo(() => safeMaterials.reduce((totals, material) => {
         const calc = calculateMaterialDeductions(material);
         return {
             totalSale: totals.totalSale + calc.consumedAmount,
@@ -602,7 +613,7 @@ export const Step3_Deductions: React.FC = memo(() => {
             actualAmount: totals.actualAmount + calc.actualDeductionAmount,
             cumulAmount: totals.cumulAmount + calc.cumulativeDeductionAmount,
         };
-    }, { totalSale: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 });
+    }, { totalSale: 0, deductionAmount: 0, previousAmount: 0, actualAmount: 0, cumulAmount: 0 }), [safeMaterials]);
 
     // Keep backward compatible totals for header display
     const laborTotal = laborTotals.actualAmount;

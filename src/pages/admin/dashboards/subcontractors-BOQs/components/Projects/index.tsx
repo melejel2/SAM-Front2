@@ -20,6 +20,9 @@ const ProjectStep: React.FC<ProjectStepProps> = ({ onSelectProject }) => {
                 onRowSelect={onSelectProject}
                 loading={false}
                 onSuccess={() => {}}
+                virtualized={true}
+                rowHeight={40}
+                overscan={5}
             />
         </div>
     );

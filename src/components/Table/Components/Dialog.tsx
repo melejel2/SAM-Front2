@@ -225,6 +225,9 @@ const DialogComponent: React.FC<DialogProps> = ({
         setRejectionNote("");
         setIsLoading(false);
         setCostCodes([]);
+        // Clear form data and files to free memory
+        setFormData({});
+        setFiles({});
         handleHide();
     };
 

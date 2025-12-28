@@ -246,14 +246,34 @@ const ContractsDatabase = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Track which tabs have been loaded to avoid re-fetching
+    const [loadedTabs, setLoadedTabs] = useState<Set<number>>(new Set());
+
+    // Load data for active tab only (lazy loading)
     useEffect(() => {
-        // Load both active and terminated contracts when page loads to show correct counts
-        getActiveContracts();
-        getTerminatedContracts();
+        const loadTabData = async () => {
+            if (activeTab === 0 && !loadedTabs.has(0)) {
+                await getActiveContracts();
+                setLoadedTabs(prev => new Set(prev).add(0));
+            } else if (activeTab === 1 && !loadedTabs.has(1)) {
+                await getTerminatedContracts();
+                setLoadedTabs(prev => new Set(prev).add(1));
+            }
+        };
+        loadTabData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    // Reset loaded tabs when navigating back to the page
+    useEffect(() => {
+        setLoadedTabs(new Set());
+        // Load initial tab data
+        if (activeTab === 0) {
+            getActiveContracts();
+            setLoadedTabs(prev => new Set(prev).add(0));
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
-
-    // No need to reload data on tab changes - data is already loaded
 
 
 
@@ -415,10 +435,11 @@ const ContractsDatabase = () => {
         }
     };
 
-    const handleBackToTable = () => {
+    const handleBackToTable = useCallback(() => {
         setViewMode('table');
+        // Clear preview data to free memory
         setPreviewData(null);
-    };
+    }, []);
 
     const handleBackToDashboard = () => {
         navigate('/dashboard');
@@ -680,8 +701,8 @@ const ContractsDatabase = () => {
                             <Loader />
                         ) : (
                             <div>
-                                {/* Contracts Tab */}
-                                {activeTab === 0 && (
+                                {/* Contracts Tab - with virtualization for performance */}
+                                {activeTab === 0 ? (
                                     <SAMTable
                                         columns={contractsColumns}
                                         tableData={filteredContractsData}
@@ -700,11 +721,12 @@ const ContractsDatabase = () => {
                                         rowActions={() => ({
                                             deleteAction: false
                                         })}
+                                        virtualized={true}
+                                        rowHeight={40}
+                                        overscan={5}
                                     />
-                                )}
-
-                                {/* Terminated Tab */}
-                                {activeTab === 1 && (
+                                ) : (
+                                    /* Terminated Tab - with virtualization for performance */
                                     <SAMTable
                                         columns={terminatedColumns}
                                         tableData={filteredTerminatedData}
@@ -731,6 +753,9 @@ const ContractsDatabase = () => {
                                             exportAction: true,
                                         })}
                                         exportingRowId={exportingRowId}
+                                        virtualized={true}
+                                        rowHeight={40}
+                                        overscan={5}
                                     />
                                 )}
                             </div>
@@ -805,11 +830,12 @@ const ContractsDatabase = () => {
                             This action cannot be undone. The contract will be moved to the terminated contracts list.
                         </p>
                         <div className="modal-action">
-                            <button 
+                            <button
                                 className="btn btn-ghost"
                                 onClick={() => {
                                     setShowTerminateModal(false);
-                                    setContractToTerminate(null);
+                                    // Clear modal data when closing to free memory
+                                    setTimeout(() => setContractToTerminate(null), 150);
                                 }}
                                 disabled={terminatingId !== null}
                             >
@@ -863,11 +889,12 @@ const ContractsDatabase = () => {
                             This will generate the "Discharge Final" document for this terminated contract.
                         </p>
                         <div className="modal-action">
-                            <button 
+                            <button
                                 className="btn btn-ghost"
                                 onClick={() => {
                                     setShowGenerateFinalModal(false);
-                                    setContractToGenerateFinal(null);
+                                    // Clear modal data when closing to free memory
+                                    setTimeout(() => setContractToGenerateFinal(null), 150);
                                 }}
                                 disabled={generatingFinalId !== null}
                             >

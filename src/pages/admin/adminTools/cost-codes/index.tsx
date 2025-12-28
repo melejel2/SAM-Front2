@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -8,7 +8,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import useCostCodes from "./use-cost-codes";
 
-const CostCodes = () => {
+const CostCodes = memo(() => {
     const { columns, tableData, inputFields, loading, uploadLoading, getCostCodes, uploadCostCodes } = useCostCodes();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
@@ -19,20 +19,20 @@ const CostCodes = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             uploadCostCodes(file);
         }
-    };
+    }, [uploadCostCodes]);
 
-    const triggerFileInput = () => {
+    const triggerFileInput = useCallback(() => {
         fileInputRef.current?.click();
-    };
+    }, []);
 
-    const handleBackToAdminTools = () => {
+    const handleBackToAdminTools = useCallback(() => {
         navigate('/admin-tools');
-    };
+    }, [navigate]);
 
     return (
         <div style={{
@@ -97,11 +97,16 @@ const CostCodes = () => {
                         createEndPoint="CostCode/AddCostCode"
                         deleteEndPoint="CostCode/DeleteCostCode"
                         onSuccess={getCostCodes}
+                        virtualized={true}
+                        rowHeight={40}
+                        overscan={5}
                     />
                 )}
             </div>
         </div>
     );
-};
+});
+
+CostCodes.displayName = 'CostCodes';
 
 export default CostCodes;

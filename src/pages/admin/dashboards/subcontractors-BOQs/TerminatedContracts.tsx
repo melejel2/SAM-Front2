@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 
 import apiRequest from "@/api/api";
 import {
@@ -63,7 +63,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
     const [regenerating, setRegenerating] = useState<string | null>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
 
-    // Table columns for terminated contracts list
+    // Table columns for terminated contracts list - memoized with stable reference
     const terminatedColumns = useMemo(() => ({
         contractNumber: "Contract #",
         projectName: "Project",
@@ -72,7 +72,14 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
         contractDate: "Contract Date",
         completionDate: "End Date",
         amount: "Amount",
-    }), []);
+    } as const), []);
+
+    // Clear preview data when modal closes to free memory
+    const handleClosePreview = useCallback(() => {
+        setShowPreview(false);
+        // Defer clearing blob data to allow modal close animation
+        setTimeout(() => setPreviewData(null), 300);
+    }, []);
 
     // Fetch terminated contracts
     const getTerminatedContracts = useCallback(async () => {
@@ -391,6 +398,9 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     }
                                 }}
                                 dynamicDialog={false}
+                                virtualized={true}
+                                rowHeight={40}
+                                overscan={5}
                             />
                         )}
                     </div>
@@ -555,7 +565,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                             </p>
                         </div>
 
-                        {/* Preview Area */}
+                        {/* Preview Area - using ternary for cleaner rendering */}
                         {showPreview && previewData ? (
                             <div className="border-t border-base-300 pt-4">
                                 <div className="flex items-center justify-between mb-3">
@@ -563,10 +573,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                         Preview: {previewData.type} Document
                                     </h3>
                                     <button
-                                        onClick={() => {
-                                            setShowPreview(false);
-                                            setPreviewData(null);
-                                        }}
+                                        onClick={handleClosePreview}
                                         className="btn btn-sm btn-ghost"
                                     >
                                         <Icon icon="lucide:x" className="size-4" />

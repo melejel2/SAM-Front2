@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useContractsApi } from "./hooks/use-contracts-api";
 import { ContractDatasetStatus } from "@/api/services/contracts-api";
 import { formatCurrency, formatDate } from "@/utils/formatters";
@@ -7,7 +7,8 @@ const useSubcontractorsBOQs = () => {
     const [tableData, setTableData] = useState<any[]>([]);
     const contractsApi = useContractsApi();
 
-    const columns = {
+    // Memoize columns to prevent unnecessary recreations
+    const columns = useMemo(() => ({
         contractNumber: "Number",
         projectName: "Project",
         subcontractorName: "Subcontractor",
@@ -16,9 +17,9 @@ const useSubcontractorsBOQs = () => {
         completionDate: "End Date",
         amount: "Amount",
         status: "Status",
-    };
+    }), []);
 
-    const inputFields = [
+    const inputFields = useMemo(() => [
         {
             name: "contractNb",
             label: "Number",
@@ -49,9 +50,10 @@ const useSubcontractorsBOQs = () => {
             type: "text",
             required: true,
         },
-    ];
+    ], []);
 
-    const formatStatusBadge = (status: any) => {
+    // Memoize formatStatusBadge to prevent recreation on every render
+    const formatStatusBadge = useCallback((status: any) => {
         // Convert status to string and handle different types
         const statusStr = status?.toString() || '';
         const statusLower = statusStr.toLowerCase();
@@ -82,17 +84,9 @@ const useSubcontractorsBOQs = () => {
         }
 
         return `<span class="badge badge-sm ${badgeClass} font-medium">${displayText}</span>`;
-    };
+    }, []);
 
-    const generateContract = async (contractId: string | number) => {
-        const result = await contractsApi.generateContractBOQ(Number(contractId));
-        if (result.success) {
-            // Refresh the data after generating contract
-            await getContractsDatasets();
-        }
-        return result;
-    };
-
+    // Define getContractsDatasets first since generateContract depends on it
     const getContractsDatasets = useCallback(async () => {
         const result = await contractsApi.fetchContractsDatasets(ContractDatasetStatus.Active);
         
@@ -116,21 +110,30 @@ const useSubcontractorsBOQs = () => {
         } else {
             setTableData([]);
         }
-    }, [contractsApi, formatDate, formatCurrency, formatStatusBadge, setTableData]);
+    }, [contractsApi, formatStatusBadge]);
 
-    const previewContract = async (contractData: any) => {
+    // Generate contract and refresh data
+    const generateContract = useCallback(async (contractId: string | number) => {
+        const result = await contractsApi.generateContractBOQ(Number(contractId));
+        if (result.success) {
+            await getContractsDatasets();
+        }
+        return result;
+    }, [contractsApi, getContractsDatasets]);
+
+    const previewContract = useCallback(async (contractData: any) => {
         // For editable contracts, use live preview instead of export
         // This generates a temporary preview without changing the contract status
         return await contractsApi.livePreviewPdfDocument(contractData);
-    };
+    }, [contractsApi]);
 
-const DeleteContract = async (contractId: number | string) => {
-    const result = await contractsApi.deleteContract(Number(contractId));
-    if (result.success) {
-        setTableData(prevData => prevData.filter(contract => contract.id !== contractId));
-    }
-    return result;
-};
+    const DeleteContract = useCallback(async (contractId: number | string) => {
+        const result = await contractsApi.deleteContract(Number(contractId));
+        if (result.success) {
+            setTableData(prevData => prevData.filter(contract => contract.id !== contractId));
+        }
+        return result;
+    }, [contractsApi]);
 
     return {
         columns,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
@@ -23,6 +23,15 @@ import { formatCurrency, formatDate } from "@/utils/formatters";
 
 import TerminatedContracts from "../TerminatedContracts";
 import { useContractsApi } from "../hooks/use-contracts-api";
+
+// Lazy load tab components to reduce initial bundle and memory usage
+const InfoTab = lazy(() => import("./components/tabs/InfoTab"));
+const VOsTab = lazy(() => import("./components/tabs/VOsTab"));
+const IPCsTab = lazy(() => import("./components/tabs/IPCsTab"));
+const DeductionsTab = lazy(() => import("./components/tabs/DeductionsTab"));
+
+// Tab type definition
+type ContractTab = "info" | "vos" | "ipcs" | "deductions";
 
 // Contract-specific VOs hook
 const useContractVOs = (contractId: string) => {
@@ -95,6 +104,13 @@ const ContractDetails = () => {
     const [contractData, setContractData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    // Tab state - use returnTab from navigation if provided
+    const initialTab = (location.state as { returnTab?: ContractTab } | null)?.returnTab ?? "info";
+    const [activeTab, setActiveTab] = useState<ContractTab>(initialTab);
+
+    // Track which tabs have been loaded for lazy loading optimization
+    const [loadedTabs, setLoadedTabs] = useState<Set<ContractTab>>(new Set([initialTab]));
+
     const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
     const [generatingContract, setGeneratingContract] = useState(false);
     const [deletingContract, setDeletingContract] = useState(false);
@@ -138,6 +154,7 @@ const ContractDetails = () => {
         contractDate?: string;
         completionDate?: string;
         status?: string;
+        returnTab?: ContractTab;
     } | null;
 
     // Contract VOs management
@@ -166,6 +183,34 @@ const ContractDetails = () => {
 
     // Initialize contracts API
     const contractsApi = useContractsApi();
+
+    // Handle tab changes with lazy loading tracking
+    const handleTabChange = useCallback((tab: ContractTab) => {
+        setActiveTab(tab);
+        setLoadedTabs(prev => {
+            if (prev.has(tab)) return prev;
+            const newSet = new Set(prev);
+            newSet.add(tab);
+            return newSet;
+        });
+    }, []);
+
+    // Clear modal data handlers to free memory
+    const handleClosePreview = useCallback(() => {
+        setShowPreview(false);
+        // Defer clearing blob data to allow modal close animation
+        setTimeout(() => setPreviewData(null), 300);
+    }, []);
+
+    const handleCloseVoPreview = useCallback(() => {
+        setShowVoPreview(false);
+        setTimeout(() => setVoPreviewData(null), 300);
+    }, []);
+
+    const handleCloseTerminatedPreview = useCallback(() => {
+        setShowTerminatedPreviewModal(false);
+        setTimeout(() => setTerminatedPreviewData(null), 300);
+    }, []);
 
     useEffect(() => {
         if (contractId) {
@@ -921,26 +966,6 @@ const ContractDetails = () => {
                         </dialog>
                     )}
 
-                    {/* VO Preview Modal */}
-                    {showVoPreview && voPreviewData && (
-                        <dialog className="modal modal-open">
-                            <div className="modal-box h-[90vh] max-w-7xl">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-lg font-bold">VO Preview</h3>
-                                    <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
-                                        <span className="iconify lucide--x size-5"></span>
-                                    </button>
-                                </div>
-                                <div className="h-[calc(100%-60px)]">
-                                    <PDFViewer fileBlob={voPreviewData.blob} fileName={voPreviewData.fileName} />
-                                </div>
-                            </div>
-                            <form method="dialog" className="modal-backdrop">
-                                <button onClick={() => setShowVoPreview(false)}>close</button>
-                            </form>
-                        </dialog>
-                    )}
-
                     {contractData.contractDatasetStatus?.toLowerCase() === "active" && (
                         <button
                             onClick={() => setShowTerminateModal(true)}
@@ -1002,201 +1027,74 @@ const ContractDetails = () => {
                 </div>
             </div>
 
-            {/* Contract Information Cards */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                {/* Main Contract Info */}
-                <div className="card bg-base-100 border-base-300 border shadow-sm">
-                    <div className="card-body">
-                        <h3 className="card-title text-base-content flex items-center gap-2">
-                            <span className="iconify lucide--file-text size-5 text-purple-600"></span>
-                            Contract Information
-                        </h3>
-                        <div className="mt-4 space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Contract Number:</span>
-                                <span className="text-base-content font-semibold">
-                                    {contractData.contractNumber || navigationData?.contractNumber || "-"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Status:</span>
-                                <span className={`badge badge-sm ${
-                                    contractData.contractDatasetStatus === "Terminated"
-                                        ? "badge-error"
-                                        : contractData.contractDatasetStatus === "Editable"
-                                            ? "badge-warning"
-                                            : "badge-success"
-                                }`}>
-                                    {contractData.contractDatasetStatus || "Active"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Contract Date:</span>
-                                <span className="text-base-content">
-                                    {formatDate(contractData.contractDate) || navigationData?.contractDate || "-"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Completion Date:</span>
-                                <span className="text-base-content">
-                                    {formatDate(contractData.completionDate) || navigationData?.completionDate || "-"}
-                                </span>
-                            </div>
-                            <div className="divider"></div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-base-content/70">Total Amount:</span>
-                                <span className="text-primary text-xl font-bold">
-                                    {currentCurrency?.currencies || currency} {formatCurrency(totalAmount)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Project & Parties */}
-                <div className="card bg-base-100 border-base-300 border shadow-sm">
-                    <div className="card-body">
-                        <h3 className="card-title text-base-content flex items-center gap-2">
-                            <span className="iconify lucide--building-2 size-5 text-blue-600"></span>
-                            Project & Parties
-                        </h3>
-                        <div className="mt-4 space-y-3">
-                            <div>
-                                <span className="text-base-content/70 text-sm">Project:</span>
-                                <p className="text-base-content mt-1 font-semibold">
-                                    {currentProject?.name || navigationData?.projectName || "N/A"}
-                                </p>
-                            </div>
-                            <div>
-                                <span className="text-base-content/70 text-sm">Subcontractor:</span>
-                                <p className="text-base-content mt-1 font-semibold">
-                                    {currentSubcontractor?.name || navigationData?.subcontractorName || "N/A"}
-                                </p>
-                            </div>
-                            <div>
-                                <span className="text-base-content/70 text-sm">Trade:</span>
-                                <p className="text-base-content mt-1 font-semibold">
-                                    {navigationData?.tradeName || contractData.subTrade || "N/A"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Financial Terms */}
-                <div className="card bg-base-100 border-base-300 border shadow-sm">
-                    <div className="card-body">
-                        <h3 className="card-title text-base-content flex items-center gap-2">
-                            <span className="iconify lucide--calculator size-5 text-green-600"></span>
-                            Financial Terms
-                        </h3>
-                        <div className="mt-4 space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Advance Payment:</span>
-                                <span className="text-base-content">{formatPercentage(advancePercentage)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Advance Amount:</span>
-                                <span className="text-base-content font-semibold">
-                                    {currentCurrency?.currencies || currency} {formatCurrency(advanceAmount)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Prorata Account:</span>
-                                <span className="text-base-content">{contractData.prorataAccount || "0"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Retention:</span>
-                                <span className="text-base-content">{contractData.holdWarranty ? `${contractData.holdWarranty}%` : "0%"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-base-content/70">Payment Terms:</span>
-                                <span className="text-base-content">{contractData.paymentsTerm || "30 days"}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {/* Tab Navigation */}
+            <div className="tabs tabs-bordered">
+                <button
+                    className={`tab ${activeTab === "info" ? "tab-active" : ""}`}
+                    onClick={() => handleTabChange("info")}>
+                    <span className="iconify lucide--file-text size-4 mr-2"></span>
+                    Contract Info
+                </button>
+                <button
+                    className={`tab ${activeTab === "vos" ? "tab-active" : ""}`}
+                    onClick={() => handleTabChange("vos")}>
+                    <span className="iconify lucide--git-branch size-4 mr-2"></span>
+                    VOs ({vos.length})
+                </button>
+                <button
+                    className={`tab ${activeTab === "ipcs" ? "tab-active" : ""}`}
+                    onClick={() => handleTabChange("ipcs")}>
+                    <span className="iconify lucide--receipt size-4 mr-2"></span>
+                    IPCs
+                </button>
+                <button
+                    className={`tab ${activeTab === "deductions" ? "tab-active" : ""}`}
+                    onClick={() => handleTabChange("deductions")}>
+                    <span className="iconify lucide--minus-circle size-4 mr-2"></span>
+                    Deductions
+                </button>
             </div>
 
-            {/* Variation Orders Section */}
-            <div className="card bg-base-100 border-base-300 border shadow-sm">
-                <div className="card-body">
-                    <div className="mb-4 flex items-center justify-between">
-                        <h3 className="card-title text-base-content flex items-center gap-2">
-                            <span className="iconify lucide--git-branch size-5 text-orange-600"></span>
-                            Variation Orders
-                        </h3>
-                        <button onClick={handleCreateVO} className="btn btn-primary btn-sm">
-                            <span className="iconify lucide--plus size-4"></span>
-                            <span>Add VO</span>
-                        </button>
-                    </div>
+            {/* Tab Content - Only load tabs that have been visited (lazy loading) */}
+            <Suspense fallback={<div className="flex justify-center p-8"><Loader /></div>}>
+                {activeTab === "info" ? (
+                    <InfoTab
+                        contractData={contractData}
+                        currency={currency}
+                        currentCurrency={currentCurrency}
+                        currentProject={currentProject}
+                        currentSubcontractor={currentSubcontractor}
+                        navigationData={navigationData}
+                    />
+                ) : activeTab === "vos" ? (
+                    <VOsTab
+                        vos={vos}
+                        voColumns={voColumns}
+                        loading={vosLoading}
+                        contractId={contractId}
+                        contractIdentifier={contractIdentifier}
+                        contractData={contractData}
+                        navigationData={navigationData}
+                        currentProject={currentProject}
+                        currentSubcontractor={currentSubcontractor}
+                        onVOsRefresh={getContractVOs}
+                        onPreviewVO={handlePreviewVoDataSet}
+                        onExportVO={handleExportVoDataSetWord}
+                        onDeleteVO={handleDeleteVO}
+                        onGenerateVO={handleGenerateVO}
+                    />
+                ) : activeTab === "ipcs" ? (
+                    <IPCsTab
+                        contractId={contractId ? parseInt(contractId) : null}
+                        contractNumber={contractData?.contractNumber}
+                        contractIdentifier={contractIdentifier}
+                        contractStatus={contractData?.contractDatasetStatus}
+                    />
+                ) : activeTab === "deductions" ? (
+                    <DeductionsTab contractId={contractId ? parseInt(contractId) : null} />
+                ) : null}
+            </Suspense>
 
-                    {vosLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader />
-                        </div>
-                    ) : vos.length > 0 ? (
-                        <SAMTable
-                            columns={voColumns}
-                            tableData={vos}
-                            actions
-                            previewAction
-                            editAction
-                            exportAction // <--- New prop
-                            deleteAction
-                            generateAction
-                            rowActions={handleVoRowActions} // <--- Conditional row actions based on status
-                            title=""
-                            loading={false}
-                            onSuccess={getContractVOs} // Refresh VOs after any action
-                            openStaticDialog={(type, data, extraData) => {
-                                console.log("🎯 Table action clicked:", type, data?.id, extraData?.contractId);
-                                if (type === "Edit") {
-                                    console.log("📝 Edit action - navigating to edit wizard");
-                                    // Navigate to VO creation wizard for editing
-                                    navigate(
-                                        `/dashboard/contracts/details/${extraData.contractIdentifier}/edit-vo/${data.id}`,
-                                        {
-                                            state: {
-                                                contractId: extraData.contractId,
-                                                voDatasetId: data.id, // Pass the ID of the VO dataset to edit
-                                            },
-                                        },
-                                    );
-                                } else if (type === "Preview") {
-                                    console.log("👁️ Preview action");
-                                    handlePreviewVoDataSet(data.id, data.voNumber);
-                                } else if (type === "Export") {
-                                    // New action type
-                                    console.log("📤 Export action");
-                                    handleExportVoDataSetWord(data.id, data.voNumber);
-                                } else if (type === "Delete") {
-                                    console.log("🗑️ Delete action");
-                                    handleDeleteVO(data.id);
-                                } else if (type === "Generate") {
-                                    console.log("⚡ Generate action - calling generateVoDataSet API");
-                                    handleGenerateVO(data.id);
-                                } else {
-                                    console.log("❓ Unknown action type:", type);
-                                }
-                            }}
-                            dynamicDialog={false}
-                            contractIdentifier={contractIdentifier}
-                            contractId={contractId}
-                        />
-                    ) : (
-                        <div className="py-12 text-center">
-                            <span className="iconify lucide--inbox text-base-content/30 mx-auto mb-3 size-12"></span>
-                            <p className="text-base-content/70">No variation orders found for this contract</p>
-                            <button onClick={handleCreateVO} className="btn btn-primary btn-sm mt-4">
-                                <span className="iconify lucide--plus size-4"></span>
-                                <span>Create First VO</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
             {/* Preview Modal */}
             {showPreview && previewData && (
                 <dialog className="modal modal-open">
@@ -1211,7 +1109,7 @@ const ContractDetails = () => {
                                     <span className="iconify lucide--file-pen size-4"></span>
                                     Edit Document
                                 </button>
-                                <button onClick={() => setShowPreview(false)} className="btn btn-ghost btn-sm">
+                                <button onClick={handleClosePreview} className="btn btn-ghost btn-sm">
                                     <span className="iconify lucide--x size-5"></span>
                                 </button>
                             </div>
@@ -1221,7 +1119,7 @@ const ContractDetails = () => {
                         </div>
                     </div>
                     <form method="dialog" className="modal-backdrop">
-                        <button onClick={() => setShowPreview(false)}>close</button>
+                        <button onClick={handleClosePreview}>close</button>
                     </form>
                 </dialog>
             )}
@@ -1264,7 +1162,7 @@ const ContractDetails = () => {
                                         Edit Document
                                     </button>
                                 )}
-                                <button onClick={() => setShowVoPreview(false)} className="btn btn-ghost btn-sm">
+                                <button onClick={handleCloseVoPreview} className="btn btn-ghost btn-sm">
                                     <span className="iconify lucide--x size-5"></span>
                                 </button>
                             </div>
@@ -1274,7 +1172,7 @@ const ContractDetails = () => {
                         </div>
                     </div>
                     <form method="dialog" className="modal-backdrop">
-                        <button onClick={() => setShowVoPreview(false)}>close</button>
+                        <button onClick={handleCloseVoPreview}>close</button>
                     </form>
                 </dialog>
             )}

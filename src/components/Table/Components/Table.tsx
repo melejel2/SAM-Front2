@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { Button, Pagination, useDialog } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
@@ -149,6 +150,11 @@ interface TableProps {
     contractIdentifier?: string; // Added for VO editing navigation
     contractId?: string; // Added for VO editing navigation
     isNested?: boolean;
+
+    // Virtualization options for large lists
+    virtualized?: boolean; // Enable virtualization for large datasets
+    rowHeight?: number; // Height of each row in pixels (default: 40)
+    overscan?: number; // Number of rows to render outside viewport (default: 10)
 }
 
 const TableComponent: React.FC<TableProps> = ({
@@ -192,9 +198,13 @@ const TableComponent: React.FC<TableProps> = ({
     onItemDelete,
     inlineEditable,
     onInlineEdit,
-    contractIdentifier, // Destructure here
-    contractId, // Destructure here
-    isNested, // Destructure new prop
+    contractIdentifier,
+    contractId,
+    isNested,
+    // Virtualization props
+    virtualized = false,
+    rowHeight = 40,
+    overscan = 10,
 }) => {
     const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
 
@@ -509,8 +519,12 @@ const TableComponent: React.FC<TableProps> = ({
         return data;
     }, [filteredData, sortColumn, sortOrder, selectedRow]);
 
-    // Paginate the data
+    // Paginate the data (skip pagination when virtualized)
     const paginatedData = useMemo(() => {
+        // When virtualized, don't paginate - virtualizer handles the rendering
+        if (virtualized) {
+            return sortedData;
+        }
         if (rowsPerPage === 0) {
             // If rowsPerPage is 0, show all data without pagination
             return sortedData;
@@ -518,9 +532,21 @@ const TableComponent: React.FC<TableProps> = ({
         const startIndex = (currentPage - 1) * rowsPerPage;
         const endIndex = startIndex + rowsPerPage;
         return sortedData.slice(startIndex, endIndex);
-    }, [sortedData, currentPage, rowsPerPage]);
+    }, [sortedData, currentPage, rowsPerPage, virtualized]);
 
-    const totalPages = rowsPerPage === 0 ? 1 : Math.ceil(sortedData.length / rowsPerPage);
+    const totalPages = virtualized ? 1 : (rowsPerPage === 0 ? 1 : Math.ceil(sortedData.length / rowsPerPage));
+
+    // Virtual row rendering for large datasets
+    const rowVirtualizer = useVirtualizer({
+        count: virtualized ? sortedData.length : 0,
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: () => rowHeight,
+        overscan: overscan,
+        enabled: virtualized,
+    });
+
+    const virtualRows = virtualized ? rowVirtualizer.getVirtualItems() : [];
+    const totalVirtualSize = virtualized ? rowVirtualizer.getTotalSize() : 0;
 
     // Effects for scroll detection - optimized to prevent memory leaks
     React.useEffect(() => {
@@ -802,7 +828,7 @@ const TableComponent: React.FC<TableProps> = ({
                         style={{
                             userSelect: isMouseDown ? 'none' : 'auto'
                         }}>
-                        <thead className="bg-base-200 sticky top-0 z-10">
+                        <thead className="bg-base-200 sticky top-0 z-30 shadow-sm">
                             <tr>
                                     {select && (
                                         <th className="px-2 sm:px-3 lg:px-4 py-1 text-center text-xs sm:text-xs lg:text-xs font-medium text-base-content/70 uppercase tracking-wider">
@@ -880,7 +906,252 @@ const TableComponent: React.FC<TableProps> = ({
                                             Loading...
                                         </td>
                                     </tr>
+                                ) : virtualized ? (
+                                    /* Virtualized rendering for large datasets */
+                                    <>
+                                        {sortedData.length === 0 ? (
+                                            <tr className="hover:bg-base-200">
+                                                <td
+                                                    colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}
+                                                    className="px-2 sm:px-3 lg:px-4 py-2 text-center text-base-content/60 italic text-xs sm:text-sm">
+                                                    No data available
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <>
+                                                {/* Top spacer for virtual scroll */}
+                                                {virtualRows.length > 0 && virtualRows[0].start > 0 && (
+                                                    <tr style={{ height: virtualRows[0].start }}>
+                                                        <td colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}></td>
+                                                    </tr>
+                                                )}
+
+                                                {/* Virtual rows */}
+                                                {virtualRows.map((virtualRow) => {
+                                                    const row = sortedData[virtualRow.index];
+                                                    const rowAction = rowActions?.(row);
+                                                    const isTotal = row.isTotal === true;
+                                                    const isSelected = !isTotal && selectedRow?.id === row.id;
+
+                                                    const isTitleRow = !isTotal && (
+                                                        row.isTitleRow === true ||
+                                                        (
+                                                            (!row.unit && !row.unite && !row.Unite) &&
+                                                            (!row.unitPrice && !row.unit_price && !row.pu && !row.Pu ||
+                                                             row.unitPrice === 0 || row.unit_price === 0 || row.pu === 0 || row.Pu === 0 ||
+                                                             row.unitPrice === '0' || row.unit_price === '0' || row.pu === '0' ||
+                                                             row.unitPrice === '-' || row.unit_price === '-' || row.pu === '-') &&
+                                                            (!row.quantity && !row.qty && !row.qte && !row.Qte ||
+                                                             row.quantity === 0 || row.qty === 0 || row.qte === 0 || row.Qte === 0 ||
+                                                             row.quantity === '0' || row.qty === '0' || row.qte === '0' ||
+                                                             row.quantity === '-' || row.qty === '-' || row.qte === '-')
+                                                        )
+                                                    );
+
+                                                    return (
+                                                        <tr
+                                                            key={virtualRow.key}
+                                                            data-index={virtualRow.index}
+                                                            data-selected={isSelected || undefined}
+                                                            data-title-row={isTitleRow || undefined}
+                                                            className={cn(
+                                                                isTotal
+                                                                    ? "bg-base-200 border-t-2 border-base-300 font-bold text-base-content"
+                                                                    : "bg-base-100 hover:bg-base-200 cursor-pointer",
+                                                                isSelected && !isTotal && "!bg-blue-50 !border-2 !border-blue-300 dark:!bg-blue-900/30 dark:!border-blue-700/50",
+                                                                isTitleRow && "font-bold bg-base-100"
+                                                            )}
+                                                            style={{ height: rowHeight }}
+                                                            onClick={() => {
+                                                                if (!isTotal) {
+                                                                    handleRowClick(row);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {select && (
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 text-xs sm:text-sm font-medium text-base-content w-16 text-center">
+                                                                    {!isTotal && (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="checkbox-xs checkbox checkbox-info ml-2"
+                                                                        />
+                                                                    )}
+                                                                </td>
+                                                            )}
+
+                                                            {columns && Object.keys(columns).map((columnKey, colIndex) => {
+                                                                if (isTotal) {
+                                                                    if (colIndex === 0) {
+                                                                        return (
+                                                                            <td
+                                                                                key={columnKey}
+                                                                                className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center"
+                                                                                colSpan={Object.keys(columns).length - 1}>
+                                                                                Total
+                                                                            </td>
+                                                                        );
+                                                                    } else if (colIndex === Object.keys(columns).length - 1) {
+                                                                        return (
+                                                                            <td
+                                                                                key={columnKey}
+                                                                                className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
+                                                                                {row[columnKey] ?? "-"}
+                                                                            </td>
+                                                                        );
+                                                                    } else {
+                                                                        return null;
+                                                                    }
+                                                                }
+
+                                                                return (
+                                                                    <td
+                                                                        key={columnKey}
+                                                                        className={cn(
+                                                                            "px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm text-base-content break-words min-w-0 text-center font-medium",
+                                                                            columnKey === 'status' || columnKey === 'type' ? 'w-20 sm:w-24' : '',
+                                                                            columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
+                                                                            columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
+                                                                        )}>
+                                                                        {(columnKey === 'status' || columnKey === 'type') && row[columnKey] ? (
+                                                                            <StatusBadge
+                                                                                value={getTextContent(row[columnKey])}
+                                                                                type={columnKey as 'status' | 'type'}
+                                                                            />
+                                                                        ) : (
+                                                                            <div className="break-words overflow-wrap-anywhere">
+                                                                                {row[columnKey] ?? "-"}
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                );
+                                                            })}
+
+                                                            {showActionsColumn && (
+                                                                <td className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-medium text-base-content w-24 sm:w-28 text-center">
+                                                                    {!isTotal && (
+                                                                        <div className="inline-flex w-fit">
+                                                                            {previewAction && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="Preview Row"
+                                                                                    data-tip="Preview"
+                                                                                    disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openPreviewDialog(row);
+                                                                                    }}>
+                                                                                    <span className={`iconify ${previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--eye'} text-base-content/70 size-4`}></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {detailsAction && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="View Details"
+                                                                                    data-tip="Details"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openStaticDialog?.("Details", row);
+                                                                                    }}>
+                                                                                    <span className="iconify lucide--info text-base-content/70 size-4"></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {(rowAction?.editAction ?? editAction) && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="Edit Row"
+                                                                                    data-tip="Edit"
+                                                                                    disabled={editLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openEditDialog(row);
+                                                                                    }}>
+                                                                                    <span className={`iconify ${editLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--pencil'} text-base-content/70 size-4`}></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {(rowAction?.exportAction ?? exportAction) && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="Export"
+                                                                                    data-tip="Export"
+                                                                                    disabled={exportingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openStaticDialog?.("Export", row, { contractIdentifier, contractId });
+                                                                                    }}>
+                                                                                    <span className={`iconify ${exportingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--arrow-up-from-line'} text-base-content/70 text-info size-4`}></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {(rowAction?.generateAction ?? generateAction) && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="Generate"
+                                                                                    data-tip="Generate"
+                                                                                    disabled={generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openGenerateDialog(row);
+                                                                                    }}>
+                                                                                    <span className={`iconify ${generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--circle-check-big'} text-base-content/70 text-success size-4`}></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {(rowAction?.deleteAction ?? deleteAction) && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    size="sm"
+                                                                                    aria-label="Delete Row"
+                                                                                    data-tip="Delete"
+                                                                                    disabled={deleteLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openDeleteDialog(row);
+                                                                                    }}>
+                                                                                    <span className={`iconify ${deleteLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--trash'} size-4`}></span>
+                                                                                </Button>
+                                                                            )}
+                                                                            {rowAction?.terminateAction && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    size="sm"
+                                                                                    aria-label="Terminate Contract"
+                                                                                    data-tip="Terminate"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openStaticDialog?.("Terminate", row);
+                                                                                    }}>
+                                                                                    <span className="iconify lucide--x-circle size-4"></span>
+                                                                                </Button>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    );
+                                                })}
+
+                                                {/* Bottom spacer for virtual scroll */}
+                                                {virtualRows.length > 0 && (
+                                                    <tr style={{ height: totalVirtualSize - (virtualRows[virtualRows.length - 1]?.end || 0) }}>
+                                                        <td colSpan={(columns ? Object.keys(columns).length : 0) + (showActionsColumn ? 1 : 0) + (select ? 1 : 0)}></td>
+                                                    </tr>
+                                                )}
+                                            </>
+                                        )}
+                                    </>
                                 ) : (
+                                    /* Standard paginated rendering */
                                     <>
                                         {paginatedData.map((row, index) => {
                                         const rowAction = rowActions?.(row);
@@ -905,7 +1176,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                  row.quantity === '-' || row.qty === '-' || row.qte === '-')
                                             )
                                         );
-                                        
+
 
                                         return (
                                             <tr
@@ -962,7 +1233,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                             return null;
                                                         }
                                                     }
-                                                    
+
                                                     // Regular row handling
                                                     return (
                                                         <td
@@ -995,7 +1266,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Preview Row"
                                                                         data-tip="Preview"
                                                                         disabled={previewLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -1010,7 +1281,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="View Details"
                                                                         data-tip="Details"
                                                                         onClick={(e) => {
@@ -1024,7 +1295,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Edit Row"
                                                                         data-tip="Edit"
                                                                         disabled={editLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -1039,7 +1310,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Export"
                                                                         data-tip="Export"
                                                                         disabled={exportingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -1054,7 +1325,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                     <Button
                                                                         color="ghost"
                                                                         size="sm"
-                                                                        className="tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         aria-label="Generate"
                                                                         data-tip="Generate"
                                                                         disabled={generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
@@ -1068,7 +1339,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {(rowAction?.deleteAction ?? deleteAction) && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
                                                                         aria-label="Delete Row"
                                                                         data-tip="Delete"
@@ -1083,7 +1354,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 {rowAction?.terminateAction && (
                                                                     <Button
                                                                         color="ghost"
-                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-50 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        className="text-error/70 hover:bg-error/20 tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
                                                                         size="sm"
                                                                         aria-label="Terminate Contract"
                                                                         data-tip="Terminate"
@@ -1137,8 +1408,17 @@ const TableComponent: React.FC<TableProps> = ({
                             </tbody>
                     </table>
                 </div>
+                {/* Footer with row count for virtualized mode */}
+                {virtualized && sortedData.length > 0 && (
+                    <div className="flex items-center justify-between px-2 sm:px-3 lg:px-4 py-2 flex-shrink-0 border-t border-base-300 bg-base-100">
+                        <div className="text-xs text-base-content/60">
+                            {sortedData.length} {sortedData.length === 1 ? 'item' : 'items'}
+                            {searchQuery && ` (filtered from ${tableData.length})`}
+                        </div>
+                    </div>
+                )}
                 {/* Footer with row count and pagination */}
-                {totalPages > 1 && (
+                {!virtualized && totalPages > 1 && (
                     <div className="flex items-center justify-end px-2 sm:px-3 lg:px-4 py-2 flex-shrink-0 border-t border-base-300 bg-base-100">
                         {/* Pagination */}
                         <div className="flex items-center">

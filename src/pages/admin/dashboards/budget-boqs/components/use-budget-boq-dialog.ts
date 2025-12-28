@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import { formatCurrency } from "@/utils/formatters";
@@ -79,14 +79,15 @@ const useBudgetBOQsDialog = () => {
     const { getToken } = useAuth();
     const token = getToken();
 
-    const columns = {
+    // Memoize columns to prevent unnecessary re-renders
+    const columns = useMemo(() => ({
         no: "N°",
         key: "Item",
         unite: "Unit",
         qte: "Quantity",
         pu: "Unit Price",
         total_price: "Total Price",
-    };
+    }), []);
 
     const createBuildings = async (buildingData: BuildingRequestModel) => {
         try {
@@ -238,31 +239,32 @@ const useBudgetBOQsDialog = () => {
         }
     };
 
-    const calculateTotal = (item: BOQItem) => {
+    const calculateTotal = useCallback((item: BOQItem) => {
         return item.qte * item.pu;
-    };
+    }, []);
 
-    const formatQuantity = (quantity: number) => {
+    const formatQuantity = useCallback((quantity: number) => {
         if (!quantity || isNaN(quantity) || quantity === 0) return '-';
-        
+
         // Check if the number has meaningful decimals
         const hasDecimals = quantity % 1 !== 0;
-        
+
         return new Intl.NumberFormat('en-US', {
             style: 'decimal',
             minimumFractionDigits: hasDecimals ? 1 : 0,
             maximumFractionDigits: hasDecimals ? 3 : 0
         }).format(quantity);
-    };
+    }, []);
 
-    const processBoqData = (boqItems: BOQItem[]) => {
+    // Memoized processBoqData to prevent unnecessary recalculations
+    const processBoqData = useCallback((boqItems: BOQItem[]) => {
         return boqItems.map(item => ({
             ...item,
             qte: formatQuantity(item.qte),
             pu: formatCurrency(item.pu),
-            total_price: formatCurrency(calculateTotal(item))
+            total_price: formatCurrency(item.qte * item.pu)
         }));
-    };
+    }, [formatQuantity]);
 
     const getBuildingsList = useCallback(async (projectId: number) => {
         try {

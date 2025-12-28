@@ -1,4 +1,5 @@
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import apiRequest from "@/api/api";
 import { ipcApiService } from "@/api/services/ipc-api";
@@ -6,6 +7,14 @@ import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 import type { BoqIpcVM, ContractBuildingsVM, IpcTypeOption, IpcWizardFormData } from "@/types/ipc";
 import { FINANCIAL_CONSTANTS } from "@/types/ipc";
+
+// Navigation state type for pre-selected contract
+interface PreselectionState {
+    preselectedContractId?: number;
+    skipStep1?: boolean;
+    returnTo?: string;
+    returnTab?: string;
+}
 
 // Additional Types for IPC Creation
 interface Contract {
@@ -31,6 +40,9 @@ interface IPCWizardContextType {
     contracts: Contract[];
     selectedContract: Contract | null;
     ipcTypes: IpcTypeOption[];
+
+    // Pre-selection state (for navigation from contract details)
+    preselectionState: PreselectionState | null;
 
     // Actions
     setFormData: (data: Partial<IpcWizardFormData>) => void;
@@ -80,13 +92,18 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     const { authState } = useAuth();
     const { toaster } = useToast();
     const { getToken } = useAuth();
+    const location = useLocation();
+
+    // Get pre-selection state from navigation
+    const preselectionState = location.state as PreselectionState | null;
 
     // State
     const [formData, setFormDataState] = useState<IpcWizardFormData>(getInitialFormData());
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(preselectionState?.skipStep1 ? 2 : 1);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [loading, setLoading] = useState(false);
     const [loadingContracts, setLoadingContracts] = useState(false);
+    const [preselectionProcessed, setPreselectionProcessed] = useState(false);
 
     // Data
     const [contracts, setContracts] = useState<Contract[]>([]);
@@ -259,6 +276,37 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         },
         [getToken, toaster],
     );
+
+    // Effect to handle pre-selected contract from navigation state
+    useEffect(() => {
+        const handlePreselection = async () => {
+            if (preselectionProcessed) return;
+            if (!preselectionState?.preselectedContractId) return;
+
+            // First, load contracts if not already loaded
+            if (contracts.length === 0) {
+                await loadContracts(2); // Load active contracts
+            }
+        };
+
+        handlePreselection();
+    }, [preselectionState, preselectionProcessed, contracts.length, loadContracts]);
+
+    // Effect to select the pre-selected contract once contracts are loaded
+    useEffect(() => {
+        if (preselectionProcessed) return;
+        if (!preselectionState?.preselectedContractId) return;
+        if (contracts.length === 0) return;
+
+        // Find and select the pre-selected contract
+        const contractId = preselectionState.preselectedContractId;
+        const contract = contracts.find((c) => c.id === contractId);
+
+        if (contract) {
+            selectContract(contractId);
+            setPreselectionProcessed(true);
+        }
+    }, [contracts, preselectionState, preselectionProcessed, selectContract]);
 
     // BOQ Progress Update
     const updateBOQProgress = useCallback(
@@ -436,6 +484,9 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             selectedContract,
             ipcTypes: IPC_TYPES,
 
+            // Pre-selection state
+            preselectionState,
+
             // Actions
             setFormData,
             setCurrentStep,
@@ -459,6 +510,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             loadingContracts,
             contracts,
             selectedContract,
+            preselectionState,
             setFormData,
             setCurrentStep,
             setHasUnsavedChanges,

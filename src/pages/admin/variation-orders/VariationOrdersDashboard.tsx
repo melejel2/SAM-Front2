@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -13,7 +13,6 @@ import ConfirmDeleteModal from "./modals/ConfirmDeleteModal";
 
 const VariationOrdersDashboard = () => {
     const {
-        voDatasets,
         loading,
         voDatasetColumns,
         getActiveVoDatasets,
@@ -21,15 +20,18 @@ const VariationOrdersDashboard = () => {
         getEditableVoDatasets,
         getVoDatasetWithBoqs
     } = useVariationOrders();
-    
+
     const { toaster } = useToast();
     const navigate = useNavigate();
-    
+
     const [activeTab, setActiveTab] = useState(0);
-    const [activeVoDatasets, setActiveVoDatasets] = useState<any[]>([]);
-    const [terminatedVoDatasets, setTerminatedVoDatasets] = useState<any[]>([]);
-    const [editableVoDatasets, setEditableVoDatasets] = useState<any[]>([]);
-    
+    // Only store data for the active tab to reduce memory usage
+    const [currentTabData, setCurrentTabData] = useState<any[]>([]);
+    // Store counts for tab badges (lightweight)
+    const [tabCounts, setTabCounts] = useState({ active: 0, editable: 0, terminated: 0 });
+    // Track which tabs have been loaded
+    const [loadedTabs, setLoadedTabs] = useState<Set<number>>(new Set());
+
     // Modals state
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -37,26 +39,79 @@ const VariationOrdersDashboard = () => {
     const [selectedVO, setSelectedVO] = useState<any>(null);
     const [previewData, setPreviewData] = useState<any>(null);
 
-    useEffect(() => {
-        loadAllVoData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // Load data for the active tab only (lazy loading)
+    const loadTabData = useCallback(async (tabIndex: number, forceRefresh = false) => {
+        // Skip if already loaded and not forcing refresh
+        if (loadedTabs.has(tabIndex) && !forceRefresh) {
+            return;
+        }
 
-    const loadAllVoData = async () => {
         try {
-            const [active, terminated, editable] = await Promise.all([
-                getActiveVoDatasets(),
-                getTerminatedVoDatasets(),
-                getEditableVoDatasets()
-            ]);
-            
-            setActiveVoDatasets(active);
-            setTerminatedVoDatasets(terminated);
-            setEditableVoDatasets(editable);
+            let data: any[] = [];
+            switch (tabIndex) {
+                case 0:
+                    data = await getActiveVoDatasets();
+                    setTabCounts(prev => ({ ...prev, active: data.length }));
+                    break;
+                case 1:
+                    data = await getEditableVoDatasets();
+                    setTabCounts(prev => ({ ...prev, editable: data.length }));
+                    break;
+                case 2:
+                    data = await getTerminatedVoDatasets();
+                    setTabCounts(prev => ({ ...prev, terminated: data.length }));
+                    break;
+            }
+
+            setCurrentTabData(data);
+            setLoadedTabs(prev => new Set(prev).add(tabIndex));
         } catch (error) {
             toaster.error("Failed to load VO data");
         }
+    }, [getActiveVoDatasets, getEditableVoDatasets, getTerminatedVoDatasets, loadedTabs, toaster]);
+
+    // Load initial tab data and counts on mount
+    useEffect(() => {
+        loadTabData(0);
+        // Load counts for other tabs in background (lightweight requests)
+        loadTabCounts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Load data when tab changes
+    useEffect(() => {
+        loadTabData(activeTab);
+    }, [activeTab, loadTabData]);
+
+    // Load counts for all tabs (for badge display)
+    const loadTabCounts = async () => {
+        try {
+            const [active, editable, terminated] = await Promise.all([
+                getActiveVoDatasets(),
+                getEditableVoDatasets(),
+                getTerminatedVoDatasets()
+            ]);
+            setTabCounts({
+                active: active.length,
+                editable: editable.length,
+                terminated: terminated.length
+            });
+            // Set initial tab data if we're on tab 0
+            if (activeTab === 0) {
+                setCurrentTabData(active);
+                setLoadedTabs(new Set([0, 1, 2]));
+            }
+        } catch (error) {
+            // Silent fail for counts, not critical
+        }
     };
+
+    // Refresh all data and clear cache
+    const refreshAllData = useCallback(async () => {
+        setLoadedTabs(new Set());
+        await loadTabData(activeTab, true);
+        await loadTabCounts();
+    }, [activeTab, loadTabData]);
 
     const handlePreviewVO = async (row: any) => {
         try {
@@ -93,31 +148,12 @@ const VariationOrdersDashboard = () => {
         navigate('/dashboard');
     };
 
-    const getCurrentData = () => {
-        switch (activeTab) {
-            case 0:
-                return activeVoDatasets;
-            case 1:
-                return editableVoDatasets;
-            case 2:
-                return terminatedVoDatasets;
-            default:
-                return activeVoDatasets;
-        }
-    };
-
-    const getCurrentTitle = () => {
-        switch (activeTab) {
-            case 0:
-                return "Active VO";
-            case 1:
-                return "Editable VO";
-            case 2:
-                return "Terminated VO";
-            default:
-                return "VO";
-        }
-    };
+    // Memoized current title based on active tab (uses ternary for efficiency)
+    const currentTitle = useMemo(() =>
+        activeTab === 0 ? "Active VO" :
+        activeTab === 1 ? "Editable VO" :
+        activeTab === 2 ? "Terminated VO" : "VO"
+    , [activeTab]);
 
     return (
         <div style={{
@@ -179,7 +215,7 @@ const VariationOrdersDashboard = () => {
                         onClick={() => setActiveTab(0)}
                     >
                         <span className="iconify lucide--check-circle size-4" />
-                        <span>Active VOs ({activeVoDatasets.length})</span>
+                        <span>Active VOs ({tabCounts.active})</span>
                     </button>
 
                     <button
@@ -191,7 +227,7 @@ const VariationOrdersDashboard = () => {
                         onClick={() => setActiveTab(1)}
                     >
                         <span className="iconify lucide--edit size-4" />
-                        <span>Editable VOs ({editableVoDatasets.length})</span>
+                        <span>Editable VOs ({tabCounts.editable})</span>
                     </button>
 
                     <button
@@ -203,7 +239,7 @@ const VariationOrdersDashboard = () => {
                         onClick={() => setActiveTab(2)}
                     >
                         <span className="iconify lucide--x-circle size-4" />
-                        <span>Terminated VOs ({terminatedVoDatasets.length})</span>
+                        <span>Terminated VOs ({tabCounts.terminated})</span>
                     </button>
                 </div>
             </div>
@@ -216,14 +252,14 @@ const VariationOrdersDashboard = () => {
                 ) : (
                     <SAMTable
                         columns={voDatasetColumns}
-                        tableData={getCurrentData()}
+                        tableData={currentTabData}
                         actions
                         previewAction
                         editAction
                         deleteAction
-                        title={getCurrentTitle()}
+                        title={currentTitle}
                         loading={false}
-                        onSuccess={loadAllVoData}
+                        onSuccess={refreshAllData}
                         openStaticDialog={(type, data) => {
                             if (type === "Preview" && data) {
                                 return handlePreviewVO(data);
@@ -238,46 +274,58 @@ const VariationOrdersDashboard = () => {
                             editAction: row.originalStatus?.toLowerCase() === 'editable',
                             deleteAction: row.originalStatus?.toLowerCase() === 'editable',
                         })}
+                        // Enable virtualization for better memory performance with large datasets
+                        virtualized={true}
+                        rowHeight={40}
+                        overscan={5}
                     />
                 )}
             </div>
 
-            {/* Upload Modal */}
-            <VOUploadModal
-                isOpen={showUploadModal}
-                onClose={() => setShowUploadModal(false)}
-                onSuccess={() => {
-                    setShowUploadModal(false);
-                    loadAllVoData();
-                }}
-            />
+            {/* Upload Modal - only render when open to save memory */}
+            {showUploadModal && (
+                <VOUploadModal
+                    isOpen={showUploadModal}
+                    onClose={() => setShowUploadModal(false)}
+                    onSuccess={() => {
+                        setShowUploadModal(false);
+                        refreshAllData();
+                    }}
+                />
+            )}
 
-            {/* Preview Modal */}
-            <VOPreviewModal
-                isOpen={showPreviewModal}
-                onClose={() => {
-                    setShowPreviewModal(false);
-                    setPreviewData(null);
-                }}
-                voData={previewData}
-            />
+            {/* Preview Modal - only render when open to save memory */}
+            {showPreviewModal && (
+                <VOPreviewModal
+                    isOpen={showPreviewModal}
+                    onClose={() => {
+                        setShowPreviewModal(false);
+                        // Clear preview data to free memory
+                        setPreviewData(null);
+                    }}
+                    voData={previewData}
+                />
+            )}
 
-            {/* Delete Confirmation Modal */}
-            <ConfirmDeleteModal
-                isOpen={showDeleteModal}
-                onClose={() => {
-                    setShowDeleteModal(false);
-                    setSelectedVO(null);
-                }}
-                onConfirm={() => {
-                    // TODO: Implement delete functionality
-                    toaster.success("VO deleted successfully");
-                    setShowDeleteModal(false);
-                    setSelectedVO(null);
-                    loadAllVoData();
-                }}
-                voData={selectedVO}
-            />
+            {/* Delete Confirmation Modal - only render when open to save memory */}
+            {showDeleteModal && (
+                <ConfirmDeleteModal
+                    isOpen={showDeleteModal}
+                    onClose={() => {
+                        setShowDeleteModal(false);
+                        // Clear selected VO to free memory
+                        setSelectedVO(null);
+                    }}
+                    onConfirm={() => {
+                        // TODO: Implement delete functionality
+                        toaster.success("VO deleted successfully");
+                        setShowDeleteModal(false);
+                        setSelectedVO(null);
+                        refreshAllData();
+                    }}
+                    voData={selectedVO}
+                />
+            )}
         </div>
     );
 };

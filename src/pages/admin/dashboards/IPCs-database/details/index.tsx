@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import apiRequest from "@/api/api";
@@ -292,6 +292,39 @@ const IPCDetails = () => {
         }
     };
 
+    // Memoize project and subcontractor data lookups - must be before early returns for Rules of Hooks
+    const currentProject = useMemo(() =>
+        ipcData ? projects.find((p) => p.id === ipcData.projectId) : undefined,
+        [projects, ipcData]
+    );
+    const currentSubcontractor = useMemo(() =>
+        ipcData ? subcontractors.find((s) => s.id === ipcData.subcontractorId) : undefined,
+        [subcontractors, ipcData]
+    );
+
+    // Memoize progress statistics calculations
+    const { totalBoqItems, completedItems, overallProgress } = useMemo(() => {
+        if (!ipcData) return { totalBoqItems: 0, completedItems: 0, overallProgress: 0 };
+
+        const total = ipcData.buildings?.reduce((sum, building) => {
+            return sum + (building.boqsContract?.length || 0);
+        }, 0) || 0;
+
+        const completed = ipcData.buildings?.reduce((sum, building) => {
+            return sum + (building.boqsContract?.filter((boq) => boq.cumulPercent >= 100).length || 0);
+        }, 0) || 0;
+
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        return { totalBoqItems: total, completedItems: completed, overallProgress: progress };
+    }, [ipcData]);
+
+    // Memoize net payment calculation
+    const netPayment = useMemo(() => {
+        if (!ipcData) return 0;
+        return ipcData.totalAmount - ipcData.retentionAmount - ipcData.advancePaymentAmount + (ipcData.penalty || 0);
+    }, [ipcData]);
+
     if (loading) {
         return (
             <div className="flex min-h-[400px] items-center justify-center">
@@ -307,27 +340,6 @@ const IPCDetails = () => {
             </div>
         );
     }
-
-    // Get project and subcontractor data
-    const currentProject = projects.find((p) => p.id === ipcData?.projectId);
-    const currentSubcontractor = subcontractors.find((s) => s.id === ipcData?.subcontractorId);
-
-    // Calculate progress statistics
-    const totalBoqItems =
-        ipcData.buildings?.reduce((total, building) => {
-            return total + (building.boqsContract?.length || 0);
-        }, 0) || 0;
-
-    const completedItems =
-        ipcData.buildings?.reduce((total, building) => {
-            return total + (building.boqsContract?.filter((boq) => boq.cumulPercent >= 100).length || 0);
-        }, 0) || 0;
-
-    const overallProgress = totalBoqItems > 0 ? Math.round((completedItems / totalBoqItems) * 100) : 0;
-
-    // Net payment calculation
-    const netPayment =
-        ipcData.totalAmount - ipcData.retentionAmount - ipcData.advancePaymentAmount + (ipcData.penalty || 0);
 
     return (
         <div
@@ -749,6 +761,9 @@ const IPCDetails = () => {
                                                             onSuccess={() => {}}
                                                             openStaticDialog={() => {}}
                                                             dynamicDialog={false}
+                                                            virtualized={true}
+                                                            rowHeight={36}
+                                                            overscan={10}
                                                         />
                                                     ) : (
                                                         <div className="py-8 text-center">
@@ -1087,7 +1102,7 @@ const IPCDetails = () => {
                             <div className="modal-box h-[90vh] max-w-7xl">
                                 <div className="mb-4 flex items-center justify-between">
                                     <h3 className="text-lg font-bold">IPC Preview</h3>
-                                    <button onClick={() => setShowPreview(false)} className="btn btn-ghost btn-sm">
+                                    <button onClick={() => { setShowPreview(false); setPreviewData(null); }} className="btn btn-ghost btn-sm">
                                         <span className="iconify lucide--x size-5"></span>
                                     </button>
                                 </div>
@@ -1096,7 +1111,7 @@ const IPCDetails = () => {
                                 </div>
                             </div>
                             <form method="dialog" className="modal-backdrop">
-                                <button onClick={() => setShowPreview(false)}>close</button>
+                                <button onClick={() => { setShowPreview(false); setPreviewData(null); }}>close</button>
                             </form>
                         </dialog>
                     )}

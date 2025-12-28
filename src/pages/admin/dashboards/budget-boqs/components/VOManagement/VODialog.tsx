@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { Button } from "@/components/daisyui";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
@@ -54,6 +54,18 @@ const VODialog: React.FC<VODialogProps> = ({
   const [voFile, setVoFile] = useState<File | null>(null);
   const [voLevel, setVoLevel] = useState(1);
   const [isFromBudgetBoq, setIsFromBudgetBoq] = useState(true);
+
+  // Clear all modal data when dialog closes to free memory
+  const clearModalData = useCallback(() => {
+    setVos([]);
+    setEditingVO(null);
+    setSelectedLevel(null);
+    setDetailedVO(null);
+    setShowCreateForm(false);
+    setVoFile(null);
+    setVoLevel(1);
+    setIsFromBudgetBoq(true);
+  }, []);
 
   // Number formatting function
   const formatQuantity = (quantity: number) => {
@@ -280,7 +292,10 @@ const VODialog: React.FC<VODialogProps> = ({
               </p>
             </div>
             <button
-              onClick={onClose}
+              onClick={() => {
+                clearModalData();
+                onClose();
+              }}
               className="btn btn-sm btn-ghost"
             >
               <Icon icon={xIcon} className="w-4 h-4" />

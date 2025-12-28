@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -7,7 +7,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import useUnits from "./use-units";
 
-const Units = () => {
+const Units = memo(() => {
     const { columns, tableData, inputFields, loading, getUnits } = useUnits();
     const navigate = useNavigate();
     const { canManageUnits } = usePermissions();
@@ -17,9 +17,9 @@ const Units = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleBackToAdminTools = () => {
+    const handleBackToAdminTools = useCallback(() => {
         navigate('/admin-tools');
-    };
+    }, [navigate]);
 
     return (
         <div style={{
@@ -62,11 +62,16 @@ const Units = () => {
                         createEndPoint="Unit/AddUnit"
                         deleteEndPoint="Unit/DeleteUnit"
                         onSuccess={getUnits}
+                        virtualized={true}
+                        rowHeight={40}
+                        overscan={5}
                     />
                 )}
             </div>
         </div>
     );
-};
+});
+
+Units.displayName = 'Units';
 
 export default Units;

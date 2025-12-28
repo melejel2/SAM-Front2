@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
@@ -14,7 +14,8 @@ const useProjects = () => {
 
     const token = getToken();
 
-    const columns = {
+    // Memoize columns to prevent unnecessary re-renders
+    const columns = useMemo(() => ({
         projectName: "Project Name",
         projectCode: "Project Code",
         client: "Client",
@@ -22,9 +23,10 @@ const useProjects = () => {
         startDate: "Start Date",
         endDate: "End Date",
         status: "Status",
-    };
+    }), []);
 
-    const inputFields = [
+    // Memoize inputFields to prevent unnecessary re-renders
+    const inputFields = useMemo(() => [
         {
             name: "projectName",
             label: "Project Name",
@@ -68,7 +70,7 @@ const useProjects = () => {
             required: true,
             options: ["Active", "Completed", "On Hold", "Cancelled"],
         },
-    ];
+    ], []);
 
     const getProjects = useCallback(async () => {
         setLoading(true);

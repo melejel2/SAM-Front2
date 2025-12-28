@@ -595,6 +595,9 @@ const ContractDatabaseDetails = () => {
                             onSuccess={() => {}}
                             openStaticDialog={() => {}}
                             dynamicDialog={false}
+                            virtualized={true}
+                            rowHeight={40}
+                            overscan={5}
                         />
                     ) : (
                         <div className="text-center py-12">
@@ -619,7 +622,11 @@ const ContractDatabaseDetails = () => {
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-bold text-lg">Contract Preview</h3>
                             <button
-                                onClick={() => setShowPreview(false)}
+                                onClick={() => {
+                                    setShowPreview(false);
+                                    // Clear preview data to free memory
+                                    setTimeout(() => setPreviewData(null), 150);
+                                }}
                                 className="btn btn-ghost btn-sm"
                             >
                                 <span className="iconify lucide--x size-5"></span>
@@ -633,7 +640,11 @@ const ContractDatabaseDetails = () => {
                         </div>
                     </div>
                     <form method="dialog" className="modal-backdrop">
-                        <button onClick={() => setShowPreview(false)}>close</button>
+                        <button onClick={() => {
+                            setShowPreview(false);
+                            // Clear preview data to free memory
+                            setTimeout(() => setPreviewData(null), 150);
+                        }}>close</button>
                     </form>
                 </dialog>
             )}

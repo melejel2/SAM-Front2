@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -10,7 +10,6 @@ import useProjects from "./use-projects";
 const Projects = () => {
     const { columns, tableData, inputFields, loading, uploadLoading, getProjects, uploadBoq, openProject } = useProjects();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const modalRef = useRef<HTMLDialogElement>(null);
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [showUploadModal, setShowUploadModal] = useState(false);
     const navigate = useNavigate();
@@ -24,10 +23,19 @@ const Projects = () => {
         const file = event.target.files?.[0];
         if (file && selectedProjectId) {
             uploadBoq(selectedProjectId, file);
-            setShowUploadModal(false);
-            setSelectedProjectId("");
+            handleCloseUploadModal();
         }
     };
+
+    // Clear modal data when closing to free up memory
+    const handleCloseUploadModal = useCallback(() => {
+        setShowUploadModal(false);
+        setSelectedProjectId("");
+        // Reset file input to allow re-selecting the same file
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    }, []);
 
     const triggerFileInput = () => {
         fileInputRef.current?.click();
@@ -103,6 +111,9 @@ const Projects = () => {
                                     handleUploadClick(data);
                                 }
                             }}
+                            virtualized={true}
+                            rowHeight={40}
+                            overscan={5}
                         />
                         <div className="mt-4 flex gap-2">
                             {tableData.map((project) => (
@@ -150,7 +161,7 @@ const Projects = () => {
                         </Button>
                         <Button
                             color="ghost"
-                            onClick={() => setShowUploadModal(false)}
+                            onClick={handleCloseUploadModal}
                         >
                             Cancel
                         </Button>

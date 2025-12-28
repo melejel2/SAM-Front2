@@ -7,6 +7,65 @@ type ApiErrorResponse = {
     status?: number;
 };
 
+// Unified Deduction type for displaying all deductions in a single table
+export interface UnifiedDeduction {
+    id: number;
+    type: "Labor" | "Machine" | "Material";
+    ref: string | null;
+    description: string | null;
+    subType: string | null;
+    unit: string | null;
+    unitPrice: number;
+    quantity: number;
+    amount: number;
+    deduction: number;
+    previousDeduction: number;
+    actualDeduction: number;
+    precedentAmount: number;
+    actAmount: number;
+    consumedAmount: number;
+    contractDatasetId: number | null;
+    contractNumber: string | null;
+    projectId: number | null;
+    projectName: string | null;
+    subcontractorId: number | null;
+    subcontractorName: string | null;
+    // Material-specific fields
+    allocated?: number | null;
+    stockQte?: number | null;
+    transferedQte?: number | null;
+    transferedTo?: string | null;
+    remark?: string | null;
+    isTransferred?: boolean | null;
+    // Type-specific IDs for editing
+    laborTypeId?: number | null;
+    machineCodeId?: number | null;
+    poId?: number | null;
+    created: string;
+}
+
+export interface DeductionsSummary {
+    laborCount: number;
+    machineCount: number;
+    materialCount: number;
+    totalAmount: number;
+    totalDeduction: number;
+}
+
+export interface AllDeductionsResponse {
+    items: UnifiedDeduction[];
+    totalCount: number;
+    summary: DeductionsSummary;
+}
+
+export interface DeductionsFilter {
+    projectId?: number | null;
+    subcontractorId?: number | null;
+    contractDatasetId?: number | null;
+    type?: string | null;
+    search?: string | null;
+}
+
 export interface Labor {
     id: number;
     laborTypeId: number;
@@ -353,6 +412,50 @@ export const deleteContractMachine = async (
     return apiRequest<{ success: boolean }>({
         endpoint: `Deductions/machines/${machineId}`,
         method: "DELETE",
+        token: token,
+    });
+};
+
+// ============================================
+// UNIFIED DEDUCTIONS API (New endpoints)
+// ============================================
+
+/**
+ * Fetch all deductions across all contracts with optional filtering
+ */
+export const fetchAllDeductions = async (
+    token: string,
+    filters?: DeductionsFilter,
+): Promise<AllDeductionsResponse | ApiErrorResponse> => {
+    const params = new URLSearchParams();
+
+    if (filters?.projectId) params.append("projectId", filters.projectId.toString());
+    if (filters?.subcontractorId) params.append("subcontractorId", filters.subcontractorId.toString());
+    if (filters?.contractDatasetId) params.append("contractDatasetId", filters.contractDatasetId.toString());
+    if (filters?.type) params.append("type", filters.type);
+    if (filters?.search) params.append("search", filters.search);
+
+    const queryString = params.toString();
+    const endpoint = `Deductions/GetAll${queryString ? `?${queryString}` : ""}`;
+
+    return apiRequest<AllDeductionsResponse>({
+        endpoint,
+        method: "GET",
+        token: token,
+    });
+};
+
+/**
+ * Get the next available reference number for a deduction type within a contract
+ */
+export const getNextRefNumber = async (
+    contractDatasetId: number,
+    type: "Labor" | "Machine" | "Material",
+    token: string,
+): Promise<{ refNumber: string } | ApiErrorResponse> => {
+    return apiRequest<{ refNumber: string }>({
+        endpoint: `Deductions/GetNextRef/${contractDatasetId}/${type}`,
+        method: "GET",
         token: token,
     });
 };

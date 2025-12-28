@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { Button } from "@/components/daisyui";
 import trashIcon from "@iconify/icons-lucide/trash";
 import { formatCurrency } from "@/utils/formatters";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import useTrades from "@/pages/admin/adminTools/trades/use-trades";
 import useBOQUnits from "@/pages/admin/dashboards/subcontractors-BOQs/hooks/use-units";
@@ -204,6 +205,11 @@ const BOQTable: React.FC<BOQTableProps> = ({
     const [tableData, setTableData] = useState<any[]>([]);
     const [enhancedSheets, setEnhancedSheets] = useState<any[]>([]);
     const projectDataRef = useRef(projectData);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    // Virtualization configuration for large datasets
+    const ROW_HEIGHT = 40;
+    const OVERSCAN = 5;
 
     // Excel-like cell selection state
     const [selectedCell, setSelectedCell] = useState<{rowId: any, columnKey: string} | null>(null);
@@ -600,7 +606,21 @@ const BOQTable: React.FC<BOQTableProps> = ({
         return { totalPrice, hasData: true };
     }, [projectData, selectedBuilding, selectedTrade]);
 
-    // Excel-like table rendering with direct cell editing
+    // Virtualization for large datasets - only activate when data is large
+    const shouldVirtualize = tableData.length > 50;
+
+    const rowVirtualizer = useVirtualizer({
+        count: shouldVirtualize ? tableData.length : 0,
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: () => ROW_HEIGHT,
+        overscan: OVERSCAN,
+        enabled: shouldVirtualize,
+    });
+
+    const virtualRows = shouldVirtualize ? rowVirtualizer.getVirtualItems() : [];
+    const totalVirtualSize = shouldVirtualize ? rowVirtualizer.getTotalSize() : 0;
+
+    // Excel-like table rendering with direct cell editing and virtualization
     const renderExcelLikeTable = () => {
         if (tableData.length === 0) {
             return (
@@ -627,6 +647,76 @@ const BOQTable: React.FC<BOQTableProps> = ({
             </td>
         ));
 
+        // Virtualized rendering for large datasets
+        if (shouldVirtualize) {
+            return (
+                <div ref={tableContainerRef} className="h-full overflow-auto relative">
+                    <table className="w-full border-collapse bg-base-100 text-xs sm:text-sm">
+                        <thead className="sticky top-0 z-20">
+                            <tr>
+                                {columnKeys.map((columnKey) => (
+                                    <th
+                                        key={columnKey}
+                                        className="px-3 py-2.5 border border-base-300 bg-base-200 text-center text-xs sm:text-sm font-semibold uppercase tracking-wide text-base-content"
+                                    >
+                                        {columns[columnKey]}
+                                    </th>
+                                ))}
+                                <th className="px-3 py-3 border border-base-300 bg-base-200 text-center text-sm sm:text-base font-semibold uppercase tracking-wide text-base-content w-20">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* Spacer for virtualization */}
+                            {virtualRows.length > 0 && virtualRows[0].start > 0 && (
+                                <tr style={{ height: `${virtualRows[0].start}px` }}>
+                                    <td colSpan={columnKeys.length + 1} />
+                                </tr>
+                            )}
+                            {virtualRows.map((virtualRow) => {
+                                const row = tableData[virtualRow.index];
+                                return (
+                                    <TableRow
+                                        key={row.id}
+                                        row={row}
+                                        columnKeys={columnKeys}
+                                        columns={columns}
+                                        inputFields={inputFields}
+                                        editingCell={editingCell}
+                                        selectedCell={selectedCell}
+                                        editingValue={editingValue}
+                                        getRawItem={getRawItem}
+                                        getDisplayValue={getDisplayValue}
+                                        handleCellClick={handleCellClick}
+                                        handleCellBlur={handleCellBlur}
+                                        handleCellKeyDown={handleCellKeyDown}
+                                        setEditingValue={setEditingValue}
+                                        handleItemDelete={handleItemDelete}
+                                    />
+                                );
+                            })}
+                            {/* End spacer for virtualization */}
+                            {virtualRows.length > 0 && (
+                                <tr style={{ height: `${totalVirtualSize - (virtualRows[virtualRows.length - 1]?.end || 0)}px` }}>
+                                    <td colSpan={columnKeys.length + 1} />
+                                </tr>
+                            )}
+                        </tbody>
+                        {calculateTotals.hasData && (
+                            <tfoot className="sticky bottom-0 z-10">
+                                <tr className="bg-base-200">
+                                    {totalsRowCells}
+                                    <td className="border border-base-300 bg-base-200" />
+                                </tr>
+                            </tfoot>
+                        )}
+                    </table>
+                </div>
+            );
+        }
+
+        // Non-virtualized rendering for smaller datasets
         return (
             <div className="h-full overflow-auto relative">
                 <table className="w-full border-collapse bg-base-100 text-xs sm:text-sm">

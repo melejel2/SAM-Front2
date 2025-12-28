@@ -1,11 +1,16 @@
+import { useMemo } from "react";
+
 const useProjects = () => {
-    const columns = {
+    // Memoize columns to prevent unnecessary re-renders
+    const columns = useMemo(() => ({
         code: "Code",
         name: "Name",
         acronym: "Acronym",
         city: "City",
-    };
-    const tableData = [
+    }), []);
+
+    // Memoize static table data to prevent unnecessary re-renders
+    const tableData = useMemo(() => [
         {
             id: 1,
             code: "A01",
@@ -27,9 +32,10 @@ const useProjects = () => {
             acronym: "Project Acronym 3",
             city: "Project City 3",
         },
-    ];
+    ], []);
 
-    const inputFields = [
+    // Memoize inputFields to prevent unnecessary re-renders
+    const inputFields = useMemo(() => [
         {
             name: "code",
             label: "Code",
@@ -54,7 +60,7 @@ const useProjects = () => {
             type: "text",
             required: true,
         },
-    ];
+    ], []);
 
     return {
         columns,

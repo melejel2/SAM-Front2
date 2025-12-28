@@ -97,6 +97,11 @@ const useDeductionsManager = (isOpen: boolean) => {
     useEffect(() => {
         if (isOpen) {
             fetchManagerData();
+        } else {
+            // Clear data when modal closes to free memory
+            setLaborData([]);
+            setMaterialsData([]);
+            setMachinesData([]);
         }
     }, [isOpen, fetchManagerData]);
 

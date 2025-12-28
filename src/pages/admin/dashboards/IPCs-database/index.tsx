@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -10,12 +10,12 @@ import { ipcApiService } from "@/api/services/ipc-api";
 
 import useIPCsDatabase from "./use-IPCs-database";
 
-// Export Dropdown Component
-const ExportDropdown = ({ 
-    exportingPdf, 
-    exportingExcel, 
-    onExportPdf, 
-    onExportExcel 
+// Export Dropdown Component (Memoized to prevent unnecessary re-renders)
+const ExportDropdown = memo(({
+    exportingPdf,
+    exportingExcel,
+    onExportPdf,
+    onExportExcel
 }: {
     exportingPdf: boolean;
     exportingExcel: boolean;
@@ -68,7 +68,9 @@ const ExportDropdown = ({
             )}
         </div>
     );
-};
+});
+
+ExportDropdown.displayName = 'ExportDropdown';
 
 const IPCsDatabase = () => {
     const {
@@ -132,14 +134,16 @@ const IPCsDatabase = () => {
         });
     };
 
-    const handleBackToTable = () => {
+    // Memoize back to table handler - also clears preview data to free memory
+    const handleBackToTable = useCallback(() => {
         setViewMode('table');
         setPreviewData(null);
-    };
+    }, []);
 
-    const handleBackToDashboard = () => {
+    // Memoize back to dashboard handler
+    const handleBackToDashboard = useCallback(() => {
         navigate('/dashboard');
-    };
+    }, [navigate]);
 
     const handleDownloadExcel = async (row: any) => {
         // Use smart download that chooses correct method based on IPC status
@@ -281,16 +285,33 @@ const IPCsDatabase = () => {
         }
     };
 
-    // Get unique project names from table data
-    const uniqueProjects = Array.from(new Set(tableData.map((ipc: any) => ipc.projectName).filter(Boolean))).sort();
+    // Memoize unique project names from table data to avoid recalculating on every render
+    const uniqueProjects = useMemo(() =>
+        Array.from(new Set(tableData.map((ipc: any) => ipc.projectName).filter(Boolean))).sort(),
+        [tableData]
+    );
 
-    // Filter table data by selected project
-    const filteredTableData = selectedProject === "All Projects"
-        ? tableData
-        : tableData.filter((ipc: any) => ipc.projectName === selectedProject);
+    // Memoize filtered table data to avoid recalculating on every render
+    const filteredTableData = useMemo(() =>
+        selectedProject === "All Projects"
+            ? tableData
+            : tableData.filter((ipc: any) => ipc.projectName === selectedProject),
+        [tableData, selectedProject]
+    );
 
-    // Header content for the table
-    const tableHeaderContent = (
+    // Memoize project counts to avoid recalculating on every render
+    const projectCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        tableData.forEach((ipc: any) => {
+            if (ipc.projectName) {
+                counts.set(ipc.projectName, (counts.get(ipc.projectName) || 0) + 1);
+            }
+        });
+        return counts;
+    }, [tableData]);
+
+    // Header content for the table - memoized to avoid recreation on every render
+    const tableHeaderContent = useMemo(() => (
         <div className="flex items-center justify-between flex-1 gap-2">
             <div className="flex items-center gap-2">
                 <button
@@ -324,22 +345,19 @@ const IPCsDatabase = () => {
                                 <span>All Projects ({tableData.length})</span>
                             </button>
                             <div className="divider my-1"></div>
-                            {uniqueProjects.map((projectName) => {
-                                const count = tableData.filter((ipc: any) => ipc.projectName === projectName).length;
-                                return (
-                                    <button
-                                        key={projectName}
-                                        onClick={() => setSelectedProject(projectName as string)}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                            selectedProject === projectName ? "bg-base-200 font-semibold" : ""
-                                        }`}
-                                    >
-                                        <span className="iconify lucide--folder size-4"></span>
-                                        <span className="truncate flex-1">{projectName}</span>
-                                        <span className="badge badge-sm badge-ghost">{count}</span>
-                                    </button>
-                                );
-                            })}
+                            {uniqueProjects.map((projectName) => (
+                                <button
+                                    key={projectName}
+                                    onClick={() => setSelectedProject(projectName as string)}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                    }`}
+                                >
+                                    <span className="iconify lucide--folder size-4"></span>
+                                    <span className="truncate flex-1">{projectName}</span>
+                                    <span className="badge badge-sm badge-ghost">{projectCounts.get(projectName as string) || 0}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -353,7 +371,7 @@ const IPCsDatabase = () => {
                 <span>Create IPC</span>
             </button>
         </div>
-    );
+    ), [selectedProject, uniqueProjects, tableData.length, projectCounts, navigate]);
 
     return (
         <div className="h-full flex flex-col overflow-hidden -mt-6">
@@ -393,7 +411,9 @@ const IPCsDatabase = () => {
                                 loading={false}
                                 onSuccess={getIPCs}
                                 dynamicDialog={false}
-                                rowsPerPage={20}
+                                virtualized={true}
+                                rowHeight={40}
+                                overscan={15}
                                 openStaticDialog={(type, data) => {
                                     if (type === "Preview" && data) {
                                         return handlePreviewIpc(data);

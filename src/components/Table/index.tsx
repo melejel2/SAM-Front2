@@ -67,6 +67,11 @@ interface SAMTableProps {
     contractIdentifier?: string; // Identifier for navigation
     contractId?: string; // Actual contract ID
     isNested?: boolean;
+
+    // Virtualization options for large lists
+    virtualized?: boolean; // Enable virtualization for large datasets
+    rowHeight?: number; // Height of each row in pixels (default: 40)
+    overscan?: number; // Number of rows to render outside viewport (default: 10)
 }
 
 const SAMTable: React.FC<SAMTableProps> = ({
@@ -110,6 +115,10 @@ const SAMTable: React.FC<SAMTableProps> = ({
     contractIdentifier,
     contractId,
     isNested,
+    // Virtualization props
+    virtualized,
+    rowHeight,
+    overscan,
 }) => {
     return (
         <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
@@ -160,6 +169,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             contractIdentifier={contractIdentifier}
                             contractId={contractId}
                             isNested={isNested}
+                            virtualized={virtualized}
+                            rowHeight={rowHeight}
+                            overscan={overscan}
                         />
                     </div>
 

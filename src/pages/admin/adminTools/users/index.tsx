@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
@@ -7,20 +7,20 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 import useUsers from "./use-users";
 
-const Users = () => {
+const Users = memo(() => {
     const { columns, tableData, inputFields, getUsers, loading } = useUsers();
     const { canManageUsers } = usePermissions();
     const navigate = useNavigate();
-    
+
 
     useEffect(() => {
         getUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleBackToAdminTools = () => {
+    const handleBackToAdminTools = useCallback(() => {
         navigate('/admin-tools');
-    };
+    }, [navigate]);
 
     return (
         <div style={{
@@ -63,11 +63,16 @@ const Users = () => {
                         createEndPoint="Users/AddUser"
                         deleteEndPoint="Users/DeleteUser"
                         onSuccess={getUsers}
+                        virtualized={true}
+                        rowHeight={40}
+                        overscan={5}
                     />
                 )}
             </div>
         </div>
     );
-};
+});
+
+Users.displayName = 'Users';
 
 export default Users;

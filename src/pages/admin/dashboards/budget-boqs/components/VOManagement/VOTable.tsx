@@ -4,7 +4,7 @@ import trashIcon from "@iconify/icons-lucide/trash";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import xIcon from "@iconify/icons-lucide/x";
 import { Icon } from "@iconify/react";
-import React, { useEffect, useRef, useState, memo } from "react";
+import React, { useEffect, useRef, useState, memo, useCallback } from "react";
 import { formatCurrency } from "@/utils/formatters";
 
 import { BudgetVO, BudgetVOSheet, BudgetVOItem, ClearBudgetVORequest, BoqDeletionScope } from '@/api/services/budget-vo-api';
@@ -216,10 +216,22 @@ const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>
     }).format(quantity);
   };
 
+  // Clear modal data to free memory
+  const clearModalData = useCallback(() => {
+    setEditedVO({ ...vo, voSheets: [] });
+    setOriginalVO(null);
+    setEditingItemId(null);
+    setActiveSheetId(null);
+    setHasUnsavedChanges(false);
+    setShowClearScopeDialog(false);
+    setClearScope(BoqDeletionScope.Sheet);
+  }, [vo]);
+
   const handleClose = () => {
     if (hasUnsavedChanges) {
       setShowUnsavedChangesDialog(true);
     } else {
+      clearModalData();
       onClose();
     }
   };
@@ -424,6 +436,7 @@ const handleDirectFileUpload = async (event: React.ChangeEvent<HTMLInputElement>
             isOpen={showUnsavedChangesDialog}
             onConfirm={() => {
                 setShowUnsavedChangesDialog(false);
+                clearModalData();
                 onClose();
             }}
             onCancel={() => setShowUnsavedChangesDialog(false)}
