@@ -49,6 +49,38 @@ class IpcApiService {
     }
 
     /**
+     * Get IPCs for a specific contract
+     * GET /api/Ipc/GetIpcsByContract/{contractDatasetId}
+     */
+    async getIpcsByContract(contractDatasetId: number, token: string): Promise<IpcApiResponse<IpcListItem[]>> {
+        try {
+            const response = await apiRequest<IpcListItem[]>({
+                endpoint: `Ipc/GetIpcsByContract/${contractDatasetId}`,
+                method: "GET",
+                token,
+            });
+
+            if (Array.isArray(response)) {
+                return {
+                    success: true,
+                    data: response,
+                };
+            }
+
+            return {
+                success: false,
+                error: { message: "Invalid response format" },
+            };
+        } catch (error) {
+            console.error("Error fetching IPCs by contract:", error);
+            return {
+                success: false,
+                error: { message: error instanceof Error ? error.message : "Failed to fetch IPCs by contract" },
+            };
+        }
+    }
+
+    /**
      * Get IPC details for editing
      * GET /api/Ipc/GetIpcForEdit/{id}
      */
