@@ -733,11 +733,12 @@ const TableComponent: React.FC<TableProps> = ({
                     filterDropdownPosition: null
                 };
             } else {
+                const rect = event?.currentTarget?.getBoundingClientRect();
                 return {
                     ...prev,
-                    filterDropdownPosition: event ? {
-                        top: event.currentTarget.getBoundingClientRect().bottom + 4,
-                        left: event.currentTarget.getBoundingClientRect().left
+                    filterDropdownPosition: rect ? {
+                        top: rect.bottom + 4,
+                        left: rect.left
                     } : null,
                     openFilterDropdown: columnKey
                 };
