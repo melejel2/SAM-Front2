@@ -719,6 +719,9 @@ const TableComponent: React.FC<TableProps> = ({
     }, []);
 
     const handleFilterDropdownToggle = useCallback((columnKey: string, event?: React.MouseEvent<HTMLButtonElement>) => {
+        // Capture rect BEFORE setState - React SyntheticEvents get nullified after handler returns
+        const rect = event?.currentTarget?.getBoundingClientRect();
+
         setFilterState(prev => {
             const isCurrentlyOpen = prev.openFilterDropdown === columnKey;
 
@@ -733,7 +736,6 @@ const TableComponent: React.FC<TableProps> = ({
                     filterDropdownPosition: null
                 };
             } else {
-                const rect = event?.currentTarget?.getBoundingClientRect();
                 return {
                     ...prev,
                     filterDropdownPosition: rect ? {
