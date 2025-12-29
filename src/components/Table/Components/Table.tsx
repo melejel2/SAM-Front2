@@ -4,6 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button, Pagination, useDialog } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
 import SearchInput from "@/components/SearchInput";
+import { formatNumber, formatQuantity } from "@/utils/formatters";
 
 import DialogComponent from "./Dialog";
 import ColumnFilterDropdown from "./ColumnFilterDropdown";
@@ -53,6 +54,39 @@ const StatusBadge = ({ value, type }: { value: string; type: 'status' | 'type' }
             {value}
         </span>
     );
+};
+
+// Helper function to format cell values based on column type
+const formatCellValue = (value: any, columnKey: string): string => {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+
+    // Numeric columns that should be formatted as currency/amounts
+    const amountColumns = ['amount', 'totalAmount', 'total_amount', 'unitPrice', 'unit_price', 'pu', 'price', 'rate', 'advancePayment', 'retention', 'penalty', 'deduction'];
+
+    // Numeric columns that should be formatted as quantities
+    const quantityColumns = ['quantity', 'qty', 'qte', 'allocated', 'stockQte', 'transferedQte'];
+
+    const lowerKey = columnKey.toLowerCase();
+
+    // Check if it's an amount column
+    if (amountColumns.some(col => lowerKey.includes(col.toLowerCase()))) {
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(numValue)) {
+            return formatNumber(numValue);
+        }
+    }
+
+    // Check if it's a quantity column
+    if (quantityColumns.some(col => lowerKey.includes(col.toLowerCase()))) {
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(numValue)) {
+            return formatQuantity(numValue);
+        }
+    }
+
+    return String(value);
 };
 
 // Helper function to extract text content from HTML strings
@@ -998,7 +1032,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             <td
                                                                                 key={columnKey}
                                                                                 className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
-                                                                                {row[columnKey] ?? "-"}
+                                                                                {formatCellValue(row[columnKey], columnKey)}
                                                                             </td>
                                                                         );
                                                                     } else {
@@ -1022,7 +1056,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             />
                                                                         ) : (
                                                                             <div className="break-words overflow-wrap-anywhere">
-                                                                                {row[columnKey] ?? "-"}
+                                                                                {formatCellValue(row[columnKey], columnKey)}
                                                                             </div>
                                                                         )}
                                                                     </td>
@@ -1228,7 +1262,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 <td
                                                                     key={columnKey}
                                                                     className="px-2 sm:px-3 lg:px-4 py-1 text-xs sm:text-sm font-bold border-t-2 border-base-300 text-center">
-                                                                    {row[columnKey] ?? "-"}
+                                                                    {formatCellValue(row[columnKey], columnKey)}
                                                                 </td>
                                                             );
                                                         } else {
@@ -1254,7 +1288,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                                 />
                                                             ) : (
                                                                 <div className="break-words overflow-wrap-anywhere">
-                                                                    {row[columnKey] ?? "-"}
+                                                                    {formatCellValue(row[columnKey], columnKey)}
                                                                 </div>
                                                             )}
                                                         </td>
