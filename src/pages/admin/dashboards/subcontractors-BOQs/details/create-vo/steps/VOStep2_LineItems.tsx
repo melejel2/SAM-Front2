@@ -1,9 +1,10 @@
 import calculatorIcon from "@iconify/icons-lucide/calculator";
+import copyIcon from "@iconify/icons-lucide/copy";
 import infoIcon from "@iconify/icons-lucide/info";
 import trashIcon from "@iconify/icons-lucide/trash";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import { Icon } from "@iconify/react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/utils/formatters";
 
 import {
@@ -12,7 +13,6 @@ import {
     copyVoProjectToVoDataSet,
     getContractBOQItems,
     getVosBuildings,
-    uploadContractVo,
 } from "@/api/services/vo-api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
@@ -42,7 +42,6 @@ export const VOStep2_LineItems: React.FC = () => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const { units } = useBOQUnits();
-    const [availableBOQItems, setAvailableBOQItems] = useState<any[]>([]);
     const [loadingBOQItems, setLoadingBOQItems] = useState(false);
     const [selectedBuildingForItems, setSelectedBuildingForItems] = useState<string>(
         formData.selectedBuildingIds && formData.selectedBuildingIds.length > 0
@@ -67,11 +66,12 @@ export const VOStep2_LineItems: React.FC = () => {
         handleCostCodeDoubleClick,
     } = useCostCodeSelection();
 
+    // Sync selectedBuildingForItems when selectedBuildingIds changes (e.g., edit flow async load)
     useEffect(() => {
-        if (formData.selectedBuildingIds.length > 0 && contractData) {
-            loadBOQItemsForBuildings();
+        if (formData.selectedBuildingIds.length > 0 && !selectedBuildingForItems) {
+            setSelectedBuildingForItems(formData.selectedBuildingIds[0].toString());
         }
-    }, [formData.selectedBuildingIds, contractData?.id]);
+    }, [formData.selectedBuildingIds]);
 
     useEffect(() => {
         if (contractData?.projectId && getToken()) {
@@ -148,33 +148,6 @@ export const VOStep2_LineItems: React.FC = () => {
         }
     };
 
-    const loadBOQItemsForBuildings = async () => {
-        if (!contractData || !getToken()) return;
-
-        setLoadingBOQItems(true);
-        try {
-            const allBOQItems: any[] = [];
-            for (const buildingId of formData.selectedBuildingIds) {
-                const response = await getContractBOQItems(contractData.id, buildingId, getToken() || "");
-                if (response.success && response.data) {
-                    const itemsWithBuilding = response.data.map((item: any) => ({
-                        ...item,
-                        buildingId,
-                        buildingName:
-                            contractData.buildings.find((b) => b.id === buildingId)?.name || `Building ${buildingId}`,
-                    }));
-                    allBOQItems.push(...itemsWithBuilding);
-                }
-            }
-            setAvailableBOQItems(allBOQItems);
-        } catch (error) {
-            console.error("Error loading BOQ items:", error);
-            toaster.error("Failed to load BOQ items");
-        } finally {
-            setLoadingBOQItems(false);
-        }
-    };
-
     // Open import modal instead of file input
     const handleImportButtonClick = () => {
         setShowImportModal(true);
@@ -235,23 +208,31 @@ export const VOStep2_LineItems: React.FC = () => {
         setFormData({ lineItems: updatedItems });
     };
 
-    const updateVOItem = (itemIndex: number, field: keyof VOLineItem, value: any) => {
-        console.log(`Updating item ${itemIndex}, field: ${String(field)}, value:`, value);
+    // Update item using ORIGINAL index in formData.lineItems array
+    const updateVOItem = (originalIndex: number, field: keyof VOLineItem, value: any) => {
         const updatedItems = [...formData.lineItems];
-        if (updatedItems[itemIndex]) {
-            updatedItems[itemIndex] = { ...updatedItems[itemIndex], [field]: value };
+        if (updatedItems[originalIndex]) {
+            updatedItems[originalIndex] = { ...updatedItems[originalIndex], [field]: value };
             if (field === "quantity" || field === "unitPrice") {
-                updatedItems[itemIndex].totalPrice =
-                    (updatedItems[itemIndex].quantity || 0) * (updatedItems[itemIndex].unitPrice || 0);
+                updatedItems[originalIndex].totalPrice =
+                    (updatedItems[originalIndex].quantity || 0) * (updatedItems[originalIndex].unitPrice || 0);
             }
-            console.log("Item after update in updateVOItem:", updatedItems[itemIndex]);
         }
         setFormData({ lineItems: updatedItems });
     };
 
-    const deleteVOItem = (itemIndex: number) => {
-        const updatedItems = formData.lineItems.filter((_, index) => index !== itemIndex);
+    // Delete item using ORIGINAL index in formData.lineItems array
+    const deleteVOItem = (originalIndex: number) => {
+        const updatedItems = formData.lineItems.filter((_, index) => index !== originalIndex);
         setFormData({ lineItems: updatedItems });
+    };
+
+    // Helper to get original index from display index
+    const getOriginalIndex = (displayIndex: number): number => {
+        if (displayIndex < itemsWithIndices.length) {
+            return itemsWithIndices[displayIndex].originalIndex;
+        }
+        return -1; // New item (empty row)
     };
 
     const handleBOQImport = (importedItems: any[]) => {
@@ -259,6 +240,12 @@ export const VOStep2_LineItems: React.FC = () => {
             toaster.error("No items to import");
             return;
         }
+
+        // Get current building ID from dropdown or first selected building
+        const targetBuildingId = selectedBuildingForItems
+            ? parseInt(selectedBuildingForItems)
+            : formData.selectedBuildingIds[0];
+
         const newVOItems: VOLineItem[] = importedItems.map((item) => ({
             id: 0,
             no: item.no || "",
@@ -269,11 +256,77 @@ export const VOStep2_LineItems: React.FC = () => {
             quantity: item.qte || item.quantity || 1,
             unitPrice: item.pu || item.unitPrice || 0,
             totalPrice: (item.qte || item.quantity || 1) * (item.pu || item.unitPrice || 0),
-            buildingId: item.buildingId,
+            // Always assign to the currently selected building
+            buildingId: targetBuildingId,
         }));
-        const updatedItems = newVOItems; // Overwrite existing items as requested
+
+        // Keep items from other buildings (including assigning any unassigned items to their first building)
+        const otherBuildingItems = formData.lineItems
+            .filter((item) => item.buildingId !== targetBuildingId)
+            .map((item) => {
+                // Assign unassigned items to first selected building if it's not the target
+                if (!item.buildingId && formData.selectedBuildingIds.length > 1) {
+                    const firstOtherBuilding = formData.selectedBuildingIds.find((id) => id !== targetBuildingId);
+                    return { ...item, buildingId: firstOtherBuilding || item.buildingId };
+                }
+                return item;
+            })
+            .filter((item) => item.buildingId && item.buildingId !== targetBuildingId);
+        const updatedItems = [...otherBuildingItems, ...newVOItems];
         setFormData({ lineItems: updatedItems });
-        toaster.success(`Successfully imported ${newVOItems.length} items`);
+        toaster.success(`Successfully imported ${newVOItems.length} items for current building`);
+    };
+
+    // Copy current building's items to other selected buildings
+    const copyToOtherBuildings = () => {
+        if (selectedBuildings.length <= 1) {
+            toaster.error("No other buildings to copy to");
+            return;
+        }
+
+        const currentBuildingItems = allItems.filter(
+            (item) => item.buildingId === currentBuildingId
+        );
+
+        if (currentBuildingItems.length === 0) {
+            toaster.error("No items to copy from current building");
+            return;
+        }
+
+        // Get other building IDs and their existing item counts
+        const otherBuildingIds = formData.selectedBuildingIds.filter(
+            (id) => id !== currentBuildingId
+        );
+
+        const existingItemsInOtherBuildings = allItems.filter(
+            (item) => item.buildingId && otherBuildingIds.includes(item.buildingId)
+        );
+
+        // Confirm if other buildings have existing items
+        if (existingItemsInOtherBuildings.length > 0) {
+            const buildingName = selectedBuildings.find((b) => b.id === currentBuildingId)?.name || "current building";
+            const confirmed = confirm(
+                `This will REPLACE ${existingItemsInOtherBuildings.length} existing items in ${otherBuildingIds.length} other building(s) with ${currentBuildingItems.length} items from ${buildingName}.\n\nAre you sure you want to continue?`
+            );
+            if (!confirmed) return;
+        }
+
+        // Create copies for each other building
+        const copiedItems: VOLineItem[] = [];
+        for (const buildingId of otherBuildingIds) {
+            for (const item of currentBuildingItems) {
+                copiedItems.push({
+                    ...item,
+                    id: 0, // New item
+                    buildingId: buildingId,
+                });
+            }
+        }
+
+        // Keep current building items, remove old items from other buildings, add new copies
+        const updatedItems = [...currentBuildingItems, ...copiedItems];
+        setFormData({ lineItems: updatedItems });
+        toaster.success(`Copied ${currentBuildingItems.length} items to ${otherBuildingIds.length} other building(s)`);
     };
 
     // Handle cost code selection for a VO line item
@@ -302,23 +355,73 @@ export const VOStep2_LineItems: React.FC = () => {
 
     const selectedBuildings = contractData?.buildings.filter((b) => formData.selectedBuildingIds.includes(b.id)) || [];
 
-    const items = formData.lineItems || [];
-    const displayItems = [...items];
+    // Get current building ID for filtering
+    const currentBuildingId = selectedBuildingForItems ? parseInt(selectedBuildingForItems) : formData.selectedBuildingIds[0];
+
+    // Filter items by selected building and track original indices
+    // STRICT filtering: only show items that belong to the current building
+    // Unassigned items (no buildingId) should be assigned when first loaded or edited
+    const allItems = formData.lineItems || [];
+    const itemsWithIndices = useMemo(() => {
+        return allItems
+            .map((item, originalIndex) => ({ item, originalIndex }))
+            .filter(({ item }) => {
+                // Only show items that explicitly belong to the current building
+                return item.buildingId === currentBuildingId;
+            });
+    }, [allItems, currentBuildingId]);
+
+    // Auto-assign unassigned items to first selected building on initial load
+    useEffect(() => {
+        const unassignedItems = allItems.filter((item) => !item.buildingId);
+        if (unassignedItems.length > 0 && formData.selectedBuildingIds.length > 0) {
+            const firstBuildingId = formData.selectedBuildingIds[0];
+            const updatedItems = allItems.map((item) => {
+                if (!item.buildingId) {
+                    return { ...item, buildingId: firstBuildingId };
+                }
+                return item;
+            });
+            setFormData({ lineItems: updatedItems });
+        }
+    }, []);
+
+    const filteredItems = itemsWithIndices.map(({ item }) => item);
+
+    // Create display items with empty row at end
+    const displayItems = [...filteredItems];
     if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== "") {
         displayItems.push(createEmptyVOItem());
     }
 
     const isAddition = formData.voType === "Addition";
-    const totalAmount = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
-    const netAmount = isAddition ? totalAmount : -totalAmount;
 
+    // Calculate total for current building only
+    const currentBuildingTotal = filteredItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
+
+    // Calculate total for all buildings (for summary)
+    const allBuildingsTotal = allItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
+
+    const netAmount = isAddition ? allBuildingsTotal : -allBuildingsTotal;
+
+    // Update totals only when values actually change to prevent marking form dirty on load
     useEffect(() => {
-        setFormData({
-            totalAdditions: isAddition ? totalAmount : 0,
-            totalDeductions: !isAddition ? totalAmount : 0,
-            totalAmount: netAmount,
-        });
-    }, [isAddition, totalAmount, netAmount, setFormData]);
+        const newTotalAdditions = isAddition ? allBuildingsTotal : 0;
+        const newTotalDeductions = !isAddition ? allBuildingsTotal : 0;
+
+        // Only update if values have changed
+        if (
+            formData.totalAdditions !== newTotalAdditions ||
+            formData.totalDeductions !== newTotalDeductions ||
+            formData.totalAmount !== netAmount
+        ) {
+            setFormData({
+                totalAdditions: newTotalAdditions,
+                totalDeductions: newTotalDeductions,
+                totalAmount: netAmount,
+            });
+        }
+    }, [isAddition, allBuildingsTotal, netAmount]);
 
     if (formData.selectedBuildingIds.length === 0) {
         return (
@@ -329,25 +432,42 @@ export const VOStep2_LineItems: React.FC = () => {
         );
     }
 
+    // Get current building name for display
+    const currentBuildingName = selectedBuildings.find((b) => b.id === currentBuildingId)?.name || "Building";
+
     return (
         <div>
-            <div className="mb-6 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
+            {/* Building context indicator */}
+            {selectedBuildings.length > 1 && (
+                <div className="alert alert-info mb-4 py-2">
+                    <Icon icon={infoIcon} className="h-5 w-5" />
+                    <span>
+                        Editing items for <strong>{currentBuildingName}</strong>.
+                        Each building has its own set of line items. Use the dropdown to switch buildings.
+                    </span>
+                </div>
+            )}
+
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                     {selectedBuildings.length > 1 && (
-                        <select
-                            className="select select-bordered w-auto max-w-xs"
-                            value={selectedBuildingForItems || ""}
-                            onChange={(e) => setSelectedBuildingForItems(e.target.value)}>
-                            {selectedBuildings.map((building) => (
-                                <option key={building.id} value={building.id.toString()}>
-                                    {building.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium">Building:</label>
+                            <select
+                                className="select select-bordered select-sm w-auto max-w-xs"
+                                value={selectedBuildingForItems || ""}
+                                onChange={(e) => setSelectedBuildingForItems(e.target.value)}>
+                                {selectedBuildings.map((building) => (
+                                    <option key={building.id} value={building.id.toString()}>
+                                        {building.name} ({allItems.filter((i) => i.buildingId === building.id).length} items)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     )}
                     {vos.length > 0 && (
                         <select
-                            className="select select-bordered w-auto max-w-xs"
+                            className="select select-bordered select-sm w-auto max-w-xs"
                             value={selectedVO}
                             onChange={(e) => handleVOSelect(e.target.value)}
                             disabled={loadingVOs}>
@@ -360,7 +480,17 @@ export const VOStep2_LineItems: React.FC = () => {
                         </select>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* Copy to other buildings button */}
+                    {selectedBuildings.length > 1 && filteredItems.length > 0 && (
+                        <button
+                            onClick={copyToOtherBuildings}
+                            className="btn btn-outline btn-sm transition-all duration-200 ease-in-out"
+                            title={`Copy items from ${currentBuildingName} to all other selected buildings`}>
+                            <Icon icon={copyIcon} className="h-4 w-4" />
+                            Copy to Other Buildings
+                        </button>
+                    )}
                     {isUpdate && voDatasetId && (
                         <button
                             onClick={handleClearBOQ}
@@ -414,7 +544,9 @@ export const VOStep2_LineItems: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-base-300 divide-y">
-                            {displayItems.map((item, index) => {
+                            {displayItems.map((item, displayIndex) => {
+                                // Get original index for existing items, -1 for new empty row
+                                const originalIndex = getOriginalIndex(displayIndex);
                                 const isEmptyRow =
                                     item.no === "" &&
                                     item.description === "" &&
@@ -424,7 +556,7 @@ export const VOStep2_LineItems: React.FC = () => {
                                     item.unitPrice === 0;
                                 const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
                                 return (
-                                    <tr key={item.id || index} className="bg-base-100 hover:bg-base-200">
+                                    <tr key={item.id || `display-${displayIndex}`} className="bg-base-100 hover:bg-base-200">
                                         <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
                                             <input
                                                 type="text"
@@ -433,8 +565,8 @@ export const VOStep2_LineItems: React.FC = () => {
                                                 onChange={(e) => {
                                                     if (isEmptyRow && e.target.value) {
                                                         addNewVOItem({ no: e.target.value }, "no");
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, "no", e.target.value);
+                                                    } else if (!isEmptyRow && originalIndex >= 0) {
+                                                        updateVOItem(originalIndex, "no", e.target.value);
                                                     }
                                                 }}
                                                 placeholder="Item No."
@@ -448,8 +580,8 @@ export const VOStep2_LineItems: React.FC = () => {
                                                 onChange={(e) => {
                                                     if (isEmptyRow && e.target.value) {
                                                         addNewVOItem({ description: e.target.value }, "description");
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, "description", e.target.value);
+                                                    } else if (!isEmptyRow && originalIndex >= 0) {
+                                                        updateVOItem(originalIndex, "description", e.target.value);
                                                     }
                                                 }}
                                                 placeholder="Description"
@@ -459,9 +591,11 @@ export const VOStep2_LineItems: React.FC = () => {
                                             <input
                                                 type="text"
                                                 value={item.costCode || ""}
-                                                onDoubleClick={() =>
-                                                    handleCostCodeCellDoubleClick(index, item.costCode)
-                                                }
+                                                onDoubleClick={() => {
+                                                    if (originalIndex >= 0) {
+                                                        handleCostCodeCellDoubleClick(originalIndex, item.costCode);
+                                                    }
+                                                }}
                                                 placeholder=""
                                                 disabled={costCodeModalOpen}
                                                 title={"Double-click to select from cost code library"}
@@ -478,8 +612,8 @@ export const VOStep2_LineItems: React.FC = () => {
                                                     const unitName = selectedUnit?.name || e.target.value;
                                                     if (isEmptyRow && unitName) {
                                                         addNewVOItem({ unit: unitName }, "unit");
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, "unit", unitName);
+                                                    } else if (!isEmptyRow && originalIndex >= 0) {
+                                                        updateVOItem(originalIndex, "unit", unitName);
                                                     }
                                                 }}>
                                                 <option value=""></option>
@@ -503,8 +637,8 @@ export const VOStep2_LineItems: React.FC = () => {
                                                     const value = parseFloat(cleanValue) || 0;
                                                     if (isEmptyRow && value !== 0) {
                                                         addNewVOItem({ quantity: value }, "quantity");
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, "quantity", value);
+                                                    } else if (!isEmptyRow && originalIndex >= 0) {
+                                                        updateVOItem(originalIndex, "quantity", value);
                                                     }
                                                 }}
                                                 placeholder=""
@@ -524,8 +658,8 @@ export const VOStep2_LineItems: React.FC = () => {
                                                     const value = parseFloat(cleanValue) || 0;
                                                     if (isEmptyRow && value !== 0) {
                                                         addNewVOItem({ unitPrice: value }, "unitPrice");
-                                                    } else if (!isEmptyRow) {
-                                                        updateVOItem(index, "unitPrice", value);
+                                                    } else if (!isEmptyRow && originalIndex >= 0) {
+                                                        updateVOItem(originalIndex, "unitPrice", value);
                                                     }
                                                 }}
                                                 placeholder=""
@@ -537,10 +671,10 @@ export const VOStep2_LineItems: React.FC = () => {
                                             {isEmptyRow || !item.unit ? "-" : formatCurrency(itemTotal)}
                                         </td>
                                         <td className="text-base-content w-24 px-2 py-1 text-center text-xs font-medium sm:w-28 sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            {!isEmptyRow && (
+                                            {!isEmptyRow && originalIndex >= 0 && (
                                                 <div className="inline-flex">
                                                     <button
-                                                        onClick={() => deleteVOItem(index)}
+                                                        onClick={() => deleteVOItem(originalIndex)}
                                                         className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
                                                         title="Delete item">
                                                         <Icon icon={trashIcon} className="h-4 w-4" />
@@ -551,16 +685,16 @@ export const VOStep2_LineItems: React.FC = () => {
                                     </tr>
                                 );
                             })}
-                            {items.length > 0 && (
+                            {filteredItems.length > 0 && (
                                 <tr className="bg-base-200 border-base-300 text-base-content border-t-2 font-bold">
                                     <td
                                         className="px-2 py-2 text-center text-xs sm:px-3 sm:py-3 sm:text-sm lg:px-4"
                                         colSpan={6}>
-                                        TOTAL
+                                        TOTAL (This Building)
                                     </td>
                                     <td
                                         className={`px-2 py-2 text-center text-xs font-bold sm:px-3 sm:py-3 sm:text-sm lg:px-4 ${isAddition ? "text-primary" : "text-error"}`}>
-                                        {formatCurrency(totalAmount)}
+                                        {formatCurrency(currentBuildingTotal)}
                                     </td>
                                     <td className="px-2 py-2 sm:px-3 sm:py-3 lg:px-4"></td>
                                 </tr>
@@ -569,7 +703,7 @@ export const VOStep2_LineItems: React.FC = () => {
                     </table>
                 </div>
             </div>
-            {items.length === 0 && (
+            {filteredItems.length === 0 && (
                 <div className="mt-4 py-8 text-center">
                     <Icon icon={infoIcon} className="text-base-content/40 mx-auto mb-2 h-8 w-8" />
                     <p className="text-base-content/60 text-sm">

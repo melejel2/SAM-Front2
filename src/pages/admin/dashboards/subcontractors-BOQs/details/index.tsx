@@ -842,9 +842,10 @@ const ContractDetails = () => {
 
     return (
         <div className="space-y-6">
-            {/* Header with Back Button */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            {/* Header with Back Button, Tabs, and Actions */}
+            <div className="flex items-center justify-between gap-4">
+                {/* Left: Back Button */}
+                <div className="flex items-center">
                     <button
                         onClick={() => navigate("/dashboard/contracts")}
                         className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
@@ -853,7 +854,51 @@ const ContractDetails = () => {
                     </button>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Center: Tab Navigation */}
+                <div className="bg-base-200 rounded-box p-1 flex gap-1">
+                    <button
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                            activeTab === "info"
+                                ? "bg-primary text-primary-content"
+                                : "bg-base-100 text-base-content hover:bg-base-300"
+                        }`}
+                        onClick={() => handleTabChange("info")}>
+                        <span className="iconify lucide--file-text size-4"></span>
+                        Contract Info
+                    </button>
+                    <button
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                            activeTab === "vos"
+                                ? "bg-primary text-primary-content"
+                                : "bg-base-100 text-base-content hover:bg-base-300"
+                        }`}
+                        onClick={() => handleTabChange("vos")}>
+                        <span className="iconify lucide--git-branch size-4"></span>
+                        VOs ({vos.length})
+                    </button>
+                    <button
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                            activeTab === "ipcs"
+                                ? "bg-primary text-primary-content"
+                                : "bg-base-100 text-base-content hover:bg-base-300"
+                        }`}
+                        onClick={() => handleTabChange("ipcs")}>
+                        <span className="iconify lucide--receipt size-4"></span>
+                        IPCs
+                    </button>
+                    <button
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                            activeTab === "deductions"
+                                ? "bg-primary text-primary-content"
+                                : "bg-base-100 text-base-content hover:bg-base-300"
+                        }`}
+                        onClick={() => handleTabChange("deductions")}>
+                        <span className="iconify lucide--minus-circle size-4"></span>
+                        Deductions
+                    </button>
+                </div>
+
+                {/* Right: Action Buttons */}
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handlePreviewContract}
@@ -1025,34 +1070,6 @@ const ContractDetails = () => {
                         </button>
                     )}
                 </div>
-            </div>
-
-            {/* Tab Navigation */}
-            <div className="tabs tabs-bordered">
-                <button
-                    className={`tab ${activeTab === "info" ? "tab-active" : ""}`}
-                    onClick={() => handleTabChange("info")}>
-                    <span className="iconify lucide--file-text size-4 mr-2"></span>
-                    Contract Info
-                </button>
-                <button
-                    className={`tab ${activeTab === "vos" ? "tab-active" : ""}`}
-                    onClick={() => handleTabChange("vos")}>
-                    <span className="iconify lucide--git-branch size-4 mr-2"></span>
-                    VOs ({vos.length})
-                </button>
-                <button
-                    className={`tab ${activeTab === "ipcs" ? "tab-active" : ""}`}
-                    onClick={() => handleTabChange("ipcs")}>
-                    <span className="iconify lucide--receipt size-4 mr-2"></span>
-                    IPCs
-                </button>
-                <button
-                    className={`tab ${activeTab === "deductions" ? "tab-active" : ""}`}
-                    onClick={() => handleTabChange("deductions")}>
-                    <span className="iconify lucide--minus-circle size-4 mr-2"></span>
-                    Deductions
-                </button>
             </div>
 
             {/* Tab Content - Only load tabs that have been visited (lazy loading) */}
