@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import archiveIcon from "@iconify/icons-lucide/archive";
 
 import SAMTable from "@/components/Table";
 import { useDialog } from "@/components/daisyui";
@@ -122,6 +123,18 @@ const BudgetBOQs = () => {
                     deleteEndPoint="Project/DeleteProject/{id}"
                     openStaticDialog={openCreateDialog}
                     rowsPerPage={10000}
+                    customHeaderContent={
+                        <button
+                            onClick={() => {
+                                // TODO: Implement archive project functionality
+                                console.log("Archive Project clicked");
+                            }}
+                            className="btn btn-secondary btn-sm rounded px-4 text-sm transition-all duration-200"
+                        >
+                            <Icon icon={archiveIcon} className="size-4" />
+                            <span className="text-xs">Archive Project</span>
+                        </button>
+                    }
                 />
             </div>
 
