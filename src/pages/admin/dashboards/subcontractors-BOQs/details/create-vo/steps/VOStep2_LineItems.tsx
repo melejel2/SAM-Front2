@@ -67,11 +67,17 @@ export const VOStep2_LineItems: React.FC = () => {
     } = useCostCodeSelection();
 
     // Sync selectedBuildingForItems when selectedBuildingIds changes (e.g., edit flow async load)
+    // Also reset if the currently selected building is no longer in the list
     useEffect(() => {
-        if (formData.selectedBuildingIds.length > 0 && !selectedBuildingForItems) {
-            setSelectedBuildingForItems(formData.selectedBuildingIds[0].toString());
+        if (formData.selectedBuildingIds.length > 0) {
+            const currentSelection = selectedBuildingForItems ? parseInt(selectedBuildingForItems) : null;
+            const isCurrentSelectionValid = currentSelection && formData.selectedBuildingIds.includes(currentSelection);
+
+            if (!isCurrentSelectionValid) {
+                setSelectedBuildingForItems(formData.selectedBuildingIds[0].toString());
+            }
         }
-    }, [formData.selectedBuildingIds]);
+    }, [formData.selectedBuildingIds, selectedBuildingForItems]);
 
     useEffect(() => {
         if (contractData?.projectId && getToken()) {
@@ -371,20 +377,27 @@ export const VOStep2_LineItems: React.FC = () => {
             });
     }, [allItems, currentBuildingId]);
 
-    // Auto-assign unassigned items to first selected building on initial load
+    // Auto-assign unassigned items to first selected building when items load (including async edit flow)
     useEffect(() => {
-        const unassignedItems = allItems.filter((item) => !item.buildingId);
-        if (unassignedItems.length > 0 && formData.selectedBuildingIds.length > 0) {
-            const firstBuildingId = formData.selectedBuildingIds[0];
-            const updatedItems = allItems.map((item) => {
-                if (!item.buildingId) {
-                    return { ...item, buildingId: firstBuildingId };
-                }
-                return item;
-            });
-            setFormData({ lineItems: updatedItems });
-        }
-    }, []);
+        // Skip if no buildings selected
+        if (formData.selectedBuildingIds.length === 0) return;
+
+        // Check for unassigned items
+        const currentItems = formData.lineItems || [];
+        const unassignedItems = currentItems.filter((item) => !item.buildingId);
+
+        // Skip if no unassigned items (prevents infinite loop)
+        if (unassignedItems.length === 0) return;
+
+        const firstBuildingId = formData.selectedBuildingIds[0];
+        const updatedItems = currentItems.map((item) => {
+            if (!item.buildingId) {
+                return { ...item, buildingId: firstBuildingId };
+            }
+            return item;
+        });
+        setFormData({ lineItems: updatedItems });
+    }, [formData.lineItems, formData.selectedBuildingIds, setFormData]);
 
     const filteredItems = itemsWithIndices.map(({ item }) => item);
 
@@ -409,7 +422,7 @@ export const VOStep2_LineItems: React.FC = () => {
         const newTotalAdditions = isAddition ? allBuildingsTotal : 0;
         const newTotalDeductions = !isAddition ? allBuildingsTotal : 0;
 
-        // Only update if values have changed
+        // Only update if values have changed (prevents infinite loop when values match)
         if (
             formData.totalAdditions !== newTotalAdditions ||
             formData.totalDeductions !== newTotalDeductions ||
@@ -421,7 +434,7 @@ export const VOStep2_LineItems: React.FC = () => {
                 totalAmount: netAmount,
             });
         }
-    }, [isAddition, allBuildingsTotal, netAmount]);
+    }, [isAddition, allBuildingsTotal, netAmount, formData.totalAdditions, formData.totalDeductions, formData.totalAmount, setFormData]);
 
     if (formData.selectedBuildingIds.length === 0) {
         return (
