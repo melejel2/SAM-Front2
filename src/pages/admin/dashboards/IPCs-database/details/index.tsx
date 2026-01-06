@@ -62,6 +62,9 @@ const IPCDetails = () => {
     const [exportingZip, setExportingZip] = useState(false);
     const [generatingIpc, setGeneratingIpc] = useState(false);
     const [deletingIpc, setDeletingIpc] = useState(false);
+    const [unissuingIpc, setUnissuingIpc] = useState(false);
+    const [showUnissueModal, setShowUnissueModal] = useState(false);
+    const [unissueReason, setUnissueReason] = useState("");
     const [activeTab, setActiveTab] = useState<"boq" | "financial" | "documents">("boq");
     const [currency, setCurrency] = useState("$");
     const [projects, setProjects] = useState<any[]>([]);
@@ -292,6 +295,35 @@ const IPCDetails = () => {
         }
     };
 
+    const handleUnissueIpc = async () => {
+        if (!id) return;
+
+        // Validate reason
+        if (!unissueReason || unissueReason.trim().length < 10) {
+            toaster.error("Please provide a reason with at least 10 characters");
+            return;
+        }
+
+        setUnissuingIpc(true);
+        try {
+            const result = await ipcApiService.unissueIpc(parseInt(id), unissueReason.trim(), getToken() ?? "");
+            if (result.success) {
+                toaster.success("IPC has been un-issued successfully. You can now edit and re-generate it.");
+                setShowUnissueModal(false);
+                setUnissueReason("");
+                // Reload IPC data to get updated status
+                loadIpcDetails();
+            } else {
+                toaster.error(result.error?.message || "Failed to un-issue IPC");
+            }
+        } catch (error) {
+            console.error("Error un-issuing IPC:", error);
+            toaster.error("An error occurred while un-issuing the IPC");
+        } finally {
+            setUnissuingIpc(false);
+        }
+    };
+
     // Memoize project and subcontractor data lookups - must be before early returns for Rules of Hooks
     const currentProject = useMemo(() =>
         ipcData ? projects.find((p) => p.id === ipcData.projectId) : undefined,
@@ -473,6 +505,25 @@ const IPCDetails = () => {
                                     <>
                                         <span className="iconify lucide--check-circle size-4"></span>
                                         <span>Generate</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
+
+                        {ipcData.status === "Issued" && (
+                            <button
+                                onClick={() => setShowUnissueModal(true)}
+                                disabled={unissuingIpc}
+                                className="btn btn-sm flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-700">
+                                {unissuingIpc ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <span>Un-issuing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="iconify lucide--undo-2 size-4"></span>
+                                        <span>Un-Issue</span>
                                     </>
                                 )}
                             </button>
@@ -1112,6 +1163,96 @@ const IPCDetails = () => {
                             </div>
                             <form method="dialog" className="modal-backdrop">
                                 <button onClick={() => { setShowPreview(false); setPreviewData(null); }}>close</button>
+                            </form>
+                        </dialog>
+                    )}
+
+                    {/* Un-Issue Modal */}
+                    {showUnissueModal && (
+                        <dialog className="modal modal-open">
+                            <div className="modal-box max-w-lg">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold flex items-center gap-2">
+                                        <span className="iconify lucide--undo-2 size-5 text-amber-600"></span>
+                                        Un-Issue IPC
+                                    </h3>
+                                    <button
+                                        onClick={() => { setShowUnissueModal(false); setUnissueReason(""); }}
+                                        className="btn btn-ghost btn-sm"
+                                        disabled={unissuingIpc}
+                                    >
+                                        <span className="iconify lucide--x size-5"></span>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="alert alert-warning">
+                                        <span className="iconify lucide--alert-triangle size-5"></span>
+                                        <div>
+                                            <p className="font-semibold">Important:</p>
+                                            <ul className="mt-1 text-sm list-disc list-inside">
+                                                <li>This action will revert the IPC to Editable status</li>
+                                                <li>The QR code verification will be revoked</li>
+                                                <li>You can only un-issue an IPC once</li>
+                                                <li>This action cannot be undone</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text font-semibold">Reason for Un-issuing *</span>
+                                        </label>
+                                        <textarea
+                                            className="textarea textarea-bordered h-24"
+                                            placeholder="Please provide a detailed reason for un-issuing this IPC (minimum 10 characters)..."
+                                            value={unissueReason}
+                                            onChange={(e) => setUnissueReason(e.target.value)}
+                                            disabled={unissuingIpc}
+                                            maxLength={500}
+                                        />
+                                        <label className="label">
+                                            <span className="label-text-alt text-base-content/60">
+                                                {unissueReason.length}/500 characters (minimum 10)
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="modal-action">
+                                    <button
+                                        onClick={() => { setShowUnissueModal(false); setUnissueReason(""); }}
+                                        className="btn btn-ghost"
+                                        disabled={unissuingIpc}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUnissueIpc}
+                                        disabled={unissuingIpc || unissueReason.trim().length < 10}
+                                        className="btn bg-amber-600 text-white hover:bg-amber-700"
+                                    >
+                                        {unissuingIpc ? (
+                                            <>
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                                <span>Un-issuing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="iconify lucide--undo-2 size-4"></span>
+                                                <span>Confirm Un-Issue</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                            <form method="dialog" className="modal-backdrop">
+                                <button
+                                    onClick={() => { setShowUnissueModal(false); setUnissueReason(""); }}
+                                    disabled={unissuingIpc}
+                                >
+                                    close
+                                </button>
                             </form>
                         </dialog>
                     )}
