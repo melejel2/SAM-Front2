@@ -68,6 +68,10 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         entityId?: number;
     } | null>(null);
 
+    // Pending input state - allows free typing during edit, validates on blur
+    // Key format: "contract-{buildingId}-{boqId}-{field}" or "vo-{voId}-{buildingId}-{boqId}-{field}"
+    const [pendingInputs, setPendingInputs] = useState<Record<string, string>>({});
+
     // Effect to fetch all buildings for the selected contract
     useEffect(() => {
         const fetchAllBuildings = async () => {
@@ -303,6 +307,169 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 return v;
             })
         });
+    };
+
+    // ==================== Pending Input Helpers (blur-based validation) ====================
+
+    /**
+     * Get a pending input key for contract BOQ items
+     */
+    const getContractInputKey = (buildingId: number, boqId: number, field: 'actualQty' | 'cumulQty' | 'cumulPercent') =>
+        `contract-${buildingId}-${boqId}-${field}`;
+
+    /**
+     * Get a pending input key for VO BOQ items
+     */
+    const getVOInputKey = (voId: number, buildingId: number, boqId: number, field: 'actualQty' | 'cumulQty' | 'cumulPercent') =>
+        `vo-${voId}-${buildingId}-${boqId}-${field}`;
+
+    /**
+     * Handle input change - stores value in pending state without validation
+     */
+    const handlePendingInputChange = (key: string, value: string) => {
+        setPendingInputs(prev => ({ ...prev, [key]: value }));
+    };
+
+    /**
+     * Clear a pending input when editing is complete
+     */
+    const clearPendingInput = (key: string) => {
+        setPendingInputs(prev => {
+            const newState = { ...prev };
+            delete newState[key];
+            return newState;
+        });
+    };
+
+    /**
+     * Validate and apply cumulative percentage on blur
+     * Shows toast and reverts to minimum if value is below allowed minimum
+     */
+    const handleCumulPercentBlur = (buildingId: number, boqId: number) => {
+        const key = getContractInputKey(buildingId, boqId, 'cumulPercent');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return; // No pending change
+
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem || boqItem.qte === 0) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputPercent = parseFloat(pendingValue) || 0;
+        const precedQte = boqItem.precedQte || 0;
+        const minPercent = (precedQte / boqItem.qte) * 100;
+
+        if (inputPercent < minPercent) {
+            toaster.error(`Cumulative % cannot be less than ${minPercent.toFixed(1)}% (previous progress). Reverted to minimum.`);
+            // Apply minimum value
+            handleBOQCumulPercentChange(buildingId, boqId, minPercent);
+        } else {
+            // Apply the valid value
+            handleBOQCumulPercentChange(buildingId, boqId, inputPercent);
+        }
+
+        clearPendingInput(key);
+    };
+
+    /**
+     * Validate and apply cumulative quantity on blur
+     */
+    const handleCumulQtyBlur = (buildingId: number, boqId: number) => {
+        const key = getContractInputKey(buildingId, boqId, 'cumulQty');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return;
+
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputQty = parseFloat(pendingValue) || 0;
+        const precedQte = boqItem.precedQte || 0;
+
+        if (inputQty < precedQte) {
+            toaster.error(`Cumulative Qty cannot be less than ${precedQte} (previous progress). Reverted to minimum.`);
+            handleBOQCumulQtyChange(buildingId, boqId, precedQte);
+        } else {
+            handleBOQCumulQtyChange(buildingId, boqId, inputQty);
+        }
+
+        clearPendingInput(key);
+    };
+
+    /**
+     * Validate and apply VO cumulative percentage on blur
+     */
+    const handleVOCumulPercentBlur = (voId: number, buildingId: number, boqId: number) => {
+        const key = getVOInputKey(voId, buildingId, boqId, 'cumulPercent');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return;
+
+        const vos = (formData.vos || []) as Vos[];
+        const vo = vos.find(v => v.id === voId);
+        const building = vo?.buildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqs.find(b => b.id === boqId);
+
+        if (!boqItem || boqItem.qte === 0) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputPercent = parseFloat(pendingValue) || 0;
+        const precedQte = boqItem.precedQte || 0;
+        const minPercent = (precedQte / boqItem.qte) * 100;
+
+        if (inputPercent < minPercent) {
+            toaster.error(`Cumulative % cannot be less than ${minPercent.toFixed(1)}% (previous progress). Reverted to minimum.`);
+            handleVOBOQCumulPercentChange(voId, buildingId, boqId, minPercent);
+        } else {
+            handleVOBOQCumulPercentChange(voId, buildingId, boqId, inputPercent);
+        }
+
+        clearPendingInput(key);
+    };
+
+    /**
+     * Validate and apply VO cumulative quantity on blur
+     */
+    const handleVOCumulQtyBlur = (voId: number, buildingId: number, boqId: number) => {
+        const key = getVOInputKey(voId, buildingId, boqId, 'cumulQty');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return;
+
+        const vos = (formData.vos || []) as Vos[];
+        const vo = vos.find(v => v.id === voId);
+        const building = vo?.buildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqs.find(b => b.id === boqId);
+
+        if (!boqItem) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputQty = parseFloat(pendingValue) || 0;
+        const precedQte = boqItem.precedQte || 0;
+
+        if (inputQty < precedQte) {
+            toaster.error(`Cumulative Qty cannot be less than ${precedQte} (previous progress). Reverted to minimum.`);
+            handleVOBOQCumulQtyChange(voId, buildingId, boqId, precedQte);
+        } else {
+            handleVOBOQCumulQtyChange(voId, buildingId, boqId, inputQty);
+        }
+
+        clearPendingInput(key);
     };
 
     // ==================== Previous Value Correction Functions ====================
@@ -1018,36 +1185,42 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                     disabled={isHeaderRow}
                                                 />
                                             </td>
-                                            {/* Cumul Qty Input - Purple highlight */}
+                                            {/* Cumul Qty Input - Purple highlight (editable with blur validation) */}
                                             <td className="text-right bg-purple-50/50 dark:bg-purple-900/10">
                                                 <input
                                                     type="number"
-                                                    value={cumulQte || ''}
-                                                    onChange={(e) => handleBOQCumulQtyChange(
-                                                        activeBuilding.id,
-                                                        boq.id,
-                                                        parseFloat(e.target.value) || 0
+                                                    value={
+                                                        pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'cumulQty')]
+                                                        ?? (cumulQte || '')
+                                                    }
+                                                    onChange={(e) => handlePendingInputChange(
+                                                        getContractInputKey(activeBuilding.id, boq.id, 'cumulQty'),
+                                                        e.target.value
                                                     )}
+                                                    onBlur={() => handleCumulQtyBlur(activeBuilding.id, boq.id)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                     className="input input-xs w-16 text-right bg-base-100 border-purple-300 dark:border-purple-700"
                                                     step="any"
-                                                    min="0"
                                                     disabled={isHeaderRow}
                                                 />
                                             </td>
-                                            {/* Cumul % Input - Blue highlight (editable) */}
+                                            {/* Cumul % Input - Blue highlight (editable with blur validation) */}
                                             <td className="text-right bg-blue-50/50 dark:bg-blue-900/10">
                                                 <div className="flex items-center justify-end gap-0.5">
                                                     <input
                                                         type="number"
-                                                        value={cumulPercent ? Math.round(cumulPercent * 100) / 100 : ''}
-                                                        onChange={(e) => handleBOQCumulPercentChange(
-                                                            activeBuilding.id,
-                                                            boq.id,
-                                                            parseFloat(e.target.value) || 0
+                                                        value={
+                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'cumulPercent')]
+                                                            ?? (cumulPercent ? Math.round(cumulPercent * 100) / 100 : '')
+                                                        }
+                                                        onChange={(e) => handlePendingInputChange(
+                                                            getContractInputKey(activeBuilding.id, boq.id, 'cumulPercent'),
+                                                            e.target.value
                                                         )}
+                                                        onBlur={() => handleCumulPercentBlur(activeBuilding.id, boq.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                         className="input input-xs w-14 text-right bg-base-100 border-blue-300 dark:border-blue-700"
                                                         step="any"
-                                                        min="0"
                                                         disabled={isHeaderRow || boq.qte === 0}
                                                     />
                                                     <span className="text-xs text-base-content/50">%</span>
@@ -1181,38 +1354,42 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                                     disabled={isHeaderRow}
                                                 />
                                             </td>
-                                            {/* Cumul Qty Input - Purple highlight */}
+                                            {/* Cumul Qty Input - Purple highlight (editable with blur validation) */}
                                             <td className="text-right bg-purple-50/50 dark:bg-purple-900/10">
                                                 <input
                                                     type="number"
-                                                    value={cumulQte || ''}
-                                                    onChange={(e) => handleVOBOQCumulQtyChange(
-                                                        activeVO.id,
-                                                        activeVOBuilding.id,
-                                                        boq.id,
-                                                        parseFloat(e.target.value) || 0
+                                                    value={
+                                                        pendingInputs[getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulQty')]
+                                                        ?? (cumulQte || '')
+                                                    }
+                                                    onChange={(e) => handlePendingInputChange(
+                                                        getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulQty'),
+                                                        e.target.value
                                                     )}
+                                                    onBlur={() => handleVOCumulQtyBlur(activeVO.id, activeVOBuilding.id, boq.id)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                     className="input input-xs w-16 text-right bg-base-100 border-purple-300 dark:border-purple-700"
                                                     step="any"
-                                                    min="0"
                                                     disabled={isHeaderRow}
                                                 />
                                             </td>
-                                            {/* Cumul % Input - Blue highlight (editable) */}
+                                            {/* Cumul % Input - Blue highlight (editable with blur validation) */}
                                             <td className="text-right bg-blue-50/50 dark:bg-blue-900/10">
                                                 <div className="flex items-center justify-end gap-0.5">
                                                     <input
                                                         type="number"
-                                                        value={cumulPercent ? Math.round(cumulPercent * 100) / 100 : ''}
-                                                        onChange={(e) => handleVOBOQCumulPercentChange(
-                                                            activeVO.id,
-                                                            activeVOBuilding.id,
-                                                            boq.id,
-                                                            parseFloat(e.target.value) || 0
+                                                        value={
+                                                            pendingInputs[getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulPercent')]
+                                                            ?? (cumulPercent ? Math.round(cumulPercent * 100) / 100 : '')
+                                                        }
+                                                        onChange={(e) => handlePendingInputChange(
+                                                            getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulPercent'),
+                                                            e.target.value
                                                         )}
+                                                        onBlur={() => handleVOCumulPercentBlur(activeVO.id, activeVOBuilding.id, boq.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                         className="input input-xs w-14 text-right bg-base-100 border-blue-300 dark:border-blue-700"
                                                         step="any"
-                                                        min="0"
                                                         disabled={isHeaderRow || boq.qte === 0}
                                                     />
                                                     <span className="text-xs text-base-content/50">%</span>
