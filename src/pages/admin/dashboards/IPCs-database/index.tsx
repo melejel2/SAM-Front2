@@ -487,54 +487,47 @@ const IPCsDatabase = () => {
                 </>
             ) : (
                 <>
-                    {/* Scrollable Content */}
-                    <div className="flex-1 min-h-0 overflow-auto">
-                        {/* Preview Header Card */}
-                        <div className="sticky top-0 bg-base-100 border-b border-base-300 z-10 p-4">
-                            <div className="flex justify-between items-center">
-                                <button
-                                    onClick={handleBackToTable}
-                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                                >
-                                    <span className="iconify lucide--arrow-left size-4"></span>
-                                    <span>Back</span>
-                                </button>
+                    {/* Preview Card - Full Height */}
+                    <div className="flex-1 min-h-0 flex flex-col p-4">
+                        <div className="card bg-base-100 shadow-sm border border-base-300 flex-1 flex flex-col overflow-hidden">
+                            {/* Card Header with Back and Export buttons */}
+                            <div className="flex items-center justify-between p-3 border-b border-base-300 flex-shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleBackToTable}
+                                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                                    >
+                                        <span className="iconify lucide--arrow-left size-4"></span>
+                                        <span>Back</span>
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-error/20 rounded-lg">
+                                            <span className="iconify lucide--file-text text-error size-4"></span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-base-content text-sm">PDF Preview</h3>
+                                            <p className="text-xs text-base-content/60">
+                                                {previewData?.fileName}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <ExportDropdown
+                                    exportingPdf={exportingPdf}
+                                    exportingExcel={exportingExcel}
+                                    onExportPdf={handleExportPdf}
+                                    onExportExcel={handleExportExcel}
+                                />
+                            </div>
 
-                                <div className="flex gap-2">
-                                    <ExportDropdown
-                                        exportingPdf={exportingPdf}
-                                        exportingExcel={exportingExcel}
-                                        onExportPdf={handleExportPdf}
-                                        onExportExcel={handleExportExcel}
+                            {/* PDF Preview Content - Takes remaining space */}
+                            <div className="flex-1 min-h-0">
+                                {previewData && (
+                                    <PDFViewer
+                                        fileBlob={previewData.blob}
+                                        fileName={previewData.fileName}
                                     />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Preview Card */}
-                        <div className="card bg-base-100 shadow-sm p-4 m-4">
-                            <div className="flex items-center space-x-3 mb-4">
-                                <div className="p-2 bg-error/20 rounded-lg">
-                                    <span className="iconify lucide--file-text text-error size-5"></span>
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-base-content">PDF Preview</h3>
-                                    <p className="text-sm text-base-content/60">
-                                        {previewData?.fileName}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* PDF Preview Content */}
-                            <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
-                                <div className="h-[calc(100vh-300px)]">
-                                    {previewData && (
-                                        <PDFViewer
-                                            fileBlob={previewData.blob}
-                                            fileName={previewData.fileName}
-                                        />
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>

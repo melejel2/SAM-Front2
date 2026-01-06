@@ -43,6 +43,7 @@ const InfoTab = ({
     const advanceAmount = (totalAmount * advancePercentage) / 100;
 
     return (
+        <div className="h-full overflow-auto">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Main Contract Info */}
             <div className="card bg-base-100 border-base-300 border shadow-sm">
@@ -156,6 +157,7 @@ const InfoTab = ({
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     );
 };

@@ -210,30 +210,32 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
     };
 
     return (
-        <div className="card bg-base-100 border-base-300 border shadow-sm">
-            <div className="card-body">
-                <div className="mb-4 flex items-center justify-between">
-                    <h3 className="card-title text-base-content flex items-center gap-2">
-                        <span className="iconify lucide--receipt size-5 text-blue-600"></span>
-                        Interim Payment Certificates
-                    </h3>
-                    <button
-                        onClick={handleCreateIPC}
-                        className="btn btn-primary btn-sm"
-                        disabled={isTerminated}
-                        title={isTerminated ? "Cannot create IPC for terminated contract" : undefined}
-                    >
-                        <span className="iconify lucide--plus size-4"></span>
-                        <span>Create IPC</span>
-                    </button>
-                </div>
-
-                {loading ? (
-                    <div className="flex justify-center p-8">
-                        <Loader />
+        <div className="h-full flex flex-col">
+            <div className="card bg-base-100 border-base-300 border shadow-sm flex-1 flex flex-col min-h-0">
+                <div className="card-body flex flex-col min-h-0 p-4">
+                    <div className="mb-4 flex items-center justify-between flex-shrink-0">
+                        <h3 className="card-title text-base-content flex items-center gap-2">
+                            <span className="iconify lucide--receipt size-5 text-blue-600"></span>
+                            Interim Payment Certificates
+                        </h3>
+                        <button
+                            onClick={handleCreateIPC}
+                            className="btn btn-primary btn-sm"
+                            disabled={isTerminated}
+                            title={isTerminated ? "Cannot create IPC for terminated contract" : undefined}
+                        >
+                            <span className="iconify lucide--plus size-4"></span>
+                            <span>Create IPC</span>
+                        </button>
                     </div>
-                ) : ipcs.length > 0 ? (
-                    <SAMTable
+
+                    <div className="flex-1 min-h-0 overflow-auto">
+                    {loading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader />
+                        </div>
+                    ) : ipcs.length > 0 ? (
+                        <SAMTable
                         columns={columns}
                         tableData={ipcs}
                         actions
@@ -252,22 +254,24 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
                         rowHeight={40}
                         overscan={10}
                     />
-                ) : (
-                    <div className="py-12 text-center">
-                        <span className="iconify lucide--receipt text-base-content/30 mx-auto mb-3 size-12"></span>
-                        <p className="text-base-content/70">
-                            {isTerminated
-                                ? "No IPCs found. Cannot create IPCs for terminated contracts."
-                                : "No IPCs found for this contract"}
-                        </p>
-                        {!isTerminated && (
-                            <button onClick={handleCreateIPC} className="btn btn-primary btn-sm mt-4">
-                                <span className="iconify lucide--plus size-4"></span>
-                                <span>Create First IPC</span>
-                            </button>
-                        )}
+                    ) : (
+                        <div className="py-12 text-center">
+                            <span className="iconify lucide--receipt text-base-content/30 mx-auto mb-3 size-12"></span>
+                            <p className="text-base-content/70">
+                                {isTerminated
+                                    ? "No IPCs found. Cannot create IPCs for terminated contracts."
+                                    : "No IPCs found for this contract"}
+                            </p>
+                            {!isTerminated && (
+                                <button onClick={handleCreateIPC} className="btn btn-primary btn-sm mt-4">
+                                    <span className="iconify lucide--plus size-4"></span>
+                                    <span>Create First IPC</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Preview Modal */}

@@ -842,9 +842,9 @@ const ContractDetails = () => {
     const advanceAmount = totalAmount * (advancePercentage / 100);
 
     return (
-        <div className="space-y-6">
+        <div className="h-full flex flex-col overflow-hidden -mt-6">
             {/* Header with Back Button, Tabs, and Actions */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 flex-shrink-0 py-4">
                 {/* Left: Back Button */}
                 <div className="flex items-center">
                     <button
@@ -1074,6 +1074,7 @@ const ContractDetails = () => {
             </div>
 
             {/* Tab Content - Only load tabs that have been visited (lazy loading) */}
+            <div className="flex-1 min-h-0 overflow-hidden">
             <Suspense fallback={<div className="flex justify-center p-8"><Loader /></div>}>
                 {activeTab === "info" ? (
                     <InfoTab
@@ -1112,6 +1113,7 @@ const ContractDetails = () => {
                     <DeductionsTab contractId={contractId ? parseInt(contractId) : null} />
                 ) : null}
             </Suspense>
+            </div>
 
             {/* Preview Modal */}
             {showPreview && previewData && (

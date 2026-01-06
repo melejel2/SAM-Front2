@@ -604,42 +604,48 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
     };
 
     return (
-        <div className="card bg-base-100 border-base-300 border shadow-sm">
-            <div className="card-body">
-                <div className="mb-4 flex items-center justify-between">
-                    <h3 className="card-title text-base-content flex items-center gap-2">
-                        <span className="iconify lucide--minus-circle size-5 text-red-600"></span>
-                        Deductions
-                    </h3>
-                    <button onClick={() => handleAdd(activeType)} className="btn btn-primary btn-sm">
-                        <span className="iconify lucide--plus size-4"></span>
-                        <span>Add {activeType === "labor" ? "Labor" : activeType === "materials" ? "Material" : "Machine"}</span>
-                    </button>
-                </div>
-
-                {renderSubTabs()}
-
-                {loading ? (
-                    <div className="flex justify-center p-8">
-                        <Loader />
-                    </div>
-                ) : getCurrentData.length > 0 ? (
-                    // Use ternary for cleaner rendering - only one table rendered at a time
-                    activeType === "labor" ? renderLaborTable() :
-                    activeType === "materials" ? renderMaterialsTable() :
-                    renderMachinesTable()
-                ) : (
-                    <div className="py-12 text-center">
-                        <span className="iconify lucide--inbox text-base-content/30 mx-auto mb-3 size-12"></span>
-                        <p className="text-base-content/70">
-                            No {activeType === "labor" ? "labor" : activeType === "materials" ? "materials" : "machines"} found for this contract
-                        </p>
-                        <button onClick={() => handleAdd(activeType)} className="btn btn-primary btn-sm mt-4">
+        <div className="h-full flex flex-col">
+            <div className="card bg-base-100 border-base-300 border shadow-sm flex-1 flex flex-col min-h-0">
+                <div className="card-body flex flex-col min-h-0 p-4">
+                    <div className="mb-4 flex items-center justify-between flex-shrink-0">
+                        <h3 className="card-title text-base-content flex items-center gap-2">
+                            <span className="iconify lucide--minus-circle size-5 text-red-600"></span>
+                            Deductions
+                        </h3>
+                        <button onClick={() => handleAdd(activeType)} className="btn btn-primary btn-sm">
                             <span className="iconify lucide--plus size-4"></span>
-                            <span>Add First {activeType === "labor" ? "Labor" : activeType === "materials" ? "Material" : "Machine"}</span>
+                            <span>Add {activeType === "labor" ? "Labor" : activeType === "materials" ? "Material" : "Machine"}</span>
                         </button>
                     </div>
-                )}
+
+                    <div className="flex-shrink-0">
+                        {renderSubTabs()}
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-auto">
+                        {loading ? (
+                            <div className="flex justify-center p-8">
+                                <Loader />
+                            </div>
+                        ) : getCurrentData.length > 0 ? (
+                            // Use ternary for cleaner rendering - only one table rendered at a time
+                            activeType === "labor" ? renderLaborTable() :
+                            activeType === "materials" ? renderMaterialsTable() :
+                            renderMachinesTable()
+                        ) : (
+                            <div className="py-12 text-center">
+                                <span className="iconify lucide--inbox text-base-content/30 mx-auto mb-3 size-12"></span>
+                                <p className="text-base-content/70">
+                                    No {activeType === "labor" ? "labor" : activeType === "materials" ? "materials" : "machines"} found for this contract
+                                </p>
+                                <button onClick={() => handleAdd(activeType)} className="btn btn-primary btn-sm mt-4">
+                                    <span className="iconify lucide--plus size-4"></span>
+                                    <span>Add First {activeType === "labor" ? "Labor" : activeType === "materials" ? "Material" : "Machine"}</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {renderEditDialog()}
