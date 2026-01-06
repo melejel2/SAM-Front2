@@ -3,7 +3,6 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import type { IpcListItem } from "@/types/ipc";
-import { formatCurrency } from "@/utils/formatters";
 
 const getStatusText = (status: string): string => {
     const statusLower = status?.toLowerCase() || '';
@@ -35,8 +34,8 @@ const useIPCsDatabase = () => {
         number: "IPC Ref",
         subcontractorName: "Subcontractor",
         tradeName: "Trade",
-        totalAmount: "Amount HT",
-        totalAmountWithVAT: "Total Amount",
+        amountHT: "Amount HT",
+        totalAmount: "Total Amount",
         status: "Status",
         type: "Type",
         retention: "Paid TTC",
@@ -119,10 +118,11 @@ const useIPCsDatabase = () => {
                             ? `Contract-${ipc.contractsDatasetId}`
                             : "-",
 
-                    // Pre-formatted display values (no recalculation needed on render)
-                    totalAmount: formatCurrency(ipc.totalAmount) as any,
-                    totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + VAT_RATE)) as any,
-                    retention: formatCurrency(ipc.retention) as any,
+                    // Raw numeric values - Table component handles formatting
+                    // Database TotalAmount is TTC (with VAT), divide by 1.18 to get HT
+                    amountHT: ipc.totalAmount / (1 + VAT_RATE),
+                    totalAmount: ipc.totalAmount,
+                    retention: ipc.retention,
 
                     // Store plain text for badges (React components will render them)
                     status: getStatusText(ipc.status) as any,

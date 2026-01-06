@@ -386,6 +386,45 @@ class IpcApiService {
     }
 
     /**
+     * Un-issue an IPC. Reverts an issued IPC back to editable status.
+     * Only the last IPC of a contract can be un-issued, and only once.
+     * POST /api/Ipc/UnissueIpc/{id}
+     */
+    async unissueIpc(
+        ipcId: number,
+        reason: string,
+        token: string,
+    ): Promise<IpcApiResponse<{ message: string }>> {
+        try {
+            const response = await apiRequest<{ message: string } | { code: string; message: string }>({
+                endpoint: `Ipc/UnissueIpc/${ipcId}`,
+                method: "POST",
+                token,
+                body: { reason },
+            });
+
+            // Check if response is an error payload from backend
+            if (response && typeof response === 'object' && 'code' in response && 'message' in response && !('message' in response && response.message?.includes('successfully'))) {
+                return {
+                    success: false,
+                    error: { message: response.message },
+                };
+            }
+
+            return {
+                success: true,
+                data: response as { message: string },
+            };
+        } catch (error) {
+            console.error("Error un-issuing IPC:", error);
+            return {
+                success: false,
+                error: { message: error instanceof Error ? error.message : "Failed to un-issue IPC" },
+            };
+        }
+    }
+
+    /**
      * Live preview IPC as PDF
      * POST /api/Ipc/LivePreviewIpcPdf
      */

@@ -238,6 +238,14 @@ export interface UpdateIpcRequest extends SaveIPCVM {
   // All SaveIPCVM properties are available for update
 }
 
+export interface UnissueIpcRequest {
+  reason: string;
+}
+
+export interface UnissueIpcResponse {
+  message: string;
+}
+
 // Response DTOs
 export interface IpcListItem {
   id: number;
