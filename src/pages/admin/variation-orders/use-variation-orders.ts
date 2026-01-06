@@ -72,7 +72,8 @@ const useVariationOrders = () => {
       tradeName: vo.tradeName || '-',
       subcontractorName: vo.subcontractorName || '-',
       date: vo.date ? formatDate(vo.date, 'numeric') : '-',
-      amount: vo.amount ? formatCurrency(vo.amount, { decimals: 'never' }) : '-',
+      // Raw numeric value - Table component handles formatting
+      amount: vo.amount ?? 0,
       originalStatus: vo.status || '',
       status: formatStatusBadge(vo.status),
     }));

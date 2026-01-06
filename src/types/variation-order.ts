@@ -247,7 +247,7 @@ export interface StatusBadgeConfig {
 
 export interface FormattedVoDataset extends Omit<VoDatasetVM, 'date' | 'amount' | 'status'> {
   date: string; // Formatted date
-  amount: string; // Formatted currency
+  amount: number; // Raw numeric value - Table component handles formatting
   status: string; // HTML badge
   originalStatus: string; // Original status for filtering
 }

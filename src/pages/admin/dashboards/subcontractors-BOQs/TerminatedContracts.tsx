@@ -113,7 +113,8 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                 contractType: contract.contractType || 'Contract',
                 contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
                 completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
-                amount: contract.amount ? formatCurrency(contract.amount) : '-',
+                // Raw numeric value - Table component handles formatting
+                amount: contract.amount ?? 0,
                 originalStatus: contract.status || 'Terminated',
                 status: 'Terminated',
                 hasTerminatedFile: !!contract.terminatedFile_Id,

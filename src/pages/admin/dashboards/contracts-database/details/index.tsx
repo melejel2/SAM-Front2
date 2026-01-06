@@ -63,7 +63,8 @@ const ContractDatabaseDetails = () => {
                         voNumber: vo.voNumber || vo.VoNumber || '-',
                         description: vo.subTrade || vo.Description || '-',
                         type: vo.type || vo.Type || '-',
-                        amount: formatCurrency(vo.amount || vo.Amount),
+                        // Raw numeric value - Table component handles formatting
+                        amount: vo.amount || vo.Amount || 0,
                         status: vo.status || vo.Status || '-',
                         date: formatDate(vo.date || vo.Date || vo.createdDate)
                     }));

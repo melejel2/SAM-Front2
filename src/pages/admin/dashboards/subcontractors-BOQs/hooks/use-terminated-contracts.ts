@@ -73,7 +73,8 @@ const useTerminatedContracts = () => {
                 tradeName: contract.tradeName || '-',
                 contractDate: contract.contractDate ? formatDate(contract.contractDate) : '-',
                 completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
-                amount: contract.amount ? formatCurrency(contract.amount) : '-',
+                // Raw numeric value - Table component handles formatting
+                amount: contract.amount ?? 0,
                 originalStatus: contract.status || '',
                 status: formatStatusBadge(contract.status),
             }));

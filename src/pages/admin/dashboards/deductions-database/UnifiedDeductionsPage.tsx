@@ -156,7 +156,7 @@ const UnifiedDeductionsPage = memo(() => {
     }, []);
 
     const handleOpenStaticDialog = useCallback(
-        async (type: "Select" | "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export" | "Generate", data?: any, _extraData?: any) => {
+        async (type: "Select" | "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export" | "Generate" | "Unissue", data?: any, _extraData?: any) => {
             if (type === "Add") {
                 resetForm();
                 setIsAddModalOpen(true);

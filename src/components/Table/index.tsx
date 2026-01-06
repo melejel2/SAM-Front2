@@ -20,13 +20,14 @@ interface SAMTableProps {
     onSuccess: () => void;
 
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Details" | "Select" | "Terminate" | "Export" | "Generate", Data?: any, extraData?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Details" | "Select" | "Terminate" | "Export" | "Generate" | "Unissue", Data?: any, extraData?: any) => void | Promise<void>;
     previewAction?: boolean;
     deleteAction?: boolean;
     editAction?: boolean;
     detailsAction?: boolean;
     exportAction?: boolean;
     generateAction?: boolean;
+    unissueAction?: boolean;
 
     rowActions?: (row: any) => {
         generateAction?: boolean;
@@ -34,6 +35,7 @@ interface SAMTableProps {
         deleteAction?: boolean;
         terminateAction?: boolean;
         exportAction?: boolean;
+        unissueAction?: boolean;
     };
 
     addBtn?: boolean;
@@ -85,6 +87,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     editAction,
     generateAction,
     exportAction,
+    unissueAction,
     rowActions,
     title,
     loading,
@@ -157,6 +160,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             rowsPerPage={rowsPerPage}
                             exportAction={exportAction}
                             generateAction={generateAction}
+                            unissueAction={unissueAction}
                             rowActions={rowActions}
                             previewLoadingRowId={previewLoadingRowId}
                             exportingRowId={exportingRowId}

@@ -160,8 +160,9 @@ const useContractManagement = () => {
       subcontractorName: contract.subcontractorName || '-',
       tradeName: contract.tradeName || '-',
       completionDate: contract.completionDate ? formatDate(contract.completionDate) : '-',
-      amount: contract.amount ? formatCurrency(contract.amount) : '-',
-      voAmount: contract.voAmount ? formatCurrency(contract.voAmount) : '-',
+      // Raw numeric values - Table component handles formatting
+      amount: contract.amount ?? 0,
+      voAmount: contract.voAmount ?? 0,
       originalStatus: contract.status || '', // Preserve original for filtering
       status: formatStatusBadge(contract.status),
     }));

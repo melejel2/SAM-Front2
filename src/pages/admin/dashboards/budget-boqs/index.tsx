@@ -32,7 +32,7 @@ const BudgetBOQs = () => {
     const { toaster } = useToast();
 
     const openCreateDialog = useCallback(async (
-        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate",
+        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate" | "Unissue",
         data?: any,
     ) => {
         setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select");

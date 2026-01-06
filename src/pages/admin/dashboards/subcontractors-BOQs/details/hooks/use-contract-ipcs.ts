@@ -66,9 +66,10 @@ const useContractIPCs = ({ contractId }: UseContractIPCsProps) => {
                     _statusRaw: ipc.status,
                     _typeRaw: ipc.type || "",
 
-                    // Pre-formatted display values
-                    totalAmount: formatCurrency(ipc.totalAmount) as string,
-                    totalAmountWithVAT: formatCurrency(ipc.totalAmount * (1 + FINANCIAL_CONSTANTS.DEFAULT_VAT_RATE)) as string,
+                    // Raw numeric values - Table component handles formatting
+                    // Database TotalAmount is TTC (with VAT), divide by 1.18 to get HT
+                    totalAmount: ipc.totalAmount / (1 + FINANCIAL_CONSTANTS.DEFAULT_VAT_RATE),
+                    totalAmountWithVAT: ipc.totalAmount,
 
                     // Normalized status and type text
                     status: getStatusText(ipc.status) as string,

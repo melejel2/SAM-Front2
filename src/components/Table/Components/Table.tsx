@@ -136,6 +136,7 @@ interface TableProps {
     detailsAction?: boolean;
     exportAction?: boolean;
     generateAction?: boolean;
+    unissueAction?: boolean;
 
     rowActions?: (row: any) => {
         generateAction?: boolean;
@@ -143,6 +144,7 @@ interface TableProps {
         deleteAction?: boolean;
         terminateAction?: boolean;
         exportAction?: boolean;
+        unissueAction?: boolean;
     };
 
     title: string;
@@ -157,7 +159,7 @@ interface TableProps {
     addBtn?: boolean;
     addBtnText?: string;
     dynamicDialog?: boolean;
-    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export" | "Generate", Data?: any, extraData?: any) => void | Promise<void>;
+    openStaticDialog?: (type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export" | "Generate" | "Unissue", Data?: any, extraData?: any) => void | Promise<void>;
     onRowSelect?: (selectedRow: any) => void;
 
     select?: boolean;
@@ -202,6 +204,7 @@ const TableComponent: React.FC<TableProps> = ({
     detailsAction,
     generateAction,
     exportAction,
+    unissueAction,
     rowActions,
     inputFields,
     title,
@@ -240,7 +243,7 @@ const TableComponent: React.FC<TableProps> = ({
     rowHeight = 40,
     overscan = 10,
 }) => {
-    const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || rowActions;
+    const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || unissueAction || rowActions;
 
     // Consolidated table state
     const [tableState, setTableState] = useState({
@@ -266,6 +269,7 @@ const TableComponent: React.FC<TableProps> = ({
         editLoadingRowId: null as string | null,
         generateLoadingRowId: null as string | null,
         deleteLoadingRowId: null as string | null,
+        unissueLoadingRowId: null as string | null,
     });
 
     const previewLoadingRowId = externalPreviewLoadingRowId ?? loadingState.internalPreviewLoadingRowId;
@@ -295,7 +299,7 @@ const TableComponent: React.FC<TableProps> = ({
     // Destructure for backward compatibility
     const { sortColumn, sortOrder, searchQuery, currentPage, selectedRow, activeSheetId } = tableState;
     const { dialogType, currentRow } = dialogState;
-    const { editLoadingRowId, generateLoadingRowId, deleteLoadingRowId } = loadingState;
+    const { editLoadingRowId, generateLoadingRowId, deleteLoadingRowId, unissueLoadingRowId } = loadingState;
     const { columnFilters, openFilterDropdown, filterSearchTerms, filterDropdownPosition } = filterState;
     const { canScrollLeft, canScrollRight, scrollPercentage, showInitialHint, hintShownOnce, isMouseDown, startX, scrollLeft } = scrollState;
 
@@ -709,6 +713,18 @@ const TableComponent: React.FC<TableProps> = ({
                 } finally {
                     setLoadingState(prev => ({ ...prev, deleteLoadingRowId: null }));
                 }
+            }
+        }
+    };
+
+    const openUnissueDialog = async (row: any) => {
+        if (openStaticDialog) {
+            const rowId = row.id || row.contractId || row.projectId || String(row);
+            setLoadingState(prev => ({ ...prev, unissueLoadingRowId: rowId }));
+            try {
+                await openStaticDialog("Unissue", row, { contractIdentifier, contractId });
+            } finally {
+                setLoadingState(prev => ({ ...prev, unissueLoadingRowId: null }));
             }
         }
     };
@@ -1141,6 +1157,21 @@ const TableComponent: React.FC<TableProps> = ({
                                                                                     <span className={`iconify ${generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--circle-check-big'} text-base-content/70 text-success size-4`}></span>
                                                                                 </Button>
                                                                             )}
+                                                                            {(rowAction?.unissueAction ?? unissueAction) && (
+                                                                                <Button
+                                                                                    color="ghost"
+                                                                                    size="sm"
+                                                                                    className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                                    aria-label="Un-issue"
+                                                                                    data-tip="Un-issue"
+                                                                                    disabled={unissueLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        openUnissueDialog(row);
+                                                                                    }}>
+                                                                                    <span className={`iconify ${unissueLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--undo-2'} text-amber-600 size-4`}></span>
+                                                                                </Button>
+                                                                            )}
                                                                             {(rowAction?.deleteAction ?? deleteAction) && (
                                                                                 <Button
                                                                                     color="ghost"
@@ -1371,6 +1402,21 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             openGenerateDialog(row);
                                                                         }}>
                                                                         <span className={`iconify ${generateLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--circle-check-big'} text-base-content/70 text-success size-4`}></span>
+                                                                    </Button>
+                                                                )}
+                                                                {(rowAction?.unissueAction ?? unissueAction) && (
+                                                                    <Button
+                                                                        color="ghost"
+                                                                        size="sm"
+                                                                        className="tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0"
+                                                                        aria-label="Un-issue"
+                                                                        data-tip="Un-issue"
+                                                                        disabled={unissueLoadingRowId === (row.id || row.contractId || row.projectId || String(row))}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openUnissueDialog(row);
+                                                                        }}>
+                                                                        <span className={`iconify ${unissueLoadingRowId === (row.id || row.contractId || row.projectId || String(row)) ? 'lucide--loader-2 animate-spin' : 'lucide--undo-2'} text-amber-600 size-4`}></span>
                                                                     </Button>
                                                                 )}
                                                                 {(rowAction?.deleteAction ?? deleteAction) && (

@@ -49,26 +49,30 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
     } = useContractDeductions({ contractId });
 
     // Memoized formatted data - only recalculate when source data changes
-    // Note: We store raw values as private properties for editing, format display values on-the-fly
+    // Note: Raw numeric values are passed to SAMTable - Table component handles formatting
+    // We store raw values as private properties for editing
     const formattedLaborData = useMemo(() => laborData.map(item => ({
         ...item,
-        amount: formatCurrency(item.amount),
-        unitPrice: formatCurrency(item.unitPrice),
+        // Raw numeric values - Table component handles formatting
+        amount: item.amount ?? 0,
+        unitPrice: item.unitPrice ?? 0,
         _amountRaw: item.amount,
         _unitPriceRaw: item.unitPrice,
     })), [laborData]);
 
     const formattedMachinesData = useMemo(() => machinesData.map(item => ({
         ...item,
-        amount: formatCurrency(item.amount),
-        unitPrice: formatCurrency(item.unitPrice),
+        // Raw numeric values - Table component handles formatting
+        amount: item.amount ?? 0,
+        unitPrice: item.unitPrice ?? 0,
         _amountRaw: item.amount,
         _unitPriceRaw: item.unitPrice,
     })), [machinesData]);
 
     const formattedMaterialsData = useMemo(() => materialsData.map(item => ({
         ...item,
-        saleUnit: formatCurrency(item.saleUnit),
+        // Raw numeric value - Table component handles formatting
+        saleUnit: item.saleUnit ?? 0,
         _saleUnitRaw: item.saleUnit,
     })), [materialsData]);
 
