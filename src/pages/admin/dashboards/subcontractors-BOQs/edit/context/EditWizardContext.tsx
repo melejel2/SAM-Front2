@@ -651,7 +651,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
                         qte: item.qte,
                         pu: item.pu,
                         costCode: item.costCode || "",
-                        costCodeId: null as number | null,
+                        costCodeId: item.costCodeId ?? null,
                         boqtype: "Subcontractor",
                         boqSheetId: 0,
                         sheetName: building.sheetName || "", // Use empty string if no sheet specified

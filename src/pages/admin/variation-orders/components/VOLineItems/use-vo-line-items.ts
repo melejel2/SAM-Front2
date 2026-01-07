@@ -152,7 +152,7 @@ const useVOLineItems = ({ buildingId, voLevel = 1 }: VOLineItemsHookProps = {}) 
                     qte: parseFloat(item.qte) || 0,
                     pu: parseFloat(item.pu) || 0,
                     costCode: item.costCode,
-                    costCodeId: item.originalItem?.costCodeId || null,
+                    costCodeId: item.costCodeId ?? item.originalItem?.costCodeId ?? null,
                     level: typeof item.level === 'number' ? item.level : parseInt(item.level) || voLevel,
                     orderVo: parseFloat(item.order) || 0
                 }));

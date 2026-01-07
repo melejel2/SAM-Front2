@@ -70,7 +70,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
                         qte: parseFloat(item.qte || item.qty) || 0,
                         pu: parseFloat(item.pu || item.unit_price) || 0,
                         costCode: item.costCode || item.cost_code || "",
-                        costCodeId: null,
+                        costCodeId: item.costCodeId ?? null,
                         boqtype: "Subcontractor",
                         boqSheetId: 0, // Let backend handle this
                         sheetName: building.sheetName || "",
