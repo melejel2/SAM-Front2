@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useMemo } from "react";
+import React, { useState, memo, useMemo } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, LaborsVM, MachinesVM, MaterialsVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
 import { CorrectionEntityType } from "@/types/ipc";
@@ -8,7 +8,6 @@ import infoIcon from "@iconify/icons-lucide/info";
 import usersIcon from "@iconify/icons-lucide/users";
 import truckIcon from "@iconify/icons-lucide/truck";
 import packageIcon from "@iconify/icons-lucide/package";
-import calculatorIcon from "@iconify/icons-lucide/calculator";
 import plusIcon from "@iconify/icons-lucide/plus";
 import trashIcon from "@iconify/icons-lucide/trash-2";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
-import { CorrectionEntityType } from "@/types/ipc";
+import { CorrectionEntityType, isAdvancePaymentType } from "@/types/ipc";
 import { Icon } from "@iconify/react";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
+import dollarSignIcon from "@iconify/icons-lucide/dollar-sign";
+import xIcon from "@iconify/icons-lucide/x";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import ExcelJS from "exceljs";
@@ -72,6 +74,52 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     // Key format: "contract-{buildingId}-{boqId}-{field}" or "vo-{voId}-{buildingId}-{boqId}-{field}"
     const [pendingInputs, setPendingInputs] = useState<Record<string, string>>({});
 
+    // Advance Payment Modal State
+    const [showAdvancePaymentModal, setShowAdvancePaymentModal] = useState(false);
+    const [advancePaymentAutoOpened, setAdvancePaymentAutoOpened] = useState(false);
+
+    // Store the ORIGINAL cumulative when data loads (for edit mode calculation)
+    // This allows us to calculate what was paid BEFORE this IPC
+    const [originalCumulativeRef, setOriginalCumulativeRef] = useState<{
+        cumulative: number;
+        thisIpcAmount: number;
+        captured: boolean;
+    }>({ cumulative: 0, thisIpcAmount: 0, captured: false });
+
+    // Capture original values when IPC data loads (for edit mode)
+    // This is needed to calculate what was paid BEFORE this IPC
+    useEffect(() => {
+        const isInEditMode = formData.id && formData.id > 0;
+        // Capture when: edit mode, not yet captured, and we have data loaded (contractsDatasetId > 0)
+        if (isInEditMode && !originalCumulativeRef.captured && formData.contractsDatasetId > 0) {
+            setOriginalCumulativeRef({
+                cumulative: formData.advancePaymentAmountCumul || 0,
+                thisIpcAmount: formData.advancePaymentAmount || 0,
+                captured: true
+            });
+        }
+    }, [formData.id, formData.contractsDatasetId, formData.advancePaymentAmountCumul, formData.advancePaymentAmount, originalCumulativeRef.captured]);
+
+    // Advance Payment Selection State - which items to include in calculation
+    // 'all' = BOQ + all VOs, 'boq' = BOQ only, or specific VO IDs
+    // Initialize from formData to persist selection across navigation
+    const [advancePaymentSelection, setAdvancePaymentSelectionLocal] = useState<'all' | 'boq' | number[]>(
+        formData.advancePaymentSelection || 'all'
+    );
+
+    // Sync selection state back to formData when it changes
+    const setAdvancePaymentSelection = (newSelection: 'all' | 'boq' | number[]) => {
+        setAdvancePaymentSelectionLocal(newSelection);
+        setFormData({ advancePaymentSelection: newSelection });
+    };
+
+    // Initialize local state from formData when component mounts or formData changes
+    useEffect(() => {
+        if (formData.advancePaymentSelection && formData.advancePaymentSelection !== advancePaymentSelection) {
+            setAdvancePaymentSelectionLocal(formData.advancePaymentSelection);
+        }
+    }, [formData.advancePaymentSelection]);
+
     // Effect to fetch all buildings for the selected contract
     useEffect(() => {
         const fetchAllBuildings = async () => {
@@ -81,7 +129,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 const response = await ipcApiService.getContractDataForNewIpc(selectedContract.id, token);
                 if (response.success && response.data) {
                     // Auto-initialize fromDate from previous IPC's toDate if available
-                    const isEditMode = (formData as any).id && (formData as any).id > 0;
+                    const isEditMode = formData.id && formData.id > 0;
                     if (!isEditMode && response.data.previousIpcToDate && !formData.fromDate) {
                         setFormData({ fromDate: response.data.previousIpcToDate.split('T')[0] });
                     }
@@ -112,7 +160,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     // fromDate: First day of current month (will be updated to previous IPC's toDate in future enhancement)
     // toDate: Today's date
     useEffect(() => {
-        const isEditMode = (formData as any).id && (formData as any).id > 0;
+        const isEditMode = formData.id && formData.id > 0;
         if (!isEditMode && (!formData.fromDate || !formData.toDate)) {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -132,6 +180,240 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             setActiveBuildingId(formData.buildings[0].id);
         }
     }, [formData.buildings, activeBuildingId]);
+
+    // Auto-open Advance Payment Modal when IPC type is "Advance Payment"
+    useEffect(() => {
+        const isAdvanceType = isAdvancePaymentType(formData.type);
+        const isInEditMode = formData.id && formData.id > 0;
+
+        // For advance payment type IPCs, we always want to show the modal:
+        // - In new mode: when there's eligible amount data available
+        // - In edit mode: always (user needs to review/modify advance payment settings)
+        const hasDataLoaded = isInEditMode
+            ? formData.contractsDatasetId > 0 // Edit mode: data is loaded when contract ID is set
+            : (formData.ipcSummaryData?.amount || 0) > 0 ||
+              (formData.advancePayment || 0) > 0 ||
+              (formData.advancePaymentAmountCumul || 0) > 0 ||
+              (formData.advancePaymentPercentage || 0) > 0;
+
+        if (isAdvanceType && hasDataLoaded && !advancePaymentAutoOpened) {
+            setShowAdvancePaymentModal(true);
+            setAdvancePaymentAutoOpened(true);
+        }
+    }, [formData, advancePaymentAutoOpened]);
+
+    // Check if this is an advance payment type IPC (for showing the button)
+    const isAdvanceType = isAdvancePaymentType(formData.type);
+
+    // Calculate BOQ total amount FIRST (sum of all building BOQ items' Pt = qty * unitPrice)
+    const boqTotalAmount = useMemo(() => {
+        const safeBuildings = formData.buildings || [];
+        return safeBuildings.reduce((total, building) => {
+            const buildingTotal = (building.boqsContract || []).reduce((bTotal, boq) => {
+                return bTotal + (boq.qte * boq.unitPrice);
+            }, 0);
+            return total + buildingTotal;
+        }, 0);
+    }, [formData.buildings]);
+
+    // Calculate individual VO amounts with their types
+    const voAmounts = useMemo(() => {
+        const safeVOs = (formData.vos || []) as Vos[];
+        return safeVOs.map(vo => {
+            const voTotal = vo.buildings.reduce((total, building) => {
+                const buildingTotal = (building.boqs || []).reduce((bTotal, boq) => {
+                    return bTotal + (boq.qte * boq.unitPrice);
+                }, 0);
+                return total + buildingTotal;
+            }, 0);
+            return {
+                id: vo.id,
+                voNumber: vo.voNumber,
+                type: vo.type, // 'Addition' or 'Omission'
+                amount: voTotal
+            };
+        });
+    }, [formData.vos]);
+
+    // Calculate full total (BOQ + all VOs) for percentage derivation
+    const fullTotalAmount = useMemo(() => {
+        let total = boqTotalAmount;
+        voAmounts.forEach(vo => {
+            if (vo.type?.toLowerCase() === 'addition') {
+                total += vo.amount;
+            } else if (vo.type?.toLowerCase() === 'omission') {
+                total -= vo.amount;
+            }
+        });
+        return Math.max(0, total);
+    }, [boqTotalAmount, voAmounts]);
+
+    // Get contract's advance payment eligible percentage
+    // Priority: 1) Backend response, 2) Selected contract, 3) Derive from eligible amount
+    const contractAdvancePayeePercent = useMemo(() => {
+        // First try: get from backend's response (formData.subcontractorAdvancePayee - sent by OpenIpc)
+        const fromBackend = formData.subcontractorAdvancePayee || 0;
+        if (fromBackend > 0) return fromBackend;
+
+        // Second try: get from selected contract (for new IPC mode)
+        const fromContract = parseFloat((selectedContract as any)?.subcontractorAdvancePayee || '0');
+        if (fromContract > 0) return fromContract;
+
+        // Third try: get from formData.contractsDataset (fallback)
+        const fromFormDataContract = parseFloat((formData as any).contractsDataset?.subcontractorAdvancePayee || '0');
+        if (fromFormDataContract > 0) return fromFormDataContract;
+
+        // Fourth try: DERIVE from backend's advancePayment / fullTotalAmount
+        // This handles edit mode if percentage wasn't sent (fallback)
+        const backendEligible = formData.advancePayment || 0;
+        if (backendEligible > 0 && fullTotalAmount > 0) {
+            const derived = (backendEligible / fullTotalAmount) * 100;
+            // Round to reasonable precision
+            return Math.round(derived * 100) / 100;
+        }
+
+        return 0;
+    }, [selectedContract, formData, fullTotalAmount]);
+
+    // Calculate selected total based on user selection
+    const selectedTotalAmount = useMemo(() => {
+        let total = 0;
+
+        if (advancePaymentSelection === 'all') {
+            // BOQ + all Addition VOs - Omission VOs
+            total = boqTotalAmount;
+            voAmounts.forEach(vo => {
+                if (vo.type?.toLowerCase() === 'addition') {
+                    total += vo.amount;
+                } else if (vo.type?.toLowerCase() === 'omission') {
+                    total -= vo.amount;
+                }
+            });
+        } else if (advancePaymentSelection === 'boq') {
+            // BOQ only
+            total = boqTotalAmount;
+        } else if (Array.isArray(advancePaymentSelection)) {
+            // BOQ + selected VOs only
+            total = boqTotalAmount;
+            voAmounts.forEach(vo => {
+                if (advancePaymentSelection.includes(vo.id)) {
+                    if (vo.type?.toLowerCase() === 'addition') {
+                        total += vo.amount;
+                    } else if (vo.type?.toLowerCase() === 'omission') {
+                        total -= vo.amount;
+                    }
+                }
+            });
+        }
+
+        return Math.max(0, total);
+    }, [advancePaymentSelection, boqTotalAmount, voAmounts]);
+
+    // Calculate eligible amount based on selection and contract percentage
+    const calculatedEligibleAmount = useMemo(() => {
+        return selectedTotalAmount * (contractAdvancePayeePercent / 100);
+    }, [selectedTotalAmount, contractAdvancePayeePercent]);
+
+    // SYNC: Update formData.advancePayment when selection changes
+    // This ensures the backend receives the correct eligible amount
+    useEffect(() => {
+        // Only update if we have valid calculated amount and it differs from current
+        if (calculatedEligibleAmount > 0 && calculatedEligibleAmount !== formData.advancePayment) {
+            // Calculate previousPaid correctly for edit mode
+            // In edit mode: subtract this IPC's original amount from cumulative
+            const isEditMode = formData.id && formData.id > 0;
+            let adjustedPreviousPaid: number;
+
+            if (isEditMode && originalCumulativeRef.captured) {
+                // Edit mode: previous paid = original cumulative - original this IPC amount
+                adjustedPreviousPaid = Math.max(0, originalCumulativeRef.cumulative - originalCumulativeRef.thisIpcAmount);
+            } else {
+                // New mode: use raw cumulative
+                adjustedPreviousPaid = formData.advancePaymentAmountCumul || 0;
+            }
+
+            // Calculate the new remaining amount with the new eligible and correct previousPaid
+            const newRemaining = Math.max(0, calculatedEligibleAmount - adjustedPreviousPaid);
+
+            // Recalculate this IPC's amount based on new remaining
+            const currentPercentage = formData.advancePaymentPercentage || 0;
+            const newThisIpcAmount = (newRemaining * currentPercentage) / 100;
+
+            setFormData({
+                advancePayment: calculatedEligibleAmount,
+                advancePaymentAmount: newThisIpcAmount
+            });
+        }
+    }, [calculatedEligibleAmount, formData.advancePayment, formData.advancePaymentAmountCumul, formData.advancePaymentPercentage, formData.id, originalCumulativeRef, setFormData]);
+
+    // Get advance payment data
+    const summaryData = formData.ipcSummaryData;
+    // For DISPLAY: use calculatedEligibleAmount directly for IMMEDIATE feedback when VO selection changes
+    // The sync effect above updates formData.advancePayment for backend, but display needs to be instant
+    const eligibleAmount = calculatedEligibleAmount > 0 ? calculatedEligibleAmount :
+        (summaryData?.amount || formData.advancePayment || 0);
+
+    // Calculate ACTUAL previous paid (paid in IPCs BEFORE this one)
+    // In edit mode: cumulative includes this IPC's saved amount, so subtract it
+    // In new mode: cumulative is from previous IPCs only
+    const isInEditMode = formData.id && formData.id > 0;
+    const rawCumulative = summaryData?.previousPaid || formData.advancePaymentAmountCumul || 0;
+
+    // For edit mode, calculate what was paid BEFORE this IPC
+    const previousPaid = useMemo(() => {
+        if (isInEditMode && originalCumulativeRef.captured) {
+            // Previous paid = original cumulative - original this IPC amount
+            return Math.max(0, originalCumulativeRef.cumulative - originalCumulativeRef.thisIpcAmount);
+        }
+        // For new IPC or if not captured yet, use raw cumulative
+        // (For new IPC, cumulative is what was paid in previous IPCs)
+        return rawCumulative;
+    }, [isInEditMode, originalCumulativeRef, rawCumulative]);
+
+    // Remaining is what's left after all PREVIOUS IPCs (not including this one)
+    const remainingAmount = Math.max(0, eligibleAmount - previousPaid);
+    const advancePaymentPercentage = formData.advancePaymentPercentage || 0;
+    // This IPC's amount = percentage of remaining
+    const thisIpcAdvanceAmount = (remainingAmount * advancePaymentPercentage) / 100;
+    // Show advance payment button if:
+    // 1. It's an advance payment type IPC (always show for these)
+    // 2. OR there's BOQ/VO data with contract advance percentage configured
+    const hasAdvancePaymentData = isAdvanceType ||
+        ((boqTotalAmount > 0 || voAmounts.length > 0) && contractAdvancePayeePercent > 0);
+
+    // Handle advance payment percentage change
+    const handleAdvancePaymentChange = (value: string) => {
+        const numValue = parseFloat(value) || 0;
+        const clampedValue = Math.max(0, Math.min(100, numValue));
+        setFormData({
+            advancePaymentPercentage: clampedValue,
+            advancePaymentAmount: (remainingAmount * clampedValue) / 100
+        });
+    };
+
+    // Handle VO selection toggle
+    const handleVOSelectionToggle = (voId: number) => {
+        if (advancePaymentSelection === 'all' || advancePaymentSelection === 'boq') {
+            // Switch to specific selection mode with this VO
+            setAdvancePaymentSelection([voId]);
+        } else if (Array.isArray(advancePaymentSelection)) {
+            if (advancePaymentSelection.includes(voId)) {
+                // Remove this VO
+                const newSelection = advancePaymentSelection.filter(id => id !== voId);
+                setAdvancePaymentSelection(newSelection.length > 0 ? newSelection : 'boq');
+            } else {
+                // Add this VO
+                setAdvancePaymentSelection([...advancePaymentSelection, voId]);
+            }
+        }
+    };
+
+    // Check if a VO is selected
+    const isVOSelected = (voId: number) => {
+        if (advancePaymentSelection === 'all') return true;
+        if (advancePaymentSelection === 'boq') return false;
+        return Array.isArray(advancePaymentSelection) && advancePaymentSelection.includes(voId);
+    };
 
     const handleInputChange = (field: string, value: string | number) => {
         setFormData({ [field]: value });
@@ -484,7 +766,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         currentValue: number,
         entityDescription: string
     ) => {
-        const isEditMode = (formData as any).id && (formData as any).id > 0;
+        const isEditMode = formData.id && formData.id > 0;
         const contractDatasetId = selectedContract?.id || (formData as any).contractsDatasetId;
         if (!contractDatasetId) {
             toaster.error("Contract dataset ID not found");
@@ -898,7 +1180,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     }, [activeVOBuilding]);
 
     // In Edit mode, selectedContract might not be set, but formData has the contract data
-    const isEditMode = (formData as any).id && (formData as any).id > 0;
+    const isEditMode = formData.id && formData.id > 0;
     if (!selectedContract && !isEditMode) {
         return (
             <div className="text-center py-12">
@@ -942,6 +1224,22 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         <span className="text-base-content/70 font-medium">Type:</span>
                         <span className="font-semibold text-base-content">{formData.type}</span>
                     </div>
+                    {/* Advance Payment Button - Shows for all IPCs with eligible amount */}
+                    {hasAdvancePaymentData && (
+                        <button
+                            type="button"
+                            onClick={() => setShowAdvancePaymentModal(true)}
+                            className={`btn btn-sm ${thisIpcAdvanceAmount > 0 ? 'btn-primary' : 'btn-outline btn-primary'} gap-1`}
+                        >
+                            <Icon icon={dollarSignIcon} className="size-4" />
+                            Advance Payment
+                            {thisIpcAdvanceAmount > 0 && (
+                                <span className="badge badge-sm badge-ghost ml-1">
+                                    {formatCurrency(thisIpcAdvanceAmount)}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 {/* Work Period Section */}
@@ -1528,6 +1826,127 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     entityId={historyModal.entityId}
                     onFetchHistory={handleFetchHistory}
                 />
+            )}
+
+            {/* ==================== ADVANCE PAYMENT MODAL ==================== */}
+            {showAdvancePaymentModal && hasAdvancePaymentData && (
+                <div className="modal modal-open">
+                    <div className="modal-box max-w-4xl w-full p-0">
+                        {/* Compact Header */}
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-base-300 bg-base-200/50">
+                            <h3 className="text-base font-semibold">Advance Payment</h3>
+                            <button type="button" onClick={() => setShowAdvancePaymentModal(false)} className="btn btn-xs btn-ghost btn-circle">
+                                <Icon icon={xIcon} className="size-4" />
+                            </button>
+                        </div>
+
+                        {/* Main Content - Horizontal Layout */}
+                        <div className="p-5">
+                            <div className={`flex gap-6 ${voAmounts.length > 0 ? '' : 'justify-center'}`}>
+
+                                {/* LEFT: VO Selection */}
+                                {voAmounts.length > 0 && (
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-medium text-base-content/70 uppercase tracking-wide">Include in Calculation</span>
+                                            <div className="join">
+                                                <button type="button" onClick={() => setAdvancePaymentSelection('all')}
+                                                    className={`btn btn-xs join-item ${advancePaymentSelection === 'all' ? 'btn-primary' : 'btn-ghost'}`}>All</button>
+                                                <button type="button" onClick={() => setAdvancePaymentSelection('boq')}
+                                                    className={`btn btn-xs join-item ${advancePaymentSelection === 'boq' ? 'btn-primary' : 'btn-ghost'}`}>BOQ Only</button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
+                                            <table className="table table-xs w-full">
+                                                <tbody>
+                                                    <tr className="bg-base-200/50">
+                                                        <td className="py-1.5"><span className="text-xs">BOQ Items</span></td>
+                                                        <td className="py-1.5 text-right font-medium text-xs">{formatCurrency(boqTotalAmount)}</td>
+                                                    </tr>
+                                                    {voAmounts.map(vo => (
+                                                        <tr key={vo.id} className={isVOSelected(vo.id) ? '' : 'opacity-40'}>
+                                                            <td className="py-1">
+                                                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                                                    <input type="checkbox" className="checkbox checkbox-xs checkbox-primary"
+                                                                        checked={isVOSelected(vo.id)} onChange={() => handleVOSelectionToggle(vo.id)} />
+                                                                    <span className={`text-xs ${vo.type?.toLowerCase() === 'omission' ? 'text-error' : 'text-success'}`}>
+                                                                        {vo.voNumber}
+                                                                    </span>
+                                                                    <span className="badge badge-xs">{vo.type}</span>
+                                                                </label>
+                                                            </td>
+                                                            <td className={`py-1 text-right text-xs font-medium ${vo.type?.toLowerCase() === 'omission' ? 'text-error' : 'text-success'}`}>
+                                                                {vo.type?.toLowerCase() === 'omission' ? '−' : '+'}{formatCurrency(vo.amount)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr className="border-t-2 border-base-300 bg-base-200">
+                                                        <td className="py-1.5 font-medium text-xs">Selected Total</td>
+                                                        <td className="py-1.5 text-right font-bold text-sm">{formatCurrency(selectedTotalAmount)}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* RIGHT: Summary & Input */}
+                                <div className={voAmounts.length > 0 ? 'flex-1 min-w-0' : 'w-full max-w-md'}>
+                                    {/* Summary Table */}
+                                    <span className="text-xs font-medium text-base-content/70 uppercase tracking-wide">Summary</span>
+                                    <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden mt-2 mb-4">
+                                        <table className="table table-xs w-full">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="py-1.5 text-xs">Eligible ({contractAdvancePayeePercent}% of {formatCurrency(selectedTotalAmount)})</td>
+                                                    <td className="py-1.5 text-right font-semibold text-sm">{formatCurrency(eligibleAmount)}</td>
+                                                </tr>
+                                                <tr className="text-success">
+                                                    <td className="py-1.5 text-xs">Previous IPCs</td>
+                                                    <td className="py-1.5 text-right font-medium text-xs">− {formatCurrency(previousPaid)}</td>
+                                                </tr>
+                                                <tr className="border-t-2 border-warning/30 bg-warning/10">
+                                                    <td className="py-2 text-xs font-semibold text-warning">Available</td>
+                                                    <td className="py-2 text-right font-bold text-base text-warning">{formatCurrency(remainingAmount)}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* This IPC Input */}
+                                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                                        <div className="flex items-center justify-between gap-4 mb-3">
+                                            <span className="text-xs font-medium text-base-content/70">This IPC:</span>
+                                            <div className="flex items-center gap-2">
+                                                <input type="number" className="input input-sm input-bordered w-16 text-center font-semibold"
+                                                    value={advancePaymentPercentage || ''} onChange={(e) => handleAdvancePaymentChange(e.target.value)}
+                                                    onFocus={(e) => e.target.select()} min="0" max="100" placeholder="0" />
+                                                <span className="text-sm text-base-content/60">%</span>
+                                                <span className="text-base-content/40">=</span>
+                                                <span className="font-bold text-primary text-lg">{formatCurrency(thisIpcAdvanceAmount)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {[0, 25, 50, 75, 100].map(pct => (
+                                                <button key={pct} type="button" onClick={() => handleAdvancePaymentChange(pct.toString())}
+                                                    className={`btn btn-xs flex-1 ${advancePaymentPercentage === pct ? 'btn-primary' : 'btn-ghost'}`}>{pct}%</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Compact Footer */}
+                        <div className="flex justify-end gap-2 px-5 py-3 border-t border-base-300 bg-base-200/30">
+                            <button type="button" onClick={() => { handleAdvancePaymentChange('0'); setShowAdvancePaymentModal(false); }}
+                                className="btn btn-sm btn-ghost">Clear</button>
+                            <button type="button" onClick={() => setShowAdvancePaymentModal(false)}
+                                className="btn btn-sm btn-primary">Apply</button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop bg-black/40" onClick={() => setShowAdvancePaymentModal(false)}></div>
+                </div>
             )}
         </div>
     );

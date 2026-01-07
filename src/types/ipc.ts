@@ -204,6 +204,11 @@ export interface SaveIPCVM extends IpcDataExtended {
   retentionAmountCumul: number;
   apRecovery: number;
   prorata: number;
+
+  // Contract's advance payment eligible percentage (e.g., 30 means 30% of contract total is eligible)
+  // This is populated from ContractsDataset.SubcontractorAdvancePayee by backend
+  subcontractorAdvancePayee?: number;
+
   fromDate?: string;
   toDate?: string;
   dateIpc?: string;
@@ -297,6 +302,10 @@ export interface IpcApiResult<T = any> {
 
 // Frontend Form Types
 export interface IpcWizardFormData {
+  // IPC ID and number (only set in edit mode)
+  id?: number;
+  number?: number; // IPC sequence number (1, 2, 3...)
+
   // Basic info
   contractsDatasetId: number;
   type: string;
@@ -304,13 +313,36 @@ export interface IpcWizardFormData {
   toDate: string;
   dateIpc: string;
 
-  // Financial calculations
-  advancePayment: number;
+  // Summary data for IPC edit forms (from backend calculation)
+  ipcSummaryData?: IpcSummaryData;
+
+  // Financial calculations - Advance Payment
+  advancePayment: number; // Total eligible amount (BOQ + VOs) × percentage
+  advancePaymentPercentage: number; // Percentage to pay this IPC
+  advancePaymentAmount: number; // Actual amount for this IPC
+  advancePaymentAmountCumul: number; // Cumulative paid so far
+
+  // Financial calculations - Retention
   retentionPercentage: number;
-  advancePaymentPercentage: number;
+  retentionAmount: number; // Amount for this IPC
+  retentionAmountCumul: number; // Cumulative retention
+  retention: number; // Current retention value
+
+  // Financial calculations - Penalty
   penalty: number;
   previousPenalty: number;
   penaltyReason?: string; // Optional penalty reason/description
+
+  // Other financial fields
+  apRecovery: number;
+  prorata: number;
+
+  // Contract's advance payment eligible percentage (from backend)
+  subcontractorAdvancePayee?: number;
+
+  // Advance Payment VO Selection - which items to include in eligible amount calculation
+  // 'all' = BOQ + all VOs, 'boq' = BOQ only, number[] = BOQ + specific VO IDs
+  advancePaymentSelection?: 'all' | 'boq' | number[];
 
   // BOQ progress data
   buildings: ContractBuildingsVM[];
@@ -328,11 +360,33 @@ export interface IpcTypeOption {
   label: string;
 }
 
+// IPC Type Values - use these constants for type checking
+export const IPC_TYPE_VALUES = {
+  INTERIM: "Provisoire / Interim",
+  FINAL: "Final / Final",
+  RETENTION: "Rg / Retention",
+  ADVANCE_PAYMENT: "Avance / Advance Payment",
+} as const;
+
+// Helper to check if a type string is an advance payment type
+export const isAdvancePaymentType = (type: string | undefined): boolean => {
+  if (!type) return false;
+  const lowerType = type.toLowerCase();
+  return lowerType.includes('advance') || lowerType.includes('avance');
+};
+
+// Helper to check if a type string is a retention type
+export const isRetentionType = (type: string | undefined): boolean => {
+  if (!type) return false;
+  const lowerType = type.toLowerCase();
+  return lowerType.includes('retention') || lowerType.includes('rg');
+};
+
 export const IpcTypeOptions: IpcTypeOption[] = [
-  { value: "Provisoire / Interim", label: "Provisoire / Interim" },
-  { value: "Final / Final", label: "Final / Final" },
-  { value: "Rg / Retention", label: "Rg / Retention" },
-  { value: "Avance / Advance Payment", label: "Avance / Advance Payment" }
+  { value: IPC_TYPE_VALUES.INTERIM, label: "Provisoire / Interim" },
+  { value: IPC_TYPE_VALUES.FINAL, label: "Final / Final" },
+  { value: IPC_TYPE_VALUES.RETENTION, label: "Rg / Retention" },
+  { value: IPC_TYPE_VALUES.ADVANCE_PAYMENT, label: "Avance / Advance Payment" }
 ];
 
 export const IpcStatusOptions: IpcTypeOption[] = [

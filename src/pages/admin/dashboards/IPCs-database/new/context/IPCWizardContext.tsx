@@ -68,11 +68,24 @@ const getInitialFormData = (): IpcWizardFormData => ({
     fromDate: "",
     toDate: "",
     dateIpc: new Date().toISOString().split("T")[0],
+    // Advance Payment fields
     advancePayment: 0,
-    retentionPercentage: 10,
     advancePaymentPercentage: 0,
+    advancePaymentAmount: 0,
+    advancePaymentAmountCumul: 0,
+    advancePaymentSelection: 'all', // Default: include all VOs in advance payment calculation
+    // Retention fields
+    retentionPercentage: 10,
+    retentionAmount: 0,
+    retentionAmountCumul: 0,
+    retention: 0,
+    // Penalty fields
     penalty: 0,
     previousPenalty: 0,
+    // Other financial fields
+    apRecovery: 0,
+    prorata: 0,
+    // Collections
     buildings: [],
     vos: [],
     labors: [],
@@ -145,11 +158,25 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                     const ipcData = response.data as any; // Treat as any to access potentially incorrect field names
 
                     // Map backend date fields and handle timezone issues
+                    // Deserialize advancePaymentSelection from backend string format
+                    const rawSelection = ipcData.advancePaymentSelection;
+                    let parsedSelection: 'all' | 'boq' | number[] = 'all';
+                    if (rawSelection === 'boq') {
+                        parsedSelection = 'boq';
+                    } else if (rawSelection && rawSelection !== 'all') {
+                        // Assume it's comma-separated VO IDs like "1,2,3"
+                        const ids = rawSelection.split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n));
+                        if (ids.length > 0) {
+                            parsedSelection = ids;
+                        }
+                    }
+
                     const mappedData: Partial<IpcWizardFormData> = {
                         ...ipcData,
                         fromDate: (ipcData.fromDate || ipcData.FromDate || ipcData.datefrom || "").split("T")[0],
                         toDate: (ipcData.toDate || ipcData.ToDate || ipcData.dateto || "").split("T")[0],
                         dateIpc: (ipcData.dateIpc || ipcData.DateOpc || ipcData.dateopc || "").split("T")[0],
+                        advancePaymentSelection: parsedSelection,
                     };
 
                     setFormData(mappedData, false); // Don't mark as dirty when loading
@@ -358,12 +385,13 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         // Calculate retention amount
         const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
 
-        // Calculate advance payment deduction
-        const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
+        // NOTE: advancePaymentAmount is set directly by Step2's Advance Payment modal
+        // Do NOT recalculate it here - the modal has the correct edit mode logic
+        // that adjusts for "previous paid" properly (subtracting this IPC's original amount)
 
-        // Update form data with calculated values
+        // Update form data with calculated values (only retention, not advance payment)
         setFormData({
-            advancePayment: advanceDeduction,
+            retentionAmount: retentionAmount,
         });
     }, [formData, setFormData]);
 
@@ -412,14 +440,24 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                 throw new Error("Authentication required");
             }
 
+            // Prepare form data for backend - serialize advancePaymentSelection
+            const preparedFormData = {
+                ...formData,
+                // Convert advancePaymentSelection to string format for backend
+                // 'all' and 'boq' stay as-is, number[] becomes "1,2,3"
+                advancePaymentSelection: Array.isArray(formData.advancePaymentSelection)
+                    ? formData.advancePaymentSelection.join(',')
+                    : formData.advancePaymentSelection || 'all'
+            };
+
             let response;
             const formDataId = (formData as any).id;
             if (!formDataId || formDataId === 0) {
                 // New IPC
-                response = await ipcApiService.createIpc(formData as any, token);
+                response = await ipcApiService.createIpc(preparedFormData as any, token);
             } else {
                 // Existing IPC
-                response = await ipcApiService.updateIpc(formData as any, token);
+                response = await ipcApiService.updateIpc(preparedFormData as any, token);
             }
 
             if (response.success) {
@@ -459,7 +497,10 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
         }, 0);
 
         const retentionAmount = (totalIPCAmount * formData.retentionPercentage) / 100;
-        const advanceDeduction = (totalIPCAmount * formData.advancePaymentPercentage) / 100;
+
+        // Use advancePaymentAmount directly from formData - it's set correctly by Step2's modal
+        // which handles the edit mode adjustment (subtracting this IPC's original amount from cumulative)
+        const advanceDeduction = formData.advancePaymentAmount || 0;
 
         return {
             totalAmount: totalIPCAmount,
@@ -467,7 +508,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             advanceDeduction,
             netAmount: totalIPCAmount - retentionAmount - advanceDeduction - formData.penalty,
         };
-    }, [formData.buildings, formData.retentionPercentage, formData.advancePaymentPercentage, formData.penalty]);
+    }, [formData.buildings, formData.retentionPercentage, formData.advancePaymentAmount, formData.penalty]);
 
     // Memoize context value to prevent unnecessary re-renders
     const contextValue: IPCWizardContextType = useMemo(
