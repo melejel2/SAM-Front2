@@ -77,6 +77,7 @@ export interface BOQItem {
     no: string;
     key: string;
     costCode?: string;
+    costCodeId?: number | null;
     unite: string;
     qte: number;
     pu: number;
