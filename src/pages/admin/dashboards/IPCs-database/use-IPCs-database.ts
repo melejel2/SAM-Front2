@@ -100,8 +100,6 @@ const useIPCsDatabase = () => {
         try {
             const response = await ipcApiService.getIpcsList(token ?? "");
             if (response.success && response.data) {
-                const VAT_RATE = 0.18; // 18% VAT rate
-
                 // Format data ONCE during fetch - store formatted values directly
                 const formattedData = response.data.map((ipc: IpcListItem) => ({
                     ...ipc,
@@ -118,9 +116,8 @@ const useIPCsDatabase = () => {
                             ? `Contract-${ipc.contractsDatasetId}`
                             : "-",
 
-                    // Raw numeric values - Table component handles formatting
-                    // Database TotalAmount is TTC (with VAT), divide by 1.18 to get HT
-                    amountHT: ipc.totalAmount / (1 + VAT_RATE),
+                    // Use server-calculated HT amount (uses contract/database VAT rate)
+                    amountHT: ipc.totalAmountHT,
                     totalAmount: ipc.totalAmount,
                     retention: ipc.retention,
 

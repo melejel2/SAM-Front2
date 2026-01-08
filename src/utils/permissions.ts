@@ -26,8 +26,8 @@ export const ROLE_PERMISSIONS = {
   // Units - only Admin can add/edit/delete
   UNITS_MANAGE: ['Admin'],
 
-  // Previous Value Corrections - ContractsManager, QuantitySurveyor, and Admin
-  PREVIOUS_VALUES_CORRECT: ['Admin', 'ContractsManager', 'QuantitySurveyor'],
+  // Previous Value Corrections - ContractsManager, QuantitySurveyor, OperationsManager, and Admin
+  PREVIOUS_VALUES_CORRECT: ['Admin', 'ContractsManager', 'QuantitySurveyor', 'OperationsManager'],
 } as const;
 
 export const checkPermission = (userRole: UserRole | undefined, permission: keyof typeof ROLE_PERMISSIONS): boolean => {
@@ -90,7 +90,7 @@ export const canManageUnits = (userRole: UserRole | undefined): boolean => {
 
 /**
  * Check if user can correct previous values in IPCs.
- * Only ContractsManager, QuantitySurveyor, and Admin can correct values.
+ * ContractsManager, QuantitySurveyor, OperationsManager, and Admin can correct values.
  */
 export const canCorrectPreviousValues = (userRole: UserRole | undefined): boolean => {
   return checkPermission(userRole, 'PREVIOUS_VALUES_CORRECT');

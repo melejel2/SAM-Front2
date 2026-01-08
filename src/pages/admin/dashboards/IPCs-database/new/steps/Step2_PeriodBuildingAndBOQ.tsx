@@ -1450,7 +1450,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                             <td className="text-right text-xs">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span>{precedQte || ''}</span>
-                                                    {canCorrectPreviousValues && !isHeaderRow && precedQte > 0 && (
+                                                    {canCorrectPreviousValues && !isHeaderRow && (
                                                         <button
                                                             type="button"
                                                             onClick={() => openCorrectionModal(
@@ -1618,7 +1618,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                             <td className="text-right text-xs">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <span>{precedQte || ''}</span>
-                                                    {canCorrectPreviousValues && !isHeaderRow && precedQte > 0 && (
+                                                    {canCorrectPreviousValues && !isHeaderRow && (
                                                         <button
                                                             type="button"
                                                             onClick={() => openCorrectionModal(

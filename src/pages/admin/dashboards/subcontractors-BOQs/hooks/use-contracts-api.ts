@@ -9,6 +9,7 @@ import {
   getContractBoqItemsFromExcel,
   clearContractBoqItems,
   generateContract,
+  unGenerateContract,
   terminateContract,
   generateFinalContract,
   deleteSubContractorBoq,
@@ -222,17 +223,44 @@ export const useContractsApi = () => {
     try {
       setLoading(true);
       const result = await generateContract(id, token);
-      
+
       if (!result.success) {
         toaster.error(result.message || 'Failed to generate contract');
         return { success: false };
       }
-      
+
       toaster.success('Contract generated successfully!');
       return { success: true };
     } catch (error) {
       console.error('Generate contract error:', error);
       toaster.error('An error occurred while generating the contract');
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Un-generate contract (Active -> Editable)
+  const unGenerateContractBOQ = async (id: number) => {
+    if (!token) {
+      toaster.error('Authentication required');
+      return { success: false };
+    }
+
+    try {
+      setLoading(true);
+      const result = await unGenerateContract(id, token);
+
+      if (!result.success) {
+        toaster.error(result.message || 'Failed to un-generate contract');
+        return { success: false, error: result.error };
+      }
+
+      toaster.success('Contract un-generated successfully! Status changed to Editable.');
+      return { success: true };
+    } catch (error) {
+      console.error('Un-generate contract error:', error);
+      toaster.error('An error occurred while un-generating the contract');
       return { success: false };
     } finally {
       setLoading(false);
@@ -596,6 +624,7 @@ export const useContractsApi = () => {
     
     // Contract lifecycle
     generateContractBOQ,
+    unGenerateContractBOQ,
     terminateContractBOQ,
     generateFinalContractBOQ,
     

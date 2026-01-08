@@ -281,6 +281,31 @@ export const generateContract = async (id: number, token: string): Promise<Contr
 };
 
 /**
+ * Un-generate contract BOQ - changes status from Active back to Editable.
+ * Only allowed if no IPCs are associated with the contract.
+ * @param id Contract dataset ID
+ * @param token Authentication token
+ */
+export const unGenerateContract = async (id: number, token: string): Promise<ContractsApiResponse> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/UnGenerateContract/${id}`,
+            method: "POST",
+            token,
+        });
+
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error("Un-generate contract API Error:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to un-generate contract",
+            message: "An error occurred while un-generating the contract",
+        };
+    }
+};
+
+/**
  * Terminate contract BOQ
  * @param id Contract dataset ID
  * @param token Authentication token

@@ -114,6 +114,7 @@ const ContractDetails = () => {
 
     const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
     const [generatingContract, setGeneratingContract] = useState(false);
+    const [unGeneratingContract, setUnGeneratingContract] = useState(false);
     const [deletingContract, setDeletingContract] = useState(false);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
@@ -298,6 +299,25 @@ const ContractDetails = () => {
             }
         } finally {
             setGeneratingContract(false);
+        }
+    };
+
+    const handleUnGenerateContract = async () => {
+        if (!contractId) return;
+
+        if (!confirm("Are you sure you want to un-generate this contract? This will change its status from Active to Editable.")) {
+            return;
+        }
+
+        setUnGeneratingContract(true);
+        try {
+            const result = await contractsApi.unGenerateContractBOQ(parseInt(contractId));
+            if (result.success) {
+                // Reload contract data to get updated status
+                loadContractDetails();
+            }
+        } finally {
+            setUnGeneratingContract(false);
         }
     };
 
@@ -1019,6 +1039,25 @@ const ContractDetails = () => {
                             className="btn btn-sm btn-error flex items-center gap-2 text-white">
                             <span className="iconify lucide--x-circle size-4"></span>
                             <span>Terminate</span>
+                        </button>
+                    )}
+
+                    {contractData.contractDatasetStatus === "Active" && (
+                        <button
+                            onClick={handleUnGenerateContract}
+                            disabled={unGeneratingContract}
+                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
+                            {unGeneratingContract ? (
+                                <>
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                    <span>Un-Generating...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="iconify lucide--undo-2 size-4"></span>
+                                    <span>Un-Generate</span>
+                                </>
+                            )}
                         </button>
                     )}
 

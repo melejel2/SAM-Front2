@@ -2,8 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
-import { FINANCIAL_CONSTANTS, type IpcListItem } from "@/types/ipc";
-import { formatCurrency } from "@/utils/formatters";
+import type { IpcListItem } from "@/types/ipc";
 
 const getStatusText = (status: string): string => {
     const statusLower = status?.toLowerCase() || '';
@@ -66,9 +65,8 @@ const useContractIPCs = ({ contractId }: UseContractIPCsProps) => {
                     _statusRaw: ipc.status,
                     _typeRaw: ipc.type || "",
 
-                    // Raw numeric values - Table component handles formatting
-                    // Database TotalAmount is TTC (with VAT), divide by 1.18 to get HT
-                    totalAmount: ipc.totalAmount / (1 + FINANCIAL_CONSTANTS.DEFAULT_VAT_RATE),
+                    // Use server-calculated HT amount (uses contract/database VAT rate)
+                    totalAmount: ipc.totalAmountHT,
                     totalAmountWithVAT: ipc.totalAmount,
 
                     // Normalized status and type text
