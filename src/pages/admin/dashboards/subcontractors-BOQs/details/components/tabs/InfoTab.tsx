@@ -30,17 +30,18 @@ const InfoTab = ({
     currentSubcontractor,
     navigationData,
 }: InfoTabProps) => {
-    // Calculate total amount and advance amount
-    const totalAmount = contractData?.buildings?.reduce((total: number, building: any) => {
+    // Calculate total amount from BOQ items or use pre-calculated amount
+    const totalAmount = contractData?.amount || contractData?.buildings?.reduce((total: number, building: any) => {
         const buildingTotal = building?.boqsContract?.reduce(
-            (sum: number, item: any) => sum + (item.amount || 0),
+            (sum: number, item: any) => sum + (item.qte * item.pu || item.amount || 0),
             0
         ) || 0;
         return total + buildingTotal;
-    }, 0) || contractData?.amount || 0;
+    }, 0) || 0;
 
-    const advancePercentage = contractData?.advancePayment || 0;
-    const advanceAmount = (totalAmount * advancePercentage) / 100;
+    // Use subcontractorAdvancePayee for advance payment percentage
+    // Note: advancePayment field stores total BOQ amount (legacy), NOT a percentage
+    const advancePercentage = parseFloat(contractData?.subcontractorAdvancePayee) || 0;
 
     return (
         <div className="h-full overflow-auto">
@@ -137,10 +138,8 @@ const InfoTab = ({
                             <span className="text-base-content">{formatPercentage(advancePercentage)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-base-content/70">Advance Amount:</span>
-                            <span className="text-base-content font-semibold">
-                                {currentCurrency?.currencies || currency} {formatCurrency(advanceAmount)}
-                            </span>
+                            <span className="text-base-content/70">Management Fees:</span>
+                            <span className="text-base-content">{contractData?.managementFees ? `${contractData.managementFees}%` : "0%"}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-base-content/70">Prorata Account:</span>

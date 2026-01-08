@@ -364,7 +364,8 @@ const ContractDatabaseDetails = () => {
     const currentCurrency = useMemo(() => currencies.find(c => c.id === contractData?.currencyId), [currencies, contractData?.currencyId]);
 
     // Memoize calculated values
-    const totalAmount = useMemo(() => contractData?.amount || contractData?.advancePayment || calculateTotalAmount(), [contractData?.amount, contractData?.advancePayment, contractData]);
+    // Note: advancePayment field stores contract amounts (legacy), don't use it as a fallback for amount
+    const totalAmount = useMemo(() => contractData?.amount || calculateTotalAmount(), [contractData?.amount, contractData]);
 
     const advancePercentage = useMemo(() => parseFloat(contractData?.subcontractorAdvancePayee || '0') || 0, [contractData?.subcontractorAdvancePayee]);
     const advanceAmount = useMemo(() => totalAmount * (advancePercentage / 100), [totalAmount, advancePercentage]);

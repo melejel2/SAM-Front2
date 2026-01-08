@@ -258,8 +258,9 @@ export interface IpcListItem {
   number: number;
   subcontractorName: string;
   tradeName: string;
+  /** Total amount including VAT (TTC), calculated as HT * (1 + VAT/100) */
   totalAmount: number;
-  /** Total amount excluding VAT (HT - Hors Taxes), calculated server-side */
+  /** Total amount excluding VAT (HT - Hors Taxes), as stored in database */
   totalAmountHT: number;
   /** VAT rate for the contract (e.g., 18 for 18%, 20 for 20%) */
   vat: number;

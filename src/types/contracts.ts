@@ -48,6 +48,7 @@ export interface ParticularConditionVM {
   daysNumber?: string | null;
   progress?: string | null;
   holdBack?: string | null;
+  /** Advance payment eligible percentage (e.g., "20" for 20%). Use this for display, NOT advancePayment. */
   subcontractorAdvancePayee?: string | null;
   recoverAdvance?: string | null;
   procurementConstruction?: string | null;
@@ -58,6 +59,7 @@ export interface ParticularConditionVM {
   remark?: string | null;
   remarkCP?: string | null;
   isGenerated: boolean;
+  /** LEGACY: Stores total BOQ amount (NOT a percentage). For percentage, use subcontractorAdvancePayee. */
   advancePayment: number;
   plansExecution?: string | null;
   subTrade?: string | null;
@@ -118,6 +120,7 @@ export interface SubcontractorBoqVM {
   daysNumber?: string;
   progress?: string;
   holdBack?: string;
+  /** Advance payment eligible percentage (e.g., "20" for 20%). Use this for display, NOT advancePayment. */
   subcontractorAdvancePayee?: string;
   recoverAdvance?: string;
   procurementConstruction?: string;
@@ -127,6 +130,7 @@ export interface SubcontractorBoqVM {
   remark?: string;
   remarkCP?: string;
   isGenerated: boolean;
+  /** LEGACY: Stores total BOQ amount (NOT a percentage). For percentage, use subcontractorAdvancePayee. */
   advancePayment: number;
   plansExecution?: string;
   subTrade?: string;

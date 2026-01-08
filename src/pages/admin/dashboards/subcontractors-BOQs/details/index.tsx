@@ -852,9 +852,9 @@ const ContractDetails = () => {
     const currentSubcontractor = subcontractors.find((s) => s.id === contractData?.subContractorId);
     const currentCurrency = currencies.find((c) => c.id === contractData?.currencyId);
 
-    // Use the amount from contract data if available, otherwise fall back to advancePayment field or calculate from BOQ
-    // Note: advancePayment field often contains the contract total (legacy behavior)
-    const totalAmount = contractData?.amount || contractData?.advancePayment || calculateTotalAmount();
+    // Use the amount from contract data if available, otherwise calculate from BOQ
+    // Note: advancePayment field stores amounts (legacy), don't use it as a fallback for totalAmount
+    const totalAmount = contractData?.amount || calculateTotalAmount();
 
     // FIXED: Use correct field for advance payment percentage
     // advancePayment stores contract amounts, subcontractorAdvancePayee stores percentages
