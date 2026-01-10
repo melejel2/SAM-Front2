@@ -11,10 +11,13 @@ import useBudgetBOQsDialog from "./use-budget-boq-dialog";
 interface BudgetBOQDialogProps {
     handleHide: () => void;
     dialogRef: React.RefObject<HTMLDialogElement | null>;
-    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select";
+    dialogType: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Archive";
     selectedProject: any;
     onSuccess: () => void;
     onCreate?: (formData: any) => void;
+    onUpdate?: (formData: any) => void;
+    onDelete?: () => void;
+    onArchive?: () => void;
 }
 
 const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
@@ -24,6 +27,9 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
     selectedProject,
     onSuccess,
     onCreate,
+    onUpdate,
+    onDelete,
+    onArchive,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const {
@@ -56,6 +62,12 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
         try {
             if (dialogType === "Add" && onCreate) {
                 await onCreate(projectData);
+            } else if (dialogType === "Delete" && onDelete) {
+                await onDelete();
+                handleClose();
+            } else if (dialogType === "Archive" && onArchive) {
+                await onArchive();
+                handleClose();
             } else if (projectData) {
                 const result = await saveProject(projectData);
                 if (result.success) {
@@ -159,6 +171,39 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
             setSelectedTrade(null);
         }
     }, [selectedProject, dialogType]);
+
+    // Render confirmation dialog for Delete and Archive actions
+    if (dialogType === "Delete" || dialogType === "Archive") {
+        const isArchive = dialogType === "Archive";
+        return (
+            <dialog ref={dialogRef as React.Ref<HTMLDialogElement>} className="modal" aria-modal="true">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg">
+                        {isArchive ? "Archive Project" : "Delete Project"}
+                    </h3>
+                    <p className="py-4">
+                        {isArchive
+                            ? `Are you sure you want to archive project "${selectedProject?.name}"? This will move the project to the archived database.`
+                            : `Are you sure you want to delete project "${selectedProject?.name}"? This action cannot be undone.`}
+                    </p>
+                    <div className="modal-action">
+                        <Button
+                            size="sm"
+                            color={isArchive ? "warning" : "error"}
+                            type="button"
+                            disabled={isLoading}
+                            loading={isLoading}
+                            onClick={handleSubmit}>
+                            {isArchive ? "Archive" : "Delete"}
+                        </Button>
+                        <Button size="sm" color="ghost" type="button" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            </dialog>
+        );
+    }
 
     return (
         <>

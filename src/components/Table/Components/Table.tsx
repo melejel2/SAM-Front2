@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { Icon } from "@iconify/react";
 
 import { Button, Pagination, useDialog } from "@/components/daisyui";
 import { cn } from "@/helpers/utils/cn";
@@ -147,6 +148,14 @@ interface TableProps {
         unissueAction?: boolean;
     };
 
+    customActions?: Array<{
+        icon: any;
+        label: string;
+        onClick: (row: any) => void | Promise<void>;
+        className?: string;
+        tooltip?: string;
+    }>;
+
     title: string;
     inputFields?: Array<{
         name: string;
@@ -206,6 +215,7 @@ const TableComponent: React.FC<TableProps> = ({
     exportAction,
     unissueAction,
     rowActions,
+    customActions,
     inputFields,
     title,
     addBtn,
@@ -243,7 +253,7 @@ const TableComponent: React.FC<TableProps> = ({
     rowHeight = 40,
     overscan = 10,
 }) => {
-    const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || unissueAction || rowActions;
+    const showActionsColumn = actions || previewAction || deleteAction || editAction || detailsAction || exportAction || generateAction || unissueAction || rowActions || (customActions && customActions.length > 0);
 
     // Consolidated table state
     const [tableState, setTableState] = useState({
@@ -1201,6 +1211,21 @@ const TableComponent: React.FC<TableProps> = ({
                                                                                     <span className="iconify lucide--x-circle size-4"></span>
                                                                                 </Button>
                                                                             )}
+                                                                            {customActions && customActions.map((action, index) => (
+                                                                                <Button
+                                                                                    key={index}
+                                                                                    color="ghost"
+                                                                                    className={`tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0 ${action.className || ''}`}
+                                                                                    size="sm"
+                                                                                    aria-label={action.label}
+                                                                                    data-tip={action.tooltip || action.label}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        action.onClick(row);
+                                                                                    }}>
+                                                                                    <Icon icon={action.icon} className="size-4" />
+                                                                                </Button>
+                                                                            ))}
                                                                         </div>
                                                                     )}
                                                                 </td>
@@ -1448,6 +1473,21 @@ const TableComponent: React.FC<TableProps> = ({
                                                                         <span className="iconify lucide--x-circle size-4"></span>
                                                                     </Button>
                                                                 )}
+                                                                {customActions && customActions.map((action, index) => (
+                                                                    <Button
+                                                                        key={index}
+                                                                        color="ghost"
+                                                                        className={`tooltip tooltip-bottom z-20 !rounded-sm min-h-0 h-7 w-7 p-0 ${action.className || ''}`}
+                                                                        size="sm"
+                                                                        aria-label={action.label}
+                                                                        data-tip={action.tooltip || action.label}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            action.onClick(row);
+                                                                        }}>
+                                                                        <Icon icon={action.icon} className="size-4" />
+                                                                    </Button>
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </td>

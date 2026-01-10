@@ -12,7 +12,7 @@ import BudgetBOQDialog from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-boqs";
 
 const BudgetBOQs = () => {
-    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select">("Add");
+    const [dialogType, setDialogType] = useState<"Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Archive">("Add");
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -26,16 +26,17 @@ const BudgetBOQs = () => {
         createProject,
         updateProject,
         deleteProject,
+        archiveProject,
         setSelectedProject: setSelectedProjectInHook,
     } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
     const { toaster } = useToast();
 
     const openCreateDialog = useCallback(async (
-        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate" | "Unissue",
+        type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate" | "Unissue" | "Archive",
         data?: any,
     ) => {
-        setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select");
+        setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Archive");
         if (data) {
             setSelectedProject(data);
             setSelectedProjectInHook(data);
@@ -95,6 +96,22 @@ const BudgetBOQs = () => {
         }
     }, [deleteProject, selectedProject, handleSuccess, toaster]);
 
+    const handleArchive = useCallback(async (project: any) => {
+        openCreateDialog("Archive", project);
+    }, [openCreateDialog]);
+
+    const handleArchiveConfirm = useCallback(async () => {
+        if (selectedProject) {
+            const result = await archiveProject(selectedProject.id);
+            if (result.success) {
+                handleSuccess();
+                toaster.success(result.message || "Project archived successfully!");
+            } else {
+                toaster.error(result.message || "Failed to archive project");
+            }
+        }
+    }, [archiveProject, selectedProject, handleSuccess, toaster]);
+
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
         if (location.pathname === "/dashboard/budget-BOQs") {
@@ -123,18 +140,15 @@ const BudgetBOQs = () => {
                     deleteEndPoint="Project/DeleteProject/{id}"
                     openStaticDialog={openCreateDialog}
                     rowsPerPage={10000}
-                    customHeaderContent={
-                        <button
-                            onClick={() => {
-                                // TODO: Implement archive project functionality
-                                console.log("Archive Project clicked");
-                            }}
-                            className="btn btn-secondary btn-sm rounded px-4 text-sm transition-all duration-200"
-                        >
-                            <Icon icon={archiveIcon} className="size-4" />
-                            <span className="text-xs">Archive Project</span>
-                        </button>
-                    }
+                    customActions={[
+                        {
+                            icon: archiveIcon,
+                            label: "Archive",
+                            onClick: handleArchive,
+                            className: "btn-warning",
+                            tooltip: "Archive Project"
+                        }
+                    ]}
                 />
             </div>
 
@@ -145,6 +159,9 @@ const BudgetBOQs = () => {
                 selectedProject={selectedProject}
                 onSuccess={handleSuccess}
                 onCreate={handleCreate}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onArchive={handleArchiveConfirm}
             />
         </>
     );

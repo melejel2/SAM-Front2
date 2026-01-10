@@ -221,6 +221,29 @@ const useBudgetBOQs = () => {
         }
     }, [token]);
 
+    const archiveProject = useCallback(async (projectId: number) => {
+        try {
+            const result = await apiRequest({
+                endpoint: `Project/ArchiveProject/${projectId}`,
+                method: "POST",
+                token: token ?? "",
+            });
+
+            if (result && (result as any).success !== false) {
+                // Invalidate cache
+                projectsCacheRef.current = { data: null, timestamp: 0 };
+                buildingsCacheRef.current.delete(projectId);
+                await getProjectsList(true);
+                return { success: true, message: "Project archived successfully" };
+            }
+
+            return { success: false, message: (result as any)?.message || "Failed to archive project" };
+        } catch (error) {
+            console.error("Error archiving project:", error);
+            return { success: false, message: "Error archiving project" };
+        }
+    }, [token, getProjectsList]);
+
     // Remove automatic token-based fetch to prevent conflicts with location-based fetch
     // useEffect(() => {
     //     if (token) {
@@ -242,6 +265,7 @@ const useBudgetBOQs = () => {
         updateProject,
         deleteProject,
         openProject,
+        archiveProject,
     };
 };
 

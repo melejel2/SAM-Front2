@@ -38,6 +38,14 @@ interface SAMTableProps {
         unissueAction?: boolean;
     };
 
+    customActions?: Array<{
+        icon: any;
+        label: string;
+        onClick: (row: any) => void | Promise<void>;
+        className?: string;
+        tooltip?: string;
+    }>;
+
     addBtn?: boolean;
     addBtnText?: string;
     onRowSelect?: (selectedRow: any) => void;
@@ -89,6 +97,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
     exportAction,
     unissueAction,
     rowActions,
+    customActions,
     title,
     loading,
     onSuccess,
@@ -162,6 +171,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             generateAction={generateAction}
                             unissueAction={unissueAction}
                             rowActions={rowActions}
+                            customActions={customActions}
                             previewLoadingRowId={previewLoadingRowId}
                             exportingRowId={exportingRowId}
                             selectedRowId={selectedRowId}
