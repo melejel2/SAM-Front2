@@ -1,5 +1,5 @@
-//export const ACTIVE_URL = "https://samback.karamentreprises.com/";
-export const ACTIVE_URL = "https://localhost:7055/"; // ⚠️ USE THIS FOR LOCAL BACKEND TESTING
+export const ACTIVE_URL = "https://samback.karamentreprises.com/";
+//export const ACTIVE_URL = "https://localhost:7055/"; // ⚠️ USE THIS FOR LOCAL BACKEND TESTING
 //export const ACTIVE_URL = "http://localhost:5276/";
 export const ACTIVE_API_URL = `${ACTIVE_URL}api/`;
 
@@ -110,14 +110,17 @@ const apiRequest = async <T = any>({
 
             // Determine the most specific error message
             let finalErrorMessage = errorMessage; // Start with the message from JSON parsing or raw text
-            if (errorData?.error?.message) { // Prioritize nested error message from backend Result object
+            if (errorData?.error?.message) {
+                // Prioritize nested error message from backend Result object
                 finalErrorMessage = errorData.error.message;
-            } else if (errorData?.message) { // Then check top-level message from errorData
+            } else if (errorData?.message) {
+                // Then check top-level message from errorData
                 finalErrorMessage = errorData.message;
             }
 
             // Adjust message based on status codes if no specific message was found
-            if (!errorData?.error?.message && !errorData?.message) { // Only use generic messages if no specific message was found
+            if (!errorData?.error?.message && !errorData?.message) {
+                // Only use generic messages if no specific message was found
                 if (response.status === 400) {
                     finalErrorMessage = "Invalid request. Please check your input and try again.";
                 } else if (response.status === 401) {
