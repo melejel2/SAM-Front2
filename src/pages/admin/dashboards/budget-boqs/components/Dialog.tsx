@@ -196,7 +196,7 @@ const BudgetBOQDialog: React.FC<BudgetBOQDialogProps> = ({
                             onClick={handleSubmit}>
                             {isArchive ? "Archive" : "Delete"}
                         </Button>
-                        <Button size="sm" color="ghost" type="button" onClick={handleClose}>
+                        <Button size="sm" color="ghost" type="button" disabled={isLoading} onClick={handleClose}>
                             Cancel
                         </Button>
                     </div>
