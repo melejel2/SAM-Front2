@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth";
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
+import DocumentEditorModal from "@/components/WordDocumentEditor/DocumentEditorModal";
 import useToast from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -135,13 +136,15 @@ const Templates = () => {
         voInputFields,
         otherInputFields,
         loading,
-        getTemplates
+        getTemplates,
+        getTemplateSfdt,
+        saveTemplateFromSfdt,
     } = useTemplates();
-    
-    const { getToken, authState } = useAuth();
+
+    const { getToken } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
-    const { canManageTemplates, canDeleteTemplates, canViewTemplates, userRole, isAdmin } = usePermissions();
+    const { canManageTemplates, canDeleteTemplates, isAdmin } = usePermissions();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -151,6 +154,18 @@ const Templates = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<{data: any, type: 'contract' | 'vo' | 'other'} | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Template Editor State (Admin only)
+    const [showEditor, setShowEditor] = useState(false);
+    const [templateSfdt, setTemplateSfdt] = useState<string | undefined>(undefined);
+    const [loadingSfdt, setLoadingSfdt] = useState(false);
+    const [sfdtError, setSfdtError] = useState<string | undefined>(undefined);
+    const [currentEditTemplate, setCurrentEditTemplate] = useState<{
+        id: number;
+        isVo: boolean;
+        name: string;
+        type: 'contract' | 'vo' | 'other';
+    } | null>(null);
 
     const token = getToken();
 
@@ -303,11 +318,11 @@ const Templates = () => {
 
     const handleExportWord = async () => {
         if (!previewData) return;
-        
+
         setExportingWord(true);
         try {
             let endpoint = '';
-            
+
             if (previewData.rowData.templateType === 'contract') {
                 endpoint = `Templates/PreviewTemplate?id=${previewData.id}&isVo=false`;
             } else {
@@ -320,7 +335,7 @@ const Templates = () => {
                 responseType: "blob",
                 token: token ?? ""
             });
-            
+
             if (response instanceof Blob) {
                 const fileName = previewData.fileName.replace('.pdf', '.docx');
                 const url = window.URL.createObjectURL(response);
@@ -340,6 +355,72 @@ const Templates = () => {
         } finally {
             setExportingWord(false);
         }
+    };
+
+    // Handle Edit Template (Admin only)
+    const handleEditTemplate = async (row: any, templateType: 'contract' | 'vo' | 'other') => {
+        if (!isAdmin) {
+            toaster.error("Only administrators can edit templates");
+            return;
+        }
+
+        const isVo = templateType !== 'contract';
+        const templateName = row.templateName || row.name || `Template #${row.id}`;
+
+        setCurrentEditTemplate({
+            id: row.id,
+            isVo,
+            name: templateName,
+            type: templateType,
+        });
+        setLoadingSfdt(true);
+        setSfdtError(undefined);
+        setShowEditor(true);
+
+        try {
+            const sfdt = await getTemplateSfdt(row.id, isVo);
+            setTemplateSfdt(sfdt);
+        } catch (error) {
+            console.error("Error loading template SFDT:", error);
+            setSfdtError("Failed to load template document for editing");
+            toaster.error("Failed to load template for editing");
+        } finally {
+            setLoadingSfdt(false);
+        }
+    };
+
+    // Handle Editor Save
+    const handleEditorSave = async (sfdtContent: string, filename: string) => {
+        if (!currentEditTemplate) return;
+
+        try {
+            const result = await saveTemplateFromSfdt(
+                currentEditTemplate.id,
+                currentEditTemplate.isVo,
+                sfdtContent
+            );
+
+            if (result.success) {
+                toaster.success("Template saved successfully");
+                setShowEditor(false);
+                setTemplateSfdt(undefined);
+                setCurrentEditTemplate(null);
+                getTemplates(); // Refresh the list
+            } else {
+                toaster.error(result.error || "Failed to save template");
+            }
+        } catch (error) {
+            console.error("Error saving template:", error);
+            toaster.error("Failed to save template");
+        }
+    };
+
+    // Handle Editor Close
+    const handleEditorClose = () => {
+        setShowEditor(false);
+        setTemplateSfdt(undefined);
+        setCurrentEditTemplate(null);
+        setSfdtError(undefined);
     };
 
     return (
@@ -414,17 +495,17 @@ const Templates = () => {
                                 {/* Contract Templates Tab */}
                                 {activeTab === 0 && (
                                     <SAMTable
-                                            columns={contractColumns}
-                                            tableData={contractData}
-                                            inputFields={contractInputFields}
-                                            actions={true}
-                                            editAction={false}
-                                            deleteAction={canDeleteTemplates}
-                                            previewAction={true}
-                                            title={"Contract Template"}
-                                            loading={false}
-                                            addBtn={canManageTemplates}
-                                            addBtnText="Upload Template"
+                                        columns={contractColumns}
+                                        tableData={contractData}
+                                        inputFields={contractInputFields}
+                                        actions={true}
+                                        editAction={isAdmin}
+                                        deleteAction={canDeleteTemplates}
+                                        previewAction={true}
+                                        title={"Contract Template"}
+                                        loading={false}
+                                        addBtn={canManageTemplates}
+                                        addBtnText="Upload Template"
                                         createEndPoint="Templates/AddContractTemplate"
                                         deleteEndPoint="Templates/DeleteTemplate"
                                         onSuccess={getTemplates}
@@ -433,9 +514,11 @@ const Templates = () => {
                                                 handlePreview(data, 'contract');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'contract');
+                                            } else if (type === "Edit" && data) {
+                                                handleEditTemplate(data, 'contract');
                                             }
                                         }}
-                                        dynamicDialog={true}
+                                        dynamicDialog={false}
                                         previewLoadingRowId={previewLoadingRowId}
                                     />
                                 )}
@@ -447,7 +530,7 @@ const Templates = () => {
                                         tableData={voData}
                                         inputFields={voInputFields}
                                         actions={true}
-                                        editAction={false}
+                                        editAction={isAdmin}
                                         deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"VO Template"}
@@ -462,6 +545,8 @@ const Templates = () => {
                                                 handlePreview(data, 'vo');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'vo');
+                                            } else if (type === "Edit" && data) {
+                                                handleEditTemplate(data, 'vo');
                                             }
                                         }}
                                         dynamicDialog={false}
@@ -476,7 +561,7 @@ const Templates = () => {
                                         tableData={otherTemplatesData}
                                         inputFields={otherInputFields}
                                         actions={true}
-                                        editAction={false}
+                                        editAction={isAdmin}
                                         deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"Other Templates"}
@@ -491,6 +576,8 @@ const Templates = () => {
                                                 handlePreview(data, 'other');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'other');
+                                            } else if (type === "Edit" && data) {
+                                                handleEditTemplate(data, 'other');
                                             }
                                         }}
                                         dynamicDialog={false}
@@ -571,7 +658,7 @@ const Templates = () => {
                                 <p className="text-sm text-base-content/70">This action cannot be undone</p>
                             </div>
                         </div>
-                        
+
                         <div className="py-4">
                             <p className="text-base-content mb-2">
                                 Are you sure you want to delete this template?
@@ -595,17 +682,17 @@ const Templates = () => {
                                 <span className="text-sm">This template will be permanently deleted and cannot be recovered.</span>
                             </div>
                         </div>
-                        
+
                         <div className="modal-action">
-                            <button 
-                                className="btn btn-ghost" 
+                            <button
+                                className="btn btn-ghost"
                                 onClick={closeDeleteModal}
                                 disabled={isDeleting}
                             >
                                 Cancel
                             </button>
-                            <button 
-                                className="btn btn-error" 
+                            <button
+                                className="btn btn-error"
                                 onClick={handleDeleteTemplate}
                                 disabled={isDeleting}
                             >
@@ -624,6 +711,26 @@ const Templates = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Template Editor Modal (Admin only) */}
+            {showEditor && currentEditTemplate && (
+                <DocumentEditorModal
+                    isOpen={showEditor}
+                    onClose={handleEditorClose}
+                    sfdtContent={templateSfdt}
+                    documentName={`${currentEditTemplate.name}.docx`}
+                    title="Edit Template"
+                    description={`Editing ${currentEditTemplate.type === 'contract' ? 'Contract' : currentEditTemplate.type === 'vo' ? 'VO' : 'Other'} Template: ${currentEditTemplate.name}`}
+                    onSaveSfdt={handleEditorSave}
+                    showSaveButton={true}
+                    isLoadingSfdt={loadingSfdt}
+                    loadError={sfdtError}
+                    metadata={[
+                        { label: "Template Type", value: currentEditTemplate.type === 'contract' ? 'Contract Template' : currentEditTemplate.type === 'vo' ? 'VO Template' : 'Other Template' },
+                        { label: "Template ID", value: String(currentEditTemplate.id) },
+                    ]}
+                />
             )}
         </div>
     );
