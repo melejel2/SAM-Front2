@@ -36,15 +36,6 @@ const BudgetBOQs = () => {
         type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate" | "Unissue" | "Archive",
         data?: any,
     ) => {
-        setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Archive");
-        if (data) {
-            setSelectedProject(data);
-            setSelectedProjectInHook(data);
-        } else {
-            setSelectedProject(null);
-            setSelectedProjectInHook(null);
-        }
-
         // Navigate to edit page for Edit action using project code instead of ID
         if ((type === "Edit" || type === "Preview" || type === "Details") && data) {
             const projectCode = data.code || data.id; // fallback to ID if no code
@@ -54,7 +45,20 @@ const BudgetBOQs = () => {
             return;
         }
 
-        handleShow();
+        // Set state first
+        setDialogType(type as "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Archive");
+        if (data) {
+            setSelectedProject(data);
+            setSelectedProjectInHook(data);
+        } else {
+            setSelectedProject(null);
+            setSelectedProjectInHook(null);
+        }
+
+        // Use setTimeout to ensure state updates complete before showing dialog
+        setTimeout(() => {
+            handleShow();
+        }, 0);
     }, [navigate, handleShow, setSelectedProjectInHook]);
 
     const handleBackToDashboard = useCallback(() => {
