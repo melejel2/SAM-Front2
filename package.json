@@ -9,7 +9,11 @@
         "preview": "vite preview",
         "lint": "eslint .",
         "format": "prettier . --write",
-        "latest": "yarn upgrade-interactive"
+        "latest": "yarn upgrade-interactive",
+        "deploy": "./deploy.sh",
+        "deploy:win": "powershell -ExecutionPolicy Bypass -File deploy.ps1",
+        "build:deploy": "npm run build && ./deploy.sh",
+        "build:deploy:win": "npm run build && powershell -ExecutionPolicy Bypass -File deploy.ps1"
     },
     "engines": {
         "node": ">=20.9.0"
