@@ -15,6 +15,34 @@ const useTemplates = () => {
 
     const token = getToken();
 
+    // Check if a value is a Syncfusion document object (has width/height/body/sections keys)
+    const isSyncfusionDocument = (val: any): boolean => {
+        if (!val || typeof val !== 'object' || Array.isArray(val)) {
+            return false;
+        }
+        return ('body' in val || 'sections' in val || ('width' in val && 'height' in val));
+    };
+
+    // Safely convert API response to array, filtering out Syncfusion document objects
+    const safeApiArray = (response: any): any[] => {
+        // Handle null/undefined
+        if (!response) {
+            return [];
+        }
+        // Reject Syncfusion document objects at the response level
+        if (isSyncfusionDocument(response)) {
+            console.warn('API returned Syncfusion document object instead of array, converting to empty array');
+            return [];
+        }
+        // Ensure it's an array
+        if (!Array.isArray(response)) {
+            console.warn('API returned non-array:', typeof response);
+            return [];
+        }
+        // Filter out any Syncfusion document objects from within the array
+        return response.filter((item: any) => !isSyncfusionDocument(item));
+    };
+
     // Format Type column text (Lump Sum, Remeasured, Cost Plus)
     const formatTypeText = (type: string) => {
         try {
@@ -51,6 +79,80 @@ const useTemplates = () => {
             console.error('Error in formatContractTypeText:', error, 'contractType:', contractType);
             return contractType || 'Error';
         }
+    };
+
+    // Format VO type numeric value to display text
+    const formatVoTypeText = (type: any): string => {
+        // Handle objects - convert to string representation
+        if (type && typeof type === 'object') {
+            return 'VO';
+        }
+        const typeStr = String(type || '0');
+        switch (typeStr) {
+            case '0': return 'VO';
+            case '1': return 'RG (Discharge)';
+            case '2': return 'Terminate';
+            case '3': return 'Final (Discharge)';
+            default: return typeStr;
+        }
+    };
+
+    // Sanitize a single value to ensure it's a primitive (string/number/boolean/null)
+    const sanitizeValue = (val: any): string | number | boolean | null => {
+        if (val === null || val === undefined) {
+            return null;
+        }
+        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+            return val;
+        }
+        if (Array.isArray(val)) {
+            // Convert arrays to comma-separated strings of primitives only
+            return val
+                .map(v => (typeof v === 'string' || typeof v === 'number') ? v : '')
+                .filter(v => v !== '')
+                .join(', ');
+        }
+        if (typeof val === 'object') {
+            // Skip Syncfusion document objects using the helper
+            if (isSyncfusionDocument(val)) {
+                return '';
+            }
+            // Try to extract meaningful primitive value
+            if ('name' in val && typeof val.name === 'string') {
+                return val.name;
+            }
+            if ('value' in val) {
+                // Recursively sanitize the value property
+                return sanitizeValue(val.value);
+            }
+            if ('label' in val && typeof val.label === 'string') {
+                return val.label;
+            }
+            // Default: skip complex objects
+            return '';
+        }
+        // Fallback: convert to string
+        return String(val);
+    };
+
+    // Sanitize template data to ensure all values are primitives (strings/numbers)
+    const sanitizeTemplateData = (data: any[]): any[] => {
+        // Use safeApiArray to handle Syncfusion documents and ensure array
+        const safeData = safeApiArray(data);
+        return safeData.map((item: any) => {
+            if (!item || typeof item !== 'object') {
+                return item;
+            }
+            // Skip Syncfusion document objects entirely
+            if (isSyncfusionDocument(item)) {
+                return null;
+            }
+            const sanitized: any = {};
+            for (const [key, value] of Object.entries(item)) {
+                sanitized[key] = sanitizeValue(value);
+            }
+            return sanitized;
+        }).filter(Boolean); // Remove any null items
     };
 
     const contractColumns = {
@@ -219,17 +321,45 @@ const useTemplates = () => {
                 })
             ]);
             
+            // Use safeApiArray to handle Syncfusion document objects and ensure arrays
+            const safeContractResponse = safeApiArray(contractResponse);
+            const safeVoResponse = safeApiArray(voResponse);
+            const safeRgResponse = safeApiArray(rgResponse);
+            const safeTerminateResponse = safeApiArray(terminateResponse);
+            const safeFinalResponse = safeApiArray(finalResponse);
+
             // Process contract data to format both type and contract type as plain text
-            const processedContractData = (contractResponse || []).map((contract: any) => ({
+            const processedContractData = safeContractResponse.map((contract: any) => ({
                 ...contract,
                 type: formatTypeText(contract.type || ''),
                 contractType: formatContractTypeText(contract.contractType || '')
             }));
-            setContractData(processedContractData);
-            setVoData(Array.isArray(voResponse) ? voResponse : []);
-            setTerminateData(Array.isArray(terminateResponse) ? terminateResponse : []);
-            setDischargeRGData(Array.isArray(rgResponse) ? rgResponse : []);
-            setDischargeFinalData(Array.isArray(finalResponse) ? finalResponse : []);
+            setContractData(sanitizeTemplateData(processedContractData));
+
+            // Process VO data with type formatting and sanitization
+            const processedVoData = safeVoResponse.map((vo: any) => ({
+                ...vo,
+                type: formatVoTypeText(vo.type)
+            }));
+            setVoData(sanitizeTemplateData(processedVoData));
+
+            // Process other template data with type formatting and sanitization
+            const processedTerminateData = safeTerminateResponse.map((t: any) => ({
+                ...t,
+                type: formatVoTypeText(t.type)
+            }));
+            const processedRgData = safeRgResponse.map((t: any) => ({
+                ...t,
+                type: formatVoTypeText(t.type)
+            }));
+            const processedFinalData = safeFinalResponse.map((t: any) => ({
+                ...t,
+                type: formatVoTypeText(t.type)
+            }));
+
+            setTerminateData(sanitizeTemplateData(processedTerminateData));
+            setDischargeRGData(sanitizeTemplateData(processedRgData));
+            setDischargeFinalData(sanitizeTemplateData(processedFinalData));
         } catch (error) {
             console.error('Error fetching templates:', error);
             setContractData([]);
@@ -242,13 +372,11 @@ const useTemplates = () => {
         }
     };
 
-    // Combine other templates data with proper array validation
-    const ensureArray = (data: any) => Array.isArray(data) ? data : [];
-
+    // Combine other templates data with proper array validation (reusing safeApiArray for consistency)
     const otherTemplatesData = [
-        ...ensureArray(terminateData),
-        ...ensureArray(dischargeRGData),
-        ...ensureArray(dischargeFinalData)
+        ...safeApiArray(terminateData),
+        ...safeApiArray(dischargeRGData),
+        ...safeApiArray(dischargeFinalData)
     ];
 
     /**

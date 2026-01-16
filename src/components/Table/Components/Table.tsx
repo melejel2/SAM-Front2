@@ -63,6 +63,22 @@ const formatCellValue = (value: any, columnKey: string): string => {
         return '-';
     }
 
+    // SAFETY: Ensure objects are never returned - convert to string or empty
+    if (typeof value === 'object') {
+        if (Array.isArray(value)) {
+            return value.map(v => typeof v === 'object' ? '' : String(v)).filter(Boolean).join(', ') || '-';
+        }
+        // Skip complex objects (like Syncfusion documents with width/height/body)
+        if ('body' in value || 'sections' in value || ('width' in value && 'height' in value)) {
+            return '-';
+        }
+        // Try to get a meaningful value from the object
+        if ('name' in value && typeof value.name === 'string') return value.name;
+        if ('label' in value && typeof value.label === 'string') return value.label;
+        if ('value' in value && typeof value.value !== 'object') return String(value.value);
+        return '-';
+    }
+
     // Numeric columns that should be formatted as currency/amounts
     const amountColumns = ['amount', 'totalAmount', 'total_amount', 'unitPrice', 'unit_price', 'pu', 'price', 'rate', 'advancePayment', 'retention', 'penalty', 'deduction'];
 
@@ -97,31 +113,41 @@ const getTextContent = (value: any): string => {
         if (value === null || value === undefined) {
             return '';
         }
-        
-        // Handle objects by converting to JSON string (for display purposes)
+
+        // Handle objects - NEVER return an object, always return a string
         if (typeof value === 'object' && value !== null) {
-            // For arrays, join them
+            // Skip Syncfusion document objects
+            if ('body' in value || 'sections' in value || ('width' in value && 'height' in value)) {
+                return '';
+            }
+            // For arrays, join only primitive values
             if (Array.isArray(value)) {
-                return value.join(', ');
+                return value
+                    .map(v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '')
+                    .filter(Boolean)
+                    .join(', ');
             }
-            // For objects, try to get a meaningful string representation
-            if (value.toString && value.toString !== Object.prototype.toString) {
-                return value.toString();
-            }
-            return JSON.stringify(value);
+            // Try to get meaningful primitive value
+            if ('name' in value && typeof value.name === 'string') return value.name;
+            if ('label' in value && typeof value.label === 'string') return value.label;
+            if ('value' in value && typeof value.value !== 'object') return String(value.value);
+            // Default: return empty string for complex objects
+            return '';
         }
-        
+
         // Handle HTML strings
         if (typeof value === 'string' && value.includes('<')) {
             const div = document.createElement('div');
             div.innerHTML = value;
             return div.textContent || div.innerText || '';
         }
-        
+
         // Handle all other types
         return String(value);
     } catch (error) {
         console.error('Error in getTextContent:', error, 'Value:', value);
+        // Safety: never return an object, always return a string
+        if (typeof value === 'object') return '';
         return String(value || '');
     }
 };
@@ -887,9 +913,10 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
                     )}
                     
-                    <table className="w-full table-auto bg-base-100"
+                    <table className="w-full bg-base-100"
                         style={{
-                            userSelect: isMouseDown ? 'none' : 'auto'
+                            userSelect: isMouseDown ? 'none' : 'auto',
+                            tableLayout: 'fixed'
                         }}>
                         <thead className="bg-base-200 sticky top-0 z-30 shadow-sm">
                             <tr>
@@ -912,10 +939,9 @@ const TableComponent: React.FC<TableProps> = ({
                                                 columnKey === 'contractNumber' || columnKey === 'number' ? 'w-28 sm:w-32' : '',
                                                 columnKey === 'amount' || columnKey === 'totalAmount' ? 'w-24 sm:w-28' : ''
                                             )}>
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex-1"></div>
+                                            <div className="flex items-center justify-center gap-1">
                                                 <div
-                                                    className="flex cursor-pointer items-center justify-center flex-1"
+                                                    className="flex cursor-pointer items-center justify-center"
                                                     onClick={() => handleSort(columnKey)}>
                                                     <span>{columnDisplayLabel}</span>
                                                     {sortColumn === columnKey && (
@@ -926,7 +952,7 @@ const TableComponent: React.FC<TableProps> = ({
                                                             })}></span>
                                                     )}
                                                 </div>
-                                                <div className="flex-1 flex justify-end">
+                                                <div>
                                                     <ColumnFilterDropdown
                                                         columnKey={columnKey}
                                                         columnLabel={columnDisplayLabel}
@@ -1223,7 +1249,13 @@ const TableComponent: React.FC<TableProps> = ({
                                                                                         e.stopPropagation();
                                                                                         action.onClick(row);
                                                                                     }}>
-                                                                                    <Icon icon={action.icon} className="size-4" />
+                                                                                    {typeof action.icon === 'string' ? (
+                                                                                        <span className={`iconify ${action.icon} size-4`} />
+                                                                                    ) : action.icon && typeof action.icon === 'object' && 'body' in action.icon ? (
+                                                                                        <Icon icon={action.icon} className="size-4" />
+                                                                                    ) : (
+                                                                                        action.icon
+                                                                                    )}
                                                                                 </Button>
                                                                             ))}
                                                                         </div>
@@ -1485,7 +1517,13 @@ const TableComponent: React.FC<TableProps> = ({
                                                                             e.stopPropagation();
                                                                             action.onClick(row);
                                                                         }}>
-                                                                        <Icon icon={action.icon} className="size-4" />
+                                                                        {typeof action.icon === 'string' ? (
+                                                                            <span className={`iconify ${action.icon} size-4`} />
+                                                                        ) : action.icon && typeof action.icon === 'object' && 'body' in action.icon ? (
+                                                                            <Icon icon={action.icon} className="size-4" />
+                                                                        ) : (
+                                                                            action.icon
+                                                                        )}
                                                                     </Button>
                                                                 ))}
                                                             </div>

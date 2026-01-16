@@ -34,52 +34,41 @@ const CostCodes = memo(() => {
         navigate('/admin-tools');
     }, [navigate]);
 
-    return (
-        <div style={{
-            height: 'calc(100vh - 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
-            {/* Fixed Header Section */}
-            <div style={{ flexShrink: 0 }} className="pb-3">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleBackToAdminTools}
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                        >
-                            <span className="iconify lucide--arrow-left size-4"></span>
-                            <span>Back</span>
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {canManageCostCodes && (
-                            <>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".xlsx,.xls"
-                                    onChange={handleFileUpload}
-                                    className="hidden"
-                                />
-                                <Button
-                                    color="primary"
-                                    size="sm"
-                                    onClick={triggerFileInput}
-                                    disabled={uploadLoading}
-                                    loading={uploadLoading}
-                                >
-                                    {uploadLoading ? "Uploading..." : "Upload Excel"}
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
+    const tableHeaderContent = (
+        <div className="flex items-center justify-between flex-1">
+            <button
+                onClick={handleBackToAdminTools}
+                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+            >
+                <span className="iconify lucide--arrow-left size-4"></span>
+                <span>Back</span>
+            </button>
+            {canManageCostCodes && (
+                <>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
+                    <Button
+                        color="primary"
+                        size="sm"
+                        onClick={triggerFileInput}
+                        disabled={uploadLoading}
+                        loading={uploadLoading}
+                    >
+                        {uploadLoading ? "Uploading..." : "Upload Excel"}
+                    </Button>
+                </>
+            )}
+        </div>
+    );
 
-            {/* Scrollable Content */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+    return (
+        <div className="h-full flex flex-col overflow-hidden -mt-5">
+            <div className="flex-1 min-h-0">
                 {loading ? (
                     <Loader />
                 ) : (
@@ -100,6 +89,7 @@ const CostCodes = memo(() => {
                         virtualized={true}
                         rowHeight={40}
                         overscan={5}
+                        customHeaderContent={tableHeaderContent}
                     />
                 )}
             </div>

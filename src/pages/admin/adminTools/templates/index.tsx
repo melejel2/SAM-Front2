@@ -423,83 +423,89 @@ const Templates = () => {
         setSfdtError(undefined);
     };
 
+    // Safe length getter - returns 0 if data is not a valid array
+    const safeLength = (data: any): number => {
+        if (!data || !Array.isArray(data)) return 0;
+        return data.length;
+    };
+
+    // Safe array getter - returns empty array if data is not valid or contains Syncfusion documents
+    const safeArray = (data: any): any[] => {
+        if (!data || !Array.isArray(data)) return [];
+        // Filter out any Syncfusion document objects (have width/height/body keys)
+        return data.filter((item: any) => {
+            if (!item || typeof item !== 'object') return true;
+            return !('body' in item || 'sections' in item || ('width' in item && 'height' in item));
+        });
+    };
+
+    const tableHeaderContent = (
+        <div className="flex items-center justify-between flex-1">
+            <button
+                onClick={handleBackToAdminTools}
+                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+            >
+                <span className="iconify lucide--arrow-left size-4"></span>
+                <span>Back</span>
+            </button>
+
+            {/* Category Selection Cards */}
+            <div className="flex items-center gap-2">
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 0
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => setActiveTab(0)}
+                >
+                    <span className="iconify lucide--file-text size-4" />
+                    <span>Contract Templates ({safeLength(contractData)})</span>
+                </button>
+
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 1
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => setActiveTab(1)}
+                >
+                    <span className="iconify lucide--file-plus size-4" />
+                    <span>VO Templates ({safeLength(voData)})</span>
+                </button>
+
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 2
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => setActiveTab(2)}
+                >
+                    <span className="iconify lucide--file-plus-2 size-4" />
+                    <span>Other Templates ({safeLength(otherTemplatesData)})</span>
+                </button>
+            </div>
+        </div>
+    );
+
     return (
-        <div style={{
-            height: 'calc(100vh - 4rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-        }}>
+        <div className="h-full flex flex-col overflow-hidden -mt-5">
             {viewMode === 'table' ? (
-                <>
-                    {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="pb-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleBackToAdminTools}
-                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                                >
-                                    <span className="iconify lucide--arrow-left size-4"></span>
-                                    <span>Back</span>
-                                </button>
-                            </div>
-
-                            {/* Category Selection Cards */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                        activeTab === 0
-                                            ? "btn-primary"
-                                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                                    }`}
-                                    onClick={() => setActiveTab(0)}
-                                >
-                                    <span className="iconify lucide--file-text size-4" />
-                                    <span>Contract Templates ({contractData.length})</span>
-                                </button>
-
-                                <button
-                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                        activeTab === 1
-                                            ? "btn-primary"
-                                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                                    }`}
-                                    onClick={() => setActiveTab(1)}
-                                >
-                                    <span className="iconify lucide--file-plus size-4" />
-                                    <span>VO Templates ({voData.length})</span>
-                                </button>
-
-                                <button
-                                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                                        activeTab === 2
-                                            ? "btn-primary"
-                                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                                    }`}
-                                    onClick={() => setActiveTab(2)}
-                                >
-                                    <span className="iconify lucide--file-plus-2 size-4" />
-                                    <span>Other Templates ({otherTemplatesData.length})</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-                        {loading ? (
-                            <Loader />
-                        ) : (
-                            <div>
+                <div className="flex-1 min-h-0">
+                    {loading ? (
+                        <Loader />
+                    ) : (
+                        <>
                                 {/* Contract Templates Tab */}
                                 {activeTab === 0 && (
                                     <SAMTable
                                         columns={contractColumns}
-                                        tableData={contractData}
+                                        tableData={safeArray(contractData)}
                                         inputFields={contractInputFields}
                                         actions={true}
-                                        editAction={isAdmin}
+                                        editAction={false}
                                         deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"Contract Template"}
@@ -514,12 +520,20 @@ const Templates = () => {
                                                 handlePreview(data, 'contract');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'contract');
-                                            } else if (type === "Edit" && data) {
-                                                handleEditTemplate(data, 'contract');
                                             }
                                         }}
-                                        dynamicDialog={false}
+                                        dynamicDialog={true}
                                         previewLoadingRowId={previewLoadingRowId}
+                                        customActions={isAdmin ? [
+                                            {
+                                                icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>,
+                                                label: "Edit Template",
+                                                tooltip: "Edit template document",
+                                                onClick: (row) => handleEditTemplate(row, 'contract'),
+                                                className: "text-primary hover:text-primary/80"
+                                            }
+                                        ] : undefined}
+                                        customHeaderContent={tableHeaderContent}
                                     />
                                 )}
 
@@ -527,10 +541,10 @@ const Templates = () => {
                                 {activeTab === 1 && (
                                     <SAMTable
                                         columns={voColumns}
-                                        tableData={voData}
+                                        tableData={safeArray(voData)}
                                         inputFields={voInputFields}
                                         actions={true}
-                                        editAction={isAdmin}
+                                        editAction={false}
                                         deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"VO Template"}
@@ -545,12 +559,20 @@ const Templates = () => {
                                                 handlePreview(data, 'vo');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'vo');
-                                            } else if (type === "Edit" && data) {
-                                                handleEditTemplate(data, 'vo');
                                             }
                                         }}
-                                        dynamicDialog={false}
+                                        dynamicDialog={true}
                                         previewLoadingRowId={previewLoadingRowId}
+                                        customActions={isAdmin ? [
+                                            {
+                                                icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>,
+                                                label: "Edit Template",
+                                                tooltip: "Edit template document",
+                                                onClick: (row) => handleEditTemplate(row, 'vo'),
+                                                className: "text-primary hover:text-primary/80"
+                                            }
+                                        ] : undefined}
+                                        customHeaderContent={tableHeaderContent}
                                     />
                                 )}
 
@@ -558,10 +580,10 @@ const Templates = () => {
                                 {activeTab === 2 && (
                                     <SAMTable
                                         columns={otherColumns}
-                                        tableData={otherTemplatesData}
+                                        tableData={safeArray(otherTemplatesData)}
                                         inputFields={otherInputFields}
                                         actions={true}
-                                        editAction={isAdmin}
+                                        editAction={false}
                                         deleteAction={canDeleteTemplates}
                                         previewAction={true}
                                         title={"Other Templates"}
@@ -576,46 +598,47 @@ const Templates = () => {
                                                 handlePreview(data, 'other');
                                             } else if (type === "Delete" && data) {
                                                 openDeleteModal(data, 'other');
-                                            } else if (type === "Edit" && data) {
-                                                handleEditTemplate(data, 'other');
                                             }
                                         }}
-                                        dynamicDialog={false}
+                                        dynamicDialog={true}
                                         previewLoadingRowId={previewLoadingRowId}
+                                        customActions={isAdmin ? [
+                                            {
+                                                icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>,
+                                                label: "Edit Template",
+                                                tooltip: "Edit template document",
+                                                onClick: (row) => handleEditTemplate(row, 'other'),
+                                                className: "text-primary hover:text-primary/80"
+                                            }
+                                        ] : undefined}
+                                        customHeaderContent={tableHeaderContent}
                                     />
                                 )}
-                            </div>
-                        )}
-                    </div>
-                </>
+                        </>
+                    )}
+                </div>
             ) : (
-                <>
+                <div className="flex-1 min-h-0 flex flex-col">
                     {/* Fixed Header Section */}
-                    <div style={{ flexShrink: 0 }} className="pb-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleBackToTable}
-                                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                                >
-                                    <span className="iconify lucide--arrow-left size-4"></span>
-                                    <span>Back</span>
-                                </button>
-                            </div>
+                    <div className="flex justify-between items-center pb-3 flex-shrink-0">
+                        <button
+                            onClick={handleBackToTable}
+                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                        >
+                            <span className="iconify lucide--arrow-left size-4"></span>
+                            <span>Back</span>
+                        </button>
 
-                            <div className="flex gap-2">
-                                <ExportDropdown
-                                    exportingPdf={exportingPdf}
-                                    exportingWord={exportingWord}
-                                    onExportPdf={handleExportPdf}
-                                    onExportWord={handleExportWord}
-                                />
-                            </div>
-                        </div>
+                        <ExportDropdown
+                            exportingPdf={exportingPdf}
+                            exportingWord={exportingWord}
+                            onExportPdf={handleExportPdf}
+                            onExportWord={handleExportWord}
+                        />
                     </div>
 
-                    {/* Scrollable Content */}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                    {/* Preview Content */}
+                    <div className="flex-1 min-h-0 overflow-auto">
                         <div className="card bg-base-100 shadow-sm p-4">
                             <div className="flex items-center space-x-3 mb-4">
                                 <div className="p-2 bg-primary/20 rounded-lg">
@@ -642,7 +665,7 @@ const Templates = () => {
                             </div>
                         </div>
                     </div>
-                </>
+                </div>
             )}
             
             {/* Delete Confirmation Modal */}
