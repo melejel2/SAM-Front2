@@ -116,13 +116,14 @@ const BudgetBOQs = () => {
         if (selectedProject) {
             const result = await archiveProject(selectedProject.id);
             if (result.success) {
-                handleSuccess();
+                await getProjectsList(true); // Force refresh
+                handleHide(); // Close dialog
                 toaster.success(result.message || "Project archived successfully!");
             } else {
                 toaster.error(result.message || "Failed to archive project");
             }
         }
-    }, [archiveProject, selectedProject, handleSuccess, toaster]);
+    }, [archiveProject, selectedProject, getProjectsList, handleHide, toaster]);
 
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
