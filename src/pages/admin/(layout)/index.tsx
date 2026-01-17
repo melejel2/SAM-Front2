@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 // Layout components
 import { Topbar } from './components/Topbar';
 import { VerticalAppNav } from './components/VerticalAppNav';
+import { TopbarContentProvider } from '@/contexts/topbar-content';
 
 /**
  * Main dashboard layout with PORTAL-style sidebar
@@ -24,24 +25,26 @@ const DashboardLayout = ({ children }: { children?: React.ReactNode }) => {
   }, []);
 
   return (
-    <div className="h-screen bg-base-200 overflow-hidden">
-      {/* PORTAL-style vertical sidebar - Desktop only */}
-      {!isMobile && <VerticalAppNav />}
+    <TopbarContentProvider>
+      <div className="h-screen bg-base-200 overflow-hidden">
+        {/* PORTAL-style vertical sidebar - Desktop only */}
+        {!isMobile && <VerticalAppNav />}
 
-      {/* Main content area with dynamic margin */}
-      <div
-        className="flex h-screen flex-col overflow-hidden"
-        style={{ marginLeft: isMobile ? '0' : 'var(--sidebar-width, 52px)' }}
-      >
-        {/* Topbar */}
-        <Topbar />
+        {/* Main content area with dynamic margin */}
+        <div
+          className="flex h-screen flex-col overflow-hidden"
+          style={{ marginLeft: isMobile ? '0' : 'var(--sidebar-width, 52px)' }}
+        >
+          {/* Topbar */}
+          <Topbar />
 
-        {/* Page content - Add padding-top for topbar */}
-        <div className={`flex-1 overflow-auto ${isMobile ? 'pt-14 px-4' : 'pt-20 px-6'}`}>
-          {children || <Outlet />}
+          {/* Page content - Add padding-top for topbar */}
+          <div className={`flex-1 overflow-auto ${isMobile ? 'pt-14 px-4' : 'pt-20 px-6'}`}>
+            {children || <Outlet />}
+          </div>
         </div>
       </div>
-    </div>
+    </TopbarContentProvider>
   );
 };
 

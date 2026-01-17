@@ -7,6 +7,7 @@ import { PublicClientApplication } from "@azure/msal-browser";
 
 import { AuthConfigProvider } from "@/contexts/auth";
 import { ConfigProvider } from "@/contexts/config";
+import { NavigationBlockerProvider } from "@/contexts/navigation-blocker";
 import { Router } from "@/router";
 import { msalConfig } from "@/config/msal";
 
@@ -22,8 +23,10 @@ root.render(
             <BrowserRouter>
                 <ConfigProvider>
                     <AuthConfigProvider>
-                        <Router />
-                        <Toaster richColors />
+                        <NavigationBlockerProvider>
+                            <Router />
+                            <Toaster richColors />
+                        </NavigationBlockerProvider>
                     </AuthConfigProvider>
                 </ConfigProvider>
             </BrowserRouter>

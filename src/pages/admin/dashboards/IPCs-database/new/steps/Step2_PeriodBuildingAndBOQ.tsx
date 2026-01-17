@@ -468,6 +468,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     };
 
     // Shared function to update BOQ item with calculated values
+    // Also auto-syncs deduction percentage to match progress (SAM-Desktop behavior)
     const updateBOQItem = (buildingId: number, boqId: number, validatedQte: number) => {
         const safeBuildings = formData.buildings || [];
 
@@ -483,13 +484,29 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                 const newCumulAmount = newCumulQte * boq.unitPrice;
                                 const newCumulPercent = boq.qte === 0 ? 0 : (newCumulQte / boq.qte) * 100;
 
+                                // SAM-Desktop behavior: Auto-sync deduction % to match progress %
+                                // If deduction % is less than or equal to the new progress %, update it
+                                // This ensures deduction is always >= cumulative progress
+                                const currentDeductionPercent = boq.cumulDeductionPercentage || 0;
+                                let newDeductionPercent = currentDeductionPercent;
+                                let newDeductionValue = boq.cumulDeductionValue || 0;
+
+                                if (currentDeductionPercent <= newCumulPercent) {
+                                    newDeductionPercent = Math.min(newCumulPercent, 100); // Cap at 100%
+                                    // Recalculate deduction value based on material value
+                                    newDeductionValue = (newDeductionPercent / 100) * (boq.cumulMaterialValue || 0);
+                                }
+
                                 return {
                                     ...boq,
                                     actualQte: validatedQte,
                                     actualAmount,
                                     cumulQte: newCumulQte,
                                     cumulAmount: newCumulAmount,
-                                    cumulPercent: newCumulPercent
+                                    cumulPercent: newCumulPercent,
+                                    // Auto-synced deduction values
+                                    cumulDeductionPercentage: newDeductionPercent,
+                                    cumulDeductionValue: newDeductionValue,
                                 };
                             }
                             return boq;
@@ -596,7 +613,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     /**
      * Get a pending input key for contract BOQ items
      */
-    const getContractInputKey = (buildingId: number, boqId: number, field: 'actualQty' | 'cumulQty' | 'cumulPercent') =>
+    const getContractInputKey = (buildingId: number, boqId: number, field: 'actualQty' | 'cumulQty' | 'cumulPercent' | 'materialPercent' | 'deductionPercent') =>
         `contract-${buildingId}-${boqId}-${field}`;
 
     /**
@@ -687,6 +704,143 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         }
 
         clearPendingInput(key);
+    };
+
+    /**
+     * Validate and apply material supply percentage on blur
+     * Material % cannot exceed contract's MaterialSupply limit
+     * SAM-Desktop behavior: Reset to 0 if exceeds limit (not clamp to max)
+     */
+    const handleMaterialPercentBlur = (buildingId: number, boqId: number) => {
+        const key = getContractInputKey(buildingId, boqId, 'materialPercent');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return;
+
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputPercent = parseFloat(pendingValue) || 0;
+        const maxMaterialSupply = formData.materialSupply || 0;
+
+        // SAM-Desktop behavior: Reset to 0 if exceeds limit (not clamp to max)
+        if (inputPercent > maxMaterialSupply) {
+            toaster.error(`Material Supply % cannot exceed contract limit of ${maxMaterialSupply}%. Reset to 0.`);
+            handleBOQMaterialPercentChange(buildingId, boqId, 0);
+        } else if (inputPercent < 0) {
+            handleBOQMaterialPercentChange(buildingId, boqId, 0);
+        } else {
+            handleBOQMaterialPercentChange(buildingId, boqId, inputPercent);
+        }
+
+        clearPendingInput(key);
+    };
+
+    /**
+     * Update BOQ item's material supply percentage and recalculate values
+     */
+    const handleBOQMaterialPercentChange = (buildingId: number, boqId: number, cumulMaterialPercentage: number) => {
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem) return;
+
+        const totalAmount = boqItem.qte * boqItem.unitPrice;
+        const cumulMaterialValue = (cumulMaterialPercentage / 100) * totalAmount;
+
+        setFormData({
+            buildings: safeBuildings.map(b =>
+                b.id === buildingId
+                    ? {
+                        ...b,
+                        boqsContract: (b.boqsContract || []).map(boq =>
+                            boq.id === boqId
+                                ? {
+                                    ...boq,
+                                    cumulMaterialPercentage,
+                                    cumulMaterialValue,
+                                    // Recalculate deduction value when material value changes
+                                    cumulDeductionValue: ((boq.cumulDeductionPercentage || 0) / 100) * cumulMaterialValue,
+                                }
+                                : boq
+                        ),
+                    }
+                    : b
+            ),
+        });
+    };
+
+    /**
+     * Validate and apply deduction percentage on blur
+     * Deduction % should default to cumulative progress % (like SAM-Desktop)
+     */
+    const handleDeductionPercentBlur = (buildingId: number, boqId: number) => {
+        const key = getContractInputKey(buildingId, boqId, 'deductionPercent');
+        const pendingValue = pendingInputs[key];
+
+        if (pendingValue === undefined) return;
+
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem) {
+            clearPendingInput(key);
+            return;
+        }
+
+        const inputPercent = parseFloat(pendingValue) || 0;
+
+        // Validate: cannot exceed 100%
+        if (inputPercent > 100) {
+            toaster.error(`Deduction % cannot exceed 100%. Reverted to maximum.`);
+            handleBOQDeductionPercentChange(buildingId, boqId, 100);
+        } else if (inputPercent < 0) {
+            handleBOQDeductionPercentChange(buildingId, boqId, 0);
+        } else {
+            handleBOQDeductionPercentChange(buildingId, boqId, inputPercent);
+        }
+
+        clearPendingInput(key);
+    };
+
+    /**
+     * Update BOQ item's deduction percentage and recalculate values
+     */
+    const handleBOQDeductionPercentChange = (buildingId: number, boqId: number, cumulDeductionPercentage: number) => {
+        const safeBuildings = formData.buildings || [];
+        const building = safeBuildings.find(b => b.id === buildingId);
+        const boqItem = building?.boqsContract?.find(b => b.id === boqId);
+
+        if (!boqItem) return;
+
+        const cumulDeductionValue = (cumulDeductionPercentage / 100) * (boqItem.cumulMaterialValue || 0);
+
+        setFormData({
+            buildings: safeBuildings.map(b =>
+                b.id === buildingId
+                    ? {
+                        ...b,
+                        boqsContract: (b.boqsContract || []).map(boq =>
+                            boq.id === boqId
+                                ? {
+                                    ...boq,
+                                    cumulDeductionPercentage,
+                                    cumulDeductionValue,
+                                }
+                                : boq
+                        ),
+                    }
+                    : b
+            ),
+        });
     };
 
     /**
@@ -1423,6 +1577,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                     <th className="text-right w-20">Prev Amt</th>
                                     <th className="text-right w-20">Actual Amt</th>
                                     <th className="text-right w-20">Cumul Amt</th>
+                                    <th className="text-right w-16 bg-orange-50 dark:bg-orange-900/20" title={`Material Supply % (max: ${formData.materialSupply || 0}%)`}>Mat. Supply %</th>
+                                    <th className="text-right w-16 bg-red-50 dark:bg-red-900/20" title="Deduction on Material Supply %">Deduction %</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1527,6 +1683,54 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                             <td className="text-right text-xs">{formatCurrency(precedQte * boq.unitPrice)}</td>
                                             <td className="text-right text-xs font-semibold text-green-600">{formatCurrency(actualQte * boq.unitPrice)}</td>
                                             <td className="text-right text-xs font-medium">{formatCurrency(cumulQte * boq.unitPrice)}</td>
+                                            {/* Material Supply % Input - Orange highlight */}
+                                            <td className="text-right bg-orange-50/50 dark:bg-orange-900/10">
+                                                <div className="flex items-center justify-end gap-0.5">
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'materialPercent')]
+                                                            ?? (boq.cumulMaterialPercentage || '')
+                                                        }
+                                                        onChange={(e) => handlePendingInputChange(
+                                                            getContractInputKey(activeBuilding.id, boq.id, 'materialPercent'),
+                                                            e.target.value
+                                                        )}
+                                                        onBlur={() => handleMaterialPercentBlur(activeBuilding.id, boq.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                        className="input input-xs w-14 text-right bg-base-100 border-orange-300 dark:border-orange-700"
+                                                        step="any"
+                                                        min="0"
+                                                        max={formData.materialSupply || 100}
+                                                        disabled={isHeaderRow}
+                                                    />
+                                                    <span className="text-xs text-base-content/50">%</span>
+                                                </div>
+                                            </td>
+                                            {/* Deduction % Input - Red highlight */}
+                                            <td className="text-right bg-red-50/50 dark:bg-red-900/10">
+                                                <div className="flex items-center justify-end gap-0.5">
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'deductionPercent')]
+                                                            ?? (boq.cumulDeductionPercentage || '')
+                                                        }
+                                                        onChange={(e) => handlePendingInputChange(
+                                                            getContractInputKey(activeBuilding.id, boq.id, 'deductionPercent'),
+                                                            e.target.value
+                                                        )}
+                                                        onBlur={() => handleDeductionPercentBlur(activeBuilding.id, boq.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                        className="input input-xs w-14 text-right bg-base-100 border-red-300 dark:border-red-700"
+                                                        step="any"
+                                                        min="0"
+                                                        max="100"
+                                                        disabled={isHeaderRow}
+                                                    />
+                                                    <span className="text-xs text-base-content/50">%</span>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1551,6 +1755,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                     <td className="text-right">
                                         {formatCurrency(contractBOQCumulTotal)}
                                     </td>
+                                    <td className="text-right bg-orange-50/50 dark:bg-orange-900/10"></td>
+                                    <td className="text-right bg-red-50/50 dark:bg-red-900/10"></td>
                                 </tr>
                             </tfoot>
                         </table>

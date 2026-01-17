@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
 
-import { Loader } from "@/components/Loader";
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 import useContractManagement from "./use-contract-management";
 
@@ -13,16 +14,32 @@ import checkCircleIcon from "@iconify/icons-lucide/check-circle";
 import xCircleIcon from "@iconify/icons-lucide/x-circle";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 import plusIcon from "@iconify/icons-lucide/plus";
+import eyeIcon from "@iconify/icons-lucide/eye";
 
 // Tab type definition
 type TabType = 'drafts' | 'active' | 'terminated';
 
+interface ContractRow {
+    id: number | string;
+    contractNumber: string;
+    projectName: string;
+    subcontractorName: string;
+    tradeName: string;
+    contractType?: string;
+    completionDate: string;
+    amount: number;
+    voAmount: number;
+    status: string;
+    originalStatus?: string;
+    [key: string]: any;
+}
+
 const ContractsManagement = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
 
     const {
-        columns,
         draftsData,
         activeData,
         terminatedData,
@@ -45,7 +62,6 @@ const ContractsManagement = memo(() => {
     const [showFinalDischargeModal, setShowFinalDischargeModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
-
 
     // Track which tabs have been loaded
     const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set());
@@ -94,8 +110,68 @@ const ContractsManagement = memo(() => {
         setActiveTab(tab);
     }, []);
 
+    // Set topbar content - back button on left, tabs in center, new contract on right
+    useEffect(() => {
+        // Left content: Back button
+        setLeftContent(
+            <button
+                onClick={handleBackToDashboard}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Dashboard"
+            >
+                <Icon icon={arrowLeftIcon} className="size-5" />
+            </button>
+        );
+
+        // Center content: Tab buttons
+        setCenterContent(
+            <div className="flex items-center gap-2">
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'drafts'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('drafts')}
+                >
+                    <Icon icon={fileTextIcon} className="size-4" />
+                    <span>Drafts ({draftsData.length})</span>
+                </button>
+
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'active'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('active')}
+                >
+                    <Icon icon={checkCircleIcon} className="size-4" />
+                    <span>Active ({activeData.length})</span>
+                </button>
+
+                <button
+                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+                        activeTab === 'terminated'
+                            ? "btn-primary"
+                            : "btn-ghost border border-base-300 hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTabChange('terminated')}
+                >
+                    <Icon icon={xCircleIcon} className="size-4" />
+                    <span>Terminated ({terminatedData.length})</span>
+                </button>
+            </div>
+        );
+
+        // Cleanup on unmount
+        return () => {
+            clearContent();
+        };
+    }, [activeTab, draftsData.length, activeData.length, terminatedData.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, clearContent]);
+
     // Handle Preview action - different behavior based on tab
-    const handlePreview = useCallback(async (row: any) => {
+    const handlePreview = useCallback(async (row: ContractRow) => {
         if (activeTab === 'drafts') {
             // For drafts, navigate to details page
             const contractNumber = row.contractNumber || row.id;
@@ -195,57 +271,181 @@ const ContractsManagement = memo(() => {
         }
     }, [contractToGenerateFinal, generateFinalContract]);
 
-    const tableHeaderContent = (
-        <div className="flex items-center gap-2 flex-1">
-            {/* Back button on far left */}
-            <button
-                onClick={handleBackToDashboard}
-                className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-            >
-                <Icon icon={arrowLeftIcon} className="size-4" />
-                <span>Back</span>
-            </button>
+    // Get current tab data
+    const currentData = useMemo(() => {
+        switch (activeTab) {
+            case 'drafts':
+                return draftsData;
+            case 'active':
+                return activeData;
+            case 'terminated':
+                return terminatedData;
+            default:
+                return [];
+        }
+    }, [activeTab, draftsData, activeData, terminatedData]);
 
-            {/* Category Selection Cards - CENTERED */}
-            <div className="flex items-center gap-2 flex-1 justify-center">
-                <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 'drafts'
-                            ? "btn-primary"
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => handleTabChange('drafts')}
-                >
-                    <Icon icon={fileTextIcon} className="size-4" />
-                    <span>Drafts ({draftsData.length})</span>
-                </button>
+    // Format status for display
+    const getStatusBadge = useCallback((status: string) => {
+        const statusStr = status?.toString() || '';
+        const statusLower = statusStr.toLowerCase();
 
-                <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 'active'
-                            ? "btn-primary"
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => handleTabChange('active')}
-                >
-                    <Icon icon={checkCircleIcon} className="size-4" />
-                    <span>Active Contracts ({activeData.length})</span>
-                </button>
+        // Strip HTML if present
+        const plainStatus = statusStr.replace(/<[^>]*>/g, '').trim();
 
+        let badgeClass = 'badge-info';
+        let displayText = plainStatus || 'Unknown';
+
+        if (statusLower.includes('active')) {
+            badgeClass = 'badge-success';
+            displayText = 'Active';
+        } else if (statusLower.includes('terminated')) {
+            badgeClass = 'badge-error';
+            displayText = 'Terminated';
+        } else if (statusLower.includes('editable') || statusLower.includes('draft')) {
+            badgeClass = 'badge-warning';
+            displayText = 'Draft';
+        } else if (statusLower.includes('completed')) {
+            badgeClass = 'badge-success';
+            displayText = 'Completed';
+        } else if (statusLower.includes('pending')) {
+            badgeClass = 'badge-warning';
+            displayText = 'Pending';
+        } else if (statusLower.includes('suspended')) {
+            badgeClass = 'badge-neutral';
+            displayText = 'Suspended';
+        }
+
+        return (
+            <span className={`badge badge-sm ${badgeClass} font-medium`}>
+                {displayText}
+            </span>
+        );
+    }, []);
+
+    // Format currency
+    const formatCurrency = useCallback((value: number) => {
+        if (value === null || value === undefined) return '-';
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(value);
+    }, []);
+
+    // Define spreadsheet columns
+    const spreadsheetColumns = useMemo((): SpreadsheetColumn<ContractRow>[] => [
+        {
+            key: "contractNumber",
+            label: "Number",
+            width: 130,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "projectName",
+            label: "Project",
+            width: 200,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "subcontractorName",
+            label: "Subcontractor",
+            width: 200,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "tradeName",
+            label: "Trade",
+            width: 150,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "contractType",
+            label: "Type",
+            width: 100,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "completionDate",
+            label: "End Date",
+            width: 120,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "amount",
+            label: "Amount",
+            width: 140,
+            align: "right",
+            editable: false,
+            sortable: true,
+            filterable: false,
+            formatter: (value) => formatCurrency(value),
+        },
+        {
+            key: "voAmount",
+            label: "VO Amount",
+            width: 140,
+            align: "right",
+            editable: false,
+            sortable: true,
+            filterable: false,
+            formatter: (value) => formatCurrency(value),
+        },
+        {
+            key: "status",
+            label: "Status",
+            width: 110,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+            render: (value) => getStatusBadge(value),
+        },
+    ], [formatCurrency, getStatusBadge]);
+
+    // Render action buttons for each row
+    const renderActions = useCallback((row: ContractRow) => {
+        return (
+            <div className="flex items-center gap-1">
                 <button
-                    className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-                        activeTab === 'terminated'
-                            ? "btn-primary"
-                            : "btn-ghost border border-base-300 hover:border-primary/50"
-                    }`}
-                    onClick={() => handleTabChange('terminated')}
+                    className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handlePreview(row);
+                    }}
+                    title="Preview"
                 >
-                    <Icon icon={xCircleIcon} className="size-4" />
-                    <span>Terminated Contracts ({terminatedData.length})</span>
+                    <Icon icon={eyeIcon} className="w-4 h-4" />
                 </button>
             </div>
+        );
+    }, [handlePreview]);
 
-            {/* New Contract button on far right */}
+    // Handle row double click
+    const handleRowDoubleClick = useCallback((row: ContractRow) => {
+        handlePreview(row);
+    }, [handlePreview]);
+
+    // Toolbar with New Contract button
+    const toolbar = useMemo(() => (
+        <div className="flex items-center justify-end w-full px-4 py-2">
             <button
                 onClick={handleNewContract}
                 className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
@@ -254,80 +454,30 @@ const ContractsManagement = memo(() => {
                 <span>New Contract</span>
             </button>
         </div>
-    );
+    ), [handleNewContract]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden -mt-6">
-            {/* Scrollable Content */}
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Spreadsheet Content - fills the entire area */}
             <div className="flex-1 min-h-0">
-                {loading ? (
-                    <Loader />
-                ) : (
-                    <>
-                        {/* Render ONLY active tab - reduces memory by not mounting all 3 tables */}
-                        {activeTab === 'drafts' ? (
-                            <SAMTable
-                                columns={columns}
-                                tableData={draftsData}
-                                actions
-                                previewAction
-                                customHeaderContent={tableHeaderContent}
-                                title="Draft Contract"
-                                loading={false}
-                                onSuccess={getDraftsContracts}
-                                openStaticDialog={(type, data) => {
-                                    if (type === "Preview" && data) {
-                                        return handlePreview(data);
-                                    }
-                                }}
-                                dynamicDialog={false}
-                                virtualized={true}
-                                rowHeight={40}
-                                overscan={5}
-                            />
-                        ) : activeTab === 'active' ? (
-                            <SAMTable
-                                columns={columns}
-                                tableData={activeData}
-                                actions
-                                previewAction
-                                customHeaderContent={tableHeaderContent}
-                                title="Active Contract"
-                                loading={false}
-                                onSuccess={getActiveContracts}
-                                openStaticDialog={(type, data) => {
-                                    if (type === "Preview" && data) {
-                                        return handlePreview(data);
-                                    }
-                                }}
-                                dynamicDialog={false}
-                                virtualized={true}
-                                rowHeight={40}
-                                overscan={5}
-                            />
-                        ) : (
-                            <SAMTable
-                                columns={columns}
-                                tableData={terminatedData}
-                                actions
-                                previewAction
-                                customHeaderContent={tableHeaderContent}
-                                title="Terminated Contract"
-                                loading={false}
-                                onSuccess={getTerminatedContracts}
-                                openStaticDialog={(type, data) => {
-                                    if (type === "Preview" && data) {
-                                        return handlePreview(data);
-                                    }
-                                }}
-                                dynamicDialog={false}
-                                virtualized={true}
-                                rowHeight={40}
-                                overscan={5}
-                            />
-                        )}
-                    </>
-                )}
+                <Spreadsheet<ContractRow>
+                    data={currentData}
+                    columns={spreadsheetColumns}
+                    mode="view"
+                    loading={loading}
+                    emptyMessage="No contracts found"
+                    persistKey={`contracts-spreadsheet-${activeTab}`}
+                    rowHeight={40}
+                    actionsRender={renderActions}
+                    actionsColumnWidth={80}
+                    onRowDoubleClick={handleRowDoubleClick}
+                    getRowId={(row) => row.id}
+                    toolbar={toolbar}
+                    allowKeyboardNavigation
+                    allowColumnResize
+                    allowSorting
+                    allowFilters
+                />
             </div>
 
             {/* Generate Contract Modal */}

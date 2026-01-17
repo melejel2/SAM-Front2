@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
-import { Button, Select, SelectOption } from "@/components/daisyui";
+import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
-import buildingIcon from "@iconify/icons-lucide/building";
-import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
-import saveIcon from "@iconify/icons-lucide/save";
+import coinsIcon from "@iconify/icons-lucide/coins";
+import checkIcon from "@iconify/icons-lucide/check";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
-import BOQTable from "./components/boqTable";
+// Option 1: Use new Spreadsheet-based component (recommended)
+import BOQSpreadsheet from "./components/BOQSpreadsheet";
+// Option 2: Use legacy table (for fallback)
+// import BOQTable from "./components/boqTable";
 import { Building } from "@/types/variation-order";
 
 // Lazy load modals for better performance
@@ -66,6 +69,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
     selectedTrade,
     setSelectedTrade,
 }) => {
+    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
     const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [clearScope, setClearScope] = useState<"trade" | "building" | "all">("trade");
@@ -75,9 +79,42 @@ const BOQStep: React.FC<BOQStepProps> = ({
     const [showBuildingDialog, setShowBuildingDialog] = useState(false);
     const [pendingSheetNavigation, setPendingSheetNavigation] = useState<string | null>(null);
     const [importingBoq, setImportingBoq] = useState(false);
+    const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
+    const [tempCurrencyId, setTempCurrencyId] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const spreadsheetRef = useRef<{ addRow: () => void } | null>(null);
 
     const { toaster } = useToast();
+
+    // Set topbar content - back button on left, project name in center
+    useEffect(() => {
+        // Left content: Back button
+        if (onBack) {
+            setLeftContent(
+                <button
+                    onClick={onBack}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                    title="Back to Budget BOQs"
+                >
+                    <Icon icon={arrowLeftIcon} className="w-5 h-5" />
+                </button>
+            );
+        }
+
+        // Center content: Project name badge
+        if (selectedProject?.name) {
+            setCenterContent(
+                <div className="badge badge-lg badge-primary gap-2 px-4 py-3">
+                    <span className="font-semibold">{selectedProject.name}</span>
+                </div>
+            );
+        }
+
+        // Cleanup on unmount
+        return () => {
+            clearContent();
+        };
+    }, [onBack, selectedProject?.name, setLeftContent, setCenterContent, clearContent]);
 
     // Auto-select first building when buildings are loaded
     useEffect(() => {
@@ -489,125 +526,10 @@ const BOQStep: React.FC<BOQStepProps> = ({
             flexDirection: 'column',
             overflow: 'hidden'
         }}>
-            {/* Top row with Back, Clear, and action buttons */}
-            <div className="flex justify-between items-center mb-4" style={{ flexShrink: 0 }}>
-                <div className="flex items-center gap-3">
-                    {/* Back Button */}
-                    {onBack && (
-                        <button
-                            onClick={onBack}
-                            className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 flex items-center gap-2"
-                        >
-                            <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                            <span>Back</span>
-                        </button>
-                    )}
-
-                    {/* Building Selector Button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowBuildingDialog(true)}
-                        disabled={!buildings}
-                        className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50 flex items-center gap-2"
-                    >
-                        <Icon icon={buildingIcon} className="w-4 h-4" />
-                        <span className="font-medium">{selectedBuilding?.name || "Select Building"}</span>
-                        <Icon icon={chevronDownIcon} className="w-3 h-3 opacity-60" />
-                    </button>
-
-                    <Select
-                        className="w-48"
-                        value={projectData?.currencyId || ''}
-                        onChange={onCurrencyChange}
-                    >
-                        <SelectOption value="" disabled>
-                            Select Currency
-                        </SelectOption>
-                        {(currencies || []).map((currency) => (
-                            <SelectOption key={currency.id} value={currency.id}>
-                                {currency.currencies}
-                            </SelectOption>
-                        ))}
-                    </Select>
-
-                    {/* Clear BOQ Button */}
-                    <button
-                        type="button"
-                        onClick={handleClearBoq}
-                        disabled={!selectedProject || !selectedBuilding || importingBoq}
-                        className="btn btn-sm bg-red-500 border border-red-500 text-white hover:bg-red-600 disabled:opacity-50"
-                    >
-                        Clear BOQ
-                    </button>
-                </div>
-
-                {/* Right side buttons */}
-                <div className="flex items-center space-x-2">
-                    {/* View VOs Button */}
-                    <button
-                        type="button" 
-                        onClick={() => {
-                            // Capture the current sheet info when button is clicked
-                            const building = projectData?.buildings?.find((b: any) => b.id === selectedBuilding?.id);
-                            let sheet = null;
-                            
-                            if ((selectedTrade as any)?.buildingSheetId) {
-                                sheet = building?.boqSheets?.find((s: any) => s.id === (selectedTrade as any).buildingSheetId);
-                            } else if (selectedTrade?.name) {
-                                sheet = building?.boqSheets?.find((s: any) => s.name === selectedTrade.name);
-                            }
-                            
-                            // If no sheet found by the above methods, try to find the first sheet with data
-                            if (!sheet && building?.boqSheets) {
-                                sheet = building.boqSheets.find((s: any) => s.boqItems && s.boqItems.length > 0);
-                            }
-                            
-                            setCurrentSheetForVO({
-                                sheet,
-                                trade: selectedTrade,
-                                sheetId: sheet?.id || (selectedTrade as any)?.buildingSheetId || selectedTrade?.id
-                            });
-                            setShowVODialog(true);
-                        }}
-                        disabled={!selectedProject || !selectedBuilding || importingBoq}
-                        className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
-                    >
-                        View VOs
-                    </button>
-                    
-                    {/* Import BOQ Button */}
-                    <button
-                        type="button"
-                        onClick={handleImportBoq}
-                        disabled={!selectedProject || !selectedBuilding || importingBoq}
-                        className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 disabled:opacity-50"
-                    >
-                        {importingBoq ? "Importing..." : "Import BOQ"}
-                    </button>
-                    
-                    {hasUnsavedChanges && (
-                        <span className="text-sm text-warning">
-                            • Unsaved changes
-                        </span>
-                    )}
-                    
-                    {/* Save Button */}
-                    {onSave && (
-                        <button
-                            onClick={onSave}
-                            disabled={saving || !hasUnsavedChanges || importingBoq}
-                            className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <Icon icon={saveIcon} className="w-4 h-4" />
-                            <span>{saving ? "Saving..." : "Save"}</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column' }}>
-                <BOQTable
+                <BOQSpreadsheet
+                    ref={spreadsheetRef}
                     selectedBuilding={selectedBuilding}
                     projectData={projectData}
                     setProjectData={setProjectData}
@@ -616,6 +538,22 @@ const BOQStep: React.FC<BOQStepProps> = ({
                     processBoqData={processBoqData}
                     selectedTrade={selectedTrade}
                     setSelectedTrade={setSelectedTrade}
+                    onClearBoq={handleClearBoq}
+                    onImportBoq={handleImportBoq}
+                    onSave={onSave}
+                    saving={saving}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    importingBoq={importingBoq}
+                    // Building selector props
+                    buildings={projectData?.buildings || buildings || []}
+                    onBuildingDialogOpen={() => setShowBuildingDialog(true)}
+                    // Currency selector props
+                    currencies={currencies}
+                    currencyId={projectData?.currencyId}
+                    onCurrencyDialogOpen={() => {
+                        setTempCurrencyId(projectData?.currencyId || null);
+                        setShowCurrencyDialog(true);
+                    }}
                 />
             </div>
             
@@ -630,56 +568,65 @@ const BOQStep: React.FC<BOQStepProps> = ({
             {/* Clear BOQ Scope Dialog */}
             {showClearDialog && (
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
-                        <h3 className="text-lg font-bold mb-4">Clear BOQ</h3>
-                        <p className="text-base-content/70 mb-4">
-                            What would you like to clear?
-                        </p>
-                        <div className="space-y-2 mb-6">
-                            <label className="flex items-center gap-2">
+                    <div className="bg-base-100 rounded-xl shadow-lg p-8 max-w-xl w-full mx-4">
+                        <div className="flex items-start gap-4 mb-6">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-base-content">Clear BOQ Data</h3>
+                                <p className="text-base-content/60 mt-1">
+                                    This action cannot be undone. Select what you want to clear:
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-3 mb-8 ml-16">
+                            <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="clearScope"
                                     value="trade"
                                     checked={clearScope === "trade"}
                                     onChange={(e) => setClearScope(e.target.value as "trade" | "building" | "all")}
-                                    className="radio radio-primary"
+                                    className="radio radio-warning"
                                 />
-                                <span>Current Trade/Sheet only</span>
+                                <span className="text-base-content">Current Trade/Sheet only</span>
                             </label>
-                            <label className="flex items-center gap-2">
+                            <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="clearScope"
                                     value="building"
                                     checked={clearScope === "building"}
                                     onChange={(e) => setClearScope(e.target.value as "trade" | "building" | "all")}
-                                    className="radio radio-primary"
+                                    className="radio radio-warning"
                                 />
-                                <span>Current Building ({selectedBuilding?.name})</span>
+                                <span className="text-base-content">Current Building ({selectedBuilding?.name})</span>
                             </label>
-                            <label className="flex items-center gap-2">
+                            <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="clearScope"
                                     value="all"
                                     checked={clearScope === "all"}
                                     onChange={(e) => setClearScope(e.target.value as "trade" | "building" | "all")}
-                                    className="radio radio-primary"
+                                    className="radio radio-warning"
                                 />
-                                <span>All Buildings in Project</span>
+                                <span className="text-base-content">All Buildings in Project</span>
                             </label>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex gap-3">
                             <button
                                 onClick={handleClearConfirm}
-                                className="btn btn-sm bg-red-500 border border-red-500 text-white hover:bg-red-600 flex-1"
+                                className="btn bg-red-800 hover:bg-red-900 text-white border-none"
                             >
-                                Continue
+                                Clear Data
                             </button>
                             <button
                                 onClick={() => setShowClearDialog(false)}
-                                className="btn btn-sm bg-base-100 border border-base-300 text-base-content hover:bg-base-200 flex-1"
+                                className="btn border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400 bg-transparent"
                             >
                                 Cancel
                             </button>
@@ -767,6 +714,66 @@ const BOQStep: React.FC<BOQStepProps> = ({
                         onUpdateBuilding={updateBuilding ? handleUpdateBuilding : undefined}
                     />
                 </Suspense>
+            )}
+
+            {/* Currency Selection Dialog */}
+            {showCurrencyDialog && (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-base-100 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <Icon icon={coinsIcon} className="w-5 h-5 text-primary" />
+                            Select Currency
+                        </h3>
+                        <div className="space-y-2 max-h-64 overflow-y-auto mb-6">
+                            {(currencies || []).map((currency) => (
+                                <label
+                                    key={currency.id}
+                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                                        tempCurrencyId === currency.id
+                                            ? "bg-primary/10 border border-primary/30"
+                                            : "bg-base-200 hover:bg-base-300 border border-transparent"
+                                    }`}
+                                    onClick={() => setTempCurrencyId(currency.id)}
+                                >
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                        tempCurrencyId === currency.id
+                                            ? "border-primary bg-primary"
+                                            : "border-base-300"
+                                    }`}>
+                                        {tempCurrencyId === currency.id && (
+                                            <Icon icon={checkIcon} className="w-3 h-3 text-white" />
+                                        )}
+                                    </div>
+                                    <span className="font-medium">{currency.currencies}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    if (tempCurrencyId) {
+                                        // Create a synthetic event to match the expected interface
+                                        const syntheticEvent = {
+                                            target: { value: String(tempCurrencyId) }
+                                        } as React.ChangeEvent<HTMLSelectElement>;
+                                        onCurrencyChange(syntheticEvent);
+                                    }
+                                    setShowCurrencyDialog(false);
+                                }}
+                                className="btn btn-primary flex-1"
+                                disabled={!tempCurrencyId}
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => setShowCurrencyDialog(false)}
+                                className="btn btn-ghost flex-1"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* BOQ Import Loading Overlay */}

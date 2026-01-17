@@ -1,12 +1,29 @@
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Icon } from "@iconify/react";
+
+// Import icons
+import eyeIcon from "@iconify/icons-lucide/eye";
+import fileSpreadsheetIcon from "@iconify/icons-lucide/file-spreadsheet";
+import undo2Icon from "@iconify/icons-lucide/undo-2";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import filterIcon from "@iconify/icons-lucide/filter";
+import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
+import listIcon from "@iconify/icons-lucide/list";
+import folderIcon from "@iconify/icons-lucide/folder";
+import plusIcon from "@iconify/icons-lucide/plus";
+import downloadIcon from "@iconify/icons-lucide/download";
+import fileTextIcon from "@iconify/icons-lucide/file-text";
+import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
+import xIcon from "@iconify/icons-lucide/x";
 
 import { Loader } from "@/components/Loader";
-import SAMTable from "@/components/Table";
+import { Spreadsheet, SpreadsheetColumn } from "@/components/Spreadsheet";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 import useIPCsDatabase from "./use-IPCs-database";
 
@@ -23,12 +40,12 @@ const ExportDropdown = memo(({
     onExportExcel: () => void;
 }) => {
     const isExporting = exportingPdf || exportingExcel;
-    
+
     return (
         <div className="dropdown dropdown-end">
-            <div 
-                tabIndex={0} 
-                role="button" 
+            <div
+                tabIndex={0}
+                role="button"
                 className={`btn btn-sm border border-base-300 bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-colors duration-200 ${isExporting ? 'btn-disabled' : ''}`}
             >
                 {isExporting ? (
@@ -38,9 +55,9 @@ const ExportDropdown = memo(({
                     </>
                 ) : (
                     <>
-                        <span className="iconify lucide--download size-4"></span>
+                        <Icon icon={downloadIcon} className="size-4" />
                         <span>Export</span>
-                        <span className="iconify lucide--chevron-down size-3.5"></span>
+                        <Icon icon={chevronDownIcon} className="size-3.5" />
                     </>
                 )}
             </div>
@@ -51,7 +68,7 @@ const ExportDropdown = memo(({
                             onClick={onExportPdf}
                             className="flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200"
                         >
-                            <span className="iconify lucide--file-text size-4"></span>
+                            <Icon icon={fileTextIcon} className="size-4" />
                             <span className="font-medium">Export as PDF</span>
                         </button>
                     </li>
@@ -60,7 +77,7 @@ const ExportDropdown = memo(({
                             onClick={onExportExcel}
                             className="flex items-center gap-2 p-2 hover:bg-base-200 rounded transition-colors duration-200"
                         >
-                            <span className="iconify lucide--file-spreadsheet size-4"></span>
+                            <Icon icon={fileSpreadsheetIcon} className="size-4" />
                             <span className="font-medium">Export as Excel</span>
                         </button>
                     </li>
@@ -72,11 +89,27 @@ const ExportDropdown = memo(({
 
 ExportDropdown.displayName = 'ExportDropdown';
 
+interface IpcRow {
+    id: number;
+    contract: string;
+    number: number;
+    subcontractorName: string;
+    tradeName: string;
+    amountHT: number;
+    totalAmount: number;
+    status: string;
+    type: string;
+    retention: number;
+    projectName?: string;
+    _statusRaw?: string;
+    _typeRaw?: string;
+    isGenerated?: boolean;
+    isLastForContract?: boolean;
+}
+
 const IPCsDatabase = () => {
     const {
-        columns,
         tableData,
-        inputFields,
         loading,
         getIPCs,
         smartPreviewIpc,
@@ -85,6 +118,7 @@ const IPCsDatabase = () => {
     } = useIPCsDatabase();
     const { toaster } = useToast();
     const { getToken } = useAuth();
+    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -103,13 +137,91 @@ const IPCsDatabase = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
 
+    // Memoize back to dashboard handler
+    const handleBackToDashboard = useCallback(() => {
+        navigate('/dashboard');
+    }, [navigate]);
+
+    // Memoize unique project names from table data
+    const uniqueProjects = useMemo(() =>
+        Array.from(new Set(tableData.map((ipc: any) => ipc.projectName).filter(Boolean))).sort(),
+        [tableData]
+    );
+
+    // Memoize project counts
+    const projectCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        tableData.forEach((ipc: any) => {
+            if (ipc.projectName) {
+                counts.set(ipc.projectName, (counts.get(ipc.projectName) || 0) + 1);
+            }
+        });
+        return counts;
+    }, [tableData]);
+
+    // Setup topbar content
+    useEffect(() => {
+        // Left content: Back button
+        setLeftContent(
+            <button
+                onClick={handleBackToDashboard}
+                className="btn btn-sm btn-circle btn-ghost"
+                title="Back to Dashboard"
+            >
+                <Icon icon={arrowLeftIcon} className="size-5" />
+            </button>
+        );
+
+        // Center content: Project filter dropdown
+        setCenterContent(
+            <div className="dropdown">
+                <div
+                    tabIndex={0}
+                    role="button"
+                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                >
+                    <Icon icon={filterIcon} className="size-4" />
+                    <span>{selectedProject}</span>
+                    <Icon icon={chevronDownIcon} className="size-3.5" />
+                </div>
+                <div tabIndex={0} className="dropdown-content z-50 shadow bg-base-100 rounded-box w-80 mt-1 max-h-96 overflow-y-auto">
+                    <div className="p-2 space-y-1">
+                        <button
+                            onClick={() => setSelectedProject("All Projects")}
+                            className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
+                            }`}
+                        >
+                            <Icon icon={listIcon} className="size-4" />
+                            <span>All Projects ({tableData.length})</span>
+                        </button>
+                        <div className="divider my-1"></div>
+                        {uniqueProjects.map((projectName) => (
+                            <button
+                                key={projectName}
+                                onClick={() => setSelectedProject(projectName as string)}
+                                className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
+                                    selectedProject === projectName ? "bg-base-200 font-semibold" : ""
+                                }`}
+                            >
+                                <Icon icon={folderIcon} className="size-4" />
+                                <span className="truncate flex-1">{projectName}</span>
+                                <span className="badge badge-sm badge-ghost">{projectCounts.get(projectName as string) || 0}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+
+        return () => clearContent();
+    }, [setLeftContent, setCenterContent, clearContent, handleBackToDashboard, selectedProject, uniqueProjects, tableData.length, projectCounts]);
+
     const handlePreviewIpc = async (row: any) => {
-        // Use smart preview that chooses correct method based on IPC status
         const result = await smartPreviewIpc(row.id, row._statusRaw || row.status, row.isGenerated);
         if (result.success && result.blob) {
-            // Use contract number and IPC reference instead of database IDs
             const contractRef = row.contract || 'document';
-            const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id; // Use business identifier
+            const ipcRef = row.number || row.ipcRef || row.ipcNumber || row.id;
             const subcontractorName = row.subcontractorName || 'unknown';
             const fileName = `ipc-${ipcRef}-${contractRef}-${subcontractorName}.pdf`;
             setPreviewData({ blob: result.blob, id: row.id, fileName, rowData: row });
@@ -120,12 +232,10 @@ const IPCsDatabase = () => {
     };
 
     const handleEditIpc = (row: any) => {
-        // Navigate to IPC edit page with enhanced penalty and summary features
         navigate(`/dashboard/IPCs-database/edit/${row.id}`);
     };
 
     const handleViewIpcDetails = (row: any) => {
-        // Navigate to IPC details page
         navigate(`/dashboard/IPCs-database/details/${row.id}`, {
             state: {
                 ipcNumber: row.number,
@@ -139,22 +249,14 @@ const IPCsDatabase = () => {
         });
     };
 
-    // Memoize back to table handler - also clears preview data to free memory
     const handleBackToTable = useCallback(() => {
         setViewMode('table');
         setPreviewData(null);
     }, []);
 
-    // Memoize back to dashboard handler
-    const handleBackToDashboard = useCallback(() => {
-        navigate('/dashboard');
-    }, [navigate]);
-
     const handleDownloadExcel = async (row: any) => {
-        // Use smart download that chooses correct method based on IPC status
         const result = await smartDownloadIpcExcel(row.id, row._statusRaw || row.status, row.isGenerated);
         if (result.success && result.blob) {
-            // Download the file
             const url = window.URL.createObjectURL(result.blob);
             const a = document.createElement('a');
             a.href = url;
@@ -169,15 +271,6 @@ const IPCsDatabase = () => {
             toaster.success("Excel file downloaded successfully");
         } else {
             toaster.error("Failed to download Excel file");
-        }
-    };
-
-    const handleExportZip = async (row: any) => {
-        const result = await exportIpcZip(row.id);
-        if (result.success) {
-            toaster.success("ZIP file exported successfully");
-        } else {
-            toaster.error("Failed to export ZIP file");
         }
     };
 
@@ -196,7 +289,6 @@ const IPCsDatabase = () => {
 
             if (result.success || result.isSuccess) {
                 toaster.success(`IPC #${row.number} generated successfully`);
-                // Refresh the table to show updated status
                 await getIPCs();
             } else {
                 toaster.error(result.error || result.message || "Failed to generate IPC");
@@ -223,10 +315,8 @@ const IPCsDatabase = () => {
 
             if (result.success) {
                 toaster.success(`IPC #${row.number} deleted successfully`);
-                // Refresh the table to show updated list
                 await getIPCs();
             } else {
-                // Show backend validation error (e.g., "Only the last IPC can be deleted")
                 const errorMessage = result.error?.message || result.message || "Failed to delete IPC";
                 toaster.error(errorMessage);
             }
@@ -245,7 +335,6 @@ const IPCsDatabase = () => {
     const handleUnissueIpc = async () => {
         if (!unissueTargetRow) return;
 
-        // Validate reason
         if (!unissueReason || unissueReason.trim().length < 10) {
             toaster.error("Please provide a reason with at least 10 characters");
             return;
@@ -261,7 +350,6 @@ const IPCsDatabase = () => {
                 setShowUnissueModal(false);
                 setUnissueReason("");
                 setUnissueTargetRow(null);
-                // Refresh the table to show updated status
                 await getIPCs();
             } else {
                 toaster.error(result.error?.message || "Failed to un-issue IPC");
@@ -276,7 +364,7 @@ const IPCsDatabase = () => {
 
     const handleExportPdf = async () => {
         if (!previewData) return;
-        
+
         setExportingPdf(true);
         try {
             const url = window.URL.createObjectURL(previewData.blob);
@@ -300,7 +388,6 @@ const IPCsDatabase = () => {
 
         setExportingExcel(true);
         try {
-            // Use smart download that chooses correct method based on IPC status
             const result = await smartDownloadIpcExcel(
                 previewData.id,
                 previewData.rowData._statusRaw || previewData.rowData.status,
@@ -328,13 +415,7 @@ const IPCsDatabase = () => {
         }
     };
 
-    // Memoize unique project names from table data to avoid recalculating on every render
-    const uniqueProjects = useMemo(() =>
-        Array.from(new Set(tableData.map((ipc: any) => ipc.projectName).filter(Boolean))).sort(),
-        [tableData]
-    );
-
-    // Memoize filtered table data to avoid recalculating on every render
+    // Memoize filtered table data
     const filteredTableData = useMemo(() =>
         selectedProject === "All Projects"
             ? tableData
@@ -342,149 +423,152 @@ const IPCsDatabase = () => {
         [tableData, selectedProject]
     );
 
-    // Memoize project counts to avoid recalculating on every render
-    const projectCounts = useMemo(() => {
-        const counts = new Map<string, number>();
-        tableData.forEach((ipc: any) => {
-            if (ipc.projectName) {
-                counts.set(ipc.projectName, (counts.get(ipc.projectName) || 0) + 1);
+    // Format currency - only show decimals if they exist, show '-' for 0
+    const formatCurrency = (value: number) => {
+        if (value == null || value === 0) return "-";
+        // Check if the number has decimals
+        const hasDecimals = value % 1 !== 0;
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: hasDecimals ? 2 : 0,
+            maximumFractionDigits: 2
+        }).format(value);
+    };
+
+    // Define spreadsheet columns
+    const columns: SpreadsheetColumn<IpcRow>[] = useMemo(() => [
+        {
+            key: "contract",
+            label: "Contract",
+            width: 140,
+            sortable: true,
+            filterable: true
+        },
+        {
+            key: "number",
+            label: "IPC Ref",
+            width: 80,
+            sortable: true,
+            filterable: true,
+            align: "center"
+        },
+        {
+            key: "subcontractorName",
+            label: "Subcontractor",
+            width: 180,
+            sortable: true,
+            filterable: true
+        },
+        {
+            key: "tradeName",
+            label: "Trade",
+            width: 140,
+            sortable: true,
+            filterable: true
+        },
+        {
+            key: "amountHT",
+            label: "Amount HT",
+            width: 120,
+            sortable: true,
+            align: "right",
+            render: (value) => <span className="pr-2">{formatCurrency(value as number)}</span>
+        },
+        {
+            key: "totalAmount",
+            label: "Total Amount",
+            width: 130,
+            sortable: true,
+            align: "right",
+            render: (value) => <span className="pr-2">{formatCurrency(value as number)}</span>
+        },
+        {
+            key: "status",
+            label: "Status",
+            width: 110,
+            sortable: true,
+            filterable: true,
+            align: "center",
+            render: (value) => {
+                const statusLower = String(value).toLowerCase();
+                let badgeClass = "bg-base-200 text-base-content";
+                if (statusLower.includes("issued")) badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200";
+                else if (statusLower.includes("editable")) badgeClass = "bg-amber-100 text-amber-700 border border-amber-200";
+                else if (statusLower.includes("pending")) badgeClass = "bg-sky-100 text-sky-700 border border-sky-200";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value}</span>;
             }
-        });
-        return counts;
-    }, [tableData]);
+        },
+        {
+            key: "type",
+            label: "Type",
+            width: 100,
+            sortable: true,
+            filterable: true,
+            align: "center",
+            render: (value) => {
+                const typeLower = String(value).toLowerCase();
+                let badgeClass = "bg-base-200 text-base-content";
+                if (typeLower.includes("provisoire") || typeLower.includes("interim")) badgeClass = "bg-blue-100 text-blue-700 border border-blue-200";
+                else if (typeLower.includes("final")) badgeClass = "bg-violet-100 text-violet-700 border border-violet-200";
+                else if (typeLower.includes("retention") || typeLower.includes("rg")) badgeClass = "bg-teal-100 text-teal-700 border border-teal-200";
+                else if (typeLower.includes("avance") || typeLower.includes("advance")) badgeClass = "bg-cyan-100 text-cyan-700 border border-cyan-200";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value}</span>;
+            }
+        },
+        {
+            key: "retention",
+            label: "Paid TTC",
+            width: 120,
+            sortable: true,
+            align: "right",
+            render: (value) => <span className="pr-2">{formatCurrency(value as number)}</span>
+        }
+    ], []);
 
-    // Header content for the table - memoized to avoid recreation on every render
-    const tableHeaderContent = useMemo(() => (
-        <div className="flex items-center justify-between flex-1 gap-2">
-            <div className="flex items-center gap-2">
+    // Actions renderer - single button to view details (all actions available there)
+    const actionsRender = (row: IpcRow) => {
+        return (
+            <div className="flex items-center justify-center">
                 <button
-                    onClick={handleBackToDashboard}
-                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
+                    onClick={(e) => { e.stopPropagation(); handleViewIpcDetails(row); }}
+                    className="btn btn-xs btn-ghost hover:bg-primary/10 text-primary"
+                    title="View Details"
                 >
-                    <span className="iconify lucide--arrow-left size-4"></span>
-                    <span>Back</span>
+                    <Icon icon={eyeIcon} className="size-4" />
                 </button>
-
-                {/* Project Filter Dropdown */}
-                <div className="dropdown">
-                    <div
-                        tabIndex={0}
-                        role="button"
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                    >
-                        <span className="iconify lucide--filter size-4"></span>
-                        <span>{selectedProject}</span>
-                        <span className="iconify lucide--chevron-down size-3.5"></span>
-                    </div>
-                    <div tabIndex={0} className="dropdown-content z-50 shadow bg-base-100 rounded-box w-80 mt-1 max-h-96 overflow-y-auto">
-                        <div className="p-2 space-y-1">
-                            <button
-                                onClick={() => setSelectedProject("All Projects")}
-                                className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                    selectedProject === "All Projects" ? "bg-base-200 font-semibold" : ""
-                                }`}
-                            >
-                                <span className="iconify lucide--list size-4"></span>
-                                <span>All Projects ({tableData.length})</span>
-                            </button>
-                            <div className="divider my-1"></div>
-                            {uniqueProjects.map((projectName) => (
-                                <button
-                                    key={projectName}
-                                    onClick={() => setSelectedProject(projectName as string)}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded transition-colors duration-200 ${
-                                        selectedProject === projectName ? "bg-base-200 font-semibold" : ""
-                                    }`}
-                                >
-                                    <span className="iconify lucide--folder size-4"></span>
-                                    <span className="truncate flex-1">{projectName}</span>
-                                    <span className="badge badge-sm badge-ghost">{projectCounts.get(projectName as string) || 0}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
             </div>
+        );
+    };
 
-            <button
-                onClick={() => navigate('/dashboard/IPCs-database/new')}
-                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-            >
-                <span className="iconify lucide--plus size-4"></span>
-                <span>Create IPC</span>
-            </button>
-        </div>
-    ), [selectedProject, uniqueProjects, tableData.length, projectCounts, navigate]);
+    // Toolbar content
+    const toolbarContent = useMemo(() => (
+        <button
+            onClick={() => navigate('/dashboard/IPCs-database/new')}
+            className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+        >
+            <Icon icon={plusIcon} className="size-4" />
+            <span>Create IPC</span>
+        </button>
+    ), [navigate]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden -mt-6">
+        <div className="h-full flex flex-col overflow-hidden">
             {viewMode === 'table' ? (
-                <>
-                    {/* Scrollable Content - Full Height */}
-                    <div className="flex-1 min-h-0">
-                        {loading ? (
-                            <Loader />
-                        ) : (
-                            <SAMTable
-                                columns={columns}
-                                tableData={filteredTableData}
-                                inputFields={inputFields}
-                                actions
-                                previewAction
-                                editAction
-                                detailsAction
-                                customHeaderContent={tableHeaderContent}
-                                rowActions={(row) => {
-                                    const statusLower = (row._statusRaw || row.status || '').toLowerCase();
-                                    const isEditable = statusLower.includes('editable') && !row.isGenerated;
-                                    const isIssued = statusLower === 'issued';
-                                    // Only allow deleting the last IPC for a contract (highest number)
-                                    const canDelete = isEditable && row.isLastForContract;
-                                    // Only allow un-issuing the last Issued IPC for a contract
-                                    const canUnissue = isIssued && row.isLastForContract;
-
-                                    return {
-                                        // Show Generate button only for Editable IPCs (not yet generated)
-                                        generateAction: isEditable,
-                                        // Hide Edit button for Issued IPCs
-                                        editAction: !isIssued,
-                                        // Show Delete button only for last Editable IPC of a contract
-                                        deleteAction: canDelete,
-                                        // Show Un-Issue button only for last Issued IPC of a contract
-                                        unissueAction: canUnissue,
-                                    };
-                                }}
-                                title={"IPC"}
-                                loading={false}
-                                onSuccess={getIPCs}
-                                dynamicDialog={false}
-                                virtualized={true}
-                                rowHeight={40}
-                                overscan={15}
-                                openStaticDialog={(type, data) => {
-                                    if (type === "Preview" && data) {
-                                        return handlePreviewIpc(data);
-                                    }
-                                    if (type === "Edit" && data) {
-                                        return handleEditIpc(data);
-                                    }
-                                    if (type === "Details" && data) {
-                                        return handleViewIpcDetails(data);
-                                    }
-                                    if (type === "Generate" && data) {
-                                        return handleGenerateIpc(data);
-                                    }
-                                    if (type === "Delete" && data) {
-                                        return handleDeleteIpc(data);
-                                    }
-                                    if (type === "Unissue" && data) {
-                                        return openUnissueModal(data);
-                                    }
-                                }}
-                            />
-                        )}
-                    </div>
-                </>
+                <div className="flex-1 min-h-0">
+                    {loading ? (
+                        <Loader />
+                    ) : (
+                        <Spreadsheet
+                            columns={columns}
+                            data={filteredTableData as unknown as IpcRow[]}
+                            mode="view"
+                            actionsRender={actionsRender}
+                            actionsColumnWidth={70}
+                            toolbar={toolbarContent}
+                            emptyMessage="No IPCs found. Click 'Create IPC' to add one."
+                            onRowDoubleClick={(row) => handleViewIpcDetails(row as IpcRow)}
+                        />
+                    )}
+                </div>
             ) : (
                 <>
                     {/* Preview Card - Full Height */}
@@ -497,12 +581,12 @@ const IPCsDatabase = () => {
                                         onClick={handleBackToTable}
                                         className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
                                     >
-                                        <span className="iconify lucide--arrow-left size-4"></span>
+                                        <Icon icon={arrowLeftIcon} className="size-4" />
                                         <span>Back</span>
                                     </button>
                                     <div className="flex items-center gap-2">
                                         <div className="p-1.5 bg-error/20 rounded-lg">
-                                            <span className="iconify lucide--file-text text-error size-4"></span>
+                                            <Icon icon={fileTextIcon} className="text-error size-4" />
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-base-content text-sm">PDF Preview</h3>
@@ -540,7 +624,7 @@ const IPCsDatabase = () => {
                     <div className="modal-box max-w-lg">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-bold flex items-center gap-2">
-                                <span className="iconify lucide--undo-2 size-5 text-amber-600"></span>
+                                <Icon icon={undo2Icon} className="size-5 text-amber-600" />
                                 Un-Issue IPC #{unissueTargetRow?.number}
                             </h3>
                             <button
@@ -548,13 +632,13 @@ const IPCsDatabase = () => {
                                 className="btn btn-ghost btn-sm"
                                 disabled={unissuingIpc}
                             >
-                                <span className="iconify lucide--x size-5"></span>
+                                <Icon icon={xIcon} className="size-5" />
                             </button>
                         </div>
 
                         <div className="space-y-4">
                             <div className="alert alert-warning">
-                                <span className="iconify lucide--alert-triangle size-5"></span>
+                                <Icon icon={alertTriangleIcon} className="size-5" />
                                 <div>
                                     <p className="font-semibold">Important:</p>
                                     <ul className="mt-1 text-sm list-disc list-inside">
@@ -606,7 +690,7 @@ const IPCsDatabase = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <span className="iconify lucide--undo-2 size-4"></span>
+                                        <Icon icon={undo2Icon} className="size-4" />
                                         <span>Confirm Un-Issue</span>
                                     </>
                                 )}

@@ -4,6 +4,8 @@ import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Select, S
 import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
 import { useAuth } from "@/contexts/auth";
 import { useConfig } from "@/contexts/config";
+import { useTopbarContent } from "@/contexts/topbar-content";
+import { useNavigationBlocker } from "@/contexts/navigation-blocker";
 import { cn } from "@/helpers/utils/cn";
 import apiRequest from "@/api/api";
 
@@ -49,6 +51,9 @@ const getPageTitle = (pathname: string) => {
   }
   if (pathname.includes('/IPCs-database')) {
     return "IPCs Database";
+  }
+  if (pathname.includes('/contracts')) {
+    return "Contracts";
   }
 
   // Admin Tools routes
@@ -974,6 +979,8 @@ const AccountDropdown = React.memo(({
 export const Topbar = () => {
   const { logout, authState } = useAuth();
   const { config } = useConfig();
+  const { leftContent, centerContent, rightContent } = useTopbarContent();
+  const { tryNavigate } = useNavigationBlocker();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -1142,27 +1149,29 @@ export const Topbar = () => {
         <div className="fixed bottom-0 left-0 right-0 z-[95] bg-base-100 border-t border-base-300">
           <div className="flex items-center h-16 px-2">
             <div className="flex-1">
-              <Link 
-                to="/dashboard" 
-                className="flex flex-col items-center justify-center p-0.5"
+              <button
+                type="button"
+                onClick={() => tryNavigate("/dashboard")}
+                className="flex flex-col items-center justify-center p-0.5 w-full"
               >
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="iconify lucide--home text-lg text-base-content" />
                   <span className="text-[10px] text-base-content">Dashboard</span>
                 </div>
-              </Link>
+              </button>
             </div>
-            
+
             <div className="flex-1">
-              <Link 
-                to="/admin-tools" 
-                className="flex flex-col items-center justify-center p-0.5"
+              <button
+                type="button"
+                onClick={() => tryNavigate("/admin-tools")}
+                className="flex flex-col items-center justify-center p-0.5 w-full"
               >
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="iconify lucide--settings text-lg text-base-content" />
                   <span className="text-[10px] text-base-content">Admin</span>
                 </div>
-              </Link>
+              </button>
             </div>
             
             <AccountDropdown
@@ -1189,9 +1198,13 @@ export const Topbar = () => {
         className="fixed top-0 right-0 z-30 bg-base-100 border-b border-base-300 h-16 transition-all duration-300"
         style={{ left: 'var(--sidebar-width, 52px)' }}
       >
-        <div className="h-full flex items-center justify-between px-6">
-          {/* Left side - App Logo with typing animation */}
-          <div className="flex items-center">
+        <div className="h-full flex items-center justify-between px-6 relative">
+          {/* Left side - Custom content + App Logo */}
+          <div className="flex items-center gap-3 z-10">
+            {/* Custom left content (e.g., back button) */}
+            {leftContent}
+
+            {/* App Logo - always visible */}
             <Link to="/" className="flex-shrink-0">
               <div className="flex items-center bg-base-200 rounded-md px-1 h-[36px] inline-flex">
                 <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
@@ -1214,55 +1227,67 @@ export const Topbar = () => {
             </Link>
           </div>
 
+          {/* Center content - Absolutely positioned to stay fixed in center */}
+          {centerContent && (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+              {centerContent}
+            </div>
+          )}
+
           {/* Right side controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 z-10">
+            {/* Custom right content */}
+            {rightContent}
+
             {/* Database Dropdown */}
             <DatabaseDropdown isMobile={isMobile} />
 
             {/* Grouped Toggle buttons for Dashboard/Admin Tools - only show on dashboard page and first admin tools page */}
-            {!isMobile && (location.pathname.startsWith('/dashboard') || location.pathname === '/admin-tools') && (
+            {!isMobile && !centerContent && (location.pathname.startsWith('/dashboard') || location.pathname === '/admin-tools') && (
               <div className="bg-base-200 rounded-xl p-1 flex items-center gap-1 shadow-sm border border-base-300">
-                <Link
-                  to="/dashboard"
+                <button
+                  type="button"
+                  onClick={() => tryNavigate("/dashboard")}
                   className={`btn btn-circle btn-ghost btn-sm relative overflow-hidden transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer group ${
-                    !isAdminTools 
-                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm' 
+                    !isAdminTools
+                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm'
                       : 'hover:bg-primary/10'
                   }`}
                   title="Dashboard"
                 >
                   <span className={`iconify lucide--monitor-dot w-5 h-5 transition-all duration-200 ${
-                    !isAdminTools 
-                      ? 'text-primary-content' 
+                    !isAdminTools
+                      ? 'text-primary-content'
                       : 'text-base-content group-hover:text-primary'
                   }`} />
-                </Link>
-                <Link
-                  to="/admin-tools"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => tryNavigate("/admin-tools")}
                   className={`btn btn-circle btn-ghost btn-sm relative overflow-hidden transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer group ${
-                    isAdminTools 
-                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm' 
+                    isAdminTools
+                      ? 'bg-primary text-primary-content hover:bg-primary/90 shadow-sm'
                       : 'hover:bg-primary/10'
                   }`}
                   title="Admin Tools"
                 >
                   <span className={`iconify lucide--settings w-5 h-5 transition-all duration-200 ${
-                    isAdminTools 
-                      ? 'text-primary-content' 
+                    isAdminTools
+                      ? 'text-primary-content'
                       : 'text-base-content group-hover:text-primary'
                   }`} />
-                </Link>
+                </button>
               </div>
             )}
 
             {/* Theme toggle button */}
-            <ThemeToggleDropdown 
+            <ThemeToggleDropdown
               triggerClass="btn btn-circle btn-ghost btn-sm relative overflow-hidden hover:bg-base-300 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-base-300 cursor-pointer"
               iconClass="text-base-content group-hover:text-base-content/70 transition-all duration-200 group-hover:rotate-6"
             />
 
             {/* Notifications Button */}
-            <NotificationButton 
+            <NotificationButton
               onClick={toggleNotificationsDialog}
               count={notificationCount}
               loading={notificationsLoading}

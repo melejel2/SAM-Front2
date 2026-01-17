@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { useConfig } from '@/contexts/config';
+import { useNavigationBlocker } from '@/contexts/navigation-blocker';
 import { dashboardMenuItems, adminToolsMenuItems } from '../helpers';
 import { ISidebarMenuItem } from './SidebarMenuItem';
 
@@ -11,6 +12,7 @@ export const Sidebar = () => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const { authState } = useAuth();
   const { config } = useConfig();
+  const { tryNavigate } = useNavigationBlocker();
   
   // Typing animation states
   const [displayText, setDisplayText] = useState("");
@@ -155,13 +157,17 @@ export const Sidebar = () => {
 
             return (
               <div key={item.id} className="relative">
-                <Link
-                  to={item.url || '#'}
-                  className="group flex items-center"
+                <button
+                  type="button"
+                  className="group flex items-center cursor-pointer"
                   aria-current={active ? 'page' : undefined}
                   onClick={() => {
                     // Cancel typing animation on click
                     setHoveredItem(null);
+                    // Use tryNavigate for navigation blocking support
+                    if (item.url) {
+                      tryNavigate(item.url);
+                    }
                   }}
                   onMouseEnter={() => setHoveredItem(item.label)}
                   onMouseLeave={() => setHoveredItem(null)}
@@ -201,7 +207,7 @@ export const Sidebar = () => {
                       </div>
                     )}
                   </div>
-                </Link>
+                </button>
               </div>
             );
           })}

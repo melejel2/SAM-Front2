@@ -40,6 +40,36 @@ export interface BoqIpcVM {
   actualAmount: number; // computed property: unitPrice * actualQte
   precedAmount: number; // computed property: unitPrice * precedQte
   cumulPercent: number; // computed property: qte == 0 ? 0 : (cumulQte / qte) * 100
+
+  // Material Supply fields - per BOQ line
+  /** Cumulative material supply percentage entered by user (must not exceed contract's MaterialSupply) */
+  cumulMaterialPercentage: number;
+  /** Previous material supply percentage (from last IPC) */
+  previousMaterialPercentage: number;
+  /** Calculated: (cumulMaterialPercentage / 100) * totalAmount */
+  cumulMaterialValue: number;
+  /** Previous material supply value (from last IPC) */
+  previousMaterialValue: number;
+
+  // Deduction on Material Supply fields
+  /** Cumulative deduction percentage on material supply */
+  cumulDeductionPercentage: number;
+  /** Previous deduction percentage (from last IPC) */
+  previousDeductionPercentage: number;
+  /** Calculated: (cumulDeductionPercentage / 100) * cumulMaterialValue */
+  cumulDeductionValue: number;
+  /** Previous deduction value (from last IPC) */
+  previousDeductionValue: number;
+
+  // Computed properties for current period (calculated in frontend)
+  /** Current period material percentage = cumulMaterialPercentage - previousMaterialPercentage */
+  actualMaterialPercentage?: number;
+  /** Current period material value = cumulMaterialValue - previousMaterialValue */
+  actualMaterialValue?: number;
+  /** Current period deduction percentage = cumulDeductionPercentage - previousDeductionPercentage */
+  actualDeductionPercentage?: number;
+  /** Current period deduction value = cumulDeductionValue - previousDeductionValue */
+  actualDeductionValue?: number;
 }
 
 export interface ContractBuildingsVM {
@@ -209,6 +239,13 @@ export interface SaveIPCVM extends IpcDataExtended {
   // This is populated from ContractsDataset.SubcontractorAdvancePayee by backend
   subcontractorAdvancePayee?: number;
 
+  /**
+   * Contract's maximum material supply percentage allowed per BOQ item.
+   * This is populated from ContractsDataset.MaterialSupply for frontend validation.
+   * Each BOQ item's cumulMaterialPercentage must not exceed this value.
+   */
+  materialSupply?: number;
+
   fromDate?: string;
   toDate?: string;
   dateIpc?: string;
@@ -344,6 +381,13 @@ export interface IpcWizardFormData {
 
   // Contract's advance payment eligible percentage (from backend)
   subcontractorAdvancePayee?: number;
+
+  /**
+   * Contract's maximum material supply percentage allowed per BOQ item.
+   * This is populated from ContractsDataset.MaterialSupply for frontend validation.
+   * Each BOQ item's cumulMaterialPercentage must not exceed this value.
+   */
+  materialSupply?: number;
 
   // Advance Payment VO Selection - which items to include in eligible amount calculation
   // 'all' = BOQ + all VOs, 'boq' = BOQ only, number[] = BOQ + specific VO IDs

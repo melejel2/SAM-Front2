@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { Loader } from "@/components/Loader";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { useBlockNavigation, useNavigationBlocker } from "@/contexts/navigation-blocker";
 
 import BOQStep from "../components/BOQ";
 import useBudgetBOQsDialog from "../components/use-budget-boq-dialog";
@@ -26,6 +27,7 @@ const BudgetBOQEdit = () => {
     const { projectIdentifier } = useParams<{ projectIdentifier: string }>();
     const location = useLocation();
     const { toaster } = useToast();
+    const { tryNavigate } = useNavigationBlocker();
     
     // Get actual project ID from navigation state (for API calls) or try to parse if it's numeric
     const projectId = location.state?.projectId || 
@@ -36,7 +38,6 @@ const BudgetBOQEdit = () => {
     const [loading, setLoading] = useState(true);
     const [projectsLoaded, setProjectsLoaded] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     
     const { tableData: projects, getProjectsList } = useBudgetBOQs();
     const { tableData: currencies, getCurrencies } = useCurrencies();
@@ -114,22 +115,7 @@ const BudgetBOQEdit = () => {
         return JSON.stringify(projectData) !== JSON.stringify(originalProjectData);
     }, [projectData, originalProjectData]);
 
-    const handleBack = useCallback(() => {
-        if (hasUnsavedChanges) {
-            setShowUnsavedDialog(true);
-        } else {
-            navigate("/dashboard/budget-BOQs");
-        }
-    }, [hasUnsavedChanges, navigate]);
-
-    const handleCurrencyChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newCurrencyId = parseInt(e.target.value);
-        if (projectData) {
-            setProjectData({ ...projectData, currencyId: newCurrencyId });
-        }
-    }, [projectData]);
-
-    // Debounce save to prevent rapid-fire saves
+    // Save function - defined before useBlockNavigation so it can be used in callbacks
     const performSave = useCallback(async () => {
         if (!projectData || !originalProjectData) return;
 
@@ -183,18 +169,45 @@ const BudgetBOQEdit = () => {
         await debouncedSave();
     }, [debouncedSave]);
 
-    const handleSaveAndExit = async () => {
-        await handleSave();
-        navigate("/dashboard/budget-BOQs");
-    };
+    // Register navigation blocking with callbacks for save/discard
+    useBlockNavigation(
+        hasUnsavedChanges,
+        {
+            onSave: async () => {
+                await performSave();
+            },
+            onDiscard: () => {
+                // Reset to original data when discarding
+                setProjectData(originalProjectData);
+            }
+        },
+        "You have unsaved changes. What would you like to do?"
+    );
 
-    const handleExitWithoutSaving = () => {
-        navigate("/dashboard/budget-BOQs");
-    };
+    // Also warn on browser refresh/close
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = "";
+                return "";
+            }
+        };
 
-    const handleCancelExit = () => {
-        setShowUnsavedDialog(false);
-    };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    const handleBack = useCallback(() => {
+        tryNavigate("/dashboard/budget-BOQs");
+    }, [tryNavigate]);
+
+    const handleCurrencyChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCurrencyId = parseInt(e.target.value);
+        if (projectData) {
+            setProjectData({ ...projectData, currencyId: newCurrencyId });
+        }
+    }, [projectData]);
 
     if (loading || !projectsLoaded) {
         return <Loader />;
@@ -216,7 +229,7 @@ const BudgetBOQEdit = () => {
     return (
         <div style={{
             width: '100%',
-            height: 'calc(100vh - 4rem)',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -243,41 +256,6 @@ const BudgetBOQEdit = () => {
                     onCurrencyChange={handleCurrencyChange}
                     onDataRefresh={loadProjectData}
                 />
-
-            {/* Unsaved Changes Dialog */}
-            {showUnsavedDialog && (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-base-100 rounded-lg p-6 max-w-md w-full mx-4">
-                        <h3 className="text-lg font-bold mb-4">Unsaved Changes</h3>
-                        <p className="text-base-content/70 mb-6">
-                            You have unsaved changes. What would you like to do?
-                        </p>
-                        <div className="flex space-x-2">
-                            <Button
-                                onClick={handleSaveAndExit}
-                                className="flex-1"
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save & Exit"}
-                            </Button>
-                            <Button
-                                onClick={handleExitWithoutSaving}
-                                variant="outline"
-                                className="flex-1"
-                            >
-                                Exit without saving
-                            </Button>
-                            <Button
-                                onClick={handleCancelExit}
-                                variant="outline"
-                                className="flex-1"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
