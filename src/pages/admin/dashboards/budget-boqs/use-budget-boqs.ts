@@ -34,7 +34,14 @@ const useBudgetBOQs = () => {
     const token = getToken();
 
     // Cache for projects and buildings to avoid redundant API calls
-    const projectsCacheRef = useRef<{ data: Project[] | null; timestamp: number }>({ data: null, timestamp: 0 });
+    // Separate cache for archived and non-archived projects
+    const projectsCacheRef = useRef<{ 
+        normal: { data: Project[] | null; timestamp: number };
+        archived: { data: Project[] | null; timestamp: number };
+    }>({ 
+        normal: { data: null, timestamp: 0 },
+        archived: { data: null, timestamp: 0 }
+    });
     const buildingsCacheRef = useRef<Map<number, { data: Building[]; timestamp: number }>>(new Map());
 
     // Memoize static column definitions to prevent recreation on every render
@@ -73,32 +80,43 @@ const useBudgetBOQs = () => {
     ], []);
 
     const getProjectsList = useCallback(async (forceRefresh = false) => {
+        // Determine if we're in archive mode
+        const isArchiveMode = localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true";
+        const cacheKey = isArchiveMode ? "archived" : "normal";
+        
+        console.log("🔍 getProjectsList called:", { isArchiveMode, cacheKey, forceRefresh });
+        
         // Check cache first
         const now = Date.now();
-        const cache = projectsCacheRef.current;
+        const cache = projectsCacheRef.current[cacheKey];
 
         if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_DURATION) {
+            console.log("📦 Using cached data for:", cacheKey);
             setTableData(cache.data);
             return;
         }
 
+        console.log("🌐 Fetching fresh data for:", cacheKey);
         setLoading(true);
         try {
+            // The isArchive parameter will be automatically added by the API interceptor
             const data = await apiRequest<Project[]>({
                 endpoint: "Project/GetProjectsList",
                 method: "GET",
                 token: token ?? "",
             });
 
+            console.log("✅ Fetched projects:", { count: Array.isArray(data) ? data.length : 0, mode: cacheKey });
+
             if (data && Array.isArray(data)) {
                 // Sort by ID descending (latest first)
                 const sortedData = [...data].sort((a, b) => b.id - a.id);
                 setTableData(sortedData);
-                // Update cache
-                projectsCacheRef.current = { data: sortedData, timestamp: now };
+                // Update cache for the current mode
+                projectsCacheRef.current[cacheKey] = { data: sortedData, timestamp: now };
             } else {
                 setTableData([]);
-                projectsCacheRef.current = { data: [], timestamp: now };
+                projectsCacheRef.current[cacheKey] = { data: [], timestamp: now };
             }
         } catch (error) {
             console.error("Error fetching projects:", error);
@@ -149,8 +167,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                // Invalidate cache
-                projectsCacheRef.current = { data: null, timestamp: 0 };
+                // Invalidate both caches
+                projectsCacheRef.current.normal = { data: null, timestamp: 0 };
+                projectsCacheRef.current.archived = { data: null, timestamp: 0 };
                 await getProjectsList(true);
                 return { success: true };
             }
@@ -171,8 +190,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                // Invalidate cache
-                projectsCacheRef.current = { data: null, timestamp: 0 };
+                // Invalidate both caches
+                projectsCacheRef.current.normal = { data: null, timestamp: 0 };
+                projectsCacheRef.current.archived = { data: null, timestamp: 0 };
                 await getProjectsList(true);
                 return { success: true };
             }
@@ -192,8 +212,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                // Invalidate cache
-                projectsCacheRef.current = { data: null, timestamp: 0 };
+                // Invalidate both caches
+                projectsCacheRef.current.normal = { data: null, timestamp: 0 };
+                projectsCacheRef.current.archived = { data: null, timestamp: 0 };
                 buildingsCacheRef.current.delete(projectId);
                 await getProjectsList(true);
                 return { success: true };
@@ -230,8 +251,9 @@ const useBudgetBOQs = () => {
             });
 
             if (result && (result as any).success !== false) {
-                // Invalidate cache
-                projectsCacheRef.current = { data: null, timestamp: 0 };
+                // Invalidate both caches (archiving moves project between databases)
+                projectsCacheRef.current.normal = { data: null, timestamp: 0 };
+                projectsCacheRef.current.archived = { data: null, timestamp: 0 };
                 buildingsCacheRef.current.delete(projectId);
                 await getProjectsList(true);
                 return { success: true, message: "Project archived successfully" };

@@ -11,6 +11,7 @@ type ApiRequestParams = {
     body?: BodyInit | Record<string, unknown>;
     headers?: Record<string, string>;
     timeout?: number; // Timeout in milliseconds (default: 2 minutes)
+    skipArchiveParam?: boolean; // Skip adding isArchive parameter for specific requests
 };
 
 const handleUnauthorized = () => {
@@ -35,8 +36,20 @@ const apiRequest = async <T = any>({
     body,
     headers = {},
     timeout = 120000, // Default 2 minutes
+    skipArchiveParam = false,
 }: ApiRequestParams): Promise<T | { isSuccess: false; success: false; message: string; status?: number }> => {
-    const normalizedEndpoint = endpoint.replace(/^\//, "");
+    let normalizedEndpoint = endpoint.replace(/^\//, "");
+    
+    // Add isArchive query parameter if archive mode is enabled (unless explicitly skipped)
+    if (!skipArchiveParam) {
+        const isArchiveMode = localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true";
+        if (isArchiveMode) {
+            const separator = normalizedEndpoint.includes("?") ? "&" : "?";
+            normalizedEndpoint = `${normalizedEndpoint}${separator}isArchive=true`;
+            console.log("🔒 API Interceptor: Added isArchive=true to", normalizedEndpoint);
+        }
+    }
+    
     const url = `${ACTIVE_API_URL}${normalizedEndpoint}`;
 
     const headersInit: HeadersInit = {};

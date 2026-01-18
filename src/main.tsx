@@ -6,6 +6,7 @@ import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 
 import { AuthConfigProvider } from "@/contexts/auth";
+import { ArchiveProvider } from "@/contexts/archive";
 import { ConfigProvider } from "@/contexts/config";
 import { NavigationBlockerProvider } from "@/contexts/navigation-blocker";
 import { Router } from "@/router";
@@ -23,10 +24,12 @@ root.render(
             <BrowserRouter>
                 <ConfigProvider>
                     <AuthConfigProvider>
-                        <NavigationBlockerProvider>
-                            <Router />
-                            <Toaster richColors />
-                        </NavigationBlockerProvider>
+                        <ArchiveProvider>
+                            <NavigationBlockerProvider>
+                                <Router />
+                                <Toaster richColors />
+                            </NavigationBlockerProvider>
+                        </ArchiveProvider>
                     </AuthConfigProvider>
                 </ConfigProvider>
             </BrowserRouter>

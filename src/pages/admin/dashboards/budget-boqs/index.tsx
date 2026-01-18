@@ -11,6 +11,7 @@ import { Spreadsheet } from "@/components/Spreadsheet";
 import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { useDialog } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
+import { useArchive } from "@/contexts/archive";
 
 import BudgetBOQDialog from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-boqs";
@@ -30,6 +31,8 @@ const BudgetBOQs = () => {
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
+
+    const { isArchiveMode, setArchiveMode } = useArchive();
 
     const {
         tableData,
@@ -128,9 +131,11 @@ const BudgetBOQs = () => {
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
         if (location.pathname === "/dashboard/budget-BOQs") {
-            getProjectsList();
+            console.log("📍 Budget BOQs page effect triggered, isArchiveMode:", isArchiveMode);
+            // Force refresh when archive mode changes to bypass cache
+            getProjectsList(true);
         }
-    }, [location.pathname]);
+    }, [location.pathname, isArchiveMode, getProjectsList]);
 
     // Convert columns to SpreadsheetColumn format
     const spreadsheetColumns = useMemo((): SpreadsheetColumn<Project>[] => [
@@ -196,16 +201,19 @@ const BudgetBOQs = () => {
                 >
                     <Icon icon={editIcon} className="w-4 h-4" />
                 </button>
-                <button
-                    className="btn btn-ghost btn-xs text-warning hover:bg-warning/20"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchive(row);
-                    }}
-                    title="Archive"
-                >
-                    <Icon icon={archiveIcon} className="w-4 h-4" />
-                </button>
+                {/* Only show Archive button when NOT in archive mode */}
+                {!isArchiveMode && (
+                    <button
+                        className="btn btn-ghost btn-xs text-warning hover:bg-warning/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleArchive(row);
+                        }}
+                        title="Archive"
+                    >
+                        <Icon icon={archiveIcon} className="w-4 h-4" />
+                    </button>
+                )}
                 <button
                     className="btn btn-ghost btn-xs text-error hover:bg-error/20"
                     onClick={(e) => {
@@ -218,16 +226,28 @@ const BudgetBOQs = () => {
                 </button>
             </div>
         );
-    }, [openCreateDialog, handleArchive]);
+    }, [openCreateDialog, handleArchive, isArchiveMode]);
 
     // Handle row double click to navigate to edit
     const handleRowDoubleClick = useCallback((row: Project) => {
         openCreateDialog("Edit", row);
     }, [openCreateDialog]);
 
-    // Toolbar with Add button (no title)
+    // Toolbar with Add button and Archive checkbox (no title)
     const toolbar = useMemo(() => (
-        <div className="flex items-center justify-end w-full px-4 py-2">
+        <div className="flex items-center justify-end gap-3 w-full px-4 py-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm checkbox-primary"
+                    checked={isArchiveMode}
+                    onChange={(e) => {
+                        console.log("☑️ Checkbox changed to:", e.target.checked);
+                        setArchiveMode(e.target.checked);
+                    }}
+                />
+                <span className="text-sm">Show Archived Projects</span>
+            </label>
             <button
                 className="btn btn-primary btn-sm"
                 onClick={() => openCreateDialog("Add")}
@@ -236,7 +256,7 @@ const BudgetBOQs = () => {
                 Add Project
             </button>
         </div>
-    ), [openCreateDialog]);
+    ), [openCreateDialog, isArchiveMode, setArchiveMode]);
 
     return (
         <>
