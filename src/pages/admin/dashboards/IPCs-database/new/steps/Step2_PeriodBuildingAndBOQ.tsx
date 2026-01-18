@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
-import type { Vos, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
+import type { Vos, BoqIpcVM, VOBoqIpcVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
 import { CorrectionEntityType, isAdvancePaymentType } from "@/types/ipc";
 import { Icon } from "@iconify/react";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
 import dollarSignIcon from "@iconify/icons-lucide/dollar-sign";
 import xIcon from "@iconify/icons-lucide/x";
+import pencilIcon from "@iconify/icons-lucide/pencil";
+import downloadIcon from "@iconify/icons-lucide/download";
+import uploadIcon from "@iconify/icons-lucide/upload";
+import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
+import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import ExcelJS from "exceljs";
@@ -15,6 +20,9 @@ import { formatCurrency } from "@/utils/formatters";
 import { usePermissions } from "@/hooks/use-permissions";
 import CorrectPreviousValueModal from "../../components/CorrectPreviousValueModal";
 import CorrectionHistoryModal from "../../components/CorrectionHistoryModal";
+import PenaltyForm from "../../components/PenaltyForm";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 
 function cellValueToPrimitive(value: ExcelJS.CellValue): unknown {
     if (value === null || value === undefined) return "";
@@ -77,6 +85,9 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     // Advance Payment Modal State
     const [showAdvancePaymentModal, setShowAdvancePaymentModal] = useState(false);
     const [advancePaymentAutoOpened, setAdvancePaymentAutoOpened] = useState(false);
+
+    // Penalty Modal State (only visible in edit mode)
+    const [showPenaltyModal, setShowPenaltyModal] = useState(false);
 
     // Store the ORIGINAL cumulative when data loads (for edit mode calculation)
     // This allows us to calculate what was paid BEFORE this IPC
@@ -417,6 +428,17 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
     const handleInputChange = (field: string, value: string | number) => {
         setFormData({ [field]: value });
+    };
+
+    // Handle penalty save from the penalty modal
+    const handlePenaltySave = (penaltyData: { penalty: number; previousPenalty: number; reason: string }) => {
+        setFormData({
+            penalty: penaltyData.penalty,
+            previousPenalty: penaltyData.previousPenalty,
+            penaltyReason: penaltyData.reason,
+        });
+        setShowPenaltyModal(false);
+        toaster.success("Penalty information updated");
     };
 
     // Handle quantity input change - updates percentage and amounts automatically
@@ -1333,6 +1355,521 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
             : 0;
     }, [activeVOBuilding]);
 
+    // ==================== Spreadsheet Column Definitions ====================
+
+    /**
+     * Contract BOQ Spreadsheet columns - using the new Spreadsheet component
+     * Editable columns: actualQte, cumulQte, cumulPercent, cumulMaterialPercentage, cumulDeductionPercentage
+     */
+    const contractBOQColumns = useMemo((): SpreadsheetColumn<BoqIpcVM>[] => [
+        {
+            key: "no",
+            label: "N°",
+            width: 60,
+            align: "center",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => <span className="font-mono text-xs">{value || ''}</span>
+        },
+        {
+            key: "key",
+            label: "Item",
+            width: 200,
+            align: "left",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <div className="truncate text-xs" title={value || ''}>{value || ''}</div>
+            )
+        },
+        {
+            key: "unite",
+            label: "Unit",
+            width: 60,
+            align: "center",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => <span className="text-xs">{value || ''}</span>
+        },
+        {
+            key: "qte",
+            label: "Contract Qty",
+            width: 90,
+            align: "right",
+            sortable: true,
+            render: (value: number) => <span className="text-xs font-medium">{value || ''}</span>
+        },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (value: number) => <span className="text-xs">{formatCurrency(value)}</span>
+        },
+        {
+            key: "totalAmount",
+            label: "Total Amt",
+            width: 110,
+            align: "right",
+            sortable: true,
+            render: (_value: number, row: BoqIpcVM) => (
+                <span className="text-xs font-medium">{formatCurrency((row.qte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "precedQte",
+            label: "Prev Qty",
+            width: 90,
+            align: "right",
+            sortable: true,
+            render: (value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                return (
+                    <div className="flex items-center justify-end gap-1 text-xs">
+                        <span>{value || ''}</span>
+                        {canCorrectPreviousValues && !isHeaderRow && row.id && activeBuilding && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openCorrectionModal(
+                                        CorrectionEntityType.ContractBoqItem,
+                                        row.id,
+                                        value || 0,
+                                        `${row.no || ''} - ${row.key || 'BOQ Item'}`
+                                    );
+                                }}
+                                className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                title="Correct previous quantity (audit trail)"
+                            >
+                                <Icon icon={pencilIcon} className="text-amber-500 size-3" />
+                            </button>
+                        )}
+                    </div>
+                );
+            }
+        },
+        {
+            key: "actualQte",
+            label: "Actual Qty",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-green-50/50 dark:bg-green-900/10",
+            render: (value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                return <span className="text-xs">{value || ''}</span>;
+            }
+        },
+        {
+            key: "cumulQte",
+            label: "Cumul Qty",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-purple-50/50 dark:bg-purple-900/10",
+            render: (_value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                return <span className="text-xs">{cumulQte || ''}</span>;
+            }
+        },
+        {
+            key: "cumulPercent",
+            label: "Cumul %",
+            width: 80,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-blue-50/50 dark:bg-blue-900/10",
+            render: (_value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow || row.qte === 0) return <span className="text-xs text-base-content/30">-</span>;
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                const cumulPercent = (cumulQte / row.qte) * 100;
+                return <span className="text-xs">{Math.round(cumulPercent * 100) / 100}%</span>;
+            }
+        },
+        {
+            key: "precedAmount",
+            label: "Prev Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number, row: BoqIpcVM) => (
+                <span className="text-xs">{formatCurrency((row.precedQte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "actualAmount",
+            label: "Actual Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number, row: BoqIpcVM) => (
+                <span className="text-xs font-semibold text-green-600">{formatCurrency((row.actualQte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "cumulAmount",
+            label: "Cumul Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number, row: BoqIpcVM) => {
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                return <span className="text-xs font-medium">{formatCurrency(cumulQte * (row.unitPrice || 0))}</span>;
+            }
+        },
+        {
+            key: "cumulMaterialPercentage",
+            label: "Mat. Supply %",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-orange-50/50 dark:bg-orange-900/10",
+            render: (value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                return <span className="text-xs">{value ? `${value}%` : ''}</span>;
+            }
+        },
+        {
+            key: "cumulDeductionPercentage",
+            label: "Deduction %",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-red-50/50 dark:bg-red-900/10",
+            render: (value: number, row: BoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                return <span className="text-xs">{value ? `${value}%` : ''}</span>;
+            }
+        }
+    ], [canCorrectPreviousValues, activeBuilding]);
+
+    /**
+     * VO BOQ Spreadsheet columns
+     */
+    const voBOQColumns = useMemo((): SpreadsheetColumn<VOBoqIpcVM>[] => [
+        {
+            key: "no",
+            label: "N°",
+            width: 60,
+            align: "center",
+            sortable: true,
+            filterable: true,
+            render: (value: string | null) => <span className="font-mono text-xs">{value || ''}</span>
+        },
+        {
+            key: "key",
+            label: "Item",
+            width: 200,
+            align: "left",
+            sortable: true,
+            filterable: true,
+            render: (value: string | null) => (
+                <div className="truncate text-xs" title={value || ''}>{value || ''}</div>
+            )
+        },
+        {
+            key: "unite",
+            label: "Unit",
+            width: 60,
+            align: "center",
+            sortable: true,
+            filterable: true,
+            render: (value: string | null) => <span className="text-xs">{value || ''}</span>
+        },
+        {
+            key: "qte",
+            label: "VO Qty",
+            width: 90,
+            align: "right",
+            sortable: true,
+            render: (value: number) => <span className="text-xs font-medium">{value || ''}</span>
+        },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (value: number) => <span className="text-xs">{formatCurrency(value)}</span>
+        },
+        {
+            key: "totalAmount",
+            label: "Total Amt",
+            width: 110,
+            align: "right",
+            sortable: true,
+            render: (_value: number | undefined, row: VOBoqIpcVM) => (
+                <span className="text-xs font-medium">{formatCurrency((row.qte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "precedQte",
+            label: "Prev Qty",
+            width: 90,
+            align: "right",
+            sortable: true,
+            render: (value: number, row: VOBoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                return (
+                    <div className="flex items-center justify-end gap-1 text-xs">
+                        <span>{value || ''}</span>
+                        {canCorrectPreviousValues && !isHeaderRow && row.id && activeVO && activeVOBuilding && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    openCorrectionModal(
+                                        CorrectionEntityType.ContractVo,
+                                        row.id,
+                                        value || 0,
+                                        `VO ${activeVO.voNumber} - ${row.no || ''} - ${row.key || 'VO Item'}`
+                                    );
+                                }}
+                                className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                                title="Correct previous quantity (audit trail)"
+                            >
+                                <Icon icon={pencilIcon} className="text-amber-500 size-3" />
+                            </button>
+                        )}
+                    </div>
+                );
+            }
+        },
+        {
+            key: "actualQte",
+            label: "Actual Qty",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-green-50/50 dark:bg-green-900/10",
+            render: (value: number, row: VOBoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                return <span className="text-xs">{value || ''}</span>;
+            }
+        },
+        {
+            key: "cumulQte",
+            label: "Cumul Qty",
+            width: 90,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-purple-50/50 dark:bg-purple-900/10",
+            render: (_value: number | undefined, row: VOBoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                return <span className="text-xs">{cumulQte || ''}</span>;
+            }
+        },
+        {
+            key: "cumulPercent",
+            label: "Cumul %",
+            width: 80,
+            align: "right",
+            editable: true,
+            type: "number",
+            sortable: true,
+            cellClassName: () => "bg-blue-50/50 dark:bg-blue-900/10",
+            render: (_value: number | undefined, row: VOBoqIpcVM) => {
+                const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+                if (isHeaderRow || row.qte === 0) return <span className="text-xs text-base-content/30">-</span>;
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                const cumulPercent = (cumulQte / row.qte) * 100;
+                return <span className="text-xs">{Math.round(cumulPercent * 100) / 100}%</span>;
+            }
+        },
+        {
+            key: "precedAmount",
+            label: "Prev Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number | undefined, row: VOBoqIpcVM) => (
+                <span className="text-xs">{formatCurrency((row.precedQte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "actualAmount",
+            label: "Actual Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number | undefined, row: VOBoqIpcVM) => (
+                <span className="text-xs font-semibold text-green-600">{formatCurrency((row.actualQte || 0) * (row.unitPrice || 0))}</span>
+            )
+        },
+        {
+            key: "cumulAmount",
+            label: "Cumul Amt",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (_value: number | undefined, row: VOBoqIpcVM) => {
+                const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
+                return <span className="text-xs font-medium">{formatCurrency(cumulQte * (row.unitPrice || 0))}</span>;
+            }
+        }
+    ], [canCorrectPreviousValues, activeVO, activeVOBuilding]);
+
+    /**
+     * Handle Contract BOQ cell changes from Spreadsheet component
+     */
+    const handleContractBOQCellChange = useCallback((
+        rowIndex: number,
+        columnKey: string,
+        value: any,
+        row: BoqIpcVM
+    ) => {
+        if (!activeBuilding) return;
+
+        const numValue = parseFloat(value) || 0;
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        if (isHeaderRow) return;
+
+        switch (columnKey) {
+            case 'actualQte':
+                handleBOQQuantityChange(activeBuilding.id, row.id, numValue);
+                break;
+            case 'cumulQte':
+                handleBOQCumulQtyChange(activeBuilding.id, row.id, numValue);
+                break;
+            case 'cumulPercent':
+                handleBOQCumulPercentChange(activeBuilding.id, row.id, numValue);
+                break;
+            case 'cumulMaterialPercentage':
+                handleBOQMaterialPercentChange(activeBuilding.id, row.id, numValue);
+                break;
+            case 'cumulDeductionPercentage':
+                handleBOQDeductionPercentChange(activeBuilding.id, row.id, numValue);
+                break;
+        }
+    }, [activeBuilding, handleBOQQuantityChange, handleBOQCumulQtyChange, handleBOQCumulPercentChange, handleBOQMaterialPercentChange, handleBOQDeductionPercentChange]);
+
+    /**
+     * Handle VO BOQ cell changes from Spreadsheet component
+     */
+    const handleVOBOQCellChange = useCallback((
+        rowIndex: number,
+        columnKey: string,
+        value: any,
+        row: VOBoqIpcVM
+    ) => {
+        if (!activeVO || !activeVOBuilding) return;
+
+        const numValue = parseFloat(value) || 0;
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        if (isHeaderRow) return;
+
+        switch (columnKey) {
+            case 'actualQte':
+                handleVOBOQQuantityChange(activeVO.id, activeVOBuilding.id, row.id, numValue);
+                break;
+            case 'cumulQte':
+                handleVOBOQCumulQtyChange(activeVO.id, activeVOBuilding.id, row.id, numValue);
+                break;
+            case 'cumulPercent':
+                handleVOBOQCumulPercentChange(activeVO.id, activeVOBuilding.id, row.id, numValue);
+                break;
+        }
+    }, [activeVO, activeVOBuilding, handleVOBOQQuantityChange, handleVOBOQCumulQtyChange, handleVOBOQCumulPercentChange]);
+
+    /**
+     * Check if Contract BOQ cell is editable (header rows are not editable)
+     */
+    const isContractBOQCellEditable = useCallback((row: BoqIpcVM, column: SpreadsheetColumn<BoqIpcVM>, _index: number) => {
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        if (isHeaderRow) return false;
+        // Cumul % is not editable if qte is 0
+        if (column.key === 'cumulPercent' && row.qte === 0) return false;
+        return column.editable === true;
+    }, []);
+
+    /**
+     * Check if VO BOQ cell is editable (header rows are not editable)
+     */
+    const isVOBOQCellEditable = useCallback((row: VOBoqIpcVM, column: SpreadsheetColumn<VOBoqIpcVM>, _index: number) => {
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        if (isHeaderRow) return false;
+        // Cumul % is not editable if qte is 0
+        if (column.key === 'cumulPercent' && row.qte === 0) return false;
+        return column.editable === true;
+    }, []);
+
+    /**
+     * Row class name for Contract BOQ - bold for header rows
+     */
+    const getContractBOQRowClassName = useCallback((row: BoqIpcVM, _index: number) => {
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        return isHeaderRow ? 'font-bold bg-base-200' : undefined;
+    }, []);
+
+    /**
+     * Row class name for VO BOQ - bold for header rows
+     */
+    const getVOBOQRowClassName = useCallback((row: VOBoqIpcVM, _index: number) => {
+        const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
+        return isHeaderRow ? 'font-bold bg-base-200' : undefined;
+    }, []);
+
+
+    /**
+     * Contract BOQ toolbar
+     */
+    const contractBOQToolbar = useMemo(() => (
+        <div className="flex items-center gap-1">
+            <button
+                type="button"
+                onClick={handleExportBOQ}
+                className="btn btn-xs bg-green-600 hover:bg-green-700 text-white border-0"
+                title="Export BOQ to Excel"
+            >
+                <Icon icon={downloadIcon} className="size-3.5" />
+                Export
+            </button>
+            <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="btn btn-xs bg-blue-600 hover:bg-blue-700 text-white border-0"
+                title="Import BOQ from Excel"
+            >
+                <Icon icon={uploadIcon} className="size-3.5" />
+                Import
+            </button>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportBOQ}
+                className="hidden"
+            />
+        </div>
+    ), [handleExportBOQ, handleImportBOQ]);
+
+    // ==================== End Spreadsheet Column Definitions ====================
+
     // In Edit mode, selectedContract might not be set, but formData has the contract data
     const isEditMode = formData.id && formData.id > 0;
     if (!selectedContract && !isEditMode) {
@@ -1390,6 +1927,22 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                             {thisIpcAdvanceAmount > 0 && (
                                 <span className="badge badge-sm badge-ghost ml-1">
                                     {formatCurrency(thisIpcAdvanceAmount)}
+                                </span>
+                            )}
+                        </button>
+                    )}
+                    {/* Penalties Button - Shows only in edit mode */}
+                    {formData.id && formData.id > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setShowPenaltyModal(true)}
+                            className={`btn btn-sm ${formData.penalty > 0 ? 'btn-error' : 'btn-outline btn-error'} gap-1`}
+                        >
+                            <Icon icon={alertTriangleIcon} className="size-4" />
+                            Penalties
+                            {formData.penalty > 0 && (
+                                <span className="badge badge-sm badge-ghost ml-1">
+                                    {formatCurrency(formData.penalty)}
                                 </span>
                             )}
                         </button>
@@ -1514,498 +2067,170 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 </div>
             )}
 
-            {/* BOQ Table - Full Page View (Legacy SAM Pattern) */}
+            {/* BOQ Spreadsheet - Contract BOQ */}
             {viewMode === "contract" && activeBuilding && (
-                <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
-                    {/* Building Header */}
-                    <div className="bg-base-200 p-3 border-b border-base-300">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Icon icon={buildingIcon} className="text-blue-600 dark:text-blue-400 size-5" />
-                                <h3 className="font-semibold text-base-content">{activeBuilding.buildingName}</h3>
-                                <span className="text-sm text-base-content/60">• Sheet: {activeBuilding.sheetName}</span>
-                                <span className="text-sm text-base-content/60">• {(activeBuilding.boqsContract || []).length} items</span>
-                            </div>
+                <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 380px)', minHeight: '400px' }}>
+                    {/* Spreadsheet with toolbarLeft for building selector */}
+                    <Spreadsheet<BoqIpcVM>
+                        data={activeBuilding.boqsContract || []}
+                        columns={contractBOQColumns}
+                        mode="edit"
+                        emptyMessage="No BOQ items for this building"
+                        persistKey={`ipc-contract-boq-${activeBuilding.id}`}
+                        rowHeight={32}
+                        onCellChange={handleContractBOQCellChange}
+                        isCellEditable={isContractBOQCellEditable}
+                        getRowId={(row) => row.id}
+                        rowClassName={getContractBOQRowClassName}
+                        allowKeyboardNavigation
+                        allowColumnResize
+                        allowSorting={false}
+                        allowFilters
+                        hideFormulaBar
+                        toolbarLeft={
                             <div className="flex items-center gap-3">
-                                {/* Excel Import/Export Buttons */}
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={handleExportBOQ}
-                                        className="btn btn-xs bg-green-600 hover:bg-green-700 text-white border-0"
-                                        title="Export BOQ to Excel"
-                                    >
-                                        <span className="iconify lucide--download size-3.5"></span>
-                                        Export
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="btn btn-xs bg-blue-600 hover:bg-blue-700 text-white border-0"
-                                        title="Import BOQ from Excel"
-                                    >
-                                        <span className="iconify lucide--upload size-3.5"></span>
-                                        Import
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".xlsx,.xls"
-                                        onChange={handleImportBOQ}
-                                        className="hidden"
-                                    />
+                                <Icon icon={buildingIcon} className="text-blue-600 dark:text-blue-400 size-4" />
+                                {safeBuildings.length > 1 ? (
+                                    <div className="relative">
+                                        <select
+                                            value={activeBuildingId || ''}
+                                            onChange={(e) => setActiveBuildingId(Number(e.target.value))}
+                                            className="select select-bordered select-sm min-w-[200px] pr-8 font-medium text-sm"
+                                        >
+                                            {safeBuildings.map(building => (
+                                                <option key={building.id} value={building.id}>
+                                                    {building.buildingName} | {building.sheetName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <Icon
+                                            icon={chevronDownIcon}
+                                            className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-base-content/50"
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="font-medium text-sm">{activeBuilding.buildingName} | {activeBuilding.sheetName}</span>
+                                )}
+                                <span className="text-xs text-base-content/50">
+                                    {(activeBuilding.boqsContract || []).length} items
+                                </span>
+                            </div>
+                        }
+                        toolbar={contractBOQToolbar}
+                        summaryRow={() => (
+                            <div className="flex items-center justify-between px-4 py-2 font-semibold text-xs">
+                                <span>Totals</span>
+                                <div className="flex gap-6">
+                                    <span>Contract: {formatCurrency(contractBOQContractTotal)}</span>
+                                    <span>Previous: {formatCurrency(contractBOQPrecedTotal)}</span>
+                                    <span className="text-green-600">Actual: {formatCurrency(activeBuildingTotal)}</span>
+                                    <span>Cumulative: {formatCurrency(contractBOQCumulTotal)}</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* BOQ Table */}
-                    <div className="overflow-x-auto">
-                        <table className="table table-xs w-full">
-                            <thead className="bg-base-200 sticky top-0">
-                                <tr>
-                                    <th className="text-left w-16">N°</th>
-                                    <th className="text-left min-w-[200px]">Item</th>
-                                    <th className="text-center w-16">Unit</th>
-                                    <th className="text-right w-20">Contract Qty</th>
-                                    <th className="text-right w-20">Unit Price</th>
-                                    <th className="text-right w-24">Total Amt</th>
-                                    <th className="text-right w-20">Prev Qty</th>
-                                    <th className="text-right w-20 bg-green-50 dark:bg-green-900/20" title="Actual quantity this period">Actual Qty</th>
-                                    <th className="text-right w-20 bg-purple-50 dark:bg-purple-900/20" title="Cumulative quantity to date">Cumul Qty</th>
-                                    <th className="text-right w-16 bg-blue-50 dark:bg-blue-900/20" title="Cumulative percentage - editable">Cumul %</th>
-                                    <th className="text-right w-20">Prev Amt</th>
-                                    <th className="text-right w-20">Actual Amt</th>
-                                    <th className="text-right w-20">Cumul Amt</th>
-                                    <th className="text-right w-16 bg-orange-50 dark:bg-orange-900/20" title={`Material Supply % (max: ${formData.materialSupply || 0}%)`}>Mat. Supply %</th>
-                                    <th className="text-right w-16 bg-red-50 dark:bg-red-900/20" title="Deduction on Material Supply %">Deduction %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(activeBuilding.boqsContract || []).map(boq => {
-                                    const actualQte = boq.actualQte || 0;
-                                    const precedQte = boq.precedQte || 0;
-                                    const cumulQte = precedQte + actualQte;
-                                    // Calculate cumulative percentage for display
-                                    const cumulPercent = boq.qte === 0 ? 0 : (cumulQte / boq.qte) * 100;
-
-                                    // Bold style for header rows (qte=0 and pu=0 like legacy)
-                                    const isHeaderRow = boq.qte === 0 && boq.unitPrice === 0;
-
-                                    return (
-                                        <tr key={boq.id} className={`hover:bg-base-200/50 ${isHeaderRow ? 'font-bold bg-base-200' : ''}`}>
-                                            <td className="font-mono text-xs">{boq.no}</td>
-                                            <td className="text-xs">
-                                                <div className="truncate max-w-[200px]" title={boq.key}>{boq.key}</div>
-                                            </td>
-                                            <td className="text-center text-xs">{boq.unite}</td>
-                                            <td className="text-right text-xs font-medium">{boq.qte || ''}</td>
-                                            <td className="text-right text-xs">{formatCurrency(boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-medium">{formatCurrency(boq.qte * boq.unitPrice)}</td>
-                                            {/* Prev Qty - with correction button for authorized users */}
-                                            <td className="text-right text-xs">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span>{precedQte || ''}</span>
-                                                    {canCorrectPreviousValues && !isHeaderRow && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openCorrectionModal(
-                                                                CorrectionEntityType.ContractBoqItem,
-                                                                boq.id,
-                                                                precedQte,
-                                                                `${boq.no || ''} - ${boq.key || 'BOQ Item'}`
-                                                            )}
-                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
-                                                            title="Correct previous quantity (audit trail)"
-                                                        >
-                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {/* Actual Qty Input - Green highlight */}
-                                            <td className="text-right bg-green-50/50 dark:bg-green-900/10">
-                                                <input
-                                                    type="number"
-                                                    value={actualQte || ''}
-                                                    onChange={(e) => handleBOQQuantityChange(
-                                                        activeBuilding.id,
-                                                        boq.id,
-                                                        parseFloat(e.target.value) || 0
-                                                    )}
-                                                    className="input input-xs w-16 text-right bg-base-100 border-green-300 dark:border-green-700"
-                                                    step="any"
-                                                    min="0"
-                                                    disabled={isHeaderRow}
-                                                />
-                                            </td>
-                                            {/* Cumul Qty Input - Purple highlight (editable with blur validation) */}
-                                            <td className="text-right bg-purple-50/50 dark:bg-purple-900/10">
-                                                <input
-                                                    type="number"
-                                                    value={
-                                                        pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'cumulQty')]
-                                                        ?? (cumulQte || '')
-                                                    }
-                                                    onChange={(e) => handlePendingInputChange(
-                                                        getContractInputKey(activeBuilding.id, boq.id, 'cumulQty'),
-                                                        e.target.value
-                                                    )}
-                                                    onBlur={() => handleCumulQtyBlur(activeBuilding.id, boq.id)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                    className="input input-xs w-16 text-right bg-base-100 border-purple-300 dark:border-purple-700"
-                                                    step="any"
-                                                    disabled={isHeaderRow}
-                                                />
-                                            </td>
-                                            {/* Cumul % Input - Blue highlight (editable with blur validation) */}
-                                            <td className="text-right bg-blue-50/50 dark:bg-blue-900/10">
-                                                <div className="flex items-center justify-end gap-0.5">
-                                                    <input
-                                                        type="number"
-                                                        value={
-                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'cumulPercent')]
-                                                            ?? (cumulPercent ? Math.round(cumulPercent * 100) / 100 : '')
-                                                        }
-                                                        onChange={(e) => handlePendingInputChange(
-                                                            getContractInputKey(activeBuilding.id, boq.id, 'cumulPercent'),
-                                                            e.target.value
-                                                        )}
-                                                        onBlur={() => handleCumulPercentBlur(activeBuilding.id, boq.id)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                        className="input input-xs w-14 text-right bg-base-100 border-blue-300 dark:border-blue-700"
-                                                        step="any"
-                                                        disabled={isHeaderRow || boq.qte === 0}
-                                                    />
-                                                    <span className="text-xs text-base-content/50">%</span>
-                                                </div>
-                                            </td>
-                                            <td className="text-right text-xs">{formatCurrency(precedQte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-semibold text-green-600">{formatCurrency(actualQte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-medium">{formatCurrency(cumulQte * boq.unitPrice)}</td>
-                                            {/* Material Supply % Input - Orange highlight */}
-                                            <td className="text-right bg-orange-50/50 dark:bg-orange-900/10">
-                                                <div className="flex items-center justify-end gap-0.5">
-                                                    <input
-                                                        type="number"
-                                                        value={
-                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'materialPercent')]
-                                                            ?? (boq.cumulMaterialPercentage || '')
-                                                        }
-                                                        onChange={(e) => handlePendingInputChange(
-                                                            getContractInputKey(activeBuilding.id, boq.id, 'materialPercent'),
-                                                            e.target.value
-                                                        )}
-                                                        onBlur={() => handleMaterialPercentBlur(activeBuilding.id, boq.id)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                        className="input input-xs w-14 text-right bg-base-100 border-orange-300 dark:border-orange-700"
-                                                        step="any"
-                                                        min="0"
-                                                        max={formData.materialSupply || 100}
-                                                        disabled={isHeaderRow}
-                                                    />
-                                                    <span className="text-xs text-base-content/50">%</span>
-                                                </div>
-                                            </td>
-                                            {/* Deduction % Input - Red highlight */}
-                                            <td className="text-right bg-red-50/50 dark:bg-red-900/10">
-                                                <div className="flex items-center justify-end gap-0.5">
-                                                    <input
-                                                        type="number"
-                                                        value={
-                                                            pendingInputs[getContractInputKey(activeBuilding.id, boq.id, 'deductionPercent')]
-                                                            ?? (boq.cumulDeductionPercentage || '')
-                                                        }
-                                                        onChange={(e) => handlePendingInputChange(
-                                                            getContractInputKey(activeBuilding.id, boq.id, 'deductionPercent'),
-                                                            e.target.value
-                                                        )}
-                                                        onBlur={() => handleDeductionPercentBlur(activeBuilding.id, boq.id)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                        className="input input-xs w-14 text-right bg-base-100 border-red-300 dark:border-red-700"
-                                                        step="any"
-                                                        min="0"
-                                                        max="100"
-                                                        disabled={isHeaderRow}
-                                                    />
-                                                    <span className="text-xs text-base-content/50">%</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            {/* Totals Row - uses memoized values to avoid recalculation */}
-                            <tfoot className="bg-base-200 border-t-2 border-base-300">
-                                <tr className="font-semibold">
-                                    <td colSpan={5} className="text-right">Totals:</td>
-                                    <td className="text-right">
-                                        {formatCurrency(contractBOQContractTotal)}
-                                    </td>
-                                    <td className="text-right"></td>
-                                    <td className="text-right bg-green-50/50 dark:bg-green-900/10"></td>
-                                    <td className="text-right bg-purple-50/50 dark:bg-purple-900/10"></td>
-                                    <td className="text-right bg-blue-50/50 dark:bg-blue-900/10"></td>
-                                    <td className="text-right">
-                                        {formatCurrency(contractBOQPrecedTotal)}
-                                    </td>
-                                    <td className="text-right text-green-600">
-                                        {formatCurrency(activeBuildingTotal)}
-                                    </td>
-                                    <td className="text-right">
-                                        {formatCurrency(contractBOQCumulTotal)}
-                                    </td>
-                                    <td className="text-right bg-orange-50/50 dark:bg-orange-900/10"></td>
-                                    <td className="text-right bg-red-50/50 dark:bg-red-900/10"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                        )}
+                    />
                 </div>
             )}
 
-            {/* VO BOQ Table */}
+            {/* VO BOQ Spreadsheet */}
             {viewMode === "vo" && activeVO && activeVOBuilding && (
-                <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
-                    {/* VO Header */}
-                    <div className="bg-purple-50 dark:bg-purple-900/20 p-3 border-b border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="iconify lucide--file-plus-2 text-purple-600 dark:text-purple-400 size-5"></span>
-                                <h3 className="font-semibold text-purple-600 dark:text-purple-400">{activeVO.voNumber}</h3>
-                                <span className="text-sm text-purple-600/70 dark:text-purple-400/70">• {activeVOBuilding.buildingName}</span>
-                                <span className="text-sm text-purple-600/70 dark:text-purple-400/70">• {(activeVOBuilding.boqs || []).length} items</span>
+                <div className="bg-base-100 border border-purple-300 dark:border-purple-800 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 380px)', minHeight: '400px' }}>
+                    {/* Spreadsheet with toolbarLeft for VO/Building selector */}
+                    <Spreadsheet<VOBoqIpcVM>
+                        data={activeVOBuilding.boqs || []}
+                        columns={voBOQColumns}
+                        mode="edit"
+                        emptyMessage="No VO BOQ items for this building"
+                        persistKey={`ipc-vo-boq-${activeVO.id}-${activeVOBuilding.id}`}
+                        rowHeight={32}
+                        onCellChange={handleVOBOQCellChange}
+                        isCellEditable={isVOBOQCellEditable}
+                        getRowId={(row) => row.id}
+                        rowClassName={getVOBOQRowClassName}
+                        allowKeyboardNavigation
+                        allowColumnResize
+                        allowSorting={false}
+                        allowFilters
+                        hideFormulaBar
+                        toolbarLeft={
+                            <div className="flex items-center gap-3">
+                                <span className="iconify lucide--file-plus-2 text-purple-600 dark:text-purple-400 size-4"></span>
+                                {/* VO Selector */}
+                                {safeVOs.length > 1 ? (
+                                    <div className="relative">
+                                        <select
+                                            value={activeVOId || ''}
+                                            onChange={(e) => {
+                                                const voId = Number(e.target.value);
+                                                setActiveVOId(voId);
+                                                const vo = safeVOs.find(v => v.id === voId);
+                                                if (vo && vo.buildings.length > 0) {
+                                                    setActiveVOBuildingId(vo.buildings[0].id);
+                                                }
+                                            }}
+                                            className="select select-bordered select-sm min-w-[120px] pr-8 font-medium text-sm bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
+                                        >
+                                            {safeVOs.map(vo => (
+                                                <option key={vo.id} value={vo.id}>
+                                                    {vo.voNumber}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <Icon
+                                            icon={chevronDownIcon}
+                                            className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-purple-400"
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="font-medium text-sm text-purple-600 dark:text-purple-400">{activeVO.voNumber}</span>
+                                )}
+                                {/* Building Selector */}
+                                {activeVO.buildings.length > 1 ? (
+                                    <div className="relative">
+                                        <select
+                                            value={activeVOBuildingId || ''}
+                                            onChange={(e) => setActiveVOBuildingId(Number(e.target.value))}
+                                            className="select select-bordered select-sm min-w-[180px] pr-8 font-medium text-sm bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
+                                        >
+                                            {activeVO.buildings.map(building => (
+                                                <option key={building.id} value={building.id}>
+                                                    {building.buildingName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <Icon
+                                            icon={chevronDownIcon}
+                                            className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-purple-400"
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className="text-sm text-purple-600/70 dark:text-purple-400/70">| {activeVOBuilding.buildingName}</span>
+                                )}
+                                <span className="text-xs text-purple-400">
+                                    {(activeVOBuilding.boqs || []).length} items
+                                </span>
                             </div>
+                        }
+                        toolbar={
                             <div className="text-sm font-semibold text-purple-600 dark:text-purple-400">
                                 VO Building Total: {formatCurrency(activeVOBuildingTotal)}
                             </div>
-                        </div>
-                    </div>
-
-                    {/* VO BOQ Table */}
-                    <div className="overflow-x-auto">
-                        <table className="table table-xs w-full">
-                            <thead className="bg-base-200 sticky top-0">
-                                <tr>
-                                    <th className="text-left w-16">N°</th>
-                                    <th className="text-left min-w-[200px]">Item</th>
-                                    <th className="text-center w-16">Unit</th>
-                                    <th className="text-right w-20">VO Qty</th>
-                                    <th className="text-right w-20">Unit Price</th>
-                                    <th className="text-right w-24">Total Amt</th>
-                                    <th className="text-right w-20">Prev Qty</th>
-                                    <th className="text-right w-20 bg-green-50 dark:bg-green-900/20" title="Actual quantity this period">Actual Qty</th>
-                                    <th className="text-right w-20 bg-purple-50 dark:bg-purple-900/20" title="Cumulative quantity to date">Cumul Qty</th>
-                                    <th className="text-right w-16 bg-blue-50 dark:bg-blue-900/20" title="Cumulative percentage - editable">Cumul %</th>
-                                    <th className="text-right w-20">Prev Amt</th>
-                                    <th className="text-right w-20">Actual Amt</th>
-                                    <th className="text-right w-20">Cumul Amt</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(activeVOBuilding.boqs || []).map(boq => {
-                                    const actualQte = boq.actualQte || 0;
-                                    const precedQte = boq.precedQte || 0;
-                                    const cumulQte = precedQte + actualQte;
-                                    const cumulPercent = boq.qte === 0 ? 0 : (cumulQte / boq.qte) * 100;
-                                    const isHeaderRow = boq.qte === 0 && boq.unitPrice === 0;
-
-                                    return (
-                                        <tr key={boq.id} className={`hover:bg-base-200/50 ${isHeaderRow ? 'font-bold bg-base-200' : ''}`}>
-                                            <td className="font-mono text-xs">{boq.no}</td>
-                                            <td className="text-xs">
-                                                <div className="truncate max-w-[200px]" title={boq.key || ''}>{boq.key}</div>
-                                            </td>
-                                            <td className="text-center text-xs">{boq.unite}</td>
-                                            <td className="text-right text-xs font-medium">{boq.qte || ''}</td>
-                                            <td className="text-right text-xs">{formatCurrency(boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-medium">{formatCurrency(boq.qte * boq.unitPrice)}</td>
-                                            {/* Prev Qty - with correction button for authorized users */}
-                                            <td className="text-right text-xs">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span>{precedQte || ''}</span>
-                                                    {canCorrectPreviousValues && !isHeaderRow && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openCorrectionModal(
-                                                                CorrectionEntityType.ContractVo,
-                                                                boq.id,
-                                                                precedQte,
-                                                                `VO ${activeVO.voNumber} - ${boq.no || ''} - ${boq.key || 'VO Item'}`
-                                                            )}
-                                                            className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
-                                                            title="Correct previous quantity (audit trail)"
-                                                        >
-                                                            <span className="iconify lucide--pencil text-amber-500 size-3"></span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {/* Actual Qty Input - Green highlight */}
-                                            <td className="text-right bg-green-50/50 dark:bg-green-900/10">
-                                                <input
-                                                    type="number"
-                                                    value={actualQte || ''}
-                                                    onChange={(e) => handleVOBOQQuantityChange(
-                                                        activeVO.id,
-                                                        activeVOBuilding.id,
-                                                        boq.id,
-                                                        parseFloat(e.target.value) || 0
-                                                    )}
-                                                    className="input input-xs w-16 text-right bg-base-100 border-green-300 dark:border-green-700"
-                                                    step="any"
-                                                    min="0"
-                                                    disabled={isHeaderRow}
-                                                />
-                                            </td>
-                                            {/* Cumul Qty Input - Purple highlight (editable with blur validation) */}
-                                            <td className="text-right bg-purple-50/50 dark:bg-purple-900/10">
-                                                <input
-                                                    type="number"
-                                                    value={
-                                                        pendingInputs[getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulQty')]
-                                                        ?? (cumulQte || '')
-                                                    }
-                                                    onChange={(e) => handlePendingInputChange(
-                                                        getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulQty'),
-                                                        e.target.value
-                                                    )}
-                                                    onBlur={() => handleVOCumulQtyBlur(activeVO.id, activeVOBuilding.id, boq.id)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                    className="input input-xs w-16 text-right bg-base-100 border-purple-300 dark:border-purple-700"
-                                                    step="any"
-                                                    disabled={isHeaderRow}
-                                                />
-                                            </td>
-                                            {/* Cumul % Input - Blue highlight (editable with blur validation) */}
-                                            <td className="text-right bg-blue-50/50 dark:bg-blue-900/10">
-                                                <div className="flex items-center justify-end gap-0.5">
-                                                    <input
-                                                        type="number"
-                                                        value={
-                                                            pendingInputs[getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulPercent')]
-                                                            ?? (cumulPercent ? Math.round(cumulPercent * 100) / 100 : '')
-                                                        }
-                                                        onChange={(e) => handlePendingInputChange(
-                                                            getVOInputKey(activeVO.id, activeVOBuilding.id, boq.id, 'cumulPercent'),
-                                                            e.target.value
-                                                        )}
-                                                        onBlur={() => handleVOCumulPercentBlur(activeVO.id, activeVOBuilding.id, boq.id)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                        className="input input-xs w-14 text-right bg-base-100 border-blue-300 dark:border-blue-700"
-                                                        step="any"
-                                                        disabled={isHeaderRow || boq.qte === 0}
-                                                    />
-                                                    <span className="text-xs text-base-content/50">%</span>
-                                                </div>
-                                            </td>
-                                            <td className="text-right text-xs">{formatCurrency(precedQte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-semibold text-green-600">{formatCurrency(actualQte * boq.unitPrice)}</td>
-                                            <td className="text-right text-xs font-medium">{formatCurrency(cumulQte * boq.unitPrice)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            {/* VO Totals Row - uses memoized values to avoid recalculation */}
-                            <tfoot className="bg-base-200 border-t-2 border-base-300">
-                                <tr className="font-semibold">
-                                    <td colSpan={5} className="text-right">Totals:</td>
-                                    <td className="text-right">
-                                        {formatCurrency(voBOQContractTotal)}
-                                    </td>
-                                    <td className="text-right"></td>
-                                    <td className="text-right bg-green-50/50 dark:bg-green-900/10"></td>
-                                    <td className="text-right bg-purple-50/50 dark:bg-purple-900/10"></td>
-                                    <td className="text-right bg-blue-50/50 dark:bg-blue-900/10"></td>
-                                    <td className="text-right">
-                                        {formatCurrency(voBOQPrecedTotal)}
-                                    </td>
-                                    <td className="text-right text-green-600">
-                                        {formatCurrency(activeVOBuildingTotal)}
-                                    </td>
-                                    <td className="text-right">
-                                        {formatCurrency(voBOQCumulTotal)}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Building Tabs at Bottom - Legacy SAM Pattern */}
-            {viewMode === "contract" && safeBuildings.length > 0 && (
-                <div className="bg-base-200 p-2 rounded-lg border border-base-300">
-                    <div className="flex items-center gap-2 overflow-x-auto">
-                        <span className="text-xs text-base-content/60 font-medium whitespace-nowrap">Buildings:</span>
-                        {safeBuildings.map(building => (
-                            <button
-                                key={building.id}
-                                type="button"
-                                onClick={() => setActiveBuildingId(building.id)}
-                                className={`btn btn-xs whitespace-nowrap ${
-                                    building.id === activeBuildingId
-                                        ? 'btn-primary'
-                                        : 'bg-base-100 text-base-content hover:bg-base-300 border-base-300'
-                                }`}
-                            >
-                                {building.buildingName}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* VO Tabs at Bottom */}
-            {viewMode === "vo" && activeVO && (
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <div className="flex flex-col gap-2">
-                        {/* VO Selection */}
-                        <div className="flex items-center gap-2 overflow-x-auto">
-                            <span className="text-xs text-purple-600/60 dark:text-purple-400/60 font-medium whitespace-nowrap">VO:</span>
-                            {safeVOs.map(vo => (
-                                <button
-                                    key={vo.id}
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveVOId(vo.id);
-                                        if (vo.buildings.length > 0) {
-                                            setActiveVOBuildingId(vo.buildings[0].id);
-                                        }
-                                    }}
-                                    className={`btn btn-xs whitespace-nowrap ${
-                                        vo.id === activeVOId
-                                            ? 'bg-purple-600 text-white hover:bg-purple-700'
-                                            : 'bg-base-100 text-base-content hover:bg-base-300 border-base-300'
-                                    }`}
-                                >
-                                    {vo.voNumber}
-                                </button>
-                            ))}
-                        </div>
-                        {/* Building Selection for Active VO */}
-                        {activeVO && (
-                            <div className="flex items-center gap-2 overflow-x-auto">
-                                <span className="text-xs text-purple-600/60 dark:text-purple-400/60 font-medium whitespace-nowrap">Buildings:</span>
-                                {activeVO.buildings.map(building => (
-                                    <button
-                                        key={building.id}
-                                        type="button"
-                                        onClick={() => setActiveVOBuildingId(building.id)}
-                                        className={`btn btn-xs whitespace-nowrap ${
-                                            building.id === activeVOBuildingId
-                                                ? 'bg-purple-600 text-white hover:bg-purple-700'
-                                                : 'bg-base-100 text-base-content hover:bg-base-300 border-base-300'
-                                        }`}
-                                    >
-                                        {building.buildingName}
-                                    </button>
-                                ))}
+                        }
+                        summaryRow={() => (
+                            <div className="flex items-center justify-between px-4 py-2 font-semibold text-xs text-purple-600 dark:text-purple-400">
+                                <span>Totals</span>
+                                <div className="flex gap-6">
+                                    <span>VO Total: {formatCurrency(voBOQContractTotal)}</span>
+                                    <span>Previous: {formatCurrency(voBOQPrecedTotal)}</span>
+                                    <span className="text-green-600">Actual: {formatCurrency(activeVOBuildingTotal)}</span>
+                                    <span>Cumulative: {formatCurrency(voBOQCumulTotal)}</span>
+                                </div>
                             </div>
                         )}
-                    </div>
+                    />
                 </div>
             )}
+
 
             {/* Correction Modals */}
             {correctionModal && (
@@ -2154,6 +2379,18 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                     <div className="modal-backdrop bg-black/40" onClick={() => setShowAdvancePaymentModal(false)}></div>
                 </div>
             )}
+
+            {/* Penalty Form Modal - Only in edit mode */}
+            <PenaltyForm
+                isOpen={showPenaltyModal}
+                onClose={() => setShowPenaltyModal(false)}
+                onSave={handlePenaltySave}
+                initialData={{
+                    penalty: formData.penalty || 0,
+                    previousPenalty: formData.previousPenalty || 0,
+                    reason: formData.penaltyReason || "",
+                }}
+            />
         </div>
     );
 };

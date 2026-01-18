@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
@@ -10,13 +10,15 @@ import useToast from "@/hooks/use-toast";
 import { UnsavedChangesDialog } from "../shared/components/UnsavedChangesDialog";
 import { StepRenderer } from "./components/StepRenderer";
 import { Loader } from "@/components/Loader";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 // Inner component that uses the context
 const NewSubcontractWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
-    
+    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+
     const {
         currentStep,
         hasUnsavedChanges,
@@ -36,12 +38,96 @@ const NewSubcontractWizardContent: React.FC = () => {
         setShowBackConfirmDialog(false);
     };
 
-    const handleSubmitAndNavigate = async () => {
+    const handleSubmitAndNavigate = useCallback(async () => {
         const success = await handleSubmit();
         if (success) {
             navigate('/dashboard/contracts');
         }
-    };
+    }, [handleSubmit, navigate]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep === 1 && hasUnsavedChanges) {
+            setShowBackConfirmDialog(true);
+        } else if (currentStep === 1) {
+            navigate('/dashboard/contracts');
+        } else {
+            goToPreviousStep();
+        }
+    }, [currentStep, hasUnsavedChanges, navigate, goToPreviousStep]);
+
+    const handleNextClick = useCallback(() => {
+        if (validateCurrentStep()) {
+            goToNextStep();
+        } else {
+            // Show validation errors based on current step
+            switch (currentStep) {
+                case 1:
+                    toaster.error("Please select a project");
+                    break;
+                case 2:
+                    toaster.error("Please select a subcontractor");
+                    break;
+                case 3:
+                    toaster.error("Please fill in all required contract details");
+                    break;
+                case 4:
+                    toaster.error("Please add at least one BOQ item");
+                    break;
+                default:
+                    toaster.error("Please complete all required fields");
+            }
+        }
+    }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
+
+    // Set topbar content
+    useEffect(() => {
+        // Clear any previous right content
+        setRightContent(null);
+
+        // Center content: Step indicator with back/next arrows
+        setCenterContent(
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={handleBackClick}
+                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                    title="Back"
+                >
+                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                </button>
+                <StepIndicator currentStep={currentStep} />
+                {currentStep < 5 ? (
+                    <button
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        onClick={handleNextClick}
+                        disabled={loading}
+                        title="Next"
+                    >
+                        <Icon icon={arrowRightIcon} className="w-4 h-4" />
+                    </button>
+                ) : (
+                    <button
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
+                        onClick={handleSubmitAndNavigate}
+                        disabled={loading}
+                        title="Save and Close"
+                    >
+                        {loading ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <>
+                                <Icon icon={checkIcon} className="w-4 h-4" />
+                                <span>Save & Close</span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+
+        return () => {
+            clearContent();
+        };
+    }, [currentStep, loading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
 
     if (loading && currentStep === 1) {
         return (
@@ -166,81 +252,6 @@ const NewSubcontractWizardContent: React.FC = () => {
                     padding-bottom: 0.5rem !important;
                 }
             `}</style>
-
-            {/* Header with Back Button, Timeline, and Navigation */}
-            <div className="flex justify-between items-center mb-6">
-                <button
-                    onClick={currentStep === 1 && hasUnsavedChanges
-                        ? () => setShowBackConfirmDialog(true)
-                        : currentStep === 1
-                            ? () => navigate('/dashboard/contracts')
-                            : goToPreviousStep
-                    }
-                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                >
-                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                    <span>Back</span>
-                </button>
-                
-                {/* Timeline in the center */}
-                <div className="flex-1 flex justify-center">
-                    <StepIndicator currentStep={currentStep} />
-                </div>
-
-                {/* Next/Save Button */}
-                <div>
-                    {currentStep < 5 ? (
-                        <button
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            onClick={() => {
-                                if (validateCurrentStep()) {
-                                    goToNextStep();
-                                } else {
-                                    // Show validation errors based on current step
-                                    switch (currentStep) {
-                                        case 1:
-                                            toaster.error("Please select a project");
-                                            break;
-                                        case 2:
-                                            toaster.error("Please select a subcontractor");
-                                            break;
-                                        case 3:
-                                            toaster.error("Please fill in all required contract details");
-                                            break;
-                                        case 4:
-                                            toaster.error("Please add at least one BOQ item");
-                                            break;
-                                        default:
-                                            toaster.error("Please complete all required fields");
-                                    }
-                                }
-                            }}
-                            disabled={loading}
-                        >
-                            <span>Next</span>
-                            <Icon icon={arrowRightIcon} className="w-4 h-4" />
-                        </button>
-                    ) : (
-                        <button
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            onClick={handleSubmitAndNavigate}
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <>
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    Creating...
-                                </>
-                            ) : (
-                                <>
-                                    <span>Save</span>
-                                    <Icon icon={checkIcon} className="w-4 h-4" />
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
 
             {/* Step Content */}
             <StepRenderer />

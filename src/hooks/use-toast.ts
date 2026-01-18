@@ -1,36 +1,43 @@
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 const useToast = () => {
     // Function to determine position based on screen width
-    const getPosition = () => (window.innerWidth < 768 ? "top-right" : "bottom-right");
+    const getPosition = useCallback(
+        () => (window.innerWidth < 768 ? "top-right" : "bottom-right"),
+        [],
+    );
 
-    const show = (message: unknown) => {
+    const show = useCallback((message: unknown) => {
         toast(String(message), { position: getPosition() });
-    };
+    }, [getPosition]);
 
-    const showSuccess = (message: unknown) => {
+    const showSuccess = useCallback((message: unknown) => {
         toast.success(String(message), { position: getPosition() });
-    };
+    }, [getPosition]);
 
-    const showError = (message: unknown) => {
+    const showError = useCallback((message: unknown) => {
         toast.error(String(message), { position: getPosition() });
-    };
+    }, [getPosition]);
 
-    const showWarning = (message: unknown) => {
+    const showWarning = useCallback((message: unknown) => {
         toast.warning(String(message), { position: getPosition() });
-    };
+    }, [getPosition]);
 
-    const showInfo = (message: unknown) => {
+    const showInfo = useCallback((message: unknown) => {
         toast.info(String(message), { position: getPosition() });
-    };
+    }, [getPosition]);
 
-    const toaster = {
-        show,
-        success: showSuccess,
-        error: showError,
-        warning: showWarning,
-        info: showInfo,
-    };
+    const toaster = useMemo(
+        () => ({
+            show,
+            success: showSuccess,
+            error: showError,
+            warning: showWarning,
+            info: showInfo,
+        }),
+        [show, showSuccess, showError, showWarning, showInfo],
+    );
 
     return {
         toaster,

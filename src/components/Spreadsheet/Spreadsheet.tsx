@@ -272,10 +272,12 @@ function SpreadsheetInner<T>(
     actionsColumnWidth = 120,
     actionsColumnResizable = true,
     getRowId,
+    scrollToRowId,
     allowKeyboardNavigation = true,
     allowColumnResize = true,
     allowFilters = true,
     allowSorting = true,
+    hideFormulaBar = false,
     excelConfig,
     toolbar,
     toolbarLeft
@@ -419,6 +421,7 @@ function SpreadsheetInner<T>(
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const lastAutoScrollRef = useRef<{ id: string | number | null; found: boolean } | null>(null);
 
   const rowHeightGetter = useCallback(
     (row: T, index: number) => {
@@ -510,6 +513,37 @@ function SpreadsheetInner<T>(
     if (count === 0) return 0;
     return offsets[count - 1] + (heights[count - 1] ?? DEFAULT_ROW_HEIGHT);
   }, [offsets, heights, processedRows.length, minRowsWithBuffer]);
+
+  useEffect(() => {
+    if (scrollToRowId === undefined || scrollToRowId === null) {
+      lastAutoScrollRef.current = null;
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const resolveId = (row: T, index: number) => {
+      if (getRowId) return getRowId(row, index);
+      const fallbackId = (row as any)?.id;
+      return fallbackId ?? index;
+    };
+
+    const targetIndex = processedRows.findIndex((row, index) => resolveId(row, index) === scrollToRowId);
+    if (targetIndex === -1) {
+      lastAutoScrollRef.current = { id: scrollToRowId, found: false };
+      return;
+    }
+
+    const lastScroll = lastAutoScrollRef.current;
+    if (lastScroll?.id === scrollToRowId && lastScroll?.found) {
+      return;
+    }
+
+    const targetOffset = offsets[targetIndex] ?? 0;
+    container.scrollTo({ top: targetOffset });
+    lastAutoScrollRef.current = { id: scrollToRowId, found: true };
+  }, [scrollToRowId, processedRows, offsets, getRowId]);
 
   const selectionRange = useMemo<SelectionRange | null>(() => {
     if (!selectedCell) return null;
@@ -1315,35 +1349,39 @@ function SpreadsheetInner<T>(
       {slotBelowHeader}
       <div className="spreadsheet-formula-bar">
         {toolbarLeft && <div className="spreadsheet-toolbar-left">{toolbarLeft}</div>}
-        <div className="spreadsheet-formula-left">
-          <div className="spreadsheet-formula-chip" aria-label="Active cell reference">
-            {activeCellRef || "--"}
-          </div>
-          <span className="spreadsheet-formula-fx" aria-label="Formula">fx</span>
-        </div>
-        <div className="spreadsheet-formula-input-wrap">
-          <textarea
-            className="spreadsheet-formula-input"
-            value={formulaValue}
-            onChange={(e) => handleFormulaChange(e.target.value)}
-            onBlur={handleFormulaCommit}
-            onKeyDown={handleFormulaKeyDown}
-            placeholder="Select a cell to view its value"
-            rows={1}
-            disabled={!selectedCell}
-            readOnly={!formulaBarEditable}
-          />
-          {formulaBarEditable && (
-            <button
-              type="button"
-              className="spreadsheet-formula-apply"
-              onClick={handleFormulaCommit}
-              title="Apply (Enter)"
-            >
-              <Icon icon={checkIcon} width={16} height={16} />
-            </button>
-          )}
-        </div>
+        {!hideFormulaBar && (
+          <>
+            <div className="spreadsheet-formula-left">
+              <div className="spreadsheet-formula-chip" aria-label="Active cell reference">
+                {activeCellRef || "--"}
+              </div>
+              <span className="spreadsheet-formula-fx" aria-label="Formula">fx</span>
+            </div>
+            <div className="spreadsheet-formula-input-wrap">
+              <textarea
+                className="spreadsheet-formula-input"
+                value={formulaValue}
+                onChange={(e) => handleFormulaChange(e.target.value)}
+                onBlur={handleFormulaCommit}
+                onKeyDown={handleFormulaKeyDown}
+                placeholder="Select a cell to view its value"
+                rows={1}
+                disabled={!selectedCell}
+                readOnly={!formulaBarEditable}
+              />
+              {formulaBarEditable && (
+                <button
+                  type="button"
+                  className="spreadsheet-formula-apply"
+                  onClick={handleFormulaCommit}
+                  title="Apply (Enter)"
+                >
+                  <Icon icon={checkIcon} width={16} height={16} />
+                </button>
+              )}
+            </div>
+          </>
+        )}
         {toolbar && <div className="spreadsheet-toolbar">{toolbar}</div>}
         <div className="spreadsheet-search">
           <Icon icon={searchIcon} width={14} height={14} className="text-base-content/60" />
@@ -1614,13 +1652,13 @@ function SpreadsheetInner<T>(
             );
           })}
         </div>
-      </div>
 
-      {summaryRow && (
-        <div className="spreadsheet-summary">
-          {summaryRow(processedRows, { gridTemplateColumns, columnWidths })}
-        </div>
-      )}
+        {summaryRow && (
+          <div className="spreadsheet-summary">
+            {summaryRow(processedRows, { gridTemplateColumns, columnWidths })}
+          </div>
+        )}
+      </div>
 
       {sheetTabs && sheetTabs.length > 0 && (
         <div className="sheet-tabs-wrapper">

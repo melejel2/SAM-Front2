@@ -1,7 +1,7 @@
-import React from "react";
-import { Icon } from "@iconify/react";
+import React, { useMemo, useCallback } from "react";
 import { useEditWizardContext } from "../context/EditWizardContext";
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 
 interface Subcontractor {
     id: number;
@@ -17,41 +17,39 @@ interface Subcontractor {
 
 export const EditStep2_SubcontractorSelection: React.FC = () => {
     const { formData, setFormData, subcontractors, loading } = useEditWizardContext();
-    
-    // Calculate selectedSubcontractor directly from current state
-    const selectedSubcontractor = React.useMemo(() => {
-        if (subcontractors.length > 0 && formData.subcontractorId) {
-            return subcontractors.find(s => s.id === formData.subcontractorId) || null;
-        }
-        return null;
-    }, [subcontractors, formData.subcontractorId]);
 
-    // Remove forced re-rendering - it was breaking prop passing
-
-    const handleSubcontractorSelect = (subcontractor: Subcontractor) => {
+    const handleSubcontractorSelect = useCallback((subcontractor: Subcontractor) => {
         setFormData({ subcontractorId: subcontractor.id });
-    };
+    }, [setFormData]);
 
+    const columns = useMemo((): SpreadsheetColumn<Subcontractor>[] => [
+        { key: "name", label: "Company Name", width: 220, sortable: true, filterable: true },
+        { key: "siegeSocial", label: "Address", width: 250, sortable: true, filterable: true },
+        { key: "commerceNumber", label: "Commerce Number", width: 160, sortable: true, filterable: true },
+        { key: "representedBy", label: "Represented By", width: 180, sortable: true, filterable: true },
+    ], []);
+
+    const rowClassName = useCallback((row: Subcontractor) => {
+        return row.id === formData.subcontractorId ? "bg-primary/10" : undefined;
+    }, [formData.subcontractorId]);
 
     return (
-        <>
-            <SAMTable
-                columns={{ 
-                    name: "Company Name", 
-                    siegeSocial: "Address", 
-                    commerceNumber: "Commerce Number",
-                    representedBy: "Represented By"
-                }}
-                tableData={subcontractors}
-                title="Subcontractors"
-                loading={loading}
-                onSuccess={() => {}}
-                onRowSelect={handleSubcontractorSelect}
-                select={false}
-                actions={false}
-                addBtn={false}
-                selectedRowId={formData.subcontractorId}
-            />
-        </>
+        <Spreadsheet<Subcontractor>
+            data={subcontractors}
+            columns={columns}
+            mode="view"
+            loading={loading}
+            emptyMessage="No subcontractors found"
+            persistKey="contract-edit-wizard-subcontractors"
+            rowHeight={40}
+            onRowClick={handleSubcontractorSelect}
+            getRowId={(row) => row.id}
+            rowClassName={rowClassName}
+            scrollToRowId={formData.subcontractorId}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+        />
     );
 };

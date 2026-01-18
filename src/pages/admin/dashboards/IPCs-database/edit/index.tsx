@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
+import checkIcon from "@iconify/icons-lucide/check";
 
 import { Loader } from "@/components/Loader";
-import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
+import { useTopbarContent } from "@/contexts/topbar-content";
 import { IPCWizardProvider, useIPCWizardContext } from "../new/context/IPCWizardContext";
 import { IPCStepIndicator } from "../new/components/IPCStepIndicator";
 import { IPCStepRenderer } from "../new/components/IPCStepRenderer";
 import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
-import PenaltyForm from "../components/PenaltyForm";
 
 interface NavigationState {
     returnTo?: string;
@@ -19,6 +22,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { toaster } = useToast();
+    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
 
     // Get return navigation from state
     const navigationState = location.state as NavigationState | null;
@@ -34,14 +38,11 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         validateCurrentStep,
         handleSubmit,
         loadIpcForEdit,
-        setFormData,
         hasUnsavedChanges,
         setHasUnsavedChanges,
     } = useIPCWizardContext();
 
     const [isSaving, setIsSaving] = useState(false);
-    const [showPenaltyForm, setShowPenaltyForm] = useState(false);
-    const [penaltyData, setPenaltyData] = useState({ penalty: 0, previousPenalty: 0, reason: "" });
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
 
     // Load IPC data on mount and start at Step 2 (skip contract selection)
@@ -54,15 +55,6 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ipcId]); // Only reload if IPC ID changes, not when loadIpcForEdit function changes
 
-    // Update penalty data when form data changes
-    useEffect(() => {
-        setPenaltyData({
-            penalty: formData.penalty || 0,
-            previousPenalty: formData.previousPenalty || 0,
-            reason: formData.penaltyReason || "",
-        });
-    }, [formData.penalty, formData.previousPenalty, formData.penaltyReason]);
-
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
         navigate(backDestination);
@@ -72,7 +64,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         setShowBackConfirmDialog(false);
     };
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
             const result = await handleSubmit();
@@ -88,18 +80,85 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         } finally {
             setIsSaving(false);
         }
-    };
+    }, [handleSubmit, toaster, setHasUnsavedChanges, navigate, backDestination]);
 
-    const handlePenaltySave = (penaltyFormData: typeof penaltyData) => {
-        setFormData({
-            penalty: penaltyFormData.penalty,
-            previousPenalty: penaltyFormData.previousPenalty,
-            penaltyReason: penaltyFormData.reason,
-        });
-        setHasUnsavedChanges(true);
-        setShowPenaltyForm(false);
-        toaster.success("Penalty information updated");
-    };
+    const handleBackClick = useCallback(() => {
+        if (currentStep === 2 && hasUnsavedChanges) {
+            setShowBackConfirmDialog(true);
+        } else if (currentStep === 2) {
+            navigate(backDestination);
+        } else {
+            goToPreviousStep();
+        }
+    }, [currentStep, hasUnsavedChanges, navigate, backDestination, goToPreviousStep]);
+
+    const handleNextClick = useCallback(() => {
+        if (validateCurrentStep()) {
+            goToNextStep();
+        } else {
+            // Show validation errors based on current step
+            switch (currentStep) {
+                case 2:
+                    toaster.error("Please set work period (from date and to date)");
+                    break;
+                case 3:
+                    toaster.error("Please review deductions and financial calculations");
+                    break;
+                default:
+                    toaster.error("Please complete all required fields");
+            }
+        }
+    }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
+
+    // Set topbar content
+    useEffect(() => {
+        // Clear any previous right content
+        setRightContent(null);
+
+        // Center content: Step indicator with back/next arrows
+        setCenterContent(
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={handleBackClick}
+                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                    title="Back"
+                >
+                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                </button>
+                <IPCStepIndicator currentStep={currentStep} />
+                {currentStep < 4 ? (
+                    <button
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        onClick={handleNextClick}
+                        disabled={loading}
+                        title="Next"
+                    >
+                        <Icon icon={arrowRightIcon} className="w-4 h-4" />
+                    </button>
+                ) : (
+                    <button
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        title="Save and Close"
+                    >
+                        {isSaving ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <>
+                                <Icon icon={checkIcon} className="w-4 h-4" />
+                                <span>Save & Close</span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+
+        return () => {
+            clearContent();
+        };
+    }, [currentStep, loading, isSaving, handleBackClick, handleNextClick, handleSave, setCenterContent, setRightContent, clearContent]);
 
 
 
@@ -153,81 +212,6 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                 }
             `}</style>
 
-            {/* Header with Back Button, Timeline, and Action Buttons */}
-            <div className="mb-6 flex items-center justify-between">
-                <button
-                    onClick={
-                        currentStep === 2 && hasUnsavedChanges
-                            ? () => setShowBackConfirmDialog(true)
-                            : currentStep === 2
-                              ? () => navigate(backDestination)
-                              : goToPreviousStep
-                    }
-                    className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                    <span className="iconify lucide--arrow-left size-4"></span>
-                    <span>Back</span>
-                </button>
-
-                {/* Timeline in the center */}
-                <div className="flex flex-1 justify-center">
-                    <IPCStepIndicator currentStep={currentStep} />
-                </div>
-
-                {/* Action Buttons - Edit-specific features */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowPenaltyForm(true)}
-                        className="btn btn-sm flex items-center gap-2 bg-red-600 text-white hover:bg-red-700">
-                        <span className="iconify lucide--alert-triangle size-4"></span>
-                        <span>Penalties</span>
-                    </button>
-
-                    {/* Next/Save Navigation Button - Edit mode has 3 steps (2, 3, 4) */}
-                    {currentStep < 4 ? (
-                        <button
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
-                            onClick={() => {
-                                if (validateCurrentStep()) {
-                                    goToNextStep();
-                                } else {
-                                    // Show validation errors based on current step
-                                    switch (currentStep) {
-                                        case 2:
-                                            toaster.error("Please set work period (from date and to date)");
-                                            break;
-                                        case 3:
-                                            toaster.error("Please review deductions and financial calculations");
-                                            break;
-                                        default:
-                                            toaster.error("Please complete all required fields");
-                                    }
-                                }
-                            }}
-                            disabled={loading}>
-                            <span>Next</span>
-                            <span className="iconify lucide--arrow-right size-4"></span>
-                        </button>
-                    ) : (
-                        <button
-                            className="btn btn-sm btn-primary flex items-center gap-2"
-                            onClick={handleSave}
-                            disabled={isSaving}>
-                            {isSaving ? (
-                                <>
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    <span>Saving...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Save and Close</span>
-                                    <span className="iconify lucide--check size-4"></span>
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
-
             {/* Step Content */}
             <IPCStepRenderer />
 
@@ -236,15 +220,6 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                 isOpen={showBackConfirmDialog}
                 onConfirm={handleConfirmBack}
                 onCancel={handleCancelBack}
-            />
-
-            {/* Penalty Form Modal */}
-            <PenaltyForm
-                isOpen={showPenaltyForm}
-                onClose={() => setShowPenaltyForm(false)}
-                onSave={handlePenaltySave}
-                initialData={penaltyData}
-                loading={isSaving}
             />
         </div>
     );

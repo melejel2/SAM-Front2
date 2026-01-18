@@ -1,8 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
+import checkIcon from "@iconify/icons-lucide/check";
 
 import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 import { IPCStepIndicator } from "./components/IPCStepIndicator";
@@ -14,6 +19,7 @@ const NewIPCWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
+    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
 
     const {
         currentStep,
@@ -44,7 +50,7 @@ const NewIPCWizardContent: React.FC = () => {
         setShowBackConfirmDialog(false);
     };
 
-    const handleSubmitAndNavigate = async () => {
+    const handleSubmitAndNavigate = useCallback(async () => {
         const result = await handleSubmit();
         if (result.success) {
             toaster.success("IPC created successfully");
@@ -52,7 +58,88 @@ const NewIPCWizardContent: React.FC = () => {
         } else {
             toaster.error(result.error || "Failed to create IPC");
         }
-    };
+    }, [handleSubmit, navigate, backDestination, toaster]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep === firstStep && hasUnsavedChanges) {
+            setShowBackConfirmDialog(true);
+        } else if (currentStep === firstStep) {
+            navigate(backDestination);
+        } else {
+            goToPreviousStep();
+        }
+    }, [currentStep, firstStep, hasUnsavedChanges, navigate, backDestination, goToPreviousStep]);
+
+    const handleNextClick = useCallback(() => {
+        if (validateCurrentStep()) {
+            goToNextStep();
+        } else {
+            // Show validation errors based on current step
+            switch (currentStep) {
+                case 1:
+                    toaster.error("Please select a contract and configure IPC type");
+                    break;
+                case 2:
+                    toaster.error("Please set work period (from date and to date)");
+                    break;
+                case 3:
+                    toaster.error("Please review deductions and financial calculations");
+                    break;
+                default:
+                    toaster.error("Please complete all required fields");
+            }
+        }
+    }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
+
+    // Set topbar content
+    useEffect(() => {
+        // Clear any previous right content
+        setRightContent(null);
+
+        // Center content: Step indicator with back/next arrows
+        setCenterContent(
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={handleBackClick}
+                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                    title="Back"
+                >
+                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                </button>
+                <IPCStepIndicator currentStep={currentStep} />
+                {currentStep < 4 ? (
+                    <button
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        onClick={handleNextClick}
+                        disabled={loading}
+                        title="Next"
+                    >
+                        <Icon icon={arrowRightIcon} className="w-4 h-4" />
+                    </button>
+                ) : (
+                    <button
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
+                        onClick={handleSubmitAndNavigate}
+                        disabled={loading}
+                        title="Save and Close"
+                    >
+                        {loading ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <>
+                                <Icon icon={checkIcon} className="w-4 h-4" />
+                                <span>Save & Close</span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+
+        return () => {
+            clearContent();
+        };
+    }, [currentStep, loading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
 
     if (loading && currentStep === firstStep) {
         return (
@@ -102,78 +189,6 @@ const NewIPCWizardContent: React.FC = () => {
                     padding-bottom: 0.5rem !important;
                 }
             `}</style>
-
-            {/* Header with Back Button, Timeline, and Navigation */}
-            <div className="mb-6 flex items-center justify-between">
-                <button
-                    onClick={
-                        currentStep === firstStep && hasUnsavedChanges
-                            ? () => setShowBackConfirmDialog(true)
-                            : currentStep === firstStep
-                              ? () => navigate(backDestination)
-                              : goToPreviousStep
-                    }
-                    className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                    <span className="iconify lucide--arrow-left size-4"></span>
-                    <span>Back</span>
-                </button>
-
-                {/* Timeline in the center */}
-                <div className="flex flex-1 justify-center">
-                    <IPCStepIndicator currentStep={currentStep} />
-                </div>
-
-                {/* Next/Save Button */}
-                <div>
-                    {currentStep < 4 ? (
-                        <button
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
-                            onClick={() => {
-                                if (validateCurrentStep()) {
-                                    goToNextStep();
-                                } else {
-                                    // Show validation errors based on current step
-                                    switch (currentStep) {
-                                        case 1:
-                                            toaster.error("Please select a contract and configure IPC type");
-                                            break;
-                                        case 2:
-                                            toaster.error(
-                                                "Please set work period (from date and to date)",
-                                            );
-                                            break;
-                                        case 3:
-                                            toaster.error("Please review deductions and financial calculations");
-                                            break;
-                                        default:
-                                            toaster.error("Please complete all required fields");
-                                    }
-                                }
-                            }}
-                            disabled={loading}>
-                            <span>Next</span>
-                            <span className="iconify lucide--arrow-right size-4"></span>
-                        </button>
-                    ) : (
-                        <button
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
-                            onClick={handleSubmitAndNavigate}
-                            disabled={loading}>
-                            {loading ? (
-                                <>
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    Creating...
-                                </>
-                            ) : (
-                                <>
-                                    <span>Save</span>
-                                    <span className="iconify lucide--check size-4"></span>
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
 
             {/* Step Content */}
             <IPCStepRenderer />

@@ -374,12 +374,14 @@ export interface SpreadsheetProps<T> {
   actionsColumnWidth?: number;
   actionsColumnResizable?: boolean;
   getRowId?: (row: T, index: number) => string | number;
+  scrollToRowId?: string | number | null;
 
   // Feature flags
   allowKeyboardNavigation?: boolean;
   allowColumnResize?: boolean;
   allowFilters?: boolean;
   allowSorting?: boolean;
+  hideFormulaBar?: boolean;
 
   // Excel integration
   excelConfig?: SpreadsheetExcelConfig<T>;

@@ -26,9 +26,17 @@ export const EditStepRenderer: React.FC = () => {
         }
     };
 
-    // Steps 3 and 4 need the white container for their form content
-    // Step 5 (Preview) needs special height handling for PDF viewer
-    if (currentStep === 3 || currentStep === 4) {
+    // Steps 1, 2, and 4 (Selection/Spreadsheet steps) need full height for internal scrolling
+    if (currentStep === 1 || currentStep === 2 || currentStep === 4) {
+        return (
+            <div className="h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+                {renderStepContent()}
+            </div>
+        );
+    }
+
+    // Step 3 (Contract Details form) needs the white container
+    if (currentStep === 3) {
         return (
             <div className="card bg-base-100 shadow-sm p-4">
                 {renderStepContent()}
@@ -36,10 +44,10 @@ export const EditStepRenderer: React.FC = () => {
         );
     }
 
-    // Step 5 gets white container with optimized height for PDF preview
+    // Step 5 (Preview) needs special height handling for PDF viewer
     if (currentStep === 5) {
         return (
-            <div className="card bg-base-100 shadow-sm p-4 h-[calc(100vh-180px)] flex flex-col">
+            <div className="card bg-base-100 shadow-sm p-4 h-[calc(100vh-120px)] flex flex-col">
                 <div className="flex-1 min-h-0">
                     {renderStepContent()}
                 </div>

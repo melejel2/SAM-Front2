@@ -46,21 +46,17 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
             {/* Collapsible Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-4 bg-base-200 hover:bg-base-300 transition-colors"
+                className={`w-full flex items-center justify-between px-3 py-2 hover:bg-base-50 transition-colors ${isExpanded ? 'border-b border-base-300' : ''}`}
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <Icon
                         icon={isExpanded ? chevronDownIcon : chevronRightIcon}
-                        className="w-5 h-5 text-base-content/60"
+                        className="w-4 h-4 text-base-content/60"
                     />
-                    <Icon icon={buildingIcon} className="w-5 h-5 text-secondary" />
-                    <span className="font-semibold text-base-content">Select Buildings</span>
-                    {selectedBuildings.length === 0 ? (
-                        <div className="badge badge-neutral badge-sm">
-                            {buildings.length} building{buildings.length !== 1 ? 's' : ''} available
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
+                    <Icon icon={buildingIcon} className="w-4 h-4 text-secondary" />
+                    <span className="font-medium text-sm text-base-content">Select Buildings</span>
+                    {selectedBuildings.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
                             {selectedBuildingNames.map(name => (
                                 <div key={name} className="badge badge-primary badge-sm">
                                     {name}
@@ -73,9 +69,9 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
 
             {/* Expandable Content */}
             {isExpanded && (
-                <div className="p-4">
+                <div className="p-3">
                     {buildings.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {buildings.map(building => {
                                 const isSelected = selectedBuildings.includes(building.id);
                                 const availableSheetsCount = building.sheets.filter(
@@ -83,43 +79,40 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
                                 ).length;
 
                                 return (
-                                    <div key={building.id} className="relative">
-                                        <label
-                                            className={`flex flex-col gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                                                isSelected
-                                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                                    : 'border-base-300 bg-base-100 hover:border-base-400'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="checkbox"
-                                                    className="checkbox checkbox-primary"
-                                                    checked={isSelected}
-                                                    onChange={(e) => handleBuildingToggle(building.id, e.target.checked)}
-                                                />
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Icon icon={buildingIcon} className="w-5 h-5 text-base-content/60" />
-                                                        <span className="font-medium text-base-content">{building.name}</span>
-                                                    </div>
-                                                    <div className="text-sm text-base-content/70">
-                                                        {availableSheetsCount} sheet{availableSheetsCount !== 1 ? 's' : ''} available
-                                                    </div>
-                                                </div>
-                                                {isSelected && (
-                                                    <Icon icon={checkCircleIcon} className="w-5 h-5 text-primary" />
-                                                )}
+                                    <label
+                                        key={building.id}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-all duration-150 hover:shadow-sm ${
+                                            isSelected
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-base-300 bg-base-100 hover:border-base-400'
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary checkbox-sm"
+                                            checked={isSelected}
+                                            onChange={(e) => handleBuildingToggle(building.id, e.target.checked)}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1">
+                                                <Icon icon={buildingIcon} className="w-4 h-4 text-base-content/60 flex-shrink-0" />
+                                                <span className="font-medium text-sm text-base-content truncate">{building.name}</span>
                                             </div>
-                                        </label>
-                                    </div>
+                                            <div className="text-xs text-base-content/60">
+                                                {availableSheetsCount} sheet{availableSheetsCount !== 1 ? 's' : ''} available
+                                            </div>
+                                        </div>
+                                        {isSelected && (
+                                            <Icon icon={checkCircleIcon} className="w-4 h-4 text-primary flex-shrink-0" />
+                                        )}
+                                    </label>
                                 );
                             })}
                         </div>
                     ) : (
-                        <div className="text-center py-8">
-                            <Icon icon={buildingIcon} className="w-12 h-12 text-base-content/40 mx-auto mb-2" />
-                            <p className="text-base-content/60">No buildings available for this trade</p>
+                        <div className="text-center py-4">
+                            <Icon icon={buildingIcon} className="w-8 h-8 text-base-content/40 mx-auto mb-2" />
+                            <p className="text-sm text-base-content/60">No buildings available for this trade</p>
                         </div>
                     )}
                 </div>

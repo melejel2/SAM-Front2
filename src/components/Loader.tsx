@@ -1,4 +1,55 @@
 import { memo, ReactNode } from "react";
+import { Icon, IconifyIcon } from "@iconify/react";
+
+// Import commonly used loader icons
+import loaderIcon from "@iconify/icons-lucide/loader-2";
+import tableIcon from "@iconify/icons-lucide/table-2";
+import receiptIcon from "@iconify/icons-lucide/receipt";
+import fileTextIcon from "@iconify/icons-lucide/file-text";
+import listIcon from "@iconify/icons-lucide/list";
+import usersIcon from "@iconify/icons-lucide/users";
+import buildingIcon from "@iconify/icons-lucide/building-2";
+import calculatorIcon from "@iconify/icons-lucide/calculator";
+import rulerIcon from "@iconify/icons-lucide/ruler";
+import coinsIcon from "@iconify/icons-lucide/coins";
+import fileSpreadsheetIcon from "@iconify/icons-lucide/file-spreadsheet";
+import clipboardListIcon from "@iconify/icons-lucide/clipboard-list";
+import briefcaseIcon from "@iconify/icons-lucide/briefcase";
+import folderIcon from "@iconify/icons-lucide/folder";
+import settingsIcon from "@iconify/icons-lucide/settings";
+import chartBarIcon from "@iconify/icons-lucide/bar-chart-3";
+import minusIcon from "@iconify/icons-lucide/minus";
+import dollarSignIcon from "@iconify/icons-lucide/dollar-sign";
+import fileCheckIcon from "@iconify/icons-lucide/file-check";
+import layoutGridIcon from "@iconify/icons-lucide/layout-grid";
+
+// Icon mapping for string names to imported icons
+const iconMap: Record<string, IconifyIcon> = {
+    "loader-2": loaderIcon,
+    "table-2": tableIcon,
+    "table": tableIcon,
+    "receipt": receiptIcon,
+    "file-text": fileTextIcon,
+    "list": listIcon,
+    "users": usersIcon,
+    "building-2": buildingIcon,
+    "building": buildingIcon,
+    "calculator": calculatorIcon,
+    "ruler": rulerIcon,
+    "coins": coinsIcon,
+    "file-spreadsheet": fileSpreadsheetIcon,
+    "clipboard-list": clipboardListIcon,
+    "briefcase": briefcaseIcon,
+    "folder": folderIcon,
+    "settings": settingsIcon,
+    "bar-chart-3": chartBarIcon,
+    "chart": chartBarIcon,
+    "minus": minusIcon,
+    "plus-minus": minusIcon,
+    "dollar-sign": dollarSignIcon,
+    "file-check": fileCheckIcon,
+    "layout-grid": layoutGridIcon,
+};
 
 interface LoaderProps {
     height?: string;
@@ -12,7 +63,7 @@ interface LoaderProps {
     subtitle?: string;
     /** Description text below subtitle (e.g., "Loading 12.Aluminium Works data...") */
     description?: string;
-    /** Lucide icon name (e.g., "table-2", "receipt", "file-text") - will be prefixed with "lucide--" */
+    /** Lucide icon name (e.g., "table-2", "receipt", "file-text") */
     icon?: string;
     /** Custom icon element instead of string */
     iconElement?: ReactNode;
@@ -85,8 +136,9 @@ export const Loader = memo(({
     const hasIcon = icon || iconElement;
     const isIndeterminate = progress === undefined;
 
-    // Convert icon name to iconify class format (e.g., "receipt" -> "lucide--receipt")
-    const iconClass = icon ? `iconify lucide--${icon.replace('lucide:', '').replace('lucide--', '')}` : '';
+    // Get icon from map, fallback to loader icon
+    const iconKey = icon?.replace('lucide:', '') || 'loader-2';
+    const resolvedIcon = iconMap[iconKey] || loaderIcon;
 
     const loaderContent = (
         <div className="text-center space-y-4">
@@ -101,7 +153,7 @@ export const Loader = memo(({
                     <div className={`${config.iconBg} rounded-full bg-base-100 shadow-sm flex items-center justify-center`}>
                         {hasIcon && (
                             iconElement || (
-                                <span className={`${iconClass} ${config.icon} text-base-content/70`} />
+                                <Icon icon={resolvedIcon} className={`${config.icon} text-base-content/70`} />
                             )
                         )}
                     </div>
