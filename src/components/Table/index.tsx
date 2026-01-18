@@ -1,6 +1,7 @@
 import { Loader } from "../Loader";
 import AccordionComponent from "./Components/Accordion";
 import TableComponent from "./Components/Table";
+import { useArchive } from "@/contexts/archive";
 
 interface SAMTableProps {
     columns: Record<string, any>;
@@ -132,6 +133,14 @@ const SAMTable: React.FC<SAMTableProps> = ({
     rowHeight,
     overscan,
 }) => {
+    // Global archive mode - disable editing/creating when in archive mode
+    const { isArchiveMode } = useArchive();
+
+    // Override edit/add actions if in archive mode (read-only)
+    const effectiveAddBtn = isArchiveMode ? false : addBtn;
+    const effectiveEditAction = isArchiveMode ? false : editAction;
+    const effectiveInlineEditable = isArchiveMode ? false : inlineEditable;
+
     return (
         <div className="mt-5 flex h-full w-full flex-col" style={{ minHeight: 0 }}>
             {loading ? (
@@ -147,9 +156,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             title={title}
                             previewAction={previewAction}
                             deleteAction={deleteAction}
-                            editAction={editAction}
+                            editAction={effectiveEditAction}
                             previewColumns={previewColumns}
-                            addBtn={addBtn}
+                            addBtn={effectiveAddBtn}
                             addBtnText={addBtnText}
                             dynamicDialog={dynamicDialog}
                             openStaticDialog={openStaticDialog}
@@ -178,7 +187,7 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             onItemUpdate={onItemUpdate}
                             onItemCreate={onItemCreate}
                             onItemDelete={onItemDelete}
-                            inlineEditable={inlineEditable}
+                            inlineEditable={effectiveInlineEditable}
                             onInlineEdit={onInlineEdit}
                             contractIdentifier={contractIdentifier}
                             contractId={contractId}
@@ -199,9 +208,9 @@ const SAMTable: React.FC<SAMTableProps> = ({
                             title={title}
                             previewAction={previewAction}
                             deleteAction={deleteAction}
-                            editAction={editAction}
+                            editAction={effectiveEditAction}
                             previewColumns={previewColumns}
-                            addBtn={addBtn}
+                            addBtn={effectiveAddBtn}
                             addBtnText={addBtnText}
                             dynamicDialog={dynamicDialog}
                             openStaticDialog={openStaticDialog}

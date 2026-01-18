@@ -84,19 +84,15 @@ const useBudgetBOQs = () => {
         const isArchiveMode = localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true";
         const cacheKey = isArchiveMode ? "archived" : "normal";
         
-        console.log("🔍 getProjectsList called:", { isArchiveMode, cacheKey, forceRefresh });
-        
         // Check cache first
         const now = Date.now();
         const cache = projectsCacheRef.current[cacheKey];
 
         if (!forceRefresh && cache.data && (now - cache.timestamp) < CACHE_DURATION) {
-            console.log("📦 Using cached data for:", cacheKey);
             setTableData(cache.data);
             return;
         }
 
-        console.log("🌐 Fetching fresh data for:", cacheKey);
         setLoading(true);
         try {
             // The isArchive parameter will be automatically added by the API interceptor
@@ -105,8 +101,6 @@ const useBudgetBOQs = () => {
                 method: "GET",
                 token: token ?? "",
             });
-
-            console.log("✅ Fetched projects:", { count: Array.isArray(data) ? data.length : 0, mode: cacheKey });
 
             if (data && Array.isArray(data)) {
                 // Sort by ID descending (latest first)

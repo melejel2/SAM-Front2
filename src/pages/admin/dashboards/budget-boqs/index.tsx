@@ -131,7 +131,6 @@ const BudgetBOQs = () => {
     useEffect(() => {
         // Only fetch data if we're actually on the budget-boqs page
         if (location.pathname === "/dashboard/budget-BOQs") {
-            console.log("📍 Budget BOQs page effect triggered, isArchiveMode:", isArchiveMode);
             // Force refresh when archive mode changes to bypass cache
             getProjectsList(true);
         }
@@ -191,16 +190,19 @@ const BudgetBOQs = () => {
                 >
                     <Icon icon={eyeIcon} className="w-4 h-4" />
                 </button>
-                <button
-                    className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        openCreateDialog("Edit", row);
-                    }}
-                    title="Edit"
-                >
-                    <Icon icon={editIcon} className="w-4 h-4" />
-                </button>
+                {/* Only show Edit button when NOT in archive mode (read-only when archived) */}
+                {!isArchiveMode && (
+                    <button
+                        className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            openCreateDialog("Edit", row);
+                        }}
+                        title="Edit"
+                    >
+                        <Icon icon={editIcon} className="w-4 h-4" />
+                    </button>
+                )}
                 {/* Only show Archive button when NOT in archive mode */}
                 {!isArchiveMode && (
                     <button
@@ -228,10 +230,16 @@ const BudgetBOQs = () => {
         );
     }, [openCreateDialog, handleArchive, isArchiveMode]);
 
-    // Handle row double click to navigate to edit
+    // Handle row double click to navigate to edit (disabled in archive mode)
     const handleRowDoubleClick = useCallback((row: Project) => {
-        openCreateDialog("Edit", row);
-    }, [openCreateDialog]);
+        // Don't allow editing in archive mode (read-only)
+        if (!isArchiveMode) {
+            openCreateDialog("Edit", row);
+        } else {
+            // In archive mode, double-click opens preview instead
+            openCreateDialog("Preview", row);
+        }
+    }, [openCreateDialog, isArchiveMode]);
 
     // Toolbar with Add button and Archive checkbox (no title)
     const toolbar = useMemo(() => (
@@ -241,20 +249,29 @@ const BudgetBOQs = () => {
                     type="checkbox"
                     className="checkbox checkbox-sm checkbox-primary"
                     checked={isArchiveMode}
-                    onChange={(e) => {
-                        console.log("☑️ Checkbox changed to:", e.target.checked);
-                        setArchiveMode(e.target.checked);
-                    }}
+                    onChange={(e) => setArchiveMode(e.target.checked)}
                 />
                 <span className="text-sm">Show Archived Projects</span>
             </label>
-            <button
-                className="btn btn-primary btn-sm"
-                onClick={() => openCreateDialog("Add")}
-            >
-                <Icon icon={plusIcon} className="w-4 h-4 mr-1" />
-                Add Project
-            </button>
+            {/* Show read-only badge when in archive mode */}
+            {isArchiveMode && (
+                <span className="badge badge-warning badge-sm gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Read-only Mode
+                </span>
+            )}
+            {/* Hide Add button when in archive mode (read-only) */}
+            {!isArchiveMode && (
+                <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => openCreateDialog("Add")}
+                >
+                    <Icon icon={plusIcon} className="w-4 h-4 mr-1" />
+                    Add Project
+                </button>
+            )}
         </div>
     ), [openCreateDialog, isArchiveMode, setArchiveMode]);
 
