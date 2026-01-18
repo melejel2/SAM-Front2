@@ -89,9 +89,13 @@ export const Step1_ContractAndType: React.FC = () => {
 
     if (loadingContracts) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader />
-            </div>
+            <Loader
+                icon="file-spreadsheet"
+                subtitle="Loading: Contracts"
+                description="Fetching available contracts..."
+                height="auto"
+                minHeight="200px"
+            />
         );
     }
 

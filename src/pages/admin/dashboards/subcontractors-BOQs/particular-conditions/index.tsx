@@ -351,7 +351,11 @@ const ParticularConditions = () => {
     if (loading) {
         return (
             <div className="flex min-h-[400px] items-center justify-center">
-                <Loader />
+                <Loader
+                    icon="file-cog"
+                    subtitle="Loading: Particular Conditions"
+                    description="Preparing contract conditions..."
+                />
             </div>
         );
     }

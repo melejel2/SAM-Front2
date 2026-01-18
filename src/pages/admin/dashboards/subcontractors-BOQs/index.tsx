@@ -183,7 +183,11 @@ const SubcontractorsBOQs = memo(() => {
             {/* Scrollable Content */}
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 {loading ? (
-                    <Loader />
+                    <Loader
+                        icon="file-spreadsheet"
+                        subtitle="Loading: Contracts"
+                        description="Preparing contract data..."
+                    />
                 ) : (
                     activeTab === 0 ? (
                         <SAMTable
@@ -207,7 +211,7 @@ const SubcontractorsBOQs = memo(() => {
                     ) : (
                         // Only render TerminatedContracts when tab is active (lazy loading)
                         terminatedTabLoaded && (
-                            <Suspense fallback={<Loader />}>
+                            <Suspense fallback={<Loader icon="x-circle" subtitle="Loading: Terminated Contracts" />}>
                                 <TerminatedContracts selectedProject={selectedProject} />
                             </Suspense>
                         )

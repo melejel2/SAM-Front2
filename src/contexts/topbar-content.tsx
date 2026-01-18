@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useRef, useEffect } from 'react';
 
 interface TopbarContentState {
   leftContent: ReactNode | null;
@@ -22,20 +22,86 @@ export const TopbarContentProvider: React.FC<{ children: ReactNode }> = ({ child
     rightContent: null,
   });
 
-  const setLeftContent = useCallback((leftContent: ReactNode | null) => {
-    setContent(prev => ({ ...prev, leftContent }));
+  // Track pending updates to debounce rapid changes
+  const pendingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  const updateCountRef = useRef(0);
+  const lastUpdateTimeRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (pendingClearRef.current) {
+        clearTimeout(pendingClearRef.current);
+      }
+    };
   }, []);
+
+  // Rate limit updates to prevent infinite loops
+  const shouldAllowUpdate = useCallback(() => {
+    const now = Date.now();
+    if (now - lastUpdateTimeRef.current < 16) { // ~60fps threshold
+      updateCountRef.current++;
+      if (updateCountRef.current > 50) { // Max 50 updates in rapid succession
+        console.warn('TopbarContent: Rate limited to prevent infinite loop');
+        return false;
+      }
+    } else {
+      updateCountRef.current = 0;
+    }
+    lastUpdateTimeRef.current = now;
+    return true;
+  }, []);
+
+  const setLeftContent = useCallback((leftContent: ReactNode | null) => {
+    if (!mountedRef.current) return;
+    if (!shouldAllowUpdate()) return;
+    // Cancel pending clear when setting new content
+    if (pendingClearRef.current && leftContent !== null) {
+      clearTimeout(pendingClearRef.current);
+      pendingClearRef.current = null;
+    }
+    setContent(prev => ({ ...prev, leftContent }));
+  }, [shouldAllowUpdate]);
 
   const setCenterContent = useCallback((centerContent: ReactNode | null) => {
+    if (!mountedRef.current) return;
+    if (!shouldAllowUpdate()) return;
+    // Cancel pending clear when setting new content
+    if (pendingClearRef.current && centerContent !== null) {
+      clearTimeout(pendingClearRef.current);
+      pendingClearRef.current = null;
+    }
     setContent(prev => ({ ...prev, centerContent }));
-  }, []);
+  }, [shouldAllowUpdate]);
 
   const setRightContent = useCallback((rightContent: ReactNode | null) => {
+    if (!mountedRef.current) return;
+    if (!shouldAllowUpdate()) return;
+    // Cancel pending clear when setting new content
+    if (pendingClearRef.current && rightContent !== null) {
+      clearTimeout(pendingClearRef.current);
+      pendingClearRef.current = null;
+    }
     setContent(prev => ({ ...prev, rightContent }));
-  }, []);
+  }, [shouldAllowUpdate]);
 
   const clearContent = useCallback(() => {
-    setContent({ leftContent: null, centerContent: null, rightContent: null });
+    // Debounce clear to prevent rapid clear/set cycles during route transitions
+    if (pendingClearRef.current) {
+      clearTimeout(pendingClearRef.current);
+    }
+    pendingClearRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        setContent(prev => {
+          if (prev.leftContent === null && prev.centerContent === null && prev.rightContent === null) {
+            return prev;
+          }
+          return { leftContent: null, centerContent: null, rightContent: null };
+        });
+      }
+    }, 0);
   }, []);
 
   return (
@@ -69,13 +135,25 @@ export const useSetTopbarContent = (
 ) => {
   const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
 
-  React.useEffect(() => {
-    if (leftContent !== undefined) setLeftContent(leftContent);
-    if (centerContent !== undefined) setCenterContent(centerContent);
-    if (rightContent !== undefined) setRightContent(rightContent);
+  // Use refs to store the latest content values without triggering re-renders
+  const leftRef = useRef(leftContent);
+  const centerRef = useRef(centerContent);
+  const rightRef = useRef(rightContent);
+
+  // Update refs when content changes
+  leftRef.current = leftContent;
+  centerRef.current = centerContent;
+  rightRef.current = rightContent;
+
+  useEffect(() => {
+    if (leftRef.current !== undefined) setLeftContent(leftRef.current);
+    if (centerRef.current !== undefined) setCenterContent(centerRef.current);
+    if (rightRef.current !== undefined) setRightContent(rightRef.current);
 
     return () => {
       clearContent();
     };
-  }, [leftContent, centerContent, rightContent, setLeftContent, setCenterContent, setRightContent, clearContent]);
+    // Only run on mount/unmount - content is accessed via refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 };

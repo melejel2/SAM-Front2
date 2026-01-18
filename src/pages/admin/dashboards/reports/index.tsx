@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 
 import apiRequest from "@/api/api";
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
+import { useTopbarContent } from "@/contexts/topbar-content";
+import { useNavigationBlocker } from "@/contexts/navigation-blocker";
 import { useAuth } from "@/contexts/auth";
 
 import useTrades from "../../adminTools/trades/use-trades";
-
-const columns = {
-    code: "Code",
-    name: "Project Name",
-};
 
 interface Project {
     id: number;
@@ -22,11 +21,13 @@ const Reports = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(false);
     const [exportingId, setExportingId] = useState<string | null>(null);
-    const navigate = useNavigate();
     const { getToken } = useAuth();
     const { sheets, getTrades, loading: tradesLoading } = useTrades();
     const [selectedTrade, setSelectedTrade] = useState("");
     const [selectedRow, setSelectedRow] = useState<Project | null>(null);
+
+    const { setLeftContent, clearContent } = useTopbarContent();
+    const { tryNavigate } = useNavigationBlocker();
 
     useEffect(() => {
         getTrades();
@@ -54,8 +55,25 @@ const Reports = () => {
     }, [getProjectsList]);
 
     const handleBackToDashboard = useCallback(() => {
-        navigate("/dashboard");
-    }, [navigate]);
+        tryNavigate("/dashboard");
+    }, [tryNavigate]);
+
+    // Set topbar content - back button on left
+    useEffect(() => {
+        setLeftContent(
+            <button
+                onClick={handleBackToDashboard}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Dashboard"
+            >
+                <Icon icon={arrowLeftIcon} className="w-5 h-5" />
+            </button>
+        );
+
+        return () => {
+            clearContent();
+        };
+    }, [handleBackToDashboard, setLeftContent, clearContent]);
 
     const handleExport = async (project: Project) => {
         setExportingId(`kpi_${project.id}`);
@@ -172,72 +190,96 @@ const Reports = () => {
         }
     };
 
-    const tableHeaderContent = (
-        <div className="flex items-center gap-3 flex-1">
-            {/* Back button on far left */}
-            <button
-                onClick={handleBackToDashboard}
-                className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                <span className="iconify lucide--arrow-left size-4"></span>
-                <span>Back</span>
-            </button>
+    // Handle row selection from Spreadsheet
+    const handleSelectionChange = useCallback((_cell: any, row?: Project | null) => {
+        setSelectedRow(row ?? null);
+    }, []);
 
-            {/* Trade filter CENTERED */}
-            <div className="flex-1 flex justify-center">
-                <select
-                    className="select select-bordered select-sm max-w-xs"
-                    value={selectedTrade}
-                    onChange={(e) => setSelectedTrade(e.target.value)}
-                    disabled={tradesLoading}>
-                    <option disabled value="">
-                        {tradesLoading ? "Loading trades..." : "Select a trade"}
+    // Define spreadsheet columns
+    const spreadsheetColumns = useMemo((): SpreadsheetColumn<Project>[] => [
+        {
+            key: "code",
+            label: "Code",
+            width: 150,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "name",
+            label: "Project Name",
+            width: 400,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+    ], []);
+
+    // Toolbar with trade selector and export buttons
+    const toolbar = useMemo(() => (
+        <div className="flex items-center gap-3">
+            {/* Trade selector */}
+            <select
+                className="select select-bordered select-sm max-w-xs"
+                value={selectedTrade}
+                onChange={(e) => setSelectedTrade(e.target.value)}
+                disabled={tradesLoading}
+            >
+                <option disabled value="">
+                    {tradesLoading ? "Loading trades..." : "Select a trade"}
+                </option>
+                {sheets.map((sheet: any) => (
+                    <option key={sheet.id} value={sheet.id}>
+                        {sheet.name}
                     </option>
-                    {sheets.map((sheet: any) => (
-                        <option key={sheet.id} value={sheet.id}>
-                            {sheet.name}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                ))}
+            </select>
 
-            {/* Export buttons on far right */}
-            <div className="flex items-center gap-2">
-                <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => selectedRow && handleExport(selectedRow)}
-                    disabled={!selectedRow || !!exportingId}>
-                    {exportingId === `kpi_${selectedRow?.id}` ? "Exporting..." : "KPI"}
-                </button>
-                <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => selectedRow && handleExportComp(selectedRow)}
-                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
-                    {exportingId === `comp_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Contract"}
-                </button>
-                <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => selectedRow && handleExportProgress(selectedRow)}
-                    disabled={!selectedRow || !selectedTrade || !!exportingId}>
-                    {exportingId === `progress_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Progress"}
-                </button>
-            </div>
+            {/* Export buttons */}
+            <button
+                className="btn btn-sm btn-primary"
+                onClick={() => selectedRow && handleExport(selectedRow)}
+                disabled={!selectedRow || !!exportingId}
+            >
+                {exportingId === `kpi_${selectedRow?.id}` ? "Exporting..." : "KPI"}
+            </button>
+            <button
+                className="btn btn-sm btn-primary"
+                onClick={() => selectedRow && handleExportComp(selectedRow)}
+                disabled={!selectedRow || !selectedTrade || !!exportingId}
+            >
+                {exportingId === `comp_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Contract"}
+            </button>
+            <button
+                className="btn btn-sm btn-primary"
+                onClick={() => selectedRow && handleExportProgress(selectedRow)}
+                disabled={!selectedRow || !selectedTrade || !!exportingId}
+            >
+                {exportingId === `progress_${selectedRow?.id}` ? "Exporting..." : "Budget Vs Progress"}
+            </button>
         </div>
-    );
+    ), [selectedTrade, tradesLoading, sheets, selectedRow, exportingId]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden -mt-6">
+        <div className="h-full flex flex-col overflow-hidden">
             <div className="flex-1 min-h-0">
-                <SAMTable
-                    columns={columns}
-                    tableData={projects}
-                    title={"Projects"}
+                <Spreadsheet<Project>
+                    data={projects}
+                    columns={spreadsheetColumns}
+                    mode="view"
                     loading={loading}
-                    exportingRowId={exportingId}
-                    customHeaderContent={tableHeaderContent}
-                    rowActions={() => ({ exportAction: false })}
-                    onRowSelect={setSelectedRow}
-                    selectedRowId={selectedRow?.id}
-                    onSuccess={() => {}}
+                    emptyMessage="No projects found"
+                    persistKey="reports-spreadsheet"
+                    rowHeight={40}
+                    toolbar={toolbar}
+                    onSelectionChange={handleSelectionChange}
+                    getRowId={(row) => row.id}
+                    allowKeyboardNavigation
+                    allowColumnResize
+                    allowSorting
+                    allowFilters
                 />
             </div>
         </div>

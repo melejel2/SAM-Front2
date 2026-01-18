@@ -834,7 +834,11 @@ const ContractDetails = () => {
     if (loading) {
         return (
             <div className="flex min-h-[400px] items-center justify-center">
-                <Loader />
+                <Loader
+                    icon="file-spreadsheet"
+                    subtitle="Loading: Contract Details"
+                    description="Preparing contract information..."
+                />
             </div>
         );
     }
@@ -1114,7 +1118,7 @@ const ContractDetails = () => {
 
             {/* Tab Content - Only load tabs that have been visited (lazy loading) */}
             <div className="flex-1 min-h-0 overflow-hidden">
-            <Suspense fallback={<div className="flex justify-center p-8"><Loader /></div>}>
+            <Suspense fallback={<div className="flex justify-center p-8"><Loader icon="file-spreadsheet" subtitle="Loading Tab" size="md" height="auto" minHeight="200px" /></div>}>
                 {activeTab === "info" ? (
                     <InfoTab
                         contractData={contractData}

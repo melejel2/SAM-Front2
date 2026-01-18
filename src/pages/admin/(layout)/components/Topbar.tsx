@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Select, SelectOption } from "@/components/daisyui";
 import { ThemeToggleDropdown } from "@/components/ThemeToggleDropdown";
+import { Loader } from "@/components/Loader";
 import { useAuth } from "@/contexts/auth";
 import { useConfig } from "@/contexts/config";
 import { useTopbarContent } from "@/contexts/topbar-content";
@@ -735,10 +736,14 @@ const NotificationsDialog: React.FC<{
           }}
         >
           {loading ? (
-            <div className="flex flex-col justify-center items-center py-16 gap-4">
-              <span className="loading loading-spinner loading-lg"></span>
-              <p className="text-sm text-base-content/60">Loading notifications...</p>
-            </div>
+            <Loader
+              icon="bell"
+              subtitle="Loading: Notifications"
+              description="Fetching your notifications..."
+              height="auto"
+              minHeight="200px"
+              size="md"
+            />
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center gap-4 px-6">
                              <div className="w-20 h-20 rounded-lg bg-base-200 border border-base-300 flex items-center justify-center">
@@ -1013,6 +1018,17 @@ export const Topbar = () => {
   const toggleNotificationsDialog = useCallback(() => {
     setIsNotificationsDialogOpen(prev => !prev);
   }, []);
+
+  const handleLogoClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      tryNavigate("/dashboard");
+    },
+    [tryNavigate]
+  );
   
   // Dynamic text sequences based on current route - Memoized
   const logoTexts = useMemo(() => {
@@ -1110,7 +1126,7 @@ export const Topbar = () => {
         <div className="fixed top-0 left-0 right-0 z-40 bg-base-100 border-b border-base-300 h-14">
           <div className="h-full flex items-center justify-between px-16">
             <div className="flex items-center gap-2">
-              <Link to="/" className="flex-shrink-0">
+              <Link to="/dashboard" onClick={handleLogoClick} className="flex-shrink-0">
                 <div className="flex items-center bg-base-200 rounded-md px-1 h-[32px] inline-flex">
                   <div className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center">
                     <img src="/images/SAM.ico" alt="SAM Logo" className="h-4 w-4" />
@@ -1205,7 +1221,7 @@ export const Topbar = () => {
             {leftContent}
 
             {/* App Logo - always visible */}
-            <Link to="/" className="flex-shrink-0">
+            <Link to="/dashboard" onClick={handleLogoClick} className="flex-shrink-0">
               <div className="flex items-center bg-base-200 rounded-md px-1 h-[36px] inline-flex">
                 <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
                   <img src="/images/SAM.ico" alt="SAM Logo" className="h-6 w-6" />

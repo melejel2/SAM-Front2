@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import clsx from 'clsx';
 import { CustomTooltip } from './CustomTooltip';
+import { useNavigationBlocker } from '@/contexts/navigation-blocker';
 import {
   dashboardMenuItems,
   adminToolsMenuItems,
@@ -28,6 +29,7 @@ const SIDEBAR_STORAGE_KEY = '__SAM_SIDEBAR_COLLAPSED__';
 export const VerticalAppNav: React.FC = () => {
   const location = useLocation();
   const pathname = location.pathname;
+  const { tryNavigate } = useNavigationBlocker();
 
   // State management - Default to collapsed (true)
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -102,6 +104,23 @@ export const VerticalAppNav: React.FC = () => {
   // Hide on mobile
   if (isMobile) return null;
 
+  const handleNavClick = useCallback(
+    (url?: string) => (event: React.MouseEvent) => {
+      if (!url) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+
+      event.preventDefault();
+      tryNavigate(url);
+    },
+    [tryNavigate]
+  );
+
   // Render expanded item
   const renderExpandedItem = (item: INavMenuItem) => {
     const active = isActive(item);
@@ -109,6 +128,7 @@ export const VerticalAppNav: React.FC = () => {
       <li key={item.id}>
         <Link
           to={item.url || '#'}
+          onClick={handleNavClick(item.url)}
           aria-current={active ? 'page' : undefined}
           className={clsx(
             'flex items-center rounded-md px-2.5 py-2 text-sm font-medium',
@@ -140,6 +160,7 @@ export const VerticalAppNav: React.FC = () => {
         <CustomTooltip content={item.label}>
           <Link
             to={item.url || '#'}
+            onClick={handleNavClick(item.url)}
             aria-current={active ? 'page' : undefined}
             aria-label={item.label}
             className={clsx(

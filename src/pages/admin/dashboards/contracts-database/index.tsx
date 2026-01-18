@@ -698,7 +698,11 @@ const ContractsDatabase = () => {
                     {/* Scrollable Content */}
                     <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                         {loading ? (
-                            <Loader />
+                            <Loader
+                                icon="file-text"
+                                subtitle="Loading: Contracts"
+                                description="Preparing contract data..."
+                            />
                         ) : (
                             <div>
                                 {/* Contracts Tab - with virtualization for performance */}

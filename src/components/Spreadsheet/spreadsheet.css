@@ -618,6 +618,7 @@
 :where(.spreadsheet-sheet, .spreadsheet-compact-theme) .spreadsheet-data-cell.cell-align-right .spreadsheet-longtext {
   justify-content: flex-end;
   text-align: right;
+  padding-right: 1rem;
 }
 
 :where(.spreadsheet-sheet, .spreadsheet-compact-theme) .spreadsheet-data-cell.cell-align-center .excel-cell-content,

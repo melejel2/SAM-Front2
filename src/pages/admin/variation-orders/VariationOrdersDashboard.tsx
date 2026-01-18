@@ -248,7 +248,11 @@ const VariationOrdersDashboard = () => {
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 {/* Table Content */}
                 {loading ? (
-                    <Loader />
+                    <Loader
+                        icon="file-diff"
+                        subtitle="Loading: Variation Orders"
+                        description="Preparing VO data..."
+                    />
                 ) : (
                     <SAMTable
                         columns={voDatasetColumns}

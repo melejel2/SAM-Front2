@@ -44,7 +44,7 @@ const VOLineItemsStep: React.FC<VOLineItemsStepProps> = ({
     const tradeOptions = useMemo(() =>
         sheets.map((sheet) => ({
             id: sheet.id,
-            label: sheet.trade
+            label: sheet.name
         })),
         [sheets]
     );

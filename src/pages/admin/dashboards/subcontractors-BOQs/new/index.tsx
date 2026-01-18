@@ -44,7 +44,13 @@ const NewSubcontractWizardContent: React.FC = () => {
     };
 
     if (loading && currentStep === 1) {
-        return <Loader />;
+        return (
+            <Loader
+                icon="file-plus"
+                subtitle="Loading: New Contract"
+                description="Preparing contract wizard..."
+            />
+        );
     }
 
     return (

@@ -176,12 +176,14 @@ export const Step4_PreviewAndSave: React.FC = () => {
                 </div>
             </div>
 
-            <div className="h-[600px] border rounded-lg overflow-hidden">
+            <div className="h-[600px] border rounded-lg overflow-hidden relative">
                 {loading && (
-                    <div className="flex items-center justify-center h-full">
-                        <Loader />
-                        <p className="ml-4">Generating PDF preview...</p>
-                    </div>
+                    <Loader
+                        overlay
+                        icon="file-text"
+                        subtitle="Generating Preview"
+                        description="Creating PDF preview..."
+                    />
                 )}
                 {error && (
                     <div className="flex items-center justify-center h-full">

@@ -17,7 +17,7 @@ import fileTextIcon from "@iconify/icons-lucide/file-text";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
 import xIcon from "@iconify/icons-lucide/x";
 
-import { Loader } from "@/components/Loader";
+import { Loader, LoaderOverlay } from "@/components/Loader";
 import { Spreadsheet, SpreadsheetColumn } from "@/components/Spreadsheet";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
@@ -446,7 +446,7 @@ const IPCsDatabase = () => {
         {
             key: "number",
             label: "IPC Ref",
-            width: 80,
+            width: 90,
             sortable: true,
             filterable: true,
             align: "center"
@@ -553,10 +553,13 @@ const IPCsDatabase = () => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {viewMode === 'table' ? (
-                <div className="flex-1 min-h-0">
-                    {loading ? (
-                        <Loader />
-                    ) : (
+                <div className="flex-1 min-h-0 relative">
+                    <LoaderOverlay
+                        loading={loading}
+                        icon="receipt"
+                        subtitle="Loading: Payment Certificates"
+                        description="Preparing IPC data..."
+                    >
                         <Spreadsheet
                             columns={columns}
                             data={filteredTableData as unknown as IpcRow[]}
@@ -567,7 +570,7 @@ const IPCsDatabase = () => {
                             emptyMessage="No IPCs found. Click 'Create IPC' to add one."
                             onRowDoubleClick={(row) => handleViewIpcDetails(row as IpcRow)}
                         />
-                    )}
+                    </LoaderOverlay>
                 </div>
             ) : (
                 <>
