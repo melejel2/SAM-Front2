@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { MetaData } from "@/components/MetaData";
+import { Loader } from "@/components/Loader";
 import { ACTIVE_API_URL } from "@/api/api";
 
 interface VerificationResult {
@@ -118,10 +119,13 @@ const VerifyPage = () => {
                     <div className="card bg-base-100 shadow-xl">
                         <div className="card-body">
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center py-8">
-                                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                                    <p className="mt-4 text-base-content/70">Verifying document...</p>
-                                </div>
+                                <Loader
+                                    icon="shield-check"
+                                    subtitle="Verifying Document"
+                                    description="Checking document authenticity..."
+                                    height="auto"
+                                    minHeight="200px"
+                                />
                             ) : isPreview ? (
                                 <div className="text-center">
                                     <div className="mb-4 flex justify-center">

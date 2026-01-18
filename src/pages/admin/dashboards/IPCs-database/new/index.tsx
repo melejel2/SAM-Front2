@@ -55,7 +55,13 @@ const NewIPCWizardContent: React.FC = () => {
     };
 
     if (loading && currentStep === firstStep) {
-        return <Loader />;
+        return (
+            <Loader
+                icon="receipt"
+                subtitle="Loading: New IPC"
+                description="Preparing payment certificate wizard..."
+            />
+        );
     }
 
     return (

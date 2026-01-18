@@ -1,6 +1,7 @@
 @theme {
     --animate-bounce-slow: bounce-slow 2s infinite alternate;
     --animate-text-color: text-color 10s ease infinite;
+    --animate-progress-indeterminate: progress-indeterminate 1.5s ease-in-out infinite;
 
     @keyframes bounce-slow {
         0% {
@@ -20,6 +21,21 @@
         }
         100% {
             background-position: 0 50%;
+        }
+    }
+
+    @keyframes progress-indeterminate {
+        0% {
+            width: 0%;
+            margin-left: 0%;
+        }
+        50% {
+            width: 40%;
+            margin-left: 30%;
+        }
+        100% {
+            width: 0%;
+            margin-left: 100%;
         }
     }
 }

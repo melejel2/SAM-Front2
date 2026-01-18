@@ -52,7 +52,13 @@ const CreateContractVOContent: React.FC = () => {
     };
 
     if (loading && currentStep === 1) {
-        return <Loader />;
+        return (
+            <Loader
+                icon="file-diff"
+                subtitle="Loading: Create VO"
+                description="Preparing variation order form..."
+            />
+        );
     }
 
     return (

@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/daisyui";
+import { Loader } from "@/components/Loader";
 import WordDocumentEditor, { WordDocumentEditorRef } from "./index";
 
 interface DocumentEditorModalProps {
@@ -246,14 +247,11 @@ const DocumentEditorModal: React.FC<DocumentEditorModalProps> = ({
                 {/* Editor Container */}
                 <div className="flex-1 min-h-0 bg-base-100 rounded-lg border border-base-300 overflow-hidden relative">
                     {isLoadingSfdt ? (
-                        <div className="h-full flex items-center justify-center">
-                            <div className="text-center space-y-4">
-                                <span className="loading loading-spinner loading-lg text-primary"></span>
-                                <p className="text-sm text-base-content/70">
-                                    Loading document for editing...
-                                </p>
-                            </div>
-                        </div>
+                        <Loader
+                            icon="file-text"
+                            subtitle="Loading: Document"
+                            description="Preparing document for editing..."
+                        />
                     ) : loadError ? (
                         <div className="h-full flex items-center justify-center">
                             <div className="text-center space-y-4">
@@ -274,14 +272,12 @@ const DocumentEditorModal: React.FC<DocumentEditorModalProps> = ({
                         <>
                             {/* Loading overlay while editor initializes document */}
                             {isEditorLoading && (
-                                <div className="absolute inset-0 bg-base-100/90 flex items-center justify-center z-10">
-                                    <div className="text-center space-y-4">
-                                        <span className="loading loading-spinner loading-lg text-primary"></span>
-                                        <p className="text-sm text-base-content/70">
-                                            Preparing document editor...
-                                        </p>
-                                    </div>
-                                </div>
+                                <Loader
+                                    overlay
+                                    icon="file-edit"
+                                    subtitle="Initializing Editor"
+                                    description="Preparing document editor..."
+                                />
                             )}
                             <WordDocumentEditor
                                 ref={editorRef}

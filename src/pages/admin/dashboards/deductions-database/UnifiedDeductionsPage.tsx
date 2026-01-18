@@ -1,11 +1,49 @@
 import { memo, useCallback, useMemo, useState } from "react";
+import { Icon } from "@iconify/react";
+import plusIcon from "@iconify/icons-lucide/plus";
+import pencilIcon from "@iconify/icons-lucide/pencil";
+import trashIcon from "@iconify/icons-lucide/trash-2";
+import databaseIcon from "@iconify/icons-lucide/database";
+import uploadIcon from "@iconify/icons-lucide/upload";
+import xIcon from "@iconify/icons-lucide/x";
+import hardHatIcon from "@iconify/icons-lucide/hard-hat";
+import cogIcon from "@iconify/icons-lucide/cog";
+import packageIcon from "@iconify/icons-lucide/package";
 
 import { Button, Input, Modal, ModalActions, ModalBody, ModalHeader, Select, SelectOption } from "@/components/daisyui";
-import TableComponent from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
+import { Loader } from "@/components/Loader";
 import { UnifiedDeduction } from "@/api/services/deductionsApi";
 
 import useUnifiedDeductions from "./use-unified-deductions";
 import useDeductionsManager from "./use-deductions-manager";
+
+// Type for labor data
+interface LaborType {
+    id: number;
+    laborType: string;
+    unit: string;
+    unitPrice: number;
+}
+
+// Type for machine data
+interface MachineType {
+    id: number;
+    acronym: string;
+    machineType: string;
+    unit: string;
+    unitPrice: number;
+}
+
+// Type for material data
+interface MaterialType {
+    id: number;
+    poRef: string;
+    item: string;
+    unit: string;
+    unitPrice: number;
+}
 
 const UnifiedDeductionsPage = memo(() => {
 
@@ -21,7 +59,6 @@ const UnifiedDeductionsPage = memo(() => {
         addDeduction,
         updateDeduction,
         deleteDeduction,
-        refetch,
     } = useUnifiedDeductions();
 
     // Modal states
@@ -54,24 +91,56 @@ const UnifiedDeductionsPage = memo(() => {
         machineCodeId: undefined as number | undefined,
     });
 
-    // Table columns configuration
-    // Note: "type" column auto-renders as badge (Labor/Machine/Material)
-    const columns = useMemo(() => ({
-        type: "Type",
-        ref: "REF",
-        contractNumber: "Contract",
-        projectName: "Project",
-        subcontractorName: "Subcontractor",
-        subType: "Category",
-        description: "Description",
-        quantity: "Qty",
-        unitPrice: "Unit Price",
-        amount: "Amount",
-    }), []);
-
-    // Use raw deductions directly - format numbers lazily on render via custom cell renderers
-    // This avoids duplicating data with both raw and formatted values
-    const tableData = deductions;
+    // Main table columns configuration for Spreadsheet
+    const columns = useMemo((): SpreadsheetColumn<UnifiedDeduction>[] => [
+        {
+            key: "type",
+            label: "Type",
+            width: 100,
+            align: "center",
+            sortable: true,
+            filterable: true,
+            render: (value: string) => (
+                <span className={`badge badge-sm ${
+                    value === "Labor" ? "badge-info" :
+                    value === "Machine" ? "badge-warning" :
+                    "badge-success"
+                }`}>
+                    {value}
+                </span>
+            ),
+        },
+        { key: "ref", label: "REF", width: 100, sortable: true, filterable: true },
+        { key: "contractNumber", label: "Contract", width: 120, sortable: true, filterable: true },
+        { key: "projectName", label: "Project", width: 150, sortable: true, filterable: true },
+        { key: "subcontractorName", label: "Subcontractor", width: 150, sortable: true, filterable: true },
+        { key: "subType", label: "Category", width: 120, sortable: true, filterable: true },
+        { key: "description", label: "Description", width: 200, sortable: true },
+        {
+            key: "quantity",
+            label: "Qty",
+            width: 80,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString() ?? "-",
+        },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 100,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "-",
+        },
+        {
+            key: "amount",
+            label: "Amount",
+            width: 120,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "-",
+        },
+    ], []);
 
     // Handlers
     const handleLaborTypeSelect = useCallback(
@@ -156,7 +225,7 @@ const UnifiedDeductionsPage = memo(() => {
     }, []);
 
     const handleOpenStaticDialog = useCallback(
-        async (type: "Select" | "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Details" | "Export" | "Generate" | "Unissue", data?: any, _extraData?: any) => {
+        async (type: "Add" | "Edit" | "Delete", data?: UnifiedDeduction) => {
             if (type === "Add") {
                 resetForm();
                 setIsAddModalOpen(true);
@@ -215,6 +284,53 @@ const UnifiedDeductionsPage = memo(() => {
             setSelectedItem(null);
         }
     }, [selectedItem, deleteDeduction]);
+
+    // Actions render for main table
+    const renderActions = useCallback((row: UnifiedDeduction) => (
+        <div className="flex items-center gap-1">
+            <button
+                className="btn btn-ghost btn-xs text-info"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenStaticDialog("Edit", row);
+                }}
+                title="Edit"
+            >
+                <Icon icon={pencilIcon} className="w-4 h-4" />
+            </button>
+            <button
+                className="btn btn-ghost btn-xs text-error"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenStaticDialog("Delete", row);
+                }}
+                title="Delete"
+            >
+                <Icon icon={trashIcon} className="w-4 h-4" />
+            </button>
+        </div>
+    ), [handleOpenStaticDialog]);
+
+    // Toolbar for main spreadsheet
+    const toolbar = useMemo(() => (
+        <div className="flex items-center gap-2">
+            <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setIsManagerModalOpen(true)}
+                title="Master Data"
+            >
+                <Icon icon={databaseIcon} className="size-4" />
+                <span className="text-xs">Master Data</span>
+            </button>
+            <button
+                className="btn btn-sm bg-green-600 text-white hover:bg-green-700"
+                onClick={() => handleOpenStaticDialog("Add")}
+            >
+                <Icon icon={plusIcon} className="size-4" />
+                New Deduction
+            </button>
+        </div>
+    ), [handleOpenStaticDialog]);
 
     // Compact form
     const renderForm = () => (
@@ -354,67 +470,81 @@ const UnifiedDeductionsPage = memo(() => {
         }, 150);
     }, [masterDataTab]);
 
-    // Master data table columns - defined as static objects outside render
-    // Note: Column keys named "type" or "status" auto-render as badges in TableComponent
-    const laborColumns = useMemo(() => ({
-        laborType: "Worker Type",
-        unit: "Unit",
-        unitPrice: "Unit Price",
-    }), []);
+    // Master data table columns - Labor
+    const laborColumns = useMemo((): SpreadsheetColumn<LaborType>[] => [
+        { key: "laborType", label: "Worker Type", width: 200, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 100, align: "center", sortable: true },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 120,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "-",
+        },
+    ], []);
 
-    const machineColumns = useMemo(() => ({
-        acronym: "Code",
-        machineType: "Machine Type",
-        unit: "Unit",
-        unitPrice: "Unit Price",
-    }), []);
+    // Master data table columns - Machines
+    const machineColumns = useMemo((): SpreadsheetColumn<MachineType>[] => [
+        { key: "acronym", label: "Code", width: 100, sortable: true, filterable: true },
+        { key: "machineType", label: "Machine Type", width: 200, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 100, align: "center", sortable: true },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 120,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "-",
+        },
+    ], []);
 
-    const materialColumns = useMemo(() => ({
-        poRef: "PO Ref",
-        item: "Item",
-        unit: "Unit",
-        unitPrice: "Unit Price",
-    }), []);
+    // Master data table columns - Materials
+    const materialColumns = useMemo((): SpreadsheetColumn<MaterialType>[] => [
+        { key: "poRef", label: "PO Ref", width: 120, sortable: true, filterable: true },
+        { key: "item", label: "Item", width: 250, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 100, align: "center", sortable: true },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 120,
+            align: "right",
+            sortable: true,
+            render: (value: number) => value?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "-",
+        },
+    ], []);
 
-    // Transform machine data lazily only when needed (rename type -> machineType to avoid badge)
-    // Memoize based on the current tab to avoid unnecessary transformations
-    const activeMasterData = useMemo(() => {
+    // Transform machine data (rename type -> machineType to display properly)
+    const transformedMachinesData = useMemo((): MachineType[] => {
         if (!isManagerModalOpen) return [];
-        if (masterDataTab === "machines") {
-            return managerMachinesData.map((item: any) => ({
-                ...item,
-                machineType: item.type,
-            }));
-        }
-        return [];
-    }, [masterDataTab, managerMachinesData, isManagerModalOpen]);
-
-    // Custom header with Master Data button
-    const customHeaderContent = (
-        <button className="btn btn-ghost btn-sm" onClick={() => setIsManagerModalOpen(true)} title="Master Data">
-            <span className="iconify lucide--database size-4" />
-            <span className="text-xs">Master Data</span>
-        </button>
-    );
+        return managerMachinesData.map((item: any) => ({
+            id: item.id,
+            acronym: item.acronym,
+            machineType: item.type,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+        }));
+    }, [managerMachinesData, isManagerModalOpen]);
 
     return (
-        <div className="-mt-6 flex h-full flex-col overflow-hidden">
-            <TableComponent
-                tableData={tableData}
+        <div className="h-full flex flex-col overflow-hidden">
+            <Spreadsheet<UnifiedDeduction>
+                data={deductions}
                 columns={columns}
-                title="Deduction"
+                mode="view"
                 loading={loading}
-                virtualized={true}
+                emptyMessage="No deductions found"
+                persistKey="deductions-spreadsheet"
                 rowHeight={40}
-                overscan={5}
-                addBtn={true}
-                addBtnText="New Deduction"
-                editAction={true}
-                deleteAction={true}
-                dynamicDialog={false}
-                openStaticDialog={handleOpenStaticDialog}
-                onSuccess={refetch}
-                customHeaderContent={customHeaderContent}
+                actionsRender={renderActions}
+                actionsColumnWidth={100}
+                onRowDoubleClick={(row) => handleOpenStaticDialog("Edit", row)}
+                getRowId={(row) => row.id}
+                toolbar={toolbar}
+                allowKeyboardNavigation
+                allowColumnResize
+                allowSorting
+                allowFilters
             />
 
             {/* Add Modal */}
@@ -480,9 +610,9 @@ const UnifiedDeductionsPage = memo(() => {
                         {/* Tabs with better styling */}
                         <div className="flex gap-1 bg-base-200 p-1 rounded-lg">
                             {[
-                                { key: "labor" as const, label: "Labor", count: managerLaborData.length, icon: "lucide--hard-hat" },
-                                { key: "machines" as const, label: "Machines", count: managerMachinesData.length, icon: "lucide--cog" },
-                                { key: "materials" as const, label: "Materials", count: managerMaterialsData.length, icon: "lucide--package" },
+                                { key: "labor" as const, label: "Labor", count: managerLaborData.length, icon: hardHatIcon },
+                                { key: "machines" as const, label: "Machines", count: managerMachinesData.length, icon: cogIcon },
+                                { key: "materials" as const, label: "Materials", count: managerMaterialsData.length, icon: packageIcon },
                             ].map((tab) => (
                                 <button
                                     key={tab.key}
@@ -493,7 +623,7 @@ const UnifiedDeductionsPage = memo(() => {
                                     }`}
                                     onClick={() => handleTabChange(tab.key)}
                                     disabled={tabSwitching}>
-                                    <span className={`iconify ${tab.icon} size-4`} />
+                                    <Icon icon={tab.icon} className="size-4" />
                                     <span>{tab.label}</span>
                                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                                         masterDataTab === tab.key ? "bg-primary/10 text-primary" : "bg-base-300 text-base-content/50"
@@ -507,62 +637,72 @@ const UnifiedDeductionsPage = memo(() => {
                     <div className="flex items-center gap-2">
                         {masterDataTab === "materials" && !tabSwitching && (
                             <Button className="btn btn-sm btn-outline btn-primary" onClick={() => importPoeFile?.()}>
-                                <span className="iconify lucide--upload size-4" />
+                                <Icon icon={uploadIcon} className="size-4" />
                                 Import PO
                             </Button>
                         )}
                         <Button className="btn btn-sm btn-ghost btn-square" onClick={() => setIsManagerModalOpen(false)}>
-                            <span className="iconify lucide--x size-5" />
+                            <Icon icon={xIcon} className="size-5" />
                         </Button>
                     </div>
                 </ModalHeader>
                 <ModalBody className="p-0 flex-1 min-h-0 overflow-hidden relative">
                     {/* Loading overlay for tab switching */}
                     {(managerLoading || tabSwitching) && (
-                        <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                            <div className="flex flex-col items-center gap-3">
-                                <span className="loading loading-spinner loading-lg text-primary" />
-                                <span className="text-sm text-base-content/60">
-                                    {managerLoading ? "Loading data..." : "Switching..."}
-                                </span>
-                            </div>
-                        </div>
+                        <Loader
+                            overlay
+                            icon="minus-circle"
+                            subtitle={managerLoading ? "Loading: Deductions" : "Switching Tab"}
+                            description={managerLoading ? "Preparing deduction data..." : "Please wait..."}
+                        />
                     )}
 
                     {/* Render ONLY the active tab's table - no hidden tables consuming memory */}
                     <div className={`h-full transition-opacity duration-150 ${tabSwitching ? "opacity-0" : "opacity-100"}`}>
                         {masterDataTab === "labor" ? (
-                            <TableComponent
-                                tableData={managerLaborData}
+                            <Spreadsheet<LaborType>
+                                data={managerLaborData}
                                 columns={laborColumns}
-                                title="Labor Type"
+                                mode="view"
                                 loading={false}
-                                onSuccess={() => {}}
-                                virtualized={true}
+                                emptyMessage="No labor types found"
+                                persistKey="deductions-labor-spreadsheet"
                                 rowHeight={40}
-                                overscan={5}
+                                getRowId={(row) => row.id}
+                                allowKeyboardNavigation
+                                allowColumnResize
+                                allowSorting
+                                allowFilters
                             />
                         ) : masterDataTab === "machines" ? (
-                            <TableComponent
-                                tableData={activeMasterData}
+                            <Spreadsheet<MachineType>
+                                data={transformedMachinesData}
                                 columns={machineColumns}
-                                title="Machine"
+                                mode="view"
                                 loading={false}
-                                onSuccess={() => {}}
-                                virtualized={true}
+                                emptyMessage="No machines found"
+                                persistKey="deductions-machines-spreadsheet"
                                 rowHeight={40}
-                                overscan={5}
+                                getRowId={(row) => row.id}
+                                allowKeyboardNavigation
+                                allowColumnResize
+                                allowSorting
+                                allowFilters
                             />
                         ) : (
-                            <TableComponent
-                                tableData={managerMaterialsData}
+                            <Spreadsheet<MaterialType>
+                                data={managerMaterialsData}
                                 columns={materialColumns}
-                                title="Material"
+                                mode="view"
                                 loading={false}
-                                onSuccess={() => {}}
-                                virtualized={true}
+                                emptyMessage="No materials found"
+                                persistKey="deductions-materials-spreadsheet"
                                 rowHeight={40}
-                                overscan={5}
+                                getRowId={(row) => row.id}
+                                allowKeyboardNavigation
+                                allowColumnResize
+                                allowSorting
+                                allowFilters
                             />
                         )}
                     </div>

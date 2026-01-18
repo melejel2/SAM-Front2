@@ -232,7 +232,12 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
                     <div className="flex-1 min-h-0 overflow-auto">
                     {loading ? (
                         <div className="flex justify-center p-8">
-                            <Loader />
+                            <Loader
+                                icon="receipt"
+                                subtitle="Loading: Payment Certificates"
+                                description="Preparing IPC data..."
+                                size="md"
+                            />
                         </div>
                     ) : ipcs.length > 0 ? (
                         <SAMTable
@@ -297,9 +302,14 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
             {/* Loading Preview Overlay */}
             {loadingPreview && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-base-100 p-6 rounded-lg flex flex-col items-center gap-4">
-                        <Loader />
-                        <span>Loading preview...</span>
+                    <div className="bg-base-100 p-6 rounded-lg">
+                        <Loader
+                            icon="eye"
+                            subtitle="Loading: Preview"
+                            description="Generating document preview..."
+                            height="auto"
+                            minHeight="auto"
+                        />
                     </div>
                 </div>
             )}

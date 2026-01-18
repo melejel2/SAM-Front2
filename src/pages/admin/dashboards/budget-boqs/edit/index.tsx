@@ -210,7 +210,13 @@ const BudgetBOQEdit = () => {
     }, [projectData]);
 
     if (loading || !projectsLoaded) {
-        return <Loader />;
+        return (
+            <Loader
+                icon="table-2"
+                subtitle="Loading: Budget BOQ"
+                description="Preparing budget data..."
+            />
+        );
     }
 
     if (!selectedProject) {

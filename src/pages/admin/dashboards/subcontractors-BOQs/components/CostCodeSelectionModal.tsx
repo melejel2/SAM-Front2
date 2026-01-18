@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import searchIcon from '@iconify/icons-lucide/search';
 import xIcon from '@iconify/icons-lucide/x';
+import { Loader } from '@/components/Loader';
 
 interface CostCodeLibrary {
   id: number;
@@ -139,9 +140,13 @@ const CostCodeSelectionModal: React.FC<CostCodeSelectionModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center h-48">
-              <div className="loading loading-spinner loading-lg text-primary"></div>
-            </div>
+            <Loader
+              icon="hash"
+              subtitle="Loading: Cost Codes"
+              description="Fetching cost code library..."
+              height="auto"
+              minHeight="200px"
+            />
           ) : (
             <div className="overflow-auto h-full">
               <table className="table table-zebra table-pin-rows">

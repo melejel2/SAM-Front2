@@ -14,9 +14,16 @@ import filterIcon from "@iconify/icons-lucide/filter";
 import filterXIcon from "@iconify/icons-lucide/filter-x";
 import chevronUpIcon from "@iconify/icons-lucide/chevron-up";
 import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
+import checkSquareIcon from "@iconify/icons-lucide/check-square";
+import squareIcon from "@iconify/icons-lucide/square";
+import xIcon from "@iconify/icons-lucide/x";
+import checkIcon from "@iconify/icons-lucide/check";
+import searchIcon from "@iconify/icons-lucide/search";
+import externalLinkIcon from "@iconify/icons-lucide/external-link";
 import SheetTabs from "./SheetTabs";
 import LongTextDialog from "./LongTextDialog";
 import { useOverflowDetection } from "./useOverflowDetection";
+import { Loader } from "@/components/Loader";
 import "./spreadsheet.css";
 
 // Import types from dedicated types file
@@ -1164,9 +1171,9 @@ function SpreadsheetInner<T>(
         return (
           <div className="flex items-center justify-center gap-2">
             {raw ? (
-              <Icon icon="lucide:check-square" className="text-success" fontSize={14} />
+              <Icon icon={checkSquareIcon} className="text-success" fontSize={14} />
             ) : (
-              <Icon icon="lucide:square" className="text-base-content/40" fontSize={14} />
+              <Icon icon={squareIcon} className="text-base-content/40" fontSize={14} />
             )}
           </div>
         );
@@ -1279,10 +1286,12 @@ function SpreadsheetInner<T>(
   if (loading) {
     return (
       <div className="spreadsheet-container spreadsheet-sheet">
-        <div className="spreadsheet-loading">
-          <span className="loading loading-ring w-12 h-12 text-primary" />
-          <p className="mt-4">Loading data...</p>
-        </div>
+        <Loader
+          icon="table-2"
+          subtitle="Loading: Data"
+          description="Preparing spreadsheet data..."
+          size="lg"
+        />
       </div>
     );
   }
@@ -1295,10 +1304,10 @@ function SpreadsheetInner<T>(
     >
       {hasActiveFilters && (
         <div className="flex items-center gap-2 px-3 py-2 bg-info/10 border-b border-base-300 text-sm">
-          <Icon icon="lucide:filter" className="text-info" fontSize={14} />
+          <Icon icon={filterIcon} className="text-info" fontSize={14} />
           Filters active – showing {filteredCount} of {rows.length} rows
           <button className="btn btn-xs btn-ghost ml-auto gap-1" onClick={clearAllFilters}>
-            <Icon icon="lucide:x" fontSize={14} />
+            <Icon icon={xIcon} fontSize={14} />
             Clear
           </button>
         </div>
@@ -1331,13 +1340,13 @@ function SpreadsheetInner<T>(
               onClick={handleFormulaCommit}
               title="Apply (Enter)"
             >
-              <Icon icon="lucide:check" width={16} height={16} />
+              <Icon icon={checkIcon} width={16} height={16} />
             </button>
           )}
         </div>
         {toolbar && <div className="spreadsheet-toolbar">{toolbar}</div>}
         <div className="spreadsheet-search">
-          <Icon icon="lucide:search" width={14} height={14} className="text-base-content/60" />
+          <Icon icon={searchIcon} width={14} height={14} className="text-base-content/60" />
           <input
             type="search"
             value={searchTerm}
@@ -1352,7 +1361,7 @@ function SpreadsheetInner<T>(
               onClick={() => setSearchTerm("")}
               aria-label="Clear search"
             >
-              <Icon icon="lucide:x" width={12} height={12} />
+              <Icon icon={xIcon} width={12} height={12} />
             </button>
           )}
         </div>
@@ -1644,7 +1653,7 @@ function SpreadsheetInner<T>(
                 setOpenFilterDropdown(null);
               }}
             >
-              <Icon icon="lucide:x" fontSize={14} />
+              <Icon icon={xIcon} fontSize={14} />
             </button>
           </div>
 
@@ -1748,6 +1757,17 @@ type OverflowCellContentProps = {
   onOpenLongText: (rowIndex: number, columnKey: string, value: string) => void;
 };
 
+// Format numbers: show 123.01 if decimals are meaningful, or 123 if no decimals (not 123.00)
+const formatNumberDisplay = (value: number): string => {
+  // Check if the number has meaningful decimal places
+  const rounded = Math.round(value * 100) / 100; // Round to 2 decimal places
+  if (Number.isInteger(rounded)) {
+    return rounded.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+  // Has meaningful decimals - show up to 2 decimal places
+  return rounded.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 const OverflowCellContent: React.FC<OverflowCellContentProps> = ({
   value,
   rowIndex,
@@ -1755,8 +1775,14 @@ const OverflowCellContent: React.FC<OverflowCellContentProps> = ({
   columnWidth,
   onOpenLongText
 }) => {
-  const displayValue =
-    value === null || value === undefined || value === "" ? "-" : String(value);
+  let displayValue: string;
+  if (value === null || value === undefined || value === "") {
+    displayValue = "-";
+  } else if (typeof value === "number") {
+    displayValue = formatNumberDisplay(value);
+  } else {
+    displayValue = String(value);
+  }
   const { textRef, isOverflowing } = useOverflowDetection<HTMLSpanElement>(displayValue, columnWidth);
 
   if (isOverflowing) {
@@ -1770,7 +1796,7 @@ const OverflowCellContent: React.FC<OverflowCellContentProps> = ({
         <span className="flex-1 min-w-0 truncate" ref={textRef}>
           {displayValue}
         </span>
-        <Icon icon="lucide:external-link" fontSize={14} />
+        <Icon icon={externalLinkIcon} fontSize={14} />
       </button>
     );
   }

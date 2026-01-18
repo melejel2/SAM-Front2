@@ -106,10 +106,11 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
     // Show loading state while initial data is being fetched
     if (loading && formData.contractsDatasetId === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-                <Loader />
-                <p className="text-base-content/70 text-sm">Loading IPC data...</p>
-            </div>
+            <Loader
+                icon="receipt"
+                subtitle="Loading: IPC Data"
+                description="Preparing payment certificate for editing..."
+            />
         );
     }
 

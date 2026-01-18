@@ -2,79 +2,44 @@ import { useState, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
-import { Subcontractor, SubcontractorFormField, SubcontractorTableColumns } from "@/types/subcontractor";
+import useToast from "@/hooks/use-toast";
+
+export interface Subcontractor {
+    id: number;
+    name: string | null;
+    siegeSocial: string | null;
+    commerceRegistrar: string | null;
+    commerceNumber: string | null;
+    taxNumber: string | null;
+    representedBy: string | null;
+    qualityRepresentive: string | null;
+    subcontractorTel: string | null;
+    [key: string]: unknown; // Index signature for API compatibility
+}
+
+export interface SubcontractorFormData {
+    name: string;
+    siegeSocial: string;
+    commerceRegistrar: string;
+    commerceNumber: string;
+    taxNumber: string;
+    representedBy: string;
+    qualityRepresentive: string;
+    subcontractorTel: string;
+    [key: string]: unknown; // Index signature for API compatibility
+}
 
 const useSubcontractors = () => {
     const [tableData, setTableData] = useState<Subcontractor[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [saving, setSaving] = useState<boolean>(false);
 
     const { getToken } = useAuth();
-    const token = getToken();
-
-    const columns: SubcontractorTableColumns = {
-        name: "Name",
-        siegeSocial: "Company Headquarters",
-        commerceRegistrar: "Commerce Registrar",
-        commerceNumber: "Commerce Number",
-        taxNumber: "Tax Number",
-        representedBy: "Represented By",
-        qualityRepresentive: "Quality Representative",
-        subcontractorTel: "Phone",
-    };
-
-    const inputFields: SubcontractorFormField[] = [
-        {
-            name: "name",
-            label: "Name",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "siegeSocial",
-            label: "Company Headquarters",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "commerceRegistrar",
-            label: "Commerce Registrar",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "commerceNumber",
-            label: "Commerce Number",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "taxNumber",
-            label: "Tax Number",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "representedBy",
-            label: "Represented By",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "qualityRepresentive",
-            label: "Quality Representative",
-            type: "text",
-            required: false,
-        },
-        {
-            name: "subcontractorTel",
-            label: "Phone",
-            type: "text",
-            required: false,
-        },
-    ];
+    const { toaster } = useToast();
 
     const getSubcontractors = useCallback(async () => {
         setLoading(true);
+        const token = getToken();
 
         try {
             const data = await apiRequest({
@@ -82,28 +47,108 @@ const useSubcontractors = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            if (data) {
+            if (data && Array.isArray(data)) {
                 setTableData(data);
-                return data;
             } else {
                 setTableData([]);
-                return [];
             }
         } catch (error) {
             console.error("useSubcontractors: Error during API request:", error);
-            return []; // Return empty array on error
+            toaster.error("Failed to load subcontractors");
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [getToken, toaster]);
+
+    const createSubcontractor = useCallback(async (subcontractor: SubcontractorFormData) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: "Subcontractors/CreateSubcontractor",
+                method: "POST",
+                token: token ?? "",
+                body: subcontractor,
+            });
+
+            if (response) {
+                toaster.success("Subcontractor created successfully");
+                await getSubcontractors();
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error("useSubcontractors: Error creating subcontractor:", error);
+            toaster.error("Failed to create subcontractor");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getSubcontractors]);
+
+    const updateSubcontractor = useCallback(async (subcontractor: Subcontractor) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: "Subcontractors/UpdateSubcontractor",
+                method: "PUT",
+                token: token ?? "",
+                body: subcontractor,
+            });
+
+            if (response) {
+                toaster.success("Subcontractor updated successfully");
+                await getSubcontractors();
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error("useSubcontractors: Error updating subcontractor:", error);
+            toaster.error("Failed to update subcontractor");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getSubcontractors]);
+
+    const deleteSubcontractor = useCallback(async (id: number) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: `Subcontractors/DeleteSubcontractor/${id}`,
+                method: "DELETE",
+                token: token ?? "",
+            });
+
+            if (response) {
+                toaster.success("Subcontractor deleted successfully");
+                await getSubcontractors();
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error("useSubcontractors: Error deleting subcontractor:", error);
+            toaster.error("Failed to delete subcontractor");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getSubcontractors]);
 
     return {
-        columns,
         tableData,
-        inputFields,
         loading,
+        saving,
         getSubcontractors,
+        createSubcontractor,
+        updateSubcontractor,
+        deleteSubcontractor,
     };
 };
 
-export default useSubcontractors; 
+export default useSubcontractors;

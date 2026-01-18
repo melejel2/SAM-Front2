@@ -42,7 +42,13 @@ const VOWizardContent: React.FC = () => {
     };
 
     if (loading && currentStep === 1) {
-        return <Loader />;
+        return (
+            <Loader
+                icon="file-diff"
+                subtitle="Loading: New VO"
+                description="Preparing variation order wizard..."
+            />
+        );
     }
 
     return (

@@ -356,7 +356,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-red-100 rounded-lg dark:bg-red-900/30">
-                                    <Icon icon="lucide:x-circle" className="text-red-600 dark:text-red-400 size-5" />
+                                    <Icon icon="x-circle" className="text-red-600 dark:text-red-400 size-5" />
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-semibold text-base-content">Terminated Contracts</h2>
@@ -370,18 +370,22 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                 className="btn btn-sm btn-ghost"
                                 disabled={loadingContracts}
                             >
-                                <Icon icon="lucide:refresh-cw" className={`size-4 ${loadingContracts ? 'animate-spin' : ''}`} />
+                                <Icon icon="refresh-cw" className={`size-4 ${loadingContracts ? 'animate-spin' : ''}`} />
                                 Refresh
                             </button>
                         </div>
 
                         {loadingContracts ? (
                             <div className="flex justify-center py-12">
-                                <Loader />
+                                <Loader
+                                    icon="x-circle"
+                                    subtitle="Loading: Terminated Contracts"
+                                    description="Preparing terminated contract data..."
+                                />
                             </div>
                         ) : filteredContracts.length === 0 ? (
                             <div className="text-center py-12">
-                                <Icon icon="lucide:inbox" className="size-12 text-base-content/30 mx-auto mb-3" />
+                                <Icon icon="inbox" className="size-12 text-base-content/30 mx-auto mb-3" />
                                 <p className="text-base-content/70">No terminated contracts found</p>
                             </div>
                         ) : (
@@ -420,12 +424,12 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                         onClick={handleBackToList}
                                         className="btn btn-sm btn-ghost"
                                     >
-                                        <Icon icon="lucide:arrow-left" className="size-4" />
+                                        <Icon icon="arrow-left" className="size-4" />
                                         Back
                                     </button>
                                 )}
                                 <div className="p-2 bg-red-100 rounded-lg dark:bg-red-900/30">
-                                    <Icon icon="lucide:file-x" className="text-red-600 dark:text-red-400 size-5" />
+                                    <Icon icon="file-x" className="text-red-600 dark:text-red-400 size-5" />
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-semibold text-base-content">
@@ -451,7 +455,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     {loading === ContractType.Terminate ? (
                                         <span className="loading loading-spinner loading-xs"></span>
                                     ) : (
-                                        <Icon icon="lucide:file-x" className="size-4" />
+                                        <Icon icon="file-x" className="size-4" />
                                     )}
                                     Preview Termination Letter
                                 </button>
@@ -464,7 +468,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     {loading === ContractType.Final ? (
                                         <span className="loading loading-spinner loading-xs"></span>
                                     ) : (
-                                        <Icon icon="lucide:file-check" className="size-4" />
+                                        <Icon icon="file-check" className="size-4" />
                                     )}
                                     Preview Final Discharge
                                 </button>
@@ -477,7 +481,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     {loading === ContractType.RG ? (
                                         <span className="loading loading-spinner loading-xs"></span>
                                     ) : (
-                                        <Icon icon="lucide:shield-check" className="size-4" />
+                                        <Icon icon="shield-check" className="size-4" />
                                     )}
                                     Preview RG Retention
                                 </button>
@@ -490,7 +494,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     {loading === ContractType.contract ? (
                                         <span className="loading loading-spinner loading-xs"></span>
                                     ) : (
-                                        <Icon icon="lucide:file-text" className="size-4" />
+                                        <Icon icon="file-text" className="size-4" />
                                     )}
                                     Preview Main Contract
                                 </button>
@@ -506,7 +510,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     onClick={handleExportTerminate}
                                     disabled={!!loading}
                                 >
-                                    <Icon icon="lucide:download" className="size-4" />
+                                    <Icon icon="download" className="size-4" />
                                     Export Termination (Word)
                                 </button>
 
@@ -515,7 +519,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                     onClick={handleExportFinal}
                                     disabled={!!loading}
                                 >
-                                    <Icon icon="lucide:download" className="size-4" />
+                                    <Icon icon="download" className="size-4" />
                                     Export Final Discharge (PDF)
                                 </button>
                             </div>
@@ -537,7 +541,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                         </>
                                     ) : (
                                         <>
-                                            <Icon icon="lucide:refresh-cw" className="size-4" />
+                                            <Icon icon="refresh-cw" className="size-4" />
                                             Regenerate Termination Letter
                                         </>
                                     )}
@@ -555,7 +559,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                         </>
                                     ) : (
                                         <>
-                                            <Icon icon="lucide:file-plus" className="size-4" />
+                                            <Icon icon="file-plus" className="size-4" />
                                             Generate Final Discharge
                                         </>
                                     )}
@@ -577,7 +581,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                                         onClick={handleClosePreview}
                                         className="btn btn-sm btn-ghost"
                                     >
-                                        <Icon icon="lucide:x" className="size-4" />
+                                        <Icon icon="x" className="size-4" />
                                         Close Preview
                                     </button>
                                 </div>
@@ -588,7 +592,7 @@ const TerminatedContracts: React.FC<TerminatedContractsProps> = ({ selectedProje
                         ) : (
                             <div className="border-t border-base-300 pt-4">
                                 <div className="py-8 text-center">
-                                    <Icon icon="lucide:file-search" className="size-12 text-base-content/30 mx-auto mb-3" />
+                                    <Icon icon="file-search" className="size-12 text-base-content/30 mx-auto mb-3" />
                                     <p className="text-base-content/60">Select a document type above to preview</p>
                                 </div>
                             </div>

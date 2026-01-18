@@ -119,7 +119,12 @@ const VOsTab = ({
                     <div className="flex-1 min-h-0 overflow-auto">
                         {loading ? (
                             <div className="flex justify-center p-8">
-                                <Loader />
+                                <Loader
+                                    icon="file-diff"
+                                    subtitle="Loading: Variation Orders"
+                                    description="Preparing VO data..."
+                                    size="md"
+                                />
                             </div>
                         ) : vos.length > 0 ? (
                             <SAMTable

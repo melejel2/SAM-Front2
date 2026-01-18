@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { Button } from "@/components/daisyui";
+import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
 import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
@@ -673,7 +674,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
             
             {/* VO Dialog - Lazy loaded */}
             {selectedProject && selectedBuilding && currentSheetForVO && showVODialog && (
-                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><div className="loading loading-spinner loading-lg"></div></div>}>
+                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><Loader icon="file-diff" subtitle="Loading: VO Dialog" showProgress={false} height="auto" minHeight="auto" /></div>}>
                     <VODialog
                         isOpen={showVODialog}
                         onClose={() => {
@@ -692,7 +693,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
             {/* Building Selection Dialog - Lazy loaded */}
             {showBuildingDialog && (
-                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><div className="loading loading-spinner loading-lg"></div></div>}>
+                <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"><Loader icon="building-2" subtitle="Loading: Building Dialog" showProgress={false} height="auto" minHeight="auto" /></div>}>
                     <BuildingSelectionDialog
                         isOpen={showBuildingDialog}
                         onClose={() => setShowBuildingDialog(false)}
@@ -780,17 +781,13 @@ const BOQStep: React.FC<BOQStepProps> = ({
             {importingBoq && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-base-100 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-                        <div className="flex flex-col items-center gap-4">
-                            <div className="loading loading-spinner loading-lg text-primary"></div>
-                            <div className="text-center">
-                                <h3 className="text-lg font-semibold text-base-content mb-2">
-                                    Importing BOQ...
-                                </h3>
-                                <p className="text-sm text-base-content/70">
-                                    Please wait while we process your file
-                                </p>
-                            </div>
-                        </div>
+                        <Loader
+                            icon="file-spreadsheet"
+                            subtitle="Importing BOQ"
+                            description="Please wait while we process your file..."
+                            height="auto"
+                            minHeight="auto"
+                        />
                     </div>
                 </div>
             )}

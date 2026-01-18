@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import apiRequest from "@/api/api";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 
+// =============================================================================
+// INTERFACES
+// =============================================================================
+
+export interface Currency {
+    id: number;
+    name: string;
+    currencies: string; // Code (e.g., USD, EUR)
+    rate: number; // Conversion rate
+}
+
 // Types for currency sync
-interface ExternalCurrencyRate {
+export interface ExternalCurrencyRate {
     code: string;
     name: string;
     currentRate: number;
     newRate: number;
     change: number;
     changePercent: number;
+    selected?: boolean;
 }
 
 interface ExchangeRateApiResponse {
@@ -20,9 +32,14 @@ interface ExchangeRateApiResponse {
     conversion_rates: Record<string, number>;
 }
 
+// =============================================================================
+// HOOK
+// =============================================================================
+
 const useCurrencies = () => {
-    const [tableData, setTableData] = useState<any[]>([]);
+    const [tableData, setTableData] = useState<Currency[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [saving, setSaving] = useState<boolean>(false);
     const [syncLoading, setSyncLoading] = useState<boolean>(false);
     const [showSyncDialog, setShowSyncDialog] = useState<boolean>(false);
     const [syncedRates, setSyncedRates] = useState<ExternalCurrencyRate[]>([]);
@@ -30,47 +47,13 @@ const useCurrencies = () => {
     const { getToken } = useAuth();
     const { toaster } = useToast();
 
-    const token = getToken();
+    // =============================================================================
+    // CRUD OPERATIONS
+    // =============================================================================
 
-    const columns = {
-        name: "Name",
-        currencies: "Code",
-        conversionRate: "Conversion Rate",
-    };
-
-    const inputFields = [
-        {
-            name: "name",
-            label: "Name",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "currencies",
-            label: "Code",
-            type: "text",
-            required: true,
-        },
-        {
-            name: "conversionRate",
-            label: "Conversion Rate",
-            type: "number",
-            required: true,
-        },
-    ];
-
-    // Sync dialog columns for displaying proposed changes
-    const syncColumns = {
-        currencies: "Currency Code",
-        name: "Name",
-        currentRate: "Current Rate",
-        newRate: "New Rate",
-        change: "Change",
-        changePercent: "Change %",
-    };
-
-    const getCurrencies = async () => {
+    const getCurrencies = useCallback(async () => {
         setLoading(true);
+        const token = getToken();
 
         try {
             const data = await apiRequest({
@@ -78,13 +61,20 @@ const useCurrencies = () => {
                 method: "GET",
                 token: token ?? "",
             });
-            
+
             // Check if response is an error object or a successful array
             if (data && data.isSuccess === false) {
                 setTableData([]);
                 toaster.error(`Failed to fetch currencies: ${data.message}`);
             } else if (Array.isArray(data)) {
-                setTableData(data);
+                // Map backend fields to our interface
+                const mappedData: Currency[] = data.map((item: any) => ({
+                    id: item.id,
+                    name: item.name || "",
+                    currencies: item.currencies || "", // Code field
+                    rate: item.conversionRate || item.rate || 0,
+                }));
+                setTableData(mappedData);
             } else {
                 setTableData([]);
             }
@@ -94,7 +84,103 @@ const useCurrencies = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [getToken, toaster]);
+
+    const createCurrency = useCallback(async (currency: Omit<Currency, 'id'>) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: "Currencie/AddCurrencie",
+                method: "POST",
+                token: token ?? "",
+                body: {
+                    name: currency.name,
+                    currencies: currency.currencies,
+                    conversionRate: currency.rate,
+                },
+            });
+
+            if (response && response.isSuccess !== false) {
+                toaster.success("Currency created successfully");
+                await getCurrencies();
+                return { success: true };
+            }
+            toaster.error("Failed to create currency");
+            return { success: false };
+        } catch (error) {
+            console.error(error);
+            toaster.error("Failed to create currency");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getCurrencies]);
+
+    const updateCurrency = useCallback(async (currency: Currency) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: "Currencie/UpdateCurrencie",
+                method: "PUT",
+                token: token ?? "",
+                body: {
+                    id: currency.id,
+                    name: currency.name,
+                    currencies: currency.currencies,
+                    conversionRate: currency.rate,
+                },
+            });
+
+            if (response && response.isSuccess !== false) {
+                toaster.success("Currency updated successfully");
+                await getCurrencies();
+                return { success: true };
+            }
+            toaster.error("Failed to update currency");
+            return { success: false };
+        } catch (error) {
+            console.error(error);
+            toaster.error("Failed to update currency");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getCurrencies]);
+
+    const deleteCurrency = useCallback(async (id: number) => {
+        setSaving(true);
+        const token = getToken();
+
+        try {
+            const response = await apiRequest({
+                endpoint: `Currencie/DeleteCurrencie?id=${id}`,
+                method: "DELETE",
+                token: token ?? "",
+            });
+
+            if (response && response.isSuccess !== false) {
+                toaster.success("Currency deleted successfully");
+                await getCurrencies();
+                return { success: true };
+            }
+            toaster.error("Failed to delete currency");
+            return { success: false };
+        } catch (error) {
+            console.error(error);
+            toaster.error("Failed to delete currency");
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    }, [getToken, toaster, getCurrencies]);
+
+    // =============================================================================
+    // SYNC FUNCTIONALITY
+    // =============================================================================
 
     // Fetch exchange rates from external API
     const fetchExternalRates = async (): Promise<Record<string, number> | null> => {
@@ -113,11 +199,11 @@ const useCurrencies = () => {
                 name: 'ExchangeRate.host'
             }
         ];
-        
+
         for (const [index, endpoint] of apiEndpoints.entries()) {
             try {
                 const response = await fetch(endpoint.url);
-                
+
                 if (!response.ok) {
                     if (index === apiEndpoints.length - 1) {
                         throw new Error(`All APIs failed. Last error: ${response.status} ${response.statusText}`);
@@ -126,14 +212,14 @@ const useCurrencies = () => {
                 }
 
                 const data: any = await response.json();
-                
+
                 if (data.result === 'error' || data.error) {
                     throw new Error('External API returned error');
                 }
 
                 // Try different rate properties based on common API formats
                 let conversionRates = null;
-                
+
                 if (data.conversion_rates && typeof data.conversion_rates === 'object') {
                     conversionRates = data.conversion_rates;
                 } else if (data.rates && typeof data.rates === 'object') {
@@ -145,7 +231,7 @@ const useCurrencies = () => {
                 }
 
                 return conversionRates;
-                
+
             } catch (error) {
                 if (index === apiEndpoints.length - 1) {
                     // Last API failed, return null
@@ -157,27 +243,27 @@ const useCurrencies = () => {
                 continue;
             }
         }
-        
+
         // If we get here, all APIs failed
         toaster.error('All exchange rate APIs failed');
         return null;
     };
 
     // Compare current rates with external rates
-    const compareRates = (currentData: any[], externalRates: Record<string, number>): ExternalCurrencyRate[] => {
+    const compareRates = (currentData: Currency[], externalRates: Record<string, number>): ExternalCurrencyRate[] => {
         const comparisons: ExternalCurrencyRate[] = [];
 
         currentData.forEach((currency) => {
             const currencyCode = currency.currencies?.toUpperCase();
-            
+
             if (!currencyCode) {
                 return;
             }
-            
+
             const externalRate = externalRates[currencyCode];
 
             if (externalRate && currencyCode !== 'USD') { // USD is base currency
-                const currentRate = parseFloat(currency.conversionRate) || 0;
+                const currentRate = currency.rate || 0;
                 const newRate = externalRate;
                 const change = newRate - currentRate;
                 const changePercent = currentRate > 0 ? ((change / currentRate) * 100) : 0;
@@ -189,17 +275,19 @@ const useCurrencies = () => {
                     newRate: newRate,
                     change: change,
                     changePercent: changePercent,
+                    selected: true,
                 });
             }
         });
-        
+
         return comparisons;
     };
 
     // Sync currencies with external API
-    const syncCurrencies = async () => {
+    const syncCurrencies = useCallback(async () => {
         setSyncLoading(true);
-        
+        const token = getToken();
+
         try {
             // Fetch current currencies (use existing tableData if available)
             let currentData = tableData;
@@ -209,13 +297,18 @@ const useCurrencies = () => {
                     method: "GET",
                     token: token ?? "",
                 });
-                
+
                 // Handle the response properly
                 if (response && response.isSuccess === false) {
                     toaster.error(`Failed to fetch currencies: ${response.message}`);
                     return;
                 } else if (Array.isArray(response)) {
-                    currentData = response;
+                    currentData = response.map((item: any) => ({
+                        id: item.id,
+                        name: item.name || "",
+                        currencies: item.currencies || "",
+                        rate: item.conversionRate || item.rate || 0,
+                    }));
                 } else {
                     currentData = [];
                 }
@@ -250,11 +343,12 @@ const useCurrencies = () => {
         } finally {
             setSyncLoading(false);
         }
-    };
+    }, [getToken, toaster, tableData]);
 
     // Apply approved rate changes
-    const applySyncedRates = async (approvedRates: ExternalCurrencyRate[]) => {
-        setLoading(true);
+    const applySyncedRates = useCallback(async (approvedRates: ExternalCurrencyRate[]) => {
+        setSaving(true);
+        const token = getToken();
         let successCount = 0;
         let errorCount = 0;
 
@@ -268,7 +362,9 @@ const useCurrencies = () => {
                 if (currentCurrency) {
                     try {
                         const updateData = {
-                            ...currentCurrency,
+                            id: currentCurrency.id,
+                            name: currentCurrency.name,
+                            currencies: currentCurrency.currencies,
                             conversionRate: rate.newRate,
                         };
 
@@ -279,7 +375,7 @@ const useCurrencies = () => {
                             body: updateData,
                         });
 
-                        if (response.isSuccess !== false) {
+                        if (response && response.isSuccess !== false) {
                             successCount++;
                         } else {
                             errorCount++;
@@ -297,7 +393,7 @@ const useCurrencies = () => {
                 toaster.success(`Successfully updated ${successCount} currency rate(s)`);
                 await getCurrencies(); // Refresh the table
             }
-            
+
             if (errorCount > 0) {
                 toaster.error(`Failed to update ${errorCount} currency rate(s)`);
             }
@@ -306,33 +402,37 @@ const useCurrencies = () => {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
             toaster.error(`Failed to apply currency updates: ${errorMessage}`);
         } finally {
-            setLoading(false);
+            setSaving(false);
             setShowSyncDialog(false);
             setSyncedRates([]);
         }
-    };
+    }, [getToken, toaster, tableData, getCurrencies]);
 
     // Cancel sync dialog
-    const cancelSync = () => {
+    const cancelSync = useCallback(() => {
         setShowSyncDialog(false);
         setSyncedRates([]);
-    };
+    }, []);
 
     return {
-        columns,
+        // Data
         tableData,
-        inputFields,
+        // States
         loading,
-        getCurrencies,
-        // Sync functionality
+        saving,
         syncLoading,
         showSyncDialog,
         syncedRates,
-        syncColumns,
+        // CRUD functions
+        getCurrencies,
+        createCurrency,
+        updateCurrency,
+        deleteCurrency,
+        // Sync functions
         syncCurrencies,
         applySyncedRates,
         cancelSync,
     };
 };
 
-export default useCurrencies; 
+export default useCurrencies;

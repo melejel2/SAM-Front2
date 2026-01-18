@@ -345,7 +345,11 @@ const ContractDatabaseDetails = () => {
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-[400px]">
-                <Loader />
+                <Loader
+                    icon="file-text"
+                    subtitle="Loading: Contract Template"
+                    description="Preparing contract template data..."
+                />
             </div>
         );
     }
@@ -580,7 +584,14 @@ const ContractDatabaseDetails = () => {
                     
                     {vosLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader />
+                            <Loader
+                                icon="file-diff"
+                                subtitle="Loading: Variation Orders"
+                                description="Fetching VO data..."
+                                size="md"
+                                height="auto"
+                                minHeight="200px"
+                            />
                         </div>
                     ) : vos.length > 0 ? (
                         <SAMTable

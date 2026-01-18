@@ -51,22 +51,21 @@ export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps>
     useEffect(() => {
         const handlePopState = () => {
             if (isBlockingRef.current) {
-                // Push the current path back to prevent navigation
-                window.history.pushState(null, "", currentPathRef.current);
+                const nextPath = window.location.pathname;
+                // Use router navigation to keep URL + UI in sync
+                navigate(currentPathRef.current, { replace: true });
                 // Show the dialog with the previous path as pending
-                setPendingNavigation(window.location.pathname);
+                setPendingNavigation(nextPath);
                 setShowDialog(true);
             }
         };
 
-        // Push initial state to enable popstate interception
-        window.history.pushState(null, "", location.pathname);
         window.addEventListener("popstate", handlePopState);
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
-    }, [location.pathname]);
+    }, [navigate]);
 
     const setBlocking = useCallback((blocking: boolean, message?: string) => {
         setIsBlockingState(blocking);

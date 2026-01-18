@@ -4,6 +4,7 @@ import {
     Toolbar,
     Inject,
 } from "@syncfusion/ej2-react-documenteditor";
+import { Loader } from "@/components/Loader";
 
 // Register Syncfusion license (free community license)
 import { registerLicense } from "@syncfusion/ej2-base";
@@ -152,12 +153,12 @@ const WordDocumentEditor = forwardRef<WordDocumentEditorRef, WordDocumentEditorP
         return (
             <div className="relative">
                 {isLoading && (
-                    <div className="absolute inset-0 bg-base-100/80 flex items-center justify-center z-50 rounded-lg">
-                        <div className="flex flex-col items-center gap-3">
-                            <span className="loading loading-spinner loading-lg text-primary"></span>
-                            <span className="text-sm text-base-content/70">Loading document...</span>
-                        </div>
-                    </div>
+                    <Loader
+                        overlay
+                        icon="file-text"
+                        subtitle="Loading: Document"
+                        description="Preparing document..."
+                    />
                 )}
                 <DocumentEditorContainerComponent
                     ref={containerRef}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import apiRequest from "@/api/api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
+import { Loader } from "@/components/Loader";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 
@@ -252,12 +253,11 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
 
     if (loading) {
         return (
-            <div className="flex min-h-[400px] items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <span className="loading loading-spinner loading-lg"></span>
-                    <p className="text-base-content/70">Loading contract preview...</p>
-                </div>
-            </div>
+            <Loader
+                icon="file-text"
+                subtitle="Loading: Contract Preview"
+                description="Generating contract preview..."
+            />
         );
     }
 

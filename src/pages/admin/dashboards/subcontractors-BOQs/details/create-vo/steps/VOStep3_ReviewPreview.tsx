@@ -73,12 +73,13 @@ export const VOStep3_ReviewPreview: React.FC = () => {
             </div>
 
             {/* Preview Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden relative">
                 {loadingPreview && (
-                    <div className="flex flex-col justify-center items-center h-full">
-                        <Loader />
-                        <p className="mt-4 text-base-content/60">Generating document preview...</p>
-                    </div>
+                    <Loader
+                        icon="eye"
+                        subtitle="Generating Preview"
+                        description="Creating document preview..."
+                    />
                 )}
 
                 {!loadingPreview && error && (

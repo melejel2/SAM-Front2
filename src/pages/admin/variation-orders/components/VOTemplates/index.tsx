@@ -128,9 +128,13 @@ const VOTemplatesManager: React.FC<VOTemplatesManagerProps> = ({
             {/* Templates Table */}
             <div className="flex-1 p-4">
                 {loading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <Loader />
-                    </div>
+                    <Loader
+                        icon="file-text"
+                        subtitle="Loading: VO Templates"
+                        description="Fetching variation order templates..."
+                        height="auto"
+                        minHeight="250px"
+                    />
                 ) : (
                     <SAMTable
                         columns={voTemplateColumns}

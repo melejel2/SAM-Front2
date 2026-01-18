@@ -625,7 +625,12 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
                     <div className="flex-1 min-h-0 overflow-auto">
                         {loading ? (
                             <div className="flex justify-center p-8">
-                                <Loader />
+                                <Loader
+                                    icon="minus-circle"
+                                    subtitle="Loading: Deductions"
+                                    description="Preparing deduction data..."
+                                    size="md"
+                                />
                             </div>
                         ) : getCurrentData.length > 0 ? (
                             // Use ternary for cleaner rendering - only one table rendered at a time
