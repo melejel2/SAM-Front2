@@ -1,7 +1,7 @@
 import { Loader } from "../Loader";
 import AccordionComponent from "./Components/Accordion";
 import TableComponent from "./Components/Table";
-import { useArchive } from "@/contexts/archive";
+import { useState, useEffect } from "react";
 
 interface SAMTableProps {
     columns: Record<string, any>;
@@ -134,7 +134,24 @@ const SAMTable: React.FC<SAMTableProps> = ({
     overscan,
 }) => {
     // Global archive mode - disable editing/creating when in archive mode
-    const { isArchiveMode } = useArchive();
+    // Read directly from localStorage to avoid context issues
+    const [isArchiveMode, setIsArchiveMode] = useState(() => {
+        return localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true";
+    });
+
+    // Listen for changes to archive mode
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setIsArchiveMode(localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true");
+        };
+        
+        // Listen for custom event when archive mode changes
+        window.addEventListener("archiveModeChanged", handleStorageChange);
+        
+        return () => {
+            window.removeEventListener("archiveModeChanged", handleStorageChange);
+        };
+    }, []);
 
     // Override edit/add actions if in archive mode (read-only)
     const effectiveAddBtn = isArchiveMode ? false : addBtn;

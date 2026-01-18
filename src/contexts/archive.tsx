@@ -20,6 +20,8 @@ export const ArchiveProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsArchiveModeState(value);
         // Update localStorage synchronously to ensure API interceptor gets the latest value
         localStorage.setItem("__SAM_ARCHIVE_MODE__", String(value));
+        // Dispatch custom event to notify components
+        window.dispatchEvent(new Event("archiveModeChanged"));
     }, []);
 
     const toggleArchiveMode = useCallback(() => {
@@ -36,7 +38,12 @@ export const ArchiveProvider: React.FC<{ children: React.ReactNode }> = ({ child
 export const useArchive = () => {
     const context = useContext(ArchiveContext);
     if (!context) {
-        throw new Error("useArchive must be used within an ArchiveProvider");
+        // Return default values instead of throwing error to prevent hook issues
+        return {
+            isArchiveMode: false,
+            setArchiveMode: () => {},
+            toggleArchiveMode: () => {},
+        };
     }
     return context;
 };

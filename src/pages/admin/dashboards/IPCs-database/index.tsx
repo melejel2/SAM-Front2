@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
+import { useArchive } from "@/contexts/archive";
 
 // Import icons
 import eyeIcon from "@iconify/icons-lucide/eye";
@@ -119,6 +120,7 @@ const IPCsDatabase = () => {
     const { toaster } = useToast();
     const { getToken } = useAuth();
     const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+    const { isArchiveMode } = useArchive();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -541,14 +543,18 @@ const IPCsDatabase = () => {
 
     // Toolbar content
     const toolbarContent = useMemo(() => (
-        <button
-            onClick={() => navigate('/dashboard/IPCs-database/new')}
-            className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-        >
-            <Icon icon={plusIcon} className="size-4" />
-            <span>Create IPC</span>
-        </button>
-    ), [navigate]);
+        <>
+            {!isArchiveMode && (
+                <button
+                    onClick={() => navigate('/dashboard/IPCs-database/new')}
+                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                >
+                    <Icon icon={plusIcon} className="size-4" />
+                    <span>Create IPC</span>
+                </button>
+            )}
+        </>
+    ), [navigate, isArchiveMode]);
 
     return (
         <div className="h-full flex flex-col overflow-hidden">

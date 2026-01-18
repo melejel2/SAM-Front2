@@ -15,6 +15,7 @@ import { Spreadsheet } from "@/components/Spreadsheet";
 import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { Loader } from "@/components/Loader";
 import { UnifiedDeduction } from "@/api/services/deductionsApi";
+import { useArchive } from "@/contexts/archive";
 
 import useUnifiedDeductions from "./use-unified-deductions";
 import useDeductionsManager from "./use-deductions-manager";
@@ -46,6 +47,7 @@ interface MaterialType {
 }
 
 const UnifiedDeductionsPage = memo(() => {
+    const { isArchiveMode } = useArchive();
 
     const {
         deductions,
@@ -322,15 +324,17 @@ const UnifiedDeductionsPage = memo(() => {
                 <Icon icon={databaseIcon} className="size-4" />
                 <span className="text-xs">Master Data</span>
             </button>
-            <button
-                className="btn btn-sm bg-green-600 text-white hover:bg-green-700"
-                onClick={() => handleOpenStaticDialog("Add")}
-            >
-                <Icon icon={plusIcon} className="size-4" />
-                New Deduction
-            </button>
+            {!isArchiveMode && (
+                <button
+                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700"
+                    onClick={() => handleOpenStaticDialog("Add")}
+                >
+                    <Icon icon={plusIcon} className="size-4" />
+                    New Deduction
+                </button>
+            )}
         </div>
-    ), [handleOpenStaticDialog]);
+    ), [handleOpenStaticDialog, isArchiveMode]);
 
     // Compact form
     const renderForm = () => (

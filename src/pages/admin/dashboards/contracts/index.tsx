@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { Spreadsheet } from "@/components/Spreadsheet";
 import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { useTopbarContent } from "@/contexts/topbar-content";
+import { useArchive } from "@/contexts/archive";
 
 import useContractManagement from "./use-contract-management";
 
@@ -38,6 +39,7 @@ const ContractsManagement = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
     const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+    const { isArchiveMode } = useArchive();
 
     const {
         draftsData,
@@ -446,15 +448,17 @@ const ContractsManagement = memo(() => {
     // Toolbar with New Contract button
     const toolbar = useMemo(() => (
         <div className="flex items-center justify-end w-full px-4 py-2">
-            <button
-                onClick={handleNewContract}
-                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-            >
-                <Icon icon={plusIcon} className="size-4" />
-                <span>New Contract</span>
-            </button>
+            {!isArchiveMode && (
+                <button
+                    onClick={handleNewContract}
+                    className="btn btn-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
+                >
+                    <Icon icon={plusIcon} className="size-4" />
+                    <span>New Contract</span>
+                </button>
+            )}
         </div>
-    ), [handleNewContract]);
+    ), [handleNewContract, isArchiveMode]);
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
