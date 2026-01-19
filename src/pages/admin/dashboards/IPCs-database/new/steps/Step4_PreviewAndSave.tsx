@@ -176,7 +176,7 @@ export const Step4_PreviewAndSave: React.FC = () => {
                 </div>
             </div>
 
-            <div className="h-[600px] border rounded-lg overflow-hidden relative">
+            <div className="h-[calc(100vh-220px)] min-h-[400px] border rounded-lg overflow-hidden relative">
                 {loading && (
                     <Loader
                         overlay
