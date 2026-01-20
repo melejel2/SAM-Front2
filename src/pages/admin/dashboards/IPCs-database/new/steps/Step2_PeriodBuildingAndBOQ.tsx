@@ -12,6 +12,11 @@ import downloadIcon from "@iconify/icons-lucide/download";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import chevronDownIcon from "@iconify/icons-lucide/chevron-down";
 import alertTriangleIcon from "@iconify/icons-lucide/alert-triangle";
+import fileTextIcon from "@iconify/icons-lucide/file-text";
+import hashIcon from "@iconify/icons-lucide/hash";
+import building2Icon from "@iconify/icons-lucide/building-2";
+import usersIcon from "@iconify/icons-lucide/users";
+import fileCheckIcon from "@iconify/icons-lucide/file-check";
 import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import ExcelJS from "exceljs";
@@ -1887,7 +1892,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         contractNumber: (formData as any).contract || 'N/A',
         projectName: (formData as any).projectName || 'N/A',
         subcontractorName: (formData as any).subcontractorName || 'N/A',
+        tradeCode: (formData as any).tradeCode || '',
     };
+
+    // Generate combined site code: ProjectName (e.g., A61) + TradeCode (e.g., 0302) = A610302
+    const siteCode = contractInfo.projectName && contractInfo.tradeCode
+        ? `${contractInfo.projectName}${contractInfo.tradeCode}`
+        : contractInfo.projectName || 'N/A';
 
     return (
         <div className="space-y-4">
@@ -1896,22 +1907,27 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 {/* Contract Context Header */}
                 <div className="flex items-center gap-6 text-sm flex-wrap mb-4 pb-3 border-b border-base-300">
                     <div className="flex items-center gap-2">
-                        <span className="iconify lucide--file-text text-primary size-4"></span>
+                        <Icon icon={fileTextIcon} className="size-4 text-primary" />
                         <span className="text-base-content/70 font-medium">Contract:</span>
                         <span className="font-semibold text-base-content">{contractInfo.contractNumber}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="iconify lucide--building-2 text-primary size-4"></span>
+                        <Icon icon={hashIcon} className="size-4 text-primary" />
+                        <span className="text-base-content/70 font-medium">Site Code:</span>
+                        <span className="font-semibold text-base-content">{siteCode}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Icon icon={building2Icon} className="size-4 text-primary" />
                         <span className="text-base-content/70 font-medium">Project:</span>
                         <span className="font-semibold text-base-content">{contractInfo.projectName}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="iconify lucide--users text-primary size-4"></span>
+                        <Icon icon={usersIcon} className="size-4 text-primary" />
                         <span className="text-base-content/70 font-medium">Subcontractor:</span>
                         <span className="font-semibold text-base-content">{contractInfo.subcontractorName}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="iconify lucide--file-check text-primary size-4"></span>
+                        <Icon icon={fileCheckIcon} className="size-4 text-primary" />
                         <span className="text-base-content/70 font-medium">Type:</span>
                         <span className="font-semibold text-base-content">{formData.type}</span>
                     </div>

@@ -23,6 +23,7 @@ interface Contract {
     projectName: string;
     subcontractorName: string;
     tradeName: string;
+    tradeCode: string;
     totalAmount: number;
     status: string;
     buildings: ContractBuildingsVM[];
@@ -275,6 +276,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                                         contract.subcontractorName ||
                                         "Unknown Subcontractor",
                                     tradeName: contract.trade?.name || contract.tradeName || "Unknown Trade",
+                                    tradeCode: contract.tradeCode || "",
                                     totalAmount: contract.amount || 0,
                                     status: contract.status || "Active",
                                     buildings: [],
@@ -287,6 +289,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
                                     projectName: contract.project?.name || "Unknown Project",
                                     subcontractorName: contract.subcontractor?.companyName || "Unknown Subcontractor",
                                     tradeName: contract.trade?.name || "Unknown Trade",
+                                    tradeCode: contract.tradeCode || "",
                                     totalAmount: contract.amount || 0,
                                     status: contract.status || "Active",
                                     buildings: [],

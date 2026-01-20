@@ -209,6 +209,8 @@ export interface IpcVM {
   subcontractorName: string;
   tradeId: number;
   tradeName: string;
+  /** The trade/sheet cost code (e.g., "0302" for Waterproofing) */
+  tradeCode?: string;
   contract: string;
 }
 
