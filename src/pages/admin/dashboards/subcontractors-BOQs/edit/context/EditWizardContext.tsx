@@ -152,6 +152,7 @@ interface EditWizardContextType {
     initialDataLoading: boolean;
     loadingProjects: boolean;
     loadingBuildings: boolean;
+    previewLoading: boolean;
 
     // Data
     projects: Project[];
@@ -168,6 +169,7 @@ interface EditWizardContextType {
     setFormData: (data: Partial<EditWizardFormData>) => void;
     setCurrentStep: (step: number) => void;
     setHasUnsavedChanges: (changed: boolean) => void;
+    setPreviewLoading: (isLoading: boolean) => void;
 
     // Data fetching
     fetchProjects: () => Promise<void>;
@@ -266,6 +268,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
     const [initialDataLoading, setInitialDataLoading] = useState(true);
     const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingBuildings, setLoadingBuildings] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(true); // Start true since preview loads on step 5
 
     // Data arrays
     const [projects, setProjects] = useState<Project[]>([]);
@@ -972,6 +975,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         initialDataLoading,
         loadingProjects,
         loadingBuildings,
+        previewLoading,
 
         // Data
         projects,
@@ -988,6 +992,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         setFormData,
         setCurrentStep,
         setHasUnsavedChanges,
+        setPreviewLoading,
 
         // Data fetching
         fetchProjects,
@@ -1014,6 +1019,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         initialDataLoading,
         loadingProjects,
         loadingBuildings,
+        previewLoading,
         projects,
         trades,
         buildings,
@@ -1024,6 +1030,7 @@ export const EditWizardProvider: React.FC<EditWizardProviderProps> = ({ children
         allCostCodes,
         originalContractData,
         setFormData,
+        setPreviewLoading,
         fetchProjects,
         fetchCostCodes,
         fetchBuildingsWithSheets,

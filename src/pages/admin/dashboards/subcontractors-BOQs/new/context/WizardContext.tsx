@@ -141,6 +141,7 @@ interface WizardContextType {
     loading: boolean;
     loadingProjects: boolean;
     loadingBuildings: boolean;
+    previewLoading: boolean;
 
     // Data
     projects: Project[];
@@ -156,6 +157,7 @@ interface WizardContextType {
     setFormData: (data: Partial<WizardFormData>) => void;
     setCurrentStep: (step: number) => void;
     setHasUnsavedChanges: (changed: boolean) => void;
+    setPreviewLoading: (isLoading: boolean) => void;
 
     // Data fetching
     fetchProjects: () => Promise<void>;
@@ -245,6 +247,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [loadingProjects, setLoadingProjects] = useState(false);
     const [loadingBuildings, setLoadingBuildings] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(true); // Start true since preview loads on step 5
 
     // Data arrays
     const [projects, setProjects] = useState<Project[]>([]);
@@ -782,6 +785,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         loading: loading || contractsApi.loading,
         loadingProjects,
         loadingBuildings,
+        previewLoading,
 
         // Data
         projects,
@@ -797,6 +801,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         setFormData,
         setCurrentStep,
         setHasUnsavedChanges,
+        setPreviewLoading,
 
         // Data fetching
         fetchProjects,
@@ -821,6 +826,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         contractsApi.loading,
         loadingProjects,
         loadingBuildings,
+        previewLoading,
         projects,
         trades,
         allBuildings,
@@ -830,6 +836,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({ children }) => {
         currencies,
         allCostCodes,
         setFormData,
+        setPreviewLoading,
         fetchCostCodes,
         fetchBuildingsWithSheets,
         validateCurrentStep,

@@ -12,11 +12,12 @@ interface PreviewStepProps {
     selectedProject: any;
     selectedSubcontractor: any;
     contractId?: number; // For edit mode
+    onLoadingChange?: (isLoading: boolean) => void; // Callback to notify parent of loading state
 }
 
-const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, selectedSubcontractor, contractId }) => {
+const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, selectedSubcontractor, contractId, onLoadingChange }) => {
     const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Start true since preview generates immediately
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isTemplateError, setIsTemplateError] = useState(false);
@@ -24,6 +25,11 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const navigate = useNavigate();
+
+    // Notify parent when loading state changes
+    useEffect(() => {
+        onLoadingChange?.(loading);
+    }, [loading, onLoadingChange]);
 
     useEffect(() => {
         // This effect decides whether to show a preview from saved data (on initial edit load)

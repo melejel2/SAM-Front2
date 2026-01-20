@@ -33,6 +33,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         currentStep,
         setCurrentStep,
         loading,
+        previewLoading,
         goToNextStep,
         goToPreviousStep,
         validateCurrentStep,
@@ -139,10 +140,10 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
                     <button
                         className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
                         onClick={handleSave}
-                        disabled={isSaving}
-                        title="Save and Close"
+                        disabled={isSaving || previewLoading}
+                        title={previewLoading ? "Wait for document to finish generating" : "Save and Close"}
                     >
-                        {isSaving ? (
+                        {isSaving || previewLoading ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <>
@@ -158,7 +159,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, isSaving, handleBackClick, handleNextClick, handleSave, setCenterContent, setRightContent, clearContent]);
+    }, [currentStep, loading, isSaving, previewLoading, handleBackClick, handleNextClick, handleSave, setCenterContent, setRightContent, clearContent]);
 
 
 

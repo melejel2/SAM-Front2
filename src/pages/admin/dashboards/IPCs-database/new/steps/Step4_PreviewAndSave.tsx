@@ -8,7 +8,7 @@ import useToast from "@/hooks/use-toast";
 import { generateIPCFileName } from "@/utils/ipc-filename";
 
 export const Step4_PreviewAndSave: React.FC = () => {
-    const { formData } = useIPCWizardContext();
+    const { formData, setPreviewLoading } = useIPCWizardContext();
     const { getToken } = useAuth();
     const { toaster } = useToast();
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
@@ -19,6 +19,12 @@ export const Step4_PreviewAndSave: React.FC = () => {
 
     // Detect if we're in Edit mode
     const isEditMode = (formData as any).id && (formData as any).id > 0;
+
+    // Sync local loading state to context so parent can disable Save button
+    // IMMEDIATELY set on mount before any render completes
+    React.useLayoutEffect(() => {
+        setPreviewLoading(loading);
+    }, [loading, setPreviewLoading]);
 
     useEffect(() => {
         const fetchPreview = async () => {

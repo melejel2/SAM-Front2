@@ -35,6 +35,7 @@ interface IPCWizardContextType {
     hasUnsavedChanges: boolean;
     loading: boolean;
     loadingContracts: boolean;
+    previewLoading: boolean;
 
     // Data
     contracts: Contract[];
@@ -48,6 +49,7 @@ interface IPCWizardContextType {
     setFormData: (data: Partial<IpcWizardFormData>) => void;
     setCurrentStep: (step: number) => void;
     setHasUnsavedChanges: (hasChanges: boolean) => void;
+    setPreviewLoading: (isLoading: boolean) => void;
     validateCurrentStep: () => boolean;
     goToNextStep: () => void;
     goToPreviousStep: () => void;
@@ -117,6 +119,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [loading, setLoading] = useState(false);
     const [loadingContracts, setLoadingContracts] = useState(false);
     const [preselectionProcessed, setPreselectionProcessed] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(true); // Start true since preview loads on step 4
 
     // Data
     const [contracts, setContracts] = useState<Contract[]>([]);
@@ -519,6 +522,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             hasUnsavedChanges,
             loading,
             loadingContracts,
+            previewLoading,
 
             // Data
             contracts,
@@ -532,6 +536,7 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             setFormData,
             setCurrentStep,
             setHasUnsavedChanges,
+            setPreviewLoading,
             validateCurrentStep,
             goToNextStep,
             goToPreviousStep,
@@ -549,12 +554,14 @@ export const IPCWizardProvider: React.FC<{ children: ReactNode }> = ({ children 
             hasUnsavedChanges,
             loading,
             loadingContracts,
+            previewLoading,
             contracts,
             selectedContract,
             preselectionState,
             setFormData,
             setCurrentStep,
             setHasUnsavedChanges,
+            setPreviewLoading,
             validateCurrentStep,
             goToNextStep,
             goToPreviousStep,

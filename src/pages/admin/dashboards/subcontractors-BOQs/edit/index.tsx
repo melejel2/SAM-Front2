@@ -24,6 +24,7 @@ const EditSubcontractWizardContent: React.FC = () => {
         hasUnsavedChanges,
         loading,
         initialDataLoading,
+        previewLoading,
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
@@ -113,10 +114,10 @@ const EditSubcontractWizardContent: React.FC = () => {
                     <button
                         className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
                         onClick={handleSubmitAndNavigate}
-                        disabled={loading}
-                        title="Save and Close"
+                        disabled={loading || previewLoading}
+                        title={previewLoading ? "Wait for document to finish generating" : "Save and Close"}
                     >
-                        {loading ? (
+                        {loading || previewLoading ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <>
@@ -132,7 +133,7 @@ const EditSubcontractWizardContent: React.FC = () => {
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
+    }, [currentStep, loading, previewLoading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
 
     if (initialDataLoading) {
         return (
