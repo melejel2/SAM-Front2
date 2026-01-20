@@ -157,17 +157,19 @@ export const Step4_BOQItems: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6 h-full">
             {/* Section 1: Trade Selection */}
-            <TradeSelectionSection
-                trades={availableTrades}
-                selectedTrades={formData.selectedTrades}
-                onTradeToggle={handleTradeToggle}
-            />
+            <div className="flex-shrink-0">
+                <TradeSelectionSection
+                    trades={availableTrades}
+                    selectedTrades={formData.selectedTrades}
+                    onTradeToggle={handleTradeToggle}
+                />
+            </div>
 
             {/* Section 2: Building Selection per Trade */}
             {formData.selectedTrades.length > 0 && (
-                <div className="space-y-4">
+                <div className="flex-shrink-0 space-y-4">
                     {formData.selectedTrades.map(tradeName => (
                         <BuildingSelectionSection
                             key={tradeName}
@@ -182,15 +184,17 @@ export const Step4_BOQItems: React.FC = () => {
                 </div>
             )}
 
-            {/* Section 3: BOQ Items Editing */}
+            {/* Section 3: BOQ Items Editing - takes remaining space */}
             {boqTabs.length > 0 && (
-                <BOQEditingSection
-                    tabs={boqTabs}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                    budgetBOQLoadedTabs={budgetBOQLoadedTabs}
-                    setBudgetBOQLoadedTabs={setBudgetBOQLoadedTabs}
-                />
+                <div className="flex-1 min-h-0">
+                    <BOQEditingSection
+                        tabs={boqTabs}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        budgetBOQLoadedTabs={budgetBOQLoadedTabs}
+                        setBudgetBOQLoadedTabs={setBudgetBOQLoadedTabs}
+                    />
+                </div>
             )}
         </div>
     );
