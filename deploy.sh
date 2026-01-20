@@ -3,20 +3,51 @@
 # SAM-Front2 Production Deployment Script (Mac/Linux)
 # Deploys React (Vite) build output to production server via SCP
 
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 echo ""
-echo "================================================================"
-echo "           SAM-Front2 Production Deployment                    "
-echo "================================================================"
+echo -e "${BLUE}================================================================${NC}"
+echo -e "${BLUE}           SAM-Front2 Production Deployment                    ${NC}"
+echo -e "${BLUE}================================================================${NC}"
 echo ""
 
-# Check if deploy.config.json exists
+STEP_COUNT=0
+total_steps() { echo "6"; }
+
+step() {
+    STEP_COUNT=$((STEP_COUNT + 1))
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}  STEP $STEP_COUNT/$(total_steps): $1${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+}
+
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
+error() { echo -e "${RED}[X]${NC} $1"; }
+warning() { echo -e "${YELLOW}[!]${NC} $1"; }
+info() { echo -e "${BLUE}[>]${NC} $1"; }
+
+# ============================================================================
+# STEP 1: VALIDATE CONFIGURATION
+# ============================================================================
+step "Validating Configuration"
+
 CONFIG_FILE="deploy.config.json"
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "X ERROR: $CONFIG_FILE not found!"
+    error "ERROR: $CONFIG_FILE not found!"
     echo "  Please create deploy.config.json with your server credentials."
     exit 1
 fi
-echo "[OK] Configuration file found: $CONFIG_FILE"
+success "Configuration file found: $CONFIG_FILE"
 
 # Read configuration from JSON file
 SERVER_HOST=$(grep -o '"host"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/.*"\([^"]*\)"$/\1/')
@@ -24,41 +55,126 @@ PORT=$(grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' "$CONFIG_FILE" | sed 's/.
 USERNAME=$(grep -o '"username"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/.*"\([^"]*\)"$/\1/')
 REMOTE_PATH=$(grep -o '"remotePath"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/.*"\([^"]*\)"$/\1/')
 
-# Validate configuration
-if [ -z "$SERVER_HOST" ] || [ -z "$PORT" ] || [ -z "$USERNAME" ] || [ -z "$REMOTE_PATH" ]; then
-    echo "X ERROR: Invalid configuration in $CONFIG_FILE"
+# Validate configuration values
+if [ -z "$SERVER_HOST" ]; then
+    error "Missing 'host' in configuration"
     exit 1
 fi
+success "Host: $SERVER_HOST"
+
+if [ -z "$PORT" ]; then
+    error "Missing 'port' in configuration"
+    exit 1
+fi
+success "Port: $PORT"
+
+if [ -z "$USERNAME" ]; then
+    error "Missing 'username' in configuration"
+    exit 1
+fi
+success "Username: $USERNAME"
+
+if [ -z "$REMOTE_PATH" ]; then
+    error "Missing 'remotePath' in configuration"
+    exit 1
+fi
+success "Remote Path: $REMOTE_PATH"
 
 # Check if scp is available
 if ! command -v scp &> /dev/null; then
-    echo "X ERROR: scp is not available!"
+    error "SCP is not available!"
     echo "  Please ensure OpenSSH is installed"
     exit 1
 fi
-echo "[OK] SCP is available"
+success "SCP is available"
 
-# BUILD OUTPUT DIRECTORY - Vite outputs to "dist"
+# ============================================================================
+# STEP 2: BUILD APPLICATION
+# ============================================================================
+step "Building Application"
+
 BUILD_DIR="dist"
 
 # Check if build directory exists
 if [ ! -d "$BUILD_DIR" ]; then
-    echo "[!] Build directory not found. Running production build..."
+    warning "Build directory not found. Running production build..."
     npm run build
+    if [ $? -ne 0 ]; then
+        error "Build failed!"
+        exit 1
+    fi
+else
+    info "Existing build found. Rebuilding for fresh deployment..."
+    npm run build
+    if [ $? -ne 0 ]; then
+        error "Build failed!"
+        exit 1
+    fi
 fi
+success "Build completed successfully"
 
-# Verify build directory exists after build
+# ============================================================================
+# STEP 3: VALIDATE BUILD OUTPUT
+# ============================================================================
+step "Validating Build Output"
+
+# Check build directory exists
 if [ ! -d "$BUILD_DIR" ]; then
-    echo "X ERROR: Build directory $BUILD_DIR not found after build!"
+    error "Build directory $BUILD_DIR not found after build!"
     exit 1
 fi
+success "Build directory exists: $BUILD_DIR"
+
+# Check for index.html
+if [ ! -f "$BUILD_DIR/index.html" ]; then
+    error "index.html not found in build output!"
+    exit 1
+fi
+success "index.html found"
+
+# Check for assets directory
+if [ ! -d "$BUILD_DIR/assets" ]; then
+    warning "assets directory not found (may be normal for some builds)"
+else
+    ASSET_COUNT=$(find "$BUILD_DIR/assets" -type f | wc -l | tr -d ' ')
+    success "Assets directory found with $ASSET_COUNT files"
+fi
+
+# Check for JavaScript files
+JS_COUNT=$(find "$BUILD_DIR" -name "*.js" -type f | wc -l | tr -d ' ')
+if [ "$JS_COUNT" -eq 0 ]; then
+    error "No JavaScript files found in build output!"
+    exit 1
+fi
+success "Found $JS_COUNT JavaScript file(s)"
+
+# Check for CSS files
+CSS_COUNT=$(find "$BUILD_DIR" -name "*.css" -type f | wc -l | tr -d ' ')
+if [ "$CSS_COUNT" -eq 0 ]; then
+    warning "No CSS files found (may be inlined)"
+else
+    success "Found $CSS_COUNT CSS file(s)"
+fi
+
+# Validate index.html contains expected content
+if ! grep -q "<script" "$BUILD_DIR/index.html"; then
+    error "index.html appears invalid (no script tags found)"
+    exit 1
+fi
+success "index.html structure validated"
 
 # Count files and calculate size
 FILE_COUNT=$(find "$BUILD_DIR" -type f | wc -l | tr -d ' ')
 DIR_COUNT=$(find "$BUILD_DIR" -type d | wc -l | tr -d ' ')
 TOTAL_SIZE=$(du -sh "$BUILD_DIR" | cut -f1)
 
-echo ""
+success "Build validation complete"
+
+# ============================================================================
+# STEP 4: CONFIRM DEPLOYMENT
+# ============================================================================
+step "Deployment Confirmation"
+
 echo "----------------------------------------------------------------"
 echo "                    Deployment Details                          "
 echo "----------------------------------------------------------------"
@@ -72,54 +188,97 @@ echo "  Total Size:  $TOTAL_SIZE"
 echo "----------------------------------------------------------------"
 echo ""
 
-# Confirm deployment
 read -p "Do you want to proceed with deployment? [y/n] " CONFIRM
 if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
-    echo "[!] Deployment cancelled by user."
+    warning "Deployment cancelled by user."
     exit 0
 fi
 
-echo ""
-echo "[>] Testing SSH connection..."
-echo "[!] You will be prompted for password..."
+# ============================================================================
+# STEP 5: DEPLOY TO SERVER
+# ============================================================================
+step "Deploying to Server"
+
+info "Testing SSH connection..."
+warning "You will be prompted for password..."
 
 START_TIME=$(date +%s)
 
 # Test SSH connection
 if ssh -p "$PORT" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$USERNAME@$SERVER_HOST" "echo connected" 2>/dev/null; then
-    echo "[OK] SSH connection successful"
+    success "SSH connection successful"
 else
-    echo "X ERROR: Cannot connect to server!"
+    error "Cannot connect to server!"
     echo "  Host: $SERVER_HOST"
     echo "  Port: $PORT"
     echo "  User: $USERNAME"
     exit 1
 fi
 
-echo "[>] Uploading $FILE_COUNT files to server..."
-echo "[!] You will be prompted for password again..."
+info "Uploading $FILE_COUNT files to server..."
+warning "You will be prompted for password again..."
 echo ""
 
 # Deploy using scp
 if scp -P "$PORT" -o StrictHostKeyChecking=no -r "$BUILD_DIR"/* "$USERNAME@$SERVER_HOST:$REMOTE_PATH/" 2>/dev/null; then
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
-
-    echo ""
-    echo "================================================================"
-    echo "              DEPLOYMENT SUCCESSFUL                             "
-    echo "================================================================"
-    echo ""
-    echo "[OK] $FILE_COUNT files deployed successfully"
-    echo "[OK] $TOTAL_SIZE transferred"
-    echo "[OK] Duration: $DURATION seconds"
-    echo ""
-    echo "  Production URL: https://sam.karamentreprises.com/"
-    echo ""
+    success "Files uploaded successfully"
+    success "Transfer duration: $DURATION seconds"
 else
-    echo ""
-    echo "================================================================"
-    echo "              DEPLOYMENT FAILED                                 "
-    echo "================================================================"
+    error "File upload failed!"
     exit 1
 fi
+
+# ============================================================================
+# STEP 6: POST-DEPLOY VERIFICATION
+# ============================================================================
+step "Post-Deploy Verification"
+
+PROD_URL="https://sam.karamentreprises.com"
+
+info "Waiting for server to update (5 seconds)..."
+sleep 5
+
+info "Verifying deployment at $PROD_URL..."
+
+# Check if curl is available
+if command -v curl &> /dev/null; then
+    # Test HTTP response
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$PROD_URL" 2>/dev/null || echo "000")
+
+    if [ "$HTTP_CODE" = "200" ]; then
+        success "Site is responding (HTTP $HTTP_CODE)"
+    elif [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+        success "Site is responding with redirect (HTTP $HTTP_CODE)"
+    elif [ "$HTTP_CODE" = "000" ]; then
+        warning "Could not verify site (connection timeout or SSL issue)"
+    else
+        warning "Site returned HTTP $HTTP_CODE (may need investigation)"
+    fi
+
+    # Check if index.html content is served
+    CONTENT_CHECK=$(curl -s --connect-timeout 10 "$PROD_URL" 2>/dev/null | grep -c "<script" || echo "0")
+    if [ "$CONTENT_CHECK" -gt 0 ]; then
+        success "Site content verified (script tags present)"
+    else
+        warning "Could not verify site content"
+    fi
+else
+    warning "curl not available, skipping HTTP verification"
+fi
+
+# Final summary
+echo ""
+echo -e "${GREEN}================================================================${NC}"
+echo -e "${GREEN}              DEPLOYMENT SUCCESSFUL                             ${NC}"
+echo -e "${GREEN}================================================================${NC}"
+echo ""
+success "$FILE_COUNT files deployed successfully"
+success "$TOTAL_SIZE transferred"
+success "Duration: $DURATION seconds"
+echo ""
+echo -e "  ${CYAN}Production URL:${NC} $PROD_URL"
+echo ""
+echo "  Deployment completed at: $(date '+%Y-%m-%d %H:%M:%S')"
+echo ""

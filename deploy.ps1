@@ -1,20 +1,44 @@
 # SAM-Front2 Production Deployment Script (Windows PowerShell)
 # Deploys React (Vite) build output to production server via SCP
 
+$ErrorActionPreference = "Stop"
+
+$StepCount = 0
+$TotalSteps = 6
+
+function Write-Step {
+    param([string]$Message)
+    $script:StepCount++
+    Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "  STEP $StepCount/$TotalSteps: $Message" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host ""
+}
+
+function Write-Success { param([string]$Message) Write-Host "[OK] $Message" -ForegroundColor Green }
+function Write-Error { param([string]$Message) Write-Host "[X] $Message" -ForegroundColor Red }
+function Write-Warning { param([string]$Message) Write-Host "[!] $Message" -ForegroundColor Yellow }
+function Write-Info { param([string]$Message) Write-Host "[>] $Message" -ForegroundColor Blue }
+
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Blue
 Write-Host "           SAM-Front2 Production Deployment                    " -ForegroundColor Blue
 Write-Host "================================================================" -ForegroundColor Blue
 Write-Host ""
 
-# Check if deploy.config.json exists
+# ============================================================================
+# STEP 1: VALIDATE CONFIGURATION
+# ============================================================================
+Write-Step "Validating Configuration"
+
 $ConfigFile = "deploy.config.json"
 if (-not (Test-Path $ConfigFile)) {
-    Write-Host "X ERROR: $ConfigFile not found!" -ForegroundColor Red
+    Write-Error "ERROR: $ConfigFile not found!"
     Write-Host "  Please create deploy.config.json with your server credentials."
     exit 1
 }
-Write-Host "[OK] Configuration file found: $ConfigFile" -ForegroundColor Green
+Write-Success "Configuration file found: $ConfigFile"
 
 # Read configuration from JSON file
 $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
@@ -24,35 +48,118 @@ $Username = $Config.production.username
 $Password = $Config.production.password
 $RemotePath = $Config.production.remotePath
 
-# Validate configuration
-if (-not $ServerHost -or -not $Port -or -not $Username -or -not $Password -or -not $RemotePath) {
-    Write-Host "X ERROR: Invalid configuration in $ConfigFile" -ForegroundColor Red
+# Validate each configuration value
+if (-not $ServerHost) {
+    Write-Error "Missing 'host' in configuration"
     exit 1
 }
+Write-Success "Host: $ServerHost"
+
+if (-not $Port) {
+    Write-Error "Missing 'port' in configuration"
+    exit 1
+}
+Write-Success "Port: $Port"
+
+if (-not $Username) {
+    Write-Error "Missing 'username' in configuration"
+    exit 1
+}
+Write-Success "Username: $Username"
+
+if (-not $RemotePath) {
+    Write-Error "Missing 'remotePath' in configuration"
+    exit 1
+}
+Write-Success "Remote Path: $RemotePath"
 
 # Check if scp is available
 $scpPath = Get-Command scp -ErrorAction SilentlyContinue
 if (-not $scpPath) {
-    Write-Host "X ERROR: scp is not available!" -ForegroundColor Red
+    Write-Error "SCP is not available!"
     Write-Host "  Please ensure OpenSSH is installed (Windows 10+ has it built-in)"
     exit 1
 }
-Write-Host "[OK] SCP is available" -ForegroundColor Green
+Write-Success "SCP is available"
 
-# BUILD OUTPUT DIRECTORY - Vite outputs to "dist"
+# ============================================================================
+# STEP 2: BUILD APPLICATION
+# ============================================================================
+Write-Step "Building Application"
+
 $BuildDir = "dist"
 
-# Check if build directory exists
 if (-not (Test-Path $BuildDir)) {
-    Write-Host "[!] Build directory not found. Running production build..." -ForegroundColor Yellow
+    Write-Warning "Build directory not found. Running production build..."
     npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Build failed!"
+        exit 1
+    }
+} else {
+    Write-Info "Existing build found. Rebuilding for fresh deployment..."
+    npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Build failed!"
+        exit 1
+    }
 }
+Write-Success "Build completed successfully"
 
-# Verify build directory exists after build
+# ============================================================================
+# STEP 3: VALIDATE BUILD OUTPUT
+# ============================================================================
+Write-Step "Validating Build Output"
+
+# Check build directory exists
 if (-not (Test-Path $BuildDir)) {
-    Write-Host "X ERROR: Build directory $BuildDir not found after build!" -ForegroundColor Red
+    Write-Error "Build directory $BuildDir not found after build!"
     exit 1
 }
+Write-Success "Build directory exists: $BuildDir"
+
+# Check for index.html
+$IndexPath = Join-Path $BuildDir "index.html"
+if (-not (Test-Path $IndexPath)) {
+    Write-Error "index.html not found in build output!"
+    exit 1
+}
+Write-Success "index.html found"
+
+# Check for assets directory
+$AssetsPath = Join-Path $BuildDir "assets"
+if (-not (Test-Path $AssetsPath)) {
+    Write-Warning "assets directory not found (may be normal for some builds)"
+} else {
+    $AssetCount = (Get-ChildItem -Path $AssetsPath -Recurse -File).Count
+    Write-Success "Assets directory found with $AssetCount files"
+}
+
+# Check for JavaScript files
+$JsFiles = Get-ChildItem -Path $BuildDir -Recurse -Filter "*.js" -File
+$JsCount = $JsFiles.Count
+if ($JsCount -eq 0) {
+    Write-Error "No JavaScript files found in build output!"
+    exit 1
+}
+Write-Success "Found $JsCount JavaScript file(s)"
+
+# Check for CSS files
+$CssFiles = Get-ChildItem -Path $BuildDir -Recurse -Filter "*.css" -File
+$CssCount = $CssFiles.Count
+if ($CssCount -eq 0) {
+    Write-Warning "No CSS files found (may be inlined)"
+} else {
+    Write-Success "Found $CssCount CSS file(s)"
+}
+
+# Validate index.html contains expected content
+$IndexContent = Get-Content $IndexPath -Raw
+if ($IndexContent -notmatch "<script") {
+    Write-Error "index.html appears invalid (no script tags found)"
+    exit 1
+}
+Write-Success "index.html structure validated"
 
 # Count files and calculate size
 $Files = Get-ChildItem -Path $BuildDir -Recurse -File
@@ -63,7 +170,13 @@ $TotalSizeBytes = ($Files | Measure-Object -Property Length -Sum).Sum
 $TotalSizeMB = [math]::Round($TotalSizeBytes / 1MB, 2)
 $TotalSize = "$TotalSizeMB MB"
 
-Write-Host ""
+Write-Success "Build validation complete"
+
+# ============================================================================
+# STEP 4: CONFIRM DEPLOYMENT
+# ============================================================================
+Write-Step "Deployment Confirmation"
+
 Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host "                    Deployment Details                          " -ForegroundColor Cyan
 Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
@@ -77,16 +190,19 @@ Write-Host "  Total Size:  $TotalSize"
 Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
-# Confirm deployment
 $Confirm = Read-Host "Do you want to proceed with deployment? [y/n]"
 if ($Confirm -ne "y" -and $Confirm -ne "Y") {
-    Write-Host "[!] Deployment cancelled by user." -ForegroundColor Yellow
+    Write-Warning "Deployment cancelled by user."
     exit 0
 }
 
-Write-Host ""
-Write-Host "[>] Testing SSH connection..." -ForegroundColor Blue
-Write-Host "[!] You will be prompted for password..." -ForegroundColor Yellow
+# ============================================================================
+# STEP 5: DEPLOY TO SERVER
+# ============================================================================
+Write-Step "Deploying to Server"
+
+Write-Info "Testing SSH connection..."
+Write-Warning "You will be prompted for password..."
 
 $StartTime = Get-Date
 
@@ -94,17 +210,17 @@ $StartTime = Get-Date
 ssh -p $Port -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$Username@$ServerHost" "echo connected" 2>$null
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "[OK] SSH connection successful" -ForegroundColor Green
+    Write-Success "SSH connection successful"
 } else {
-    Write-Host "X ERROR: Cannot connect to server!" -ForegroundColor Red
+    Write-Error "Cannot connect to server!"
     Write-Host "  Host: $ServerHost"
     Write-Host "  Port: $Port"
     Write-Host "  User: $Username"
     exit 1
 }
 
-Write-Host "[>] Uploading $FileCount files to server..." -ForegroundColor Blue
-Write-Host "[!] You will be prompted for password again..." -ForegroundColor Yellow
+Write-Info "Uploading $FileCount files to server..."
+Write-Warning "You will be prompted for password again..."
 Write-Host ""
 
 # Deploy using scp
@@ -113,22 +229,60 @@ scp -P $Port -o StrictHostKeyChecking=no -r "$BuildDir\*" "${Username}@${ServerH
 if ($LASTEXITCODE -eq 0) {
     $EndTime = Get-Date
     $Duration = [math]::Round(($EndTime - $StartTime).TotalSeconds)
-
-    Write-Host ""
-    Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "              DEPLOYMENT SUCCESSFUL                             " -ForegroundColor Green
-    Write-Host "================================================================" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "[OK] $FileCount files deployed successfully" -ForegroundColor Green
-    Write-Host "[OK] $TotalSize transferred" -ForegroundColor Green
-    Write-Host "[OK] Duration: $Duration seconds" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "  Production URL: https://sam.karamentreprises.com/" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Success "Files uploaded successfully"
+    Write-Success "Transfer duration: $Duration seconds"
 } else {
-    Write-Host ""
-    Write-Host "================================================================" -ForegroundColor Red
-    Write-Host "              DEPLOYMENT FAILED                                 " -ForegroundColor Red
-    Write-Host "================================================================" -ForegroundColor Red
+    Write-Error "File upload failed!"
     exit 1
 }
+
+# ============================================================================
+# STEP 6: POST-DEPLOY VERIFICATION
+# ============================================================================
+Write-Step "Post-Deploy Verification"
+
+$ProdUrl = "https://sam.karamentreprises.com"
+
+Write-Info "Waiting for server to update (5 seconds)..."
+Start-Sleep -Seconds 5
+
+Write-Info "Verifying deployment at $ProdUrl..."
+
+try {
+    # Test HTTP response
+    $Response = Invoke-WebRequest -Uri $ProdUrl -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
+    $StatusCode = $Response.StatusCode
+
+    if ($StatusCode -eq 200) {
+        Write-Success "Site is responding (HTTP $StatusCode)"
+    } elseif ($StatusCode -eq 301 -or $StatusCode -eq 302) {
+        Write-Success "Site is responding with redirect (HTTP $StatusCode)"
+    } else {
+        Write-Warning "Site returned HTTP $StatusCode (may need investigation)"
+    }
+
+    # Check if index.html content is served
+    if ($Response.Content -match "<script") {
+        Write-Success "Site content verified (script tags present)"
+    } else {
+        Write-Warning "Could not verify site content"
+    }
+} catch {
+    Write-Warning "Could not verify site (connection timeout or SSL issue)"
+    Write-Warning "Error: $($_.Exception.Message)"
+}
+
+# Final summary
+Write-Host ""
+Write-Host "================================================================" -ForegroundColor Green
+Write-Host "              DEPLOYMENT SUCCESSFUL                             " -ForegroundColor Green
+Write-Host "================================================================" -ForegroundColor Green
+Write-Host ""
+Write-Success "$FileCount files deployed successfully"
+Write-Success "$TotalSize transferred"
+Write-Success "Duration: $Duration seconds"
+Write-Host ""
+Write-Host "  Production URL: $ProdUrl" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Deployment completed at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Host ""
