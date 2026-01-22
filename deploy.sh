@@ -204,8 +204,11 @@ warning "You will be prompted for password..."
 
 START_TIME=$(date +%s)
 
+# SSH connection options to prevent hung sftp-server processes
+SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o BatchMode=no"
+
 # Test SSH connection
-if ssh -p "$PORT" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$USERNAME@$SERVER_HOST" "echo connected" 2>/dev/null; then
+if ssh -p "$PORT" $SSH_OPTS "$USERNAME@$SERVER_HOST" "echo connected" 2>/dev/null; then
     success "SSH connection successful"
 else
     error "Cannot connect to server!"
@@ -219,16 +222,25 @@ info "Uploading $FILE_COUNT files to server..."
 warning "You will be prompted for password again..."
 echo ""
 
-# Deploy using scp
-if scp -P "$PORT" -o StrictHostKeyChecking=no -r "$BUILD_DIR"/* "$USERNAME@$SERVER_HOST:$REMOTE_PATH/" 2>/dev/null; then
+# Deploy using scp with timeout options to prevent hung connections
+if scp -P "$PORT" $SSH_OPTS -r "$BUILD_DIR"/* "$USERNAME@$SERVER_HOST:$REMOTE_PATH/"; then
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
     success "Files uploaded successfully"
     success "Transfer duration: $DURATION seconds"
 else
     error "File upload failed!"
+    # Attempt cleanup even on failure
+    info "Attempting SSH connection cleanup..."
+    ssh -p "$PORT" -o ConnectTimeout=10 "$USERNAME@$SERVER_HOST" "exit" 2>/dev/null || true
     exit 1
 fi
+
+# Explicit SSH session cleanup to prevent hung sftp-server processes
+info "Cleaning up SSH connection..."
+ssh -p "$PORT" -o ConnectTimeout=10 "$USERNAME@$SERVER_HOST" "exit" 2>/dev/null || true
+sleep 2
+success "SSH connection cleanup completed"
 
 # ============================================================================
 # STEP 6: POST-DEPLOY VERIFICATION

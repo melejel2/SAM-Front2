@@ -206,8 +206,12 @@ Write-Warning "You will be prompted for password..."
 
 $StartTime = Get-Date
 
+# SSH connection options to prevent hung sftp-server processes
+$SshOpts = "-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
+
 # Test SSH connection
-ssh -p $Port -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$Username@$ServerHost" "echo connected" 2>$null
+$sshArgs = @("-p", $Port) + ($SshOpts -split ' ') + @("$Username@$ServerHost", "echo connected")
+& ssh @sshArgs 2>$null
 
 if ($LASTEXITCODE -eq 0) {
     Write-Success "SSH connection successful"
@@ -223,8 +227,9 @@ Write-Info "Uploading $FileCount files to server..."
 Write-Warning "You will be prompted for password again..."
 Write-Host ""
 
-# Deploy using scp
-scp -P $Port -o StrictHostKeyChecking=no -r "$BuildDir\*" "${Username}@${ServerHost}:$RemotePath/" 2>$null
+# Deploy using scp with timeout options to prevent hung connections
+$scpArgs = @("-P", $Port) + ($SshOpts -split ' ') + @("-r", "$BuildDir\*", "${Username}@${ServerHost}:$RemotePath/")
+& scp @scpArgs
 
 if ($LASTEXITCODE -eq 0) {
     $EndTime = Get-Date
@@ -233,8 +238,17 @@ if ($LASTEXITCODE -eq 0) {
     Write-Success "Transfer duration: $Duration seconds"
 } else {
     Write-Error "File upload failed!"
+    # Attempt cleanup even on failure
+    Write-Info "Attempting SSH connection cleanup..."
+    & ssh -p $Port -o ConnectTimeout=10 "$Username@$ServerHost" "exit" 2>$null
     exit 1
 }
+
+# Explicit SSH session cleanup to prevent hung sftp-server processes
+Write-Info "Cleaning up SSH connection..."
+& ssh -p $Port -o ConnectTimeout=10 "$Username@$ServerHost" "exit" 2>$null
+Start-Sleep -Seconds 2
+Write-Success "SSH connection cleanup completed"
 
 # ============================================================================
 # STEP 6: POST-DEPLOY VERIFICATION

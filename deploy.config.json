@@ -4,6 +4,12 @@
     "port": 2313,
     "username": "KaramEnt",
     "password": "4ioho4ho24igh4irf98uc89cysacy8x899^#R*By9^&*#%$*(#$*^#$#$!@#$#$554",
-    "remotePath": "/C:/inetpub/SAM/frontend"
+    "remotePath": "/C:/inetpub/SAM/frontend",
+    "sshOptions": {
+      "connectTimeout": 30,
+      "serverAliveInterval": 15,
+      "serverAliveCountMax": 3,
+      "batchMode": false
+    }
   }
 }
