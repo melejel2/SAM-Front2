@@ -11,7 +11,7 @@ function Write-Step {
     $script:StepCount++
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "  STEP $StepCount/$TotalSteps: $Message" -ForegroundColor Cyan
+    Write-Host "  STEP ${StepCount}/${TotalSteps}: $Message" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -83,28 +83,17 @@ if (-not $scpPath) {
 Write-Success "SCP is available"
 
 # ============================================================================
-# STEP 2: BUILD APPLICATION
+# STEP 2: VERIFY BUILD OUTPUT EXISTS
 # ============================================================================
-Write-Step "Building Application"
+Write-Step "Verifying Build Output"
 
 $BuildDir = "dist"
 
 if (-not (Test-Path $BuildDir)) {
-    Write-Warning "Build directory not found. Running production build..."
-    npm run build
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Build failed!"
-        exit 1
-    }
-} else {
-    Write-Info "Existing build found. Rebuilding for fresh deployment..."
-    npm run build
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Build failed!"
-        exit 1
-    }
+    Write-Error "Build directory not found! Run 'npm run build' first."
+    exit 1
 }
-Write-Success "Build completed successfully"
+Write-Success "Build directory found: $BuildDir"
 
 # ============================================================================
 # STEP 3: VALIDATE BUILD OUTPUT

@@ -21,7 +21,7 @@ import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import ExcelJS from "exceljs";
 import useToast from "@/hooks/use-toast";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency, formatQuantity } from "@/utils/formatters";
 import { usePermissions } from "@/hooks/use-permissions";
 import CorrectPreviousValueModal from "../../components/CorrectPreviousValueModal";
 import CorrectionHistoryModal from "../../components/CorrectionHistoryModal";
@@ -1370,7 +1370,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "no",
             label: "N°",
-            width: 60,
+            width: 70,
             align: "center",
             sortable: true,
             filterable: true,
@@ -1390,7 +1390,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "unite",
             label: "Unit",
-            width: 60,
+            width: 70,
             align: "center",
             sortable: true,
             filterable: true,
@@ -1399,10 +1399,10 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "qte",
             label: "Contract Qty",
-            width: 90,
+            width: 100,
             align: "right",
             sortable: true,
-            render: (value: number) => <span className="text-xs font-medium">{value || ''}</span>
+            render: (value: number) => <span className="text-xs font-medium">{value ? formatQuantity(value) : ''}</span>
         },
         {
             key: "unitPrice",
@@ -1432,7 +1432,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 return (
                     <div className="flex items-center justify-end gap-1 text-xs">
-                        <span>{value || ''}</span>
+                        <span>{value ? formatQuantity(value) : ''}</span>
                         {canCorrectPreviousValues && !isHeaderRow && row.id && activeBuilding && (
                             <button
                                 type="button"
@@ -1458,43 +1458,40 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "actualQte",
             label: "Actual Qty",
-            width: 90,
+            width: 100,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-green-50/50 dark:bg-green-900/10",
             render: (value: number, row: BoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
-                return <span className="text-xs">{value || ''}</span>;
+                return <span className="text-xs">{value ? formatQuantity(value) : ''}</span>;
             }
         },
         {
             key: "cumulQte",
             label: "Cumul Qty",
-            width: 90,
+            width: 100,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-purple-50/50 dark:bg-purple-900/10",
             render: (_value: number, row: BoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
                 const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
-                return <span className="text-xs">{cumulQte || ''}</span>;
+                return <span className="text-xs">{cumulQte ? formatQuantity(cumulQte) : ''}</span>;
             }
         },
         {
             key: "cumulPercent",
             label: "Cumul %",
-            width: 80,
+            width: 85,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-blue-50/50 dark:bg-blue-900/10",
             render: (_value: number, row: BoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow || row.qte === 0) return <span className="text-xs text-base-content/30">-</span>;
@@ -1536,32 +1533,30 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         },
         {
             key: "cumulMaterialPercentage",
-            label: "Mat. Supply %",
-            width: 90,
+            label: "Mat. Supply",
+            width: 100,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-orange-50/50 dark:bg-orange-900/10",
             render: (value: number, row: BoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
-                return <span className="text-xs">{value ? `${value}%` : ''}</span>;
+                return <span className="text-xs">{value ? `${formatQuantity(value)}%` : ''}</span>;
             }
         },
         {
             key: "cumulDeductionPercentage",
-            label: "Deduction %",
-            width: 90,
+            label: "Deduction",
+            width: 95,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-red-50/50 dark:bg-red-900/10",
             render: (value: number, row: BoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
-                return <span className="text-xs">{value ? `${value}%` : ''}</span>;
+                return <span className="text-xs">{value ? `${formatQuantity(value)}%` : ''}</span>;
             }
         }
     ], [canCorrectPreviousValues, activeBuilding]);
@@ -1573,7 +1568,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "no",
             label: "N°",
-            width: 60,
+            width: 70,
             align: "center",
             sortable: true,
             filterable: true,
@@ -1593,7 +1588,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "unite",
             label: "Unit",
-            width: 60,
+            width: 70,
             align: "center",
             sortable: true,
             filterable: true,
@@ -1602,10 +1597,10 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "qte",
             label: "VO Qty",
-            width: 90,
+            width: 100,
             align: "right",
             sortable: true,
-            render: (value: number) => <span className="text-xs font-medium">{value || ''}</span>
+            render: (value: number) => <span className="text-xs font-medium">{value ? formatQuantity(value) : ''}</span>
         },
         {
             key: "unitPrice",
@@ -1628,14 +1623,14 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "precedQte",
             label: "Prev Qty",
-            width: 90,
+            width: 100,
             align: "right",
             sortable: true,
             render: (value: number, row: VOBoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 return (
                     <div className="flex items-center justify-end gap-1 text-xs">
-                        <span>{value || ''}</span>
+                        <span>{value ? formatQuantity(value) : ''}</span>
                         {canCorrectPreviousValues && !isHeaderRow && row.id && activeVO && activeVOBuilding && (
                             <button
                                 type="button"
@@ -1661,43 +1656,40 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         {
             key: "actualQte",
             label: "Actual Qty",
-            width: 90,
+            width: 100,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-green-50/50 dark:bg-green-900/10",
             render: (value: number, row: VOBoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
-                return <span className="text-xs">{value || ''}</span>;
+                return <span className="text-xs">{value ? formatQuantity(value) : ''}</span>;
             }
         },
         {
             key: "cumulQte",
             label: "Cumul Qty",
-            width: 90,
+            width: 100,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-purple-50/50 dark:bg-purple-900/10",
             render: (_value: number | undefined, row: VOBoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow) return <span className="text-xs text-base-content/30">-</span>;
                 const cumulQte = (row.precedQte || 0) + (row.actualQte || 0);
-                return <span className="text-xs">{cumulQte || ''}</span>;
+                return <span className="text-xs">{cumulQte ? formatQuantity(cumulQte) : ''}</span>;
             }
         },
         {
             key: "cumulPercent",
             label: "Cumul %",
-            width: 80,
+            width: 85,
             align: "right",
             editable: true,
             type: "number",
             sortable: true,
-            cellClassName: () => "bg-blue-50/50 dark:bg-blue-900/10",
             render: (_value: number | undefined, row: VOBoqIpcVM) => {
                 const isHeaderRow = row.qte === 0 && row.unitPrice === 0;
                 if (isHeaderRow || row.qte === 0) return <span className="text-xs text-base-content/30">-</span>;
@@ -1966,11 +1958,6 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 </div>
 
                 {/* Work Period Section */}
-                <div className="flex items-center gap-2 mb-3">
-                    <span className="w-3 h-3 bg-primary rounded-full"></span>
-                    <h2 className="text-base font-semibold text-base-content">Work Period</h2>
-                </div>
-
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
                     {/* IPC Date */}
                     <div className="form-control">
@@ -2085,7 +2072,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
             {/* BOQ Spreadsheet - Contract BOQ */}
             {viewMode === "contract" && activeBuilding && (
-                <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 380px)', minHeight: '400px' }}>
+                <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
                     {/* Spreadsheet with toolbarLeft for building selector */}
                     <Spreadsheet<BoqIpcVM>
                         data={activeBuilding.boqsContract || []}
@@ -2102,7 +2089,6 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         allowColumnResize
                         allowSorting={false}
                         allowFilters
-                        hideFormulaBar
                         toolbarLeft={
                             <div className="flex items-center gap-3">
                                 <Icon icon={buildingIcon} className="text-blue-600 dark:text-blue-400 size-4" />
@@ -2133,15 +2119,43 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                             </div>
                         }
                         toolbar={contractBOQToolbar}
-                        summaryRow={() => (
-                            <div className="flex items-center justify-between px-4 py-2 font-semibold text-xs">
-                                <span>Totals</span>
-                                <div className="flex gap-6">
-                                    <span>Contract: {formatCurrency(contractBOQContractTotal)}</span>
-                                    <span>Previous: {formatCurrency(contractBOQPrecedTotal)}</span>
-                                    <span className="text-green-600">Actual: {formatCurrency(activeBuildingTotal)}</span>
-                                    <span>Cumulative: {formatCurrency(contractBOQCumulTotal)}</span>
-                                </div>
+                        summaryRow={(_rows, meta) => (
+                            <div
+                                className="spreadsheet-grid-base font-semibold text-xs bg-base-200"
+                                style={{ gridTemplateColumns: meta?.gridTemplateColumns, minHeight: 36 }}
+                            >
+                                {/* Row number */}
+                                <div className="spreadsheet-row-number flex items-center justify-center border-r border-b border-base-300 bg-base-200">Σ</div>
+                                {/* N° */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Item */}
+                                <div className="flex items-center px-3 border-r border-b border-base-300">Totals</div>
+                                {/* Unit */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Contract Qty */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Unit Price */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Total Amt - Contract Total */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-base-300">{formatCurrency(contractBOQContractTotal)}</div>
+                                {/* Prev Qty */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Actual Qty */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Cumul Qty */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Cumul % */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Prev Amt */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-base-300">{formatCurrency(contractBOQPrecedTotal)}</div>
+                                {/* Actual Amt */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-base-300 text-green-600">{formatCurrency(activeBuildingTotal)}</div>
+                                {/* Cumul Amt */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-base-300">{formatCurrency(contractBOQCumulTotal)}</div>
+                                {/* Mat. Supply */}
+                                <div className="border-r border-b border-base-300"></div>
+                                {/* Deduction */}
+                                <div className="border-b border-base-300"></div>
                             </div>
                         )}
                     />
@@ -2150,7 +2164,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
             {/* VO BOQ Spreadsheet */}
             {viewMode === "vo" && activeVO && activeVOBuilding && (
-                <div className="bg-base-100 border border-purple-300 dark:border-purple-800 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 380px)', minHeight: '400px' }}>
+                <div className="bg-base-100 border border-purple-300 dark:border-purple-800 rounded-lg overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
                     {/* Spreadsheet with toolbarLeft for VO/Building selector */}
                     <Spreadsheet<VOBoqIpcVM>
                         data={activeVOBuilding.boqs || []}
@@ -2167,7 +2181,6 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         allowColumnResize
                         allowSorting={false}
                         allowFilters
-                        hideFormulaBar
                         toolbarLeft={
                             <div className="flex items-center gap-3">
                                 <span className="iconify lucide--file-plus-2 text-purple-600 dark:text-purple-400 size-4"></span>
@@ -2232,15 +2245,39 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                                 VO Building Total: {formatCurrency(activeVOBuildingTotal)}
                             </div>
                         }
-                        summaryRow={() => (
-                            <div className="flex items-center justify-between px-4 py-2 font-semibold text-xs text-purple-600 dark:text-purple-400">
-                                <span>Totals</span>
-                                <div className="flex gap-6">
-                                    <span>VO Total: {formatCurrency(voBOQContractTotal)}</span>
-                                    <span>Previous: {formatCurrency(voBOQPrecedTotal)}</span>
-                                    <span className="text-green-600">Actual: {formatCurrency(activeVOBuildingTotal)}</span>
-                                    <span>Cumulative: {formatCurrency(voBOQCumulTotal)}</span>
-                                </div>
+                        summaryRow={(_rows, meta) => (
+                            <div
+                                className="spreadsheet-grid-base font-semibold text-xs bg-purple-50 dark:bg-purple-900/20"
+                                style={{ gridTemplateColumns: meta?.gridTemplateColumns, minHeight: 36 }}
+                            >
+                                {/* Row number */}
+                                <div className="spreadsheet-row-number flex items-center justify-center border-r border-b border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">Σ</div>
+                                {/* N° */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Item */}
+                                <div className="flex items-center px-3 border-r border-b border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400">Totals</div>
+                                {/* Unit */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* VO Qty */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Unit Price */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Total Amt - VO Total */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400">{formatCurrency(voBOQContractTotal)}</div>
+                                {/* Prev Qty */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Actual Qty */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Cumul Qty */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Cumul % */}
+                                <div className="border-r border-b border-purple-200 dark:border-purple-800"></div>
+                                {/* Prev Amt */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400">{formatCurrency(voBOQPrecedTotal)}</div>
+                                {/* Actual Amt */}
+                                <div className="flex items-center justify-end px-3 border-r border-b border-purple-200 dark:border-purple-800 text-green-600">{formatCurrency(activeVOBuildingTotal)}</div>
+                                {/* Cumul Amt */}
+                                <div className="flex items-center justify-end px-3 border-b border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400">{formatCurrency(voBOQCumulTotal)}</div>
                             </div>
                         )}
                     />
