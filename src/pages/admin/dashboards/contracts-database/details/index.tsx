@@ -10,6 +10,9 @@ import apiRequest from "@/api/api";
 import { useContractsApi } from "../../subcontractors-BOQs/hooks/use-contracts-api";
 import { getContractVOs as fetchContractVOs } from "@/api/services/vo-api";
 import { formatCurrency, formatDate, formatPercentage } from "@/utils/formatters";
+import TerminationDocsTab from "./TerminationDocsTab";
+
+type ContractTab = "info" | "termination-docs";
 
 const ContractDatabaseDetails = () => {
     const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
@@ -35,6 +38,7 @@ const ContractDatabaseDetails = () => {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
     const [terminating, setTerminating] = useState(false);
+    const [activeTab, setActiveTab] = useState<ContractTab>("info");
     // Contract-specific VOs hook (optimized with useMemo and useCallback)
     const useContractVOs = (contractId: string) => {
         const [vos, setVos] = useState<any[]>([]);
@@ -448,10 +452,45 @@ const ContractDatabaseDetails = () => {
                     </button>
                 </div>
                 </div>
+
+                {/* Tab Navigation - only show for terminated contracts */}
+                {contractData?.contractDatasetStatus?.toLowerCase() === 'terminated' && (
+                    <div className="flex gap-1 bg-base-200 rounded-box p-1 mt-3">
+                        <button
+                            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                                activeTab === "info"
+                                    ? "bg-primary text-primary-content"
+                                    : "bg-base-100 text-base-content hover:bg-base-300"
+                            }`}
+                            onClick={() => setActiveTab("info")}
+                        >
+                            <span className="iconify lucide--file-text size-4"></span>
+                            Contract Info
+                        </button>
+                        <button
+                            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                                activeTab === "termination-docs"
+                                    ? "bg-primary text-primary-content"
+                                    : "bg-base-100 text-base-content hover:bg-base-300"
+                            }`}
+                            onClick={() => setActiveTab("termination-docs")}
+                        >
+                            <span className="iconify lucide--file-x size-4"></span>
+                            Termination Docs
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Scrollable Content */}
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }} className="pb-6">
+                {/* Termination Docs Tab */}
+                {activeTab === "termination-docs" && contractData?.contractDatasetStatus?.toLowerCase() === 'terminated' && contractId ? (
+                    <TerminationDocsTab
+                        contractId={parseInt(contractId)}
+                        contractNumber={contractData?.contractNumber || contractIdentifier || ''}
+                    />
+                ) : (
                 <div className="space-y-6">
                     {/* Contract Information Cards */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -627,6 +666,8 @@ const ContractDatabaseDetails = () => {
                     )}
                 </div>
             </div>
+            </div>
+            )}
 
             {/* Preview Modal */}
             {showPreview && previewData && (
@@ -718,7 +759,6 @@ const ContractDatabaseDetails = () => {
                     </div>
                 </div>
             )}
-                </div>
             </div>
         </div>
     );

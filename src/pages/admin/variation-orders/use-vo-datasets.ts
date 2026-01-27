@@ -13,7 +13,8 @@ import {
   uploadContractVo as uploadContractVoApi,
   generateVoDataSet as generateVoDataSetApi,
   clearVoContractItems as clearVoContractItemsApi,
-  deleteVoDataSet as deleteVoDataSetApi
+  deleteVoDataSet as deleteVoDataSetApi,
+  updateVoNumber as updateVoNumberApi
 } from "@/api/services/vo-api";
 import {
   VoDatasetVM,
@@ -461,6 +462,41 @@ const useVoDatasets = () => {
     }
   };
 
+  /**
+   * Update the VO number (A01, A02, etc.) for a VO dataset
+   * Only Contract Managers, Quantity Surveyors, and Admins can update VO numbers
+   * @param id VO dataset ID
+   * @param voNumber New VO number
+   */
+  const updateVoNumber = async (id: number, voNumber: string): Promise<VOServiceResult> => {
+    setLoading(true);
+
+    try {
+      const response = await updateVoNumberApi(id, voNumber, token ?? "");
+
+      if ('success' in response && response.success) {
+        toaster.success("VO number updated successfully");
+
+        // Refresh datasets to reflect changes
+        await loadAllVoDatasets();
+
+        return { isSuccess: true, data: response };
+      } else if ('success' in response && !response.success) {
+        toaster.error((response as any).error || (response as any).message || "Update failed");
+        return { isSuccess: false, error: { message: (response as any).error || "Update failed" } };
+      } else {
+        toaster.success("VO number updated successfully");
+        return { isSuccess: true, data: response };
+      }
+    } catch (error) {
+      console.error("Update VO number error:", error);
+      toaster.error("Failed to update VO number");
+      return { isSuccess: false, error: { message: "Failed to update VO number" } };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     // State
     activeVoDatasets,
@@ -484,6 +520,7 @@ const useVoDatasets = () => {
     generateVoDataSet,
     clearVoContractItems,
     deleteVoDataSet,
+    updateVoNumber,
 
     // Convenience methods
     getActiveVoDatasets,

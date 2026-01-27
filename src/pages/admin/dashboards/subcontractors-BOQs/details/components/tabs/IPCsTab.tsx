@@ -229,8 +229,8 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
                         </button>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-auto">
-                    {loading ? (
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        {loading ? (
                         <div className="flex justify-center p-8">
                             <Loader
                                 icon="receipt"

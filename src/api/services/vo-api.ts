@@ -1227,6 +1227,49 @@ export const getAllProjectBuildings = async (projectId: number, token: string): 
   }
 };
 
+/**
+ * Update the VO number (A01, A02, etc.) for a VO dataset
+ * Only Contract Managers, Quantity Surveyors, and Admins can update VO numbers
+ * @param id VO dataset ID
+ * @param voNumber New VO number
+ * @param token Authentication token
+ */
+export const updateVoNumber = async (id: number, voNumber: string, token: string): Promise<VoApiResponse | VoApiError> => {
+  try {
+    const response = await apiRequest({
+      endpoint: `VoDataSet/UpdateVoNumber/${id}`,
+      method: 'PUT',
+      token,
+      body: { voNumber }
+    });
+
+    if (response && typeof response === 'object') {
+      if ('success' in response && response.success) {
+        return { success: true, message: 'VO number updated successfully', data: response };
+      }
+
+      if ('success' in response && !response.success) {
+        return { success: false, error: response.error || response.message || 'Update failed', message: response.message };
+      }
+
+      if ('isSuccess' in response) {
+        return response.isSuccess ?
+          { success: true, message: 'VO number updated successfully', data: response } :
+          { success: false, error: response.error?.message || 'Update failed', message: response.error?.message };
+      }
+    }
+
+    return { success: true, message: 'VO number updated successfully', data: response };
+  } catch (error) {
+    console.error('Update VO number API Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update VO number',
+      message: 'An error occurred while updating the VO number'
+    };
+  }
+};
+
 // Export types for use in components
 export type {
   VoApiResponse,

@@ -21,8 +21,10 @@ import useToast from "@/hooks/use-toast";
 import { generateContractFileName, generateVOFileName } from "@/utils/ipc-filename";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
-import TerminatedContracts from "../TerminatedContracts";
 import { useContractsApi } from "../hooks/use-contracts-api";
+
+// Lazy load TerminationDocsTab only when needed
+const TerminationDocsTab = lazy(() => import("../../contracts-database/details/TerminationDocsTab"));
 
 // Lazy load tab components to reduce initial bundle and memory usage
 const InfoTab = lazy(() => import("./components/tabs/InfoTab"));
@@ -31,7 +33,7 @@ const IPCsTab = lazy(() => import("./components/tabs/IPCsTab"));
 const DeductionsTab = lazy(() => import("./components/tabs/DeductionsTab"));
 
 // Tab type definition
-type ContractTab = "info" | "vos" | "ipcs" | "deductions";
+type ContractTab = "info" | "vos" | "ipcs" | "deductions" | "termination-docs";
 
 // Contract-specific VOs hook
 const useContractVOs = (contractId: string) => {
@@ -124,8 +126,6 @@ const ContractDetails = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
     const [currencies, setCurrencies] = useState<any[]>([]);
-    const [showTerminatedPreviewModal, setShowTerminatedPreviewModal] = useState(false);
-    const [terminatedPreviewData, setTerminatedPreviewData] = useState<any>(null);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
     const [terminating, setTerminating] = useState(false);
 
@@ -207,11 +207,6 @@ const ContractDetails = () => {
     const handleCloseVoPreview = useCallback(() => {
         setShowVoPreview(false);
         setTimeout(() => setVoPreviewData(null), 300);
-    }, []);
-
-    const handleCloseTerminatedPreview = useCallback(() => {
-        setShowTerminatedPreviewModal(false);
-        setTimeout(() => setTerminatedPreviewData(null), 300);
     }, []);
 
     useEffect(() => {
@@ -921,6 +916,18 @@ const ContractDetails = () => {
                         <span className="iconify lucide--minus-circle size-4"></span>
                         Deductions
                     </button>
+                    {contractData.contractDatasetStatus === "Terminated" && (
+                        <button
+                            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                                activeTab === "termination-docs"
+                                    ? "bg-primary text-primary-content"
+                                    : "bg-base-100 text-base-content hover:bg-base-300"
+                            }`}
+                            onClick={() => handleTabChange("termination-docs")}>
+                            <span className="iconify lucide--file-x size-4"></span>
+                            Termination Docs
+                        </button>
+                    )}
                 </div>
 
                 {/* Right: Action Buttons */}
@@ -993,48 +1000,6 @@ const ContractDetails = () => {
                             </li>
                         </ul>
                     </div>
-
-                    {contractData.contractDatasetStatus === "Terminated" && (
-                        <button
-                            onClick={() => {
-                                setTerminatedPreviewData({
-                                    contractId: contractData.id,
-                                    contractNumber: contractData.contractNumber,
-                                    projectName: contractData.projectName,
-                                    status: contractData.originalStatus,
-                                });
-                                setShowTerminatedPreviewModal(true);
-                            }}
-                            className="btn btn-sm bg-red-600 text-white hover:bg-red-700 flex items-center gap-2">
-                            <span className="iconify lucide--file-x size-4"></span>
-                            <span>Termination Documents</span>
-                        </button>
-                    )}
-
-                    {/* Terminated Contracts Documents Modal */}
-                    {showTerminatedPreviewModal && terminatedPreviewData && (
-                        <dialog className="modal modal-open">
-                            <div className="modal-box h-[90vh] max-w-7xl">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-lg font-bold">Termination Documents - {terminatedPreviewData.contractNumber}</h3>
-                                    <button
-                                        onClick={() => setShowTerminatedPreviewModal(false)}
-                                        className="btn btn-ghost btn-sm">
-                                        <span className="iconify lucide--x size-5"></span>
-                                    </button>
-                                </div>
-                                <div className="h-[calc(100%-60px)]">
-                                    <TerminatedContracts
-                                        selectedProject={terminatedPreviewData.projectName}
-                                        contractId={terminatedPreviewData.contractId}
-                                    />
-                                </div>
-                            </div>
-                            <form method="dialog" className="modal-backdrop">
-                                <button onClick={() => setShowTerminatedPreviewModal(false)}>close</button>
-                            </form>
-                        </dialog>
-                    )}
 
                     {contractData.contractDatasetStatus?.toLowerCase() === "active" && (
                         <button
@@ -1154,6 +1119,11 @@ const ContractDetails = () => {
                     />
                 ) : activeTab === "deductions" ? (
                     <DeductionsTab contractId={contractId ? parseInt(contractId) : null} />
+                ) : activeTab === "termination-docs" && contractData.contractDatasetStatus === "Terminated" ? (
+                    <TerminationDocsTab
+                        contractId={contractId ? parseInt(contractId) : 0}
+                        contractNumber={contractData?.contractNumber || contractIdentifier || ''}
+                    />
                 ) : null}
             </Suspense>
             </div>
