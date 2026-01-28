@@ -45,230 +45,190 @@ const HowItWorksModal = memo(({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-7xl w-[95vw] max-h-[90vh] p-0">
+      <div className="modal-box max-w-4xl max-h-[85vh] p-0">
         {/* Header */}
-        <div className="bg-base-100 border-b border-base-200 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Icon icon={fileTextIcon} className="size-5 text-primary" />
-            </div>
+        <div className="bg-gradient-to-r from-primary/10 to-secondary/10 px-6 py-5 border-b border-base-200">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-lg">How Contract Analysis Works</h3>
-              <p className="text-xs text-base-content/60">
-                Based on Moon et al. (2022) "Toxic Clauses" framework - AI-powered risk assessment for construction contracts
+              <h3 className="font-bold text-xl">How Contract Analysis Works</h3>
+              <p className="text-sm text-base-content/70 mt-1">
+                AI-powered risk assessment based on Moon et al. (2022) "Toxic Clauses" framework
               </p>
             </div>
+            <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>✕</button>
           </div>
-          <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>✕</button>
         </div>
 
-        <div className="p-5 space-y-5 overflow-y-auto">
-          {/* Row 1: How It Works + Two-Tier System */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* How It Works - 3 columns */}
-            <div className="lg:col-span-3 bg-base-200/30 rounded-xl p-4 border border-base-300">
-              <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs">1</span>
-                How It Works
-              </h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex items-start gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-info/20 flex items-center justify-center shrink-0">
-                    <Icon icon={uploadCloudIcon} className="size-4 text-info" />
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-sm">Upload & Parse</h5>
-                    <p className="text-xs text-base-content/70">Extract text from Word/PDF and identify clauses using NLP</p>
-                  </div>
+        <div className="p-6 space-y-6 overflow-y-auto">
+          {/* How It Works */}
+          <div>
+            <h4 className="font-semibold text-base mb-4">Process Overview</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-base-200/50 rounded-xl p-4">
+                <div className="w-10 h-10 rounded-lg bg-info/20 flex items-center justify-center mb-3">
+                  <Icon icon={uploadCloudIcon} className="size-5 text-info" />
                 </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center shrink-0">
-                    <Icon icon={scanIcon} className="size-4 text-warning" />
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-sm">Analyze & Classify</h5>
-                    <p className="text-xs text-base-content/70">Match clauses against risk patterns across 7 categories</p>
-                  </div>
+                <h5 className="font-semibold mb-1">1. Upload & Parse</h5>
+                <p className="text-sm text-base-content/70">
+                  Extract text from contract documents and identify individual clauses
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-xl p-4">
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center mb-3">
+                  <Icon icon={scanIcon} className="size-5 text-warning" />
                 </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-success/20 flex items-center justify-center shrink-0">
-                    <Icon icon={fileCheckIcon} className="size-4 text-success" />
+                <h5 className="font-semibold mb-1">2. Analyze & Classify</h5>
+                <p className="text-sm text-base-content/70">
+                  Match clauses against risk patterns across 7 categories
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-xl p-4">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center mb-3">
+                  <Icon icon={fileCheckIcon} className="size-5 text-success" />
+                </div>
+                <h5 className="font-semibold mb-1">3. Report & Recommend</h5>
+                <p className="text-sm text-base-content/70">
+                  Get health score, risk breakdown, and recommendations
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-Tier + Categories Row */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Two-Tier System */}
+            <div>
+              <h4 className="font-semibold text-base mb-3">Two-Tier Analysis</h4>
+              <div className="space-y-3">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="badge badge-primary badge-sm">Tier 1</span>
+                    <span className="font-semibold">Template Analysis</span>
                   </div>
-                  <div>
-                    <h5 className="font-semibold text-sm">Report & Recommend</h5>
-                    <p className="text-xs text-base-content/70">Get health score, risk breakdown, and improvement suggestions</p>
+                  <p className="text-sm text-base-content/70">
+                    Analyze standard contract templates to establish a risk baseline before projects begin
+                  </p>
+                </div>
+                <div className="bg-secondary/5 border border-secondary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="badge badge-secondary badge-sm">Tier 2</span>
+                    <span className="font-semibold">Contract Analysis</span>
                   </div>
+                  <p className="text-sm text-base-content/70">
+                    Compare specific contracts against template baseline to identify deviations
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Two-Tier System - 2 columns */}
-            <div className="lg:col-span-2 bg-base-200/30 rounded-xl p-4 border border-base-300">
-              <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs">2</span>
-                Two-Tier Analysis
-              </h4>
+            {/* Risk Levels + Health Score */}
+            <div>
+              <h4 className="font-semibold text-base mb-3">Risk Levels & Health Score</h4>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-primary/5 border border-primary/30 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="badge badge-primary badge-xs">Tier 1</span>
-                    <span className="font-semibold text-xs">Templates</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: '#7f1d1d15' }}>
+                    <div className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: '#7f1d1d' }}>
+                      <span className="text-white font-bold text-sm">!</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm" style={{ color: '#7f1d1d' }}>Critical</span>
+                      <span className="text-xs text-base-content/60 ml-2">Major exposure</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-base-content/70">Analyze standard templates to establish risk baseline</p>
-                </div>
-                <div className="bg-secondary/5 border border-secondary/30 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="badge badge-secondary badge-xs">Tier 2</span>
-                    <span className="font-semibold text-xs">Contracts</span>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-error/10">
+                    <div className="w-8 h-8 rounded flex items-center justify-center bg-error">
+                      <span className="text-white font-bold text-sm">!</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm text-error">High</span>
+                      <span className="text-xs text-base-content/60 ml-2">Negotiate first</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-base-content/70">Compare specific contracts against template baseline</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: 7 Risk Categories (horizontal) */}
-          <div className="bg-base-200/30 rounded-xl p-4 border border-base-300">
-            <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs">3</span>
-              7 Risk Categories (Moon et al., 2022)
-            </h4>
-            <div className="grid grid-cols-7 gap-2">
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-error">
-                <h5 className="font-semibold text-error text-xs mb-1">Payment</h5>
-                <p className="text-[10px] text-base-content/70">Payment terms, retention, late penalties</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-warning">
-                <h5 className="font-semibold text-warning text-xs mb-1">Responsibility</h5>
-                <p className="text-[10px] text-base-content/70">Unclear scope, liability transfer</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-info">
-                <h5 className="font-semibold text-info text-xs mb-1">Safety</h5>
-                <p className="text-[10px] text-base-content/70">Insurance, liability caps, HSE</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-success">
-                <h5 className="font-semibold text-success text-xs mb-1">Timeline</h5>
-                <p className="text-[10px] text-base-content/70">Deadlines, delay penalties</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-primary">
-                <h5 className="font-semibold text-primary text-xs mb-1">Procedures</h5>
-                <p className="text-[10px] text-base-content/70">Claims, dispute resolution</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-secondary">
-                <h5 className="font-semibold text-secondary text-xs mb-1">Definitions</h5>
-                <p className="text-[10px] text-base-content/70">Ambiguous terms, vague scope</p>
-              </div>
-              <div className="bg-base-100 rounded-lg p-2 border-l-3 border-accent">
-                <h5 className="font-semibold text-accent text-xs mb-1">References</h5>
-                <p className="text-[10px] text-base-content/70">Missing docs, outdated standards</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 3: Risk Levels + Health Score (horizontal) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Risk Levels - horizontal */}
-            <div className="bg-base-200/30 rounded-xl p-4 border border-base-300">
-              <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs">4</span>
-                Risk Levels
-              </h4>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: '#7f1d1d10' }}>
-                  <div className="w-8 h-8 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: '#7f1d1d' }}>
-                    <span className="text-white font-bold text-xs">!</span>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10">
+                    <div className="w-8 h-8 rounded flex items-center justify-center bg-warning">
+                      <span className="text-white font-bold text-sm">-</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm text-warning">Medium</span>
+                      <span className="text-xs text-base-content/60 ml-2">Review needed</span>
+                    </div>
                   </div>
-                  <div>
-                    <h5 className="font-semibold text-xs" style={{ color: '#7f1d1d' }}>Critical</h5>
-                    <p className="text-[10px] text-base-content/70">Major exposure</p>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10">
+                    <div className="w-8 h-8 rounded flex items-center justify-center bg-success">
+                      <span className="text-white font-bold text-sm">✓</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm text-success">Low</span>
+                      <span className="text-xs text-base-content/60 ml-2">Minor issue</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-error/10">
-                  <div className="w-8 h-8 rounded flex items-center justify-center bg-error shrink-0">
-                    <span className="text-white font-bold text-xs">!</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#22c55e' }}>80-100</div>
+                    <span className="text-sm"><strong className="text-success">Good</strong> - Proceed</span>
                   </div>
-                  <div>
-                    <h5 className="font-semibold text-error text-xs">High</h5>
-                    <p className="text-[10px] text-base-content/70">Negotiate first</p>
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#f59e0b' }}>60-79</div>
+                    <span className="text-sm"><strong className="text-warning">Moderate</strong> - Review</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10">
-                  <div className="w-8 h-8 rounded flex items-center justify-center bg-warning shrink-0">
-                    <span className="text-white font-bold text-xs">-</span>
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#ef4444' }}>40-59</div>
+                    <span className="text-sm"><strong className="text-error">Concerning</strong> - Negotiate</span>
                   </div>
-                  <div>
-                    <h5 className="font-semibold text-warning text-xs">Medium</h5>
-                    <p className="text-[10px] text-base-content/70">Review needed</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10">
-                  <div className="w-8 h-8 rounded flex items-center justify-center bg-success shrink-0">
-                    <span className="text-white font-bold text-xs">✓</span>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-success text-xs">Low</h5>
-                    <p className="text-[10px] text-base-content/70">Minor issue</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Health Score - horizontal */}
-            <div className="bg-base-200/30 rounded-xl p-4 border border-base-300">
-              <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs">5</span>
-                Health Score (0-100)
-              </h4>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-14 h-7 rounded flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: '#22c55e' }}>
-                    80-100
-                  </div>
-                  <div>
-                    <span className="font-semibold text-success text-xs">Good</span>
-                    <p className="text-[10px] text-base-content/60">Proceed</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-14 h-7 rounded flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: '#f59e0b' }}>
-                    60-79
-                  </div>
-                  <div>
-                    <span className="font-semibold text-warning text-xs">Moderate</span>
-                    <p className="text-[10px] text-base-content/60">Review</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-14 h-7 rounded flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: '#ef4444' }}>
-                    40-59
-                  </div>
-                  <div>
-                    <span className="font-semibold text-error text-xs">Concerning</span>
-                    <p className="text-[10px] text-base-content/60">Negotiate</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-14 h-7 rounded flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: '#7f1d1d' }}>
-                    0-39
-                  </div>
-                  <div>
-                    <span className="font-semibold text-xs" style={{ color: '#7f1d1d' }}>Critical</span>
-                    <p className="text-[10px] text-base-content/60">Revise</p>
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#7f1d1d' }}>0-39</div>
+                    <span className="text-sm"><strong style={{ color: '#7f1d1d' }}>Critical</strong> - Revise</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Reference - compact footer */}
-          <div className="bg-base-200/50 rounded-lg px-4 py-2 flex items-center justify-between">
-            <p className="text-[10px] text-base-content/50">
-              <strong>Reference:</strong> Moon, S., Chi, S., & Im, S. B. (2022). "Automated Detection of Contractual Risk Clauses." JCEM, 148(1).
-            </p>
-            <button className="btn btn-primary btn-sm" onClick={onClose}>
-              Got it!
-            </button>
+          {/* 7 Risk Categories */}
+          <div>
+            <h4 className="font-semibold text-base mb-3">7 Risk Categories</h4>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-error">
+                <h5 className="font-semibold text-error text-sm">Payment</h5>
+                <p className="text-xs text-base-content/70 mt-1">Payment terms, retention, penalties</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-warning">
+                <h5 className="font-semibold text-warning text-sm">Responsibility</h5>
+                <p className="text-xs text-base-content/70 mt-1">Scope, liability, obligations</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-info">
+                <h5 className="font-semibold text-info text-sm">Safety</h5>
+                <p className="text-xs text-base-content/70 mt-1">Insurance, HSE, warranties</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-success">
+                <h5 className="font-semibold text-success text-sm">Timeline</h5>
+                <p className="text-xs text-base-content/70 mt-1">Deadlines, delays, milestones</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-primary">
+                <h5 className="font-semibold text-primary text-sm">Procedures</h5>
+                <p className="text-xs text-base-content/70 mt-1">Claims, disputes, changes</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-secondary">
+                <h5 className="font-semibold text-secondary text-sm">Definitions</h5>
+                <p className="text-xs text-base-content/70 mt-1">Ambiguous terms, vague scope</p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-3 border-l-4 border-accent">
+                <h5 className="font-semibold text-accent text-sm">References</h5>
+                <p className="text-xs text-base-content/70 mt-1">Missing docs, standards</p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-base-200 px-6 py-4 flex items-center justify-between bg-base-100">
+          <p className="text-xs text-base-content/50">
+            Based on Moon, S., Chi, S., & Im, S. B. (2022) - JCEM
+          </p>
+          <button className="btn btn-primary" onClick={onClose}>
+            Got it!
+          </button>
         </div>
       </div>
     </div>
