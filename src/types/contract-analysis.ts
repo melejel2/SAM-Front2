@@ -1,0 +1,196 @@
+/**
+ * Contract Analysis Types
+ * Based on Moon et al. (2022) "Toxic Clauses" classification
+ */
+
+// Risk categories (7 types from Moon et al.)
+export enum RiskCategory {
+  Payment = 'Payment',
+  RoleResponsibility = 'RoleResponsibility',
+  Safety = 'Safety',
+  Temporal = 'Temporal',
+  Procedure = 'Procedure',
+  Definition = 'Definition',
+  Reference = 'Reference',
+}
+
+// Risk level
+export enum RiskLevel {
+  Low = 'Low',
+  Medium = 'Medium',
+  High = 'High',
+  Critical = 'Critical',
+}
+
+// French translations for risk categories
+export const RiskCategoryFr: Record<RiskCategory, string> = {
+  [RiskCategory.Payment]: 'Risque de Paiement',
+  [RiskCategory.RoleResponsibility]: 'Rôle et Responsabilité',
+  [RiskCategory.Safety]: 'Sécurité et Assurance',
+  [RiskCategory.Temporal]: 'Délais et Pénalités',
+  [RiskCategory.Procedure]: 'Procédures et Réclamations',
+  [RiskCategory.Definition]: 'Définitions et Ambiguïtés',
+  [RiskCategory.Reference]: 'Documents de Référence',
+};
+
+// French translations for risk levels
+export const RiskLevelFr: Record<RiskLevel, string> = {
+  [RiskLevel.Low]: 'Faible',
+  [RiskLevel.Medium]: 'Moyen',
+  [RiskLevel.High]: 'Élevé',
+  [RiskLevel.Critical]: 'Critique',
+};
+
+// Colors for risk levels
+export const RiskLevelColors: Record<RiskLevel, string> = {
+  [RiskLevel.Low]: '#22c55e', // green
+  [RiskLevel.Medium]: '#f59e0b', // amber
+  [RiskLevel.High]: '#ef4444', // red
+  [RiskLevel.Critical]: '#7f1d1d', // dark red
+};
+
+// Category scores
+export interface CategoryScores {
+  payment: number;
+  roleResponsibility: number;
+  safety: number;
+  temporal: number;
+  procedure: number;
+  definition: number;
+  reference: number;
+}
+
+// Risk assessment for a clause
+export interface RiskAssessment {
+  id: number;
+  category: string;
+  categoryFr: string;
+  level: string;
+  levelFr: string;
+  score: number;
+  riskDescription?: string;
+  recommendation?: string;
+  matchedText?: string;
+}
+
+// Contract clause with risk assessments
+export interface ContractClause {
+  id: number;
+  clauseNumber?: string;
+  clauseTitle?: string;
+  clauseContent?: string;
+  clauseOrder: number;
+  riskAssessments: RiskAssessment[];
+}
+
+// Template risk profile
+export interface TemplateRiskProfile {
+  id: number;
+  contractTemplateId: number;
+  templateName?: string;
+  overallScore: number;
+  totalClauses: number;
+  criticalRiskCount: number;
+  highRiskCount: number;
+  mediumRiskCount: number;
+  lowRiskCount: number;
+  categoryScores: CategoryScores;
+  summary?: string;
+  topRecommendations: string[];
+  generatedAt: string;
+  analysisVersion?: string;
+}
+
+// Contract health report
+export interface ContractHealthReport {
+  id: number;
+  contractDatasetId: number;
+  contractNumber?: string;
+  projectName?: string;
+  subcontractorName?: string;
+  overallScore: number;
+  templateBaselineScore: number;
+  deltaFromTemplate: number;
+  modificationsDetected: number;
+  newRisksIntroduced: number;
+  risksMitigated: number;
+  totalClauses: number;
+  criticalRiskCount: number;
+  highRiskCount: number;
+  mediumRiskCount: number;
+  lowRiskCount: number;
+  categoryScores: CategoryScores;
+  summary?: string;
+  recommendations: string[];
+  generatedAt: string;
+  analysisVersion?: string;
+}
+
+// Template analysis summary (for list view)
+export interface TemplateAnalysisSummary {
+  contractTemplateId: number;
+  templateName?: string;
+  templateType?: string;
+  overallScore?: number;
+  criticalRiskCount?: number;
+  highRiskCount?: number;
+  isAnalyzed: boolean;
+  lastAnalyzedAt?: string;
+}
+
+// Analysis result from API
+export interface AnalysisResult {
+  success: boolean;
+  errorMessage?: string;
+  templateProfile?: TemplateRiskProfile;
+  healthReport?: ContractHealthReport;
+  clauses: ContractClause[];
+  topRisks: RiskAssessment[];
+}
+
+// Document scan result (for direct upload)
+export interface DocumentScanResult {
+  success: boolean;
+  errorMessage?: string;
+  overallScore: number;
+  totalClauses: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  categoryScores: CategoryScores;
+  summary?: string;
+  recommendations: string[];
+  topRisks: RiskAssessment[];
+}
+
+// Helper function to get health status label
+export function getHealthStatus(score: number): {
+  label: string;
+  labelFr: string;
+  color: string;
+} {
+  if (score >= 80) {
+    return { label: 'Good', labelFr: 'Bon', color: '#22c55e' };
+  } else if (score >= 60) {
+    return { label: 'Moderate', labelFr: 'Modéré', color: '#f59e0b' };
+  } else if (score >= 40) {
+    return { label: 'Concerning', labelFr: 'Préoccupant', color: '#ef4444' };
+  } else {
+    return { label: 'Critical', labelFr: 'Critique', color: '#7f1d1d' };
+  }
+}
+
+// Helper function to get risk level from string
+export function getRiskLevel(level: string): RiskLevel {
+  switch (level.toLowerCase()) {
+    case 'critical':
+      return RiskLevel.Critical;
+    case 'high':
+      return RiskLevel.High;
+    case 'medium':
+      return RiskLevel.Medium;
+    default:
+      return RiskLevel.Low;
+  }
+}

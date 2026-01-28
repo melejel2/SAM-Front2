@@ -114,6 +114,15 @@ const dashboardRoutes: IRoutesProps[] = [
         path: "/dashboard/reports",
         element: cw(lazy(() => import("@/pages/admin/dashboards/reports"))),
     },
+    // ========== CONTRACT ANALYSIS (Risk Assessment - Moon et al. 2022) ==========
+    {
+        path: "/dashboard/contract-analysis",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis"))),
+    },
+    {
+        path: "/dashboard/contract-analysis/template/:templateId",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis/template-details"))),
+    },
 ];
 
 const variationOrdersRoutes: IRoutesProps[] = [

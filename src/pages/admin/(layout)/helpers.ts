@@ -58,6 +58,14 @@ export const dashboardMenuItems: INavMenuItem[] = [
         category: "operations",
         activePaths: ["/dashboard/reports"],
     },
+    {
+        id: "dashboard-contract-analysis",
+        icon: "lucide--shield-check",
+        label: "Contract Analysis",
+        url: "/dashboard/contract-analysis",
+        category: "operations",
+        activePaths: ["/dashboard/contract-analysis"],
+    },
 ];
 
 export const adminToolsMenuItems: INavMenuItem[] = [
