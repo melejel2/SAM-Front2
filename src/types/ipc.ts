@@ -248,6 +248,13 @@ export interface SaveIPCVM extends IpcDataExtended {
    */
   materialSupply?: number;
 
+  /**
+   * Contract's warranty retention percentage (HoldWarranty).
+   * This is the percentage of cumulative BOQ/VO amounts held as retention.
+   * Used to calculate the base retention amount for Retention Release IPCs.
+   */
+  holdWarranty?: number;
+
   fromDate?: string;
   toDate?: string;
   dateIpc?: string;
@@ -390,6 +397,13 @@ export interface IpcWizardFormData {
    * Each BOQ item's cumulMaterialPercentage must not exceed this value.
    */
   materialSupply?: number;
+
+  /**
+   * Contract's warranty retention percentage (HoldWarranty).
+   * This is the percentage of cumulative BOQ/VO amounts held as retention.
+   * Used to calculate the base retention amount for Retention Release IPCs.
+   */
+  holdWarranty?: number;
 
   // Advance Payment VO Selection - which items to include in eligible amount calculation
   // 'all' = BOQ + all VOs, 'boq' = BOQ only, number[] = BOQ + specific VO IDs

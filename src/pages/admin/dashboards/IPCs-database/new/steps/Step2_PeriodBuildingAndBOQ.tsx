@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useIPCWizardContext } from "../context/IPCWizardContext";
 import type { Vos, BoqIpcVM, VOBoqIpcVM, CorrectPreviousValueRequest, CorrectionResultDTO, CorrectionHistoryDTO, CorrectionHistoryRequest } from "@/types/ipc";
-import { CorrectionEntityType, isAdvancePaymentType } from "@/types/ipc";
+import { CorrectionEntityType, isAdvancePaymentType, isRetentionType } from "@/types/ipc";
+import shieldIcon from "@iconify/icons-lucide/shield";
 import { Icon } from "@iconify/react";
 import infoIcon from "@iconify/icons-lucide/info";
 import buildingIcon from "@iconify/icons-lucide/building";
@@ -91,19 +92,31 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     const [showAdvancePaymentModal, setShowAdvancePaymentModal] = useState(false);
     const [advancePaymentAutoOpened, setAdvancePaymentAutoOpened] = useState(false);
 
+    // Retention Release Modal State
+    const [showRetentionReleaseModal, setShowRetentionReleaseModal] = useState(false);
+    const [retentionReleaseAutoOpened, setRetentionReleaseAutoOpened] = useState(false);
+
     // Penalty Modal State (only visible in edit mode)
     const [showPenaltyModal, setShowPenaltyModal] = useState(false);
 
     // Store the ORIGINAL cumulative when data loads (for edit mode calculation)
-    // This allows us to calculate what was paid BEFORE this IPC
+    // This allows us to calculate what was paid BEFORE this IPC (for Advance Payment)
     const [originalCumulativeRef, setOriginalCumulativeRef] = useState<{
         cumulative: number;
         thisIpcAmount: number;
         captured: boolean;
     }>({ cumulative: 0, thisIpcAmount: 0, captured: false });
 
+    // Store the ORIGINAL retention cumulative when data loads (for edit mode calculation)
+    // This allows us to calculate what was released BEFORE this IPC (for Retention Release)
+    const [originalRetentionCumulativeRef, setOriginalRetentionCumulativeRef] = useState<{
+        cumulative: number;
+        thisIpcAmount: number;
+        captured: boolean;
+    }>({ cumulative: 0, thisIpcAmount: 0, captured: false });
+
     // Capture original values when IPC data loads (for edit mode)
-    // This is needed to calculate what was paid BEFORE this IPC
+    // This is needed to calculate what was paid/released BEFORE this IPC
     useEffect(() => {
         const isInEditMode = formData.id && formData.id > 0;
         // Capture when: edit mode, not yet captured, and we have data loaded (contractsDatasetId > 0)
@@ -114,7 +127,15 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                 captured: true
             });
         }
-    }, [formData.id, formData.contractsDatasetId, formData.advancePaymentAmountCumul, formData.advancePaymentAmount, originalCumulativeRef.captured]);
+        // Capture retention cumulative
+        if (isInEditMode && !originalRetentionCumulativeRef.captured && formData.contractsDatasetId > 0) {
+            setOriginalRetentionCumulativeRef({
+                cumulative: formData.retentionAmountCumul || 0,
+                thisIpcAmount: formData.retentionAmount || 0,
+                captured: true
+            });
+        }
+    }, [formData.id, formData.contractsDatasetId, formData.advancePaymentAmountCumul, formData.advancePaymentAmount, originalCumulativeRef.captured, formData.retentionAmountCumul, formData.retentionAmount, originalRetentionCumulativeRef.captured]);
 
     // Advance Payment Selection State - which items to include in calculation
     // 'all' = BOQ + all VOs, 'boq' = BOQ only, or specific VO IDs
@@ -218,8 +239,32 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         }
     }, [formData, advancePaymentAutoOpened]);
 
+    // Auto-open Retention Release Modal when IPC type is "RG / Retention"
+    useEffect(() => {
+        const isRetentionReleaseType = isRetentionType(formData.type);
+        const isInEditMode = formData.id && formData.id > 0;
+
+        // For retention release type IPCs, we always want to show the modal:
+        // - In new mode: when there's cumulative data or retention data available
+        // - In edit mode: always (user needs to review/modify retention release settings)
+        const hasRetentionDataLoaded = isInEditMode
+            ? formData.contractsDatasetId > 0 // Edit mode: data is loaded when contract ID is set
+            : (formData.retentionAmountCumul || 0) > 0 ||
+              (formData.retentionAmount || 0) > 0 ||
+              (formData.retentionPercentage || 0) > 0 ||
+              (formData.holdWarranty || 0) > 0;
+
+        if (isRetentionReleaseType && hasRetentionDataLoaded && !retentionReleaseAutoOpened) {
+            setShowRetentionReleaseModal(true);
+            setRetentionReleaseAutoOpened(true);
+        }
+    }, [formData, retentionReleaseAutoOpened]);
+
     // Check if this is an advance payment type IPC (for showing the button)
     const isAdvanceType = isAdvancePaymentType(formData.type);
+
+    // Check if this is a retention release type IPC (for showing the button)
+    const isRetentionReleaseType = isRetentionType(formData.type);
 
     // Calculate BOQ total amount FIRST (sum of all building BOQ items' Pt = qty * unitPrice)
     const boqTotalAmount = useMemo(() => {
@@ -424,12 +469,61 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         }
     };
 
-    // Check if a VO is selected
+    // Check if a VO is selected (for Advance Payment)
     const isVOSelected = (voId: number) => {
         if (advancePaymentSelection === 'all') return true;
         if (advancePaymentSelection === 'boq') return false;
         return Array.isArray(advancePaymentSelection) && advancePaymentSelection.includes(voId);
     };
+
+    // ==================== Retention Release Calculations ====================
+    // Retention Release is SIMPLE: release a percentage of ALREADY HELD retention
+    // No VO selection needed - retention was already calculated on all BOQ + VOs during regular IPCs
+
+    // Get contract's HoldWarranty percentage (for display only)
+    const contractHoldWarrantyPercent = useMemo(() => {
+        const fromBackend = formData.holdWarranty || 0;
+        if (fromBackend > 0) return fromBackend;
+        const fromContract = parseFloat((selectedContract as any)?.holdWarranty || '0');
+        if (fromContract > 0) return fromContract;
+        return 10; // Default 10%
+    }, [selectedContract, formData.holdWarranty]);
+
+    // Total Retention Held = formData.retention (calculated by backend during interim IPCs)
+    // This is the total retention that has been held across all previous IPCs
+    // It equals: (TotalBoqCum + Material - Deductions + AdditionVOs - OmissionVOs) × HoldWarranty%
+    const totalRetentionHeld = formData.retention || 0;
+
+    // Previously Released = what was released in prior RG IPCs
+    // In edit mode: subtract this IPC's original amount from cumulative
+    const previousRetentionReleased = useMemo(() => {
+        if (isInEditMode && originalRetentionCumulativeRef.captured) {
+            return Math.max(0, originalRetentionCumulativeRef.cumulative - originalRetentionCumulativeRef.thisIpcAmount);
+        }
+        return formData.retentionAmountCumul || 0;
+    }, [isInEditMode, originalRetentionCumulativeRef, formData.retentionAmountCumul]);
+
+    // Available to release = Total Held - Previously Released
+    const remainingRetentionAmount = Math.max(0, totalRetentionHeld - previousRetentionReleased);
+
+    // This IPC's retention release amount = Available × User's Percentage
+    const retentionReleasePercentage = formData.retentionPercentage || 0;
+    const thisIpcRetentionAmount = (remainingRetentionAmount * retentionReleasePercentage) / 100;
+
+    // Show retention release button only for RG/Retention type IPCs
+    const hasRetentionReleaseData = isRetentionReleaseType;
+
+    // Handle retention percentage change
+    const handleRetentionPercentageChange = (value: string) => {
+        const numValue = parseFloat(value) || 0;
+        const clampedValue = Math.max(0, Math.min(100, numValue));
+        setFormData({
+            retentionPercentage: clampedValue,
+            retentionAmount: (remainingRetentionAmount * clampedValue) / 100
+        });
+    };
+
+    // ==================== End Retention Release Calculations ====================
 
     const handleInputChange = (field: string, value: string | number) => {
         setFormData({ [field]: value });
@@ -1939,6 +2033,22 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                             )}
                         </button>
                     )}
+                    {/* Retention Release Button - Shows for retention type IPCs or when retention data is available */}
+                    {hasRetentionReleaseData && (
+                        <button
+                            type="button"
+                            onClick={() => setShowRetentionReleaseModal(true)}
+                            className={`btn btn-sm ${thisIpcRetentionAmount > 0 ? 'btn-success' : 'btn-outline btn-success'} gap-1`}
+                        >
+                            <Icon icon={shieldIcon} className="size-4" />
+                            Retention Release
+                            {thisIpcRetentionAmount > 0 && (
+                                <span className="badge badge-sm badge-ghost ml-1">
+                                    {formatCurrency(thisIpcRetentionAmount)}
+                                </span>
+                            )}
+                        </button>
+                    )}
                     {/* Penalties Button - Shows only in edit mode */}
                     {formData.id && formData.id > 0 && (
                         <button
@@ -2430,6 +2540,75 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
                         </div>
                     </div>
                     <div className="modal-backdrop bg-black/40" onClick={() => setShowAdvancePaymentModal(false)}></div>
+                </div>
+            )}
+
+            {/* ==================== RETENTION RELEASE MODAL ==================== */}
+            {/* Simple modal - just shows already-held retention and lets user enter % to release */}
+            {showRetentionReleaseModal && hasRetentionReleaseData && (
+                <div className="modal modal-open">
+                    <div className="modal-box max-w-md w-full p-0">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-base-300 bg-base-200/50">
+                            <h3 className="text-base font-semibold">Retention Release</h3>
+                            <button type="button" onClick={() => setShowRetentionReleaseModal(false)} className="btn btn-xs btn-ghost btn-circle">
+                                <Icon icon={xIcon} className="size-4" />
+                            </button>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="p-5">
+                            {/* Summary Table */}
+                            <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden mb-4">
+                                <table className="table table-sm w-full">
+                                    <tbody>
+                                        <tr>
+                                            <td className="py-2 text-sm">Total Retention Held</td>
+                                            <td className="py-2 text-right font-semibold text-base">{formatCurrency(totalRetentionHeld)}</td>
+                                        </tr>
+                                        <tr className="text-success">
+                                            <td className="py-2 text-sm">Previously Released</td>
+                                            <td className="py-2 text-right font-medium text-sm">− {formatCurrency(previousRetentionReleased)}</td>
+                                        </tr>
+                                        <tr className="border-t-2 border-warning/30 bg-warning/10">
+                                            <td className="py-3 text-sm font-semibold text-warning">Available to Release</td>
+                                            <td className="py-3 text-right font-bold text-lg text-warning">{formatCurrency(remainingRetentionAmount)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Percentage Input */}
+                            <div className="bg-success/5 border border-success/20 rounded-lg p-4">
+                                <div className="text-center mb-3">
+                                    <span className="text-sm text-base-content/70">Release percentage of available retention:</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-3 mb-4">
+                                    <input type="number" className="input input-bordered w-20 text-center font-bold text-lg"
+                                        value={retentionReleasePercentage || ''} onChange={(e) => handleRetentionPercentageChange(e.target.value)}
+                                        onFocus={(e) => e.target.select()} min="0" max="100" placeholder="0" />
+                                    <span className="text-lg text-base-content/60">%</span>
+                                    <span className="text-base-content/40">=</span>
+                                    <span className="font-bold text-success text-xl">{formatCurrency(thisIpcRetentionAmount)}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    {[0, 25, 50, 75, 100].map(pct => (
+                                        <button key={pct} type="button" onClick={() => handleRetentionPercentageChange(pct.toString())}
+                                            className={`btn btn-sm flex-1 ${retentionReleasePercentage === pct ? 'btn-success' : 'btn-ghost'}`}>{pct}%</button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-end gap-2 px-5 py-3 border-t border-base-300 bg-base-200/30">
+                            <button type="button" onClick={() => { handleRetentionPercentageChange('0'); setShowRetentionReleaseModal(false); }}
+                                className="btn btn-sm btn-ghost">Clear</button>
+                            <button type="button" onClick={() => setShowRetentionReleaseModal(false)}
+                                className="btn btn-sm btn-success">Apply</button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop bg-black/40" onClick={() => setShowRetentionReleaseModal(false)}></div>
                 </div>
             )}
 

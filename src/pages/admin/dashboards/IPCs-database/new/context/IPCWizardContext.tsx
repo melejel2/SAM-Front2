@@ -78,10 +78,11 @@ const getInitialFormData = (): IpcWizardFormData => ({
     advancePaymentAmountCumul: 0,
     advancePaymentSelection: 'all', // Default: include all VOs in advance payment calculation
     // Retention fields
-    retentionPercentage: 10,
+    retentionPercentage: 0, // Default to 0 for retention release IPCs (user needs to specify)
     retentionAmount: 0,
     retentionAmountCumul: 0,
     retention: 0,
+    holdWarranty: 0, // Contract's warranty retention percentage
     // Penalty fields
     penalty: 0,
     previousPenalty: 0,
