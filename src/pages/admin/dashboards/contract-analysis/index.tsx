@@ -45,7 +45,7 @@ const HowItWorksModal = memo(({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-5xl max-h-[90vh] p-0">
+      <div className="modal-box max-w-7xl w-[95vw] max-h-[90vh] p-0">
         {/* Header */}
         <div className="sticky top-0 bg-base-100 border-b border-base-200 px-6 py-4 flex items-center justify-between z-10">
           <div>
