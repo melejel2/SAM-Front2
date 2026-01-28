@@ -72,7 +72,7 @@ const ScoreGauge = ({
         className="text-xs font-semibold px-2 py-0.5 rounded mt-1"
         style={{ backgroundColor: status.color + '20', color: status.color }}
       >
-        {status.labelFr}
+        {status.label}
       </span>
     </div>
   );
@@ -141,18 +141,18 @@ const TemplateCard = ({
           <div className="mt-3 space-y-2">
             <div className="flex gap-3 flex-wrap">
               {template.criticalRiskCount! > 0 && (
-                <RiskBadge count={template.criticalRiskCount!} level="Critical" label="Critique" />
+                <RiskBadge count={template.criticalRiskCount!} level="Critical" label="Critical" />
               )}
               {template.highRiskCount! > 0 && (
-                <RiskBadge count={template.highRiskCount!} level="High" label="Élevé" />
+                <RiskBadge count={template.highRiskCount!} level="High" label="High" />
               )}
             </div>
             <p className="text-xs text-base-content/50">
-              Analysé le {new Date(template.lastAnalyzedAt!).toLocaleDateString('fr-FR')}
+              Analyzed on {new Date(template.lastAnalyzedAt!).toLocaleDateString('en-US')}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-base-content/60 mt-2">Non analysé</p>
+          <p className="text-sm text-base-content/60 mt-2">Not analyzed</p>
         )}
 
         <div className="card-actions justify-end mt-3">
@@ -162,7 +162,7 @@ const TemplateCard = ({
               onClick={onViewDetails}
             >
               <span className="iconify lucide--eye size-4"></span>
-              Détails
+              Details
             </button>
           )}
           <button
@@ -175,7 +175,7 @@ const TemplateCard = ({
             ) : (
               <span className="iconify lucide--scan size-4"></span>
             )}
-            {template.isAnalyzed ? 'Ré-analyser' : 'Analyser'}
+            {template.isAnalyzed ? 'Re-analyze' : 'Analyze'}
           </button>
         </div>
       </div>
@@ -195,7 +195,7 @@ const DocumentScanner = ({
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
-      toaster.error('Format non supporté. Veuillez utiliser un fichier Word (.docx)');
+      toaster.error('Unsupported format. Please use a Word file (.docx)');
       return;
     }
 
@@ -203,9 +203,9 @@ const DocumentScanner = ({
     try {
       const result = await scanDocument(file);
       onScanComplete(result);
-      toaster.success('Analyse terminée');
+      toaster.success('Analysis complete');
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur lors de l\'analyse');
+      toaster.error(error.message || 'Error during analysis');
     } finally {
       setIsScanning(false);
     }
@@ -237,17 +237,17 @@ const DocumentScanner = ({
       {isScanning ? (
         <div className="flex flex-col items-center gap-2">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-sm text-base-content/70">Analyse en cours...</p>
+          <p className="text-sm text-base-content/70">Analyzing...</p>
         </div>
       ) : (
         <>
           <span className="iconify lucide--upload-cloud size-12 text-base-content/30 mx-auto"></span>
           <p className="mt-2 text-sm text-base-content/70">
-            Glissez un fichier Word ici ou
+            Drag a Word file here or
           </p>
           <label className="btn btn-primary btn-sm mt-2">
             <span className="iconify lucide--file-up size-4"></span>
-            Parcourir
+            Browse
             <input
               type="file"
               className="hidden"
@@ -256,7 +256,7 @@ const DocumentScanner = ({
             />
           </label>
           <p className="text-xs text-base-content/50 mt-2">
-            Formats supportés: .docx, .doc
+            Supported formats: .docx, .doc
           </p>
         </>
       )}
@@ -285,25 +285,25 @@ const ScanResultModal = ({
         >
           ✕
         </button>
-        <h3 className="font-bold text-lg mb-4">Résultat de l'Analyse</h3>
+        <h3 className="font-bold text-lg mb-4">Analysis Results</h3>
 
         <div className="flex items-center gap-6 mb-6">
-          <ScoreGauge score={result.overallScore} size={100} label="Score Global" />
+          <ScoreGauge score={result.overallScore} size={100} label="Overall Score" />
           <div className="flex-1">
             <p className="text-base-content/80">{result.summary}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <RiskBadge count={result.criticalCount} level="Critical" label="Critique" />
-          <RiskBadge count={result.highCount} level="High" label="Élevé" />
-          <RiskBadge count={result.mediumCount} level="Medium" label="Moyen" />
-          <RiskBadge count={result.lowCount} level="Low" label="Faible" />
+          <RiskBadge count={result.criticalCount} level="Critical" label="Critical" />
+          <RiskBadge count={result.highCount} level="High" label="High" />
+          <RiskBadge count={result.mediumCount} level="Medium" label="Medium" />
+          <RiskBadge count={result.lowCount} level="Low" label="Low" />
         </div>
 
         {result.recommendations.length > 0 && (
           <div className="mb-4">
-            <h4 className="font-semibold mb-2">Recommandations</h4>
+            <h4 className="font-semibold mb-2">Recommendations</h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-base-content/80">
               {result.recommendations.map((rec, i) => (
                 <li key={i}>{rec}</li>
@@ -314,7 +314,7 @@ const ScanResultModal = ({
 
         {result.topRisks.length > 0 && (
           <div>
-            <h4 className="font-semibold mb-2">Risques Principaux</h4>
+            <h4 className="font-semibold mb-2">Top Risks</h4>
             <div className="space-y-2">
               {result.topRisks.slice(0, 5).map((risk, i) => (
                 <div
@@ -326,16 +326,16 @@ const ScanResultModal = ({
                       className="px-2 py-0.5 rounded text-xs font-semibold text-white"
                       style={{ backgroundColor: RiskLevelColors[risk.level as keyof typeof RiskLevelColors] || '#6b7280' }}
                     >
-                      {risk.levelFr}
+                      {risk.level}
                     </span>
                     <span className="text-xs text-base-content/60">
-                      {risk.categoryFr}
+                      {risk.category}
                     </span>
                   </div>
                   <p className="text-sm">{risk.riskDescription}</p>
                   {risk.recommendation && (
                     <p className="text-xs text-primary mt-1">
-                      💡 {risk.recommendation}
+                      {risk.recommendation}
                     </p>
                   )}
                 </div>
@@ -346,7 +346,7 @@ const ScanResultModal = ({
 
         <div className="modal-action">
           <button className="btn" onClick={onClose}>
-            Fermer
+            Close
           </button>
         </div>
       </div>
@@ -370,7 +370,7 @@ export default function ContractAnalysisDashboard() {
       const data = await getTemplatesWithAnalysisStatus();
       setTemplates(data);
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur lors du chargement');
+      toaster.error(error.message || 'Error loading templates');
     } finally {
       setIsLoading(false);
     }
@@ -385,13 +385,13 @@ export default function ContractAnalysisDashboard() {
     try {
       const result = await analyzeTemplate(templateId);
       if (result.success) {
-        toaster.success('Analyse terminée avec succès');
+        toaster.success('Analysis completed successfully');
         loadTemplates();
       } else {
-        toaster.error(result.errorMessage || 'Erreur lors de l\'analyse');
+        toaster.error(result.errorMessage || 'Error during analysis');
       }
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur lors de l\'analyse');
+      toaster.error(error.message || 'Error during analysis');
     } finally {
       setAnalyzingTemplateId(null);
     }
@@ -401,10 +401,10 @@ export default function ContractAnalysisDashboard() {
     setIsAnalyzingAll(true);
     try {
       await analyzeAllTemplates();
-      toaster.success('Tous les modèles ont été analysés');
+      toaster.success('All templates have been analyzed');
       loadTemplates();
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur lors de l\'analyse');
+      toaster.error(error.message || 'Error during analysis');
     } finally {
       setIsAnalyzingAll(false);
     }
@@ -434,9 +434,9 @@ export default function ContractAnalysisDashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Analyse des Risques Contractuels</h1>
+          <h1 className="text-2xl font-bold">Contract Risk Analysis</h1>
           <p className="text-base-content/60">
-            Basé sur Moon et al. (2022) - Classification des Clauses Toxiques
+            Based on Moon et al. (2022) - Toxic Clauses Classification
           </p>
         </div>
         <button
@@ -449,7 +449,7 @@ export default function ContractAnalysisDashboard() {
           ) : (
             <span className="iconify lucide--scan-search size-5"></span>
           )}
-          Analyser Tous les Modèles
+          Analyze All Templates
         </button>
       </div>
 
@@ -459,7 +459,7 @@ export default function ContractAnalysisDashboard() {
           <div className="card-body p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/60">Modèles Analysés</p>
+                <p className="text-sm text-base-content/60">Templates Analyzed</p>
                 <p className="text-2xl font-bold">
                   {analyzedCount}/{templates.length}
                 </p>
@@ -473,7 +473,7 @@ export default function ContractAnalysisDashboard() {
           <div className="card-body p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/60">Score Moyen</p>
+                <p className="text-sm text-base-content/60">Average Score</p>
                 <p className="text-2xl font-bold">{Math.round(avgScore)}/100</p>
               </div>
               <ScoreGauge score={avgScore} size={50} />
@@ -485,7 +485,7 @@ export default function ContractAnalysisDashboard() {
           <div className="card-body p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/60">Risques Critiques</p>
+                <p className="text-sm text-base-content/60">Critical Risks</p>
                 <p className="text-2xl font-bold text-error">{totalCritical}</p>
               </div>
               <span className="iconify lucide--alert-octagon size-8 text-error/50"></span>
@@ -497,7 +497,7 @@ export default function ContractAnalysisDashboard() {
           <div className="card-body p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-base-content/60">Risques Élevés</p>
+                <p className="text-sm text-base-content/60">High Risks</p>
                 <p className="text-2xl font-bold text-warning">{totalHigh}</p>
               </div>
               <span className="iconify lucide--alert-triangle size-8 text-warning/50"></span>
@@ -511,10 +511,10 @@ export default function ContractAnalysisDashboard() {
         <div className="card-body">
           <h2 className="card-title text-lg mb-4">
             <span className="iconify lucide--file-scan size-5"></span>
-            Scanner un Document
+            Scan a Document
           </h2>
           <p className="text-sm text-base-content/60 mb-4">
-            Analysez un contrat externe (fichier Word) pour identifier les clauses à risque
+            Analyze an external contract (Word file) to identify risk clauses
           </p>
           <DocumentScanner onScanComplete={setScanResult} />
         </div>
@@ -522,7 +522,7 @@ export default function ContractAnalysisDashboard() {
 
       {/* Templates Grid */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Modèles de Contrats</h2>
+        <h2 className="text-lg font-semibold mb-4">Contract Templates</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
             <TemplateCard
@@ -541,17 +541,17 @@ export default function ContractAnalysisDashboard() {
         <div className="card-body">
           <h2 className="card-title text-lg mb-4">
             <span className="iconify lucide--info size-5"></span>
-            Catégories de Risques (Moon et al. 2022)
+            Risk Categories (Moon et al. 2022)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { name: 'Paiement', desc: 'Retards de paiement, retenues excessives' },
-              { name: 'Rôle/Responsabilité', desc: 'Périmètre ambigu, obligations floues' },
-              { name: 'Sécurité', desc: 'Transfert de responsabilité, assurances' },
-              { name: 'Délais', desc: 'Délais irréalistes, pénalités' },
-              { name: 'Procédures', desc: 'Processus complexes, délais courts' },
-              { name: 'Définitions', desc: 'Termes vagues, ambiguïtés' },
-              { name: 'Références', desc: 'Documents externes non fournis' },
+              { name: 'Payment', desc: 'Payment delays, excessive retentions' },
+              { name: 'Role/Responsibility', desc: 'Ambiguous scope, unclear obligations' },
+              { name: 'Safety', desc: 'Liability transfer, insurance issues' },
+              { name: 'Timeline', desc: 'Unrealistic deadlines, penalties' },
+              { name: 'Procedures', desc: 'Complex processes, short deadlines' },
+              { name: 'Definitions', desc: 'Vague terms, ambiguities' },
+              { name: 'References', desc: 'External documents not provided' },
             ].map((cat) => (
               <div key={cat.name} className="p-3 rounded-lg bg-base-200/50">
                 <p className="font-semibold text-sm">{cat.name}</p>

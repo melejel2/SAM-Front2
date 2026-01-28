@@ -10,12 +10,10 @@ import {
 import type {
   TemplateRiskProfile,
   ContractClause,
-  RiskAssessment,
 } from '@/types/contract-analysis';
 import {
   getHealthStatus,
   RiskLevelColors,
-  RiskCategoryFr,
   RiskCategory,
 } from '@/types/contract-analysis';
 
@@ -74,7 +72,7 @@ const ScoreGauge = ({
         className="text-xs font-semibold px-2 py-0.5 rounded mt-1"
         style={{ backgroundColor: status.color + '20', color: status.color }}
       >
-        {status.labelFr}
+        {status.label}
       </span>
     </div>
   );
@@ -84,7 +82,6 @@ const ScoreGauge = ({
 const CategoryScoreBar = ({
   category,
   score,
-  categoryKey,
 }: {
   category: string;
   score: number;
@@ -153,7 +150,7 @@ const ClauseRiskCard = ({
                       '#6b7280',
                   }}
                 >
-                  {clause.riskAssessments.length} risque(s)
+                  {clause.riskAssessments.length} risk(s)
                 </span>
               )}
             </div>
@@ -181,7 +178,7 @@ const ClauseRiskCard = ({
             {/* Risk Assessments */}
             {hasRisks && (
               <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Risques Identifiés</h4>
+                <h4 className="font-semibold text-sm">Identified Risks</h4>
                 {clause.riskAssessments.map((risk, i) => (
                   <div
                     key={i}
@@ -196,10 +193,10 @@ const ClauseRiskCard = ({
                             '#6b7280',
                         }}
                       >
-                        {risk.levelFr}
+                        {risk.level}
                       </span>
                       <span className="text-xs font-medium text-primary">
-                        {risk.categoryFr}
+                        {risk.category}
                       </span>
                     </div>
                     <p className="text-sm mb-2">{risk.riskDescription}</p>
@@ -210,7 +207,7 @@ const ClauseRiskCard = ({
                     )}
                     {risk.recommendation && (
                       <p className="text-xs text-primary mt-2">
-                        💡 {risk.recommendation}
+                        {risk.recommendation}
                       </p>
                     )}
                   </div>
@@ -248,7 +245,7 @@ export default function TemplateDetailsPage() {
       setProfile(profileData);
       setClauses(clausesData);
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur lors du chargement');
+      toaster.error(error.message || 'Error loading data');
     } finally {
       setIsLoading(false);
     }
@@ -265,13 +262,13 @@ export default function TemplateDetailsPage() {
     try {
       const result = await analyzeTemplate(parseInt(templateId));
       if (result.success) {
-        toaster.success('Analyse terminée');
+        toaster.success('Analysis complete');
         loadData();
       } else {
-        toaster.error(result.errorMessage || 'Erreur');
+        toaster.error(result.errorMessage || 'Error');
       }
     } catch (error: any) {
-      toaster.error(error.message || 'Erreur');
+      toaster.error(error.message || 'Error');
     } finally {
       setIsReanalyzing(false);
     }
@@ -291,12 +288,12 @@ export default function TemplateDetailsPage() {
   if (!profile) {
     return (
       <div className="p-6 text-center">
-        <p className="text-base-content/60">Profil non trouvé</p>
+        <p className="text-base-content/60">Profile not found</p>
         <button
           className="btn btn-primary mt-4"
           onClick={() => navigate('/dashboard/contract-analysis')}
         >
-          Retour
+          Back
         </button>
       </div>
     );
@@ -312,11 +309,11 @@ export default function TemplateDetailsPage() {
             onClick={() => navigate('/dashboard/contract-analysis')}
           >
             <span className="iconify lucide--arrow-left size-4"></span>
-            Retour
+            Back
           </button>
           <h1 className="text-2xl font-bold">{profile.templateName}</h1>
           <p className="text-base-content/60">
-            Analysé le {new Date(profile.generatedAt).toLocaleDateString('fr-FR')} •
+            Analyzed on {new Date(profile.generatedAt).toLocaleDateString('en-US')} •
             Version {profile.analysisVersion}
           </p>
         </div>
@@ -330,7 +327,7 @@ export default function TemplateDetailsPage() {
           ) : (
             <span className="iconify lucide--refresh-cw size-4"></span>
           )}
-          Ré-analyser
+          Re-analyze
         </button>
       </div>
 
@@ -339,7 +336,7 @@ export default function TemplateDetailsPage() {
         {/* Score Card */}
         <div className="card bg-base-100 shadow border border-base-300">
           <div className="card-body items-center">
-            <ScoreGauge score={profile.overallScore} size={140} label="Score Global" />
+            <ScoreGauge score={profile.overallScore} size={140} label="Overall Score" />
             <p className="text-center text-sm text-base-content/60 mt-2">
               {profile.summary}
             </p>
@@ -349,22 +346,22 @@ export default function TemplateDetailsPage() {
         {/* Risk Counts */}
         <div className="card bg-base-100 shadow border border-base-300">
           <div className="card-body">
-            <h3 className="card-title text-base">Répartition des Risques</h3>
+            <h3 className="card-title text-base">Risk Distribution</h3>
             <div className="space-y-3 mt-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Critiques</span>
+                <span className="text-sm">Critical</span>
                 <span className="badge badge-error text-white">{profile.criticalRiskCount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Élevés</span>
+                <span className="text-sm">High</span>
                 <span className="badge badge-warning">{profile.highRiskCount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Moyens</span>
+                <span className="text-sm">Medium</span>
                 <span className="badge badge-info">{profile.mediumRiskCount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Faibles</span>
+                <span className="text-sm">Low</span>
                 <span className="badge badge-success">{profile.lowRiskCount}</span>
               </div>
             </div>
@@ -379,40 +376,40 @@ export default function TemplateDetailsPage() {
         {/* Category Scores */}
         <div className="card bg-base-100 shadow border border-base-300">
           <div className="card-body">
-            <h3 className="card-title text-base">Scores par Catégorie</h3>
+            <h3 className="card-title text-base">Category Scores</h3>
             <div className="space-y-3 mt-2">
               <CategoryScoreBar
-                category="Paiement"
+                category="Payment"
                 score={profile.categoryScores.payment}
                 categoryKey={RiskCategory.Payment}
               />
               <CategoryScoreBar
-                category="Rôle/Responsabilité"
+                category="Role/Responsibility"
                 score={profile.categoryScores.roleResponsibility}
                 categoryKey={RiskCategory.RoleResponsibility}
               />
               <CategoryScoreBar
-                category="Sécurité"
+                category="Safety"
                 score={profile.categoryScores.safety}
                 categoryKey={RiskCategory.Safety}
               />
               <CategoryScoreBar
-                category="Délais"
+                category="Timeline"
                 score={profile.categoryScores.temporal}
                 categoryKey={RiskCategory.Temporal}
               />
               <CategoryScoreBar
-                category="Procédures"
+                category="Procedures"
                 score={profile.categoryScores.procedure}
                 categoryKey={RiskCategory.Procedure}
               />
               <CategoryScoreBar
-                category="Définitions"
+                category="Definitions"
                 score={profile.categoryScores.definition}
                 categoryKey={RiskCategory.Definition}
               />
               <CategoryScoreBar
-                category="Références"
+                category="References"
                 score={profile.categoryScores.reference}
                 categoryKey={RiskCategory.Reference}
               />
@@ -427,7 +424,7 @@ export default function TemplateDetailsPage() {
           <div className="card-body">
             <h3 className="card-title text-base text-primary">
               <span className="iconify lucide--lightbulb size-5"></span>
-              Recommandations Principales
+              Top Recommendations
             </h3>
             <ul className="list-disc list-inside space-y-1 text-sm">
               {profile.topRecommendations.map((rec, i) => (
@@ -441,18 +438,18 @@ export default function TemplateDetailsPage() {
       {/* Clauses Section */}
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Clauses Analysées</h2>
+          <h2 className="text-lg font-semibold">Analyzed Clauses</h2>
           <select
             className="select select-bordered select-sm"
             value={filterLevel}
             onChange={(e) => setFilterLevel(e.target.value)}
           >
-            <option value="all">Toutes les clauses</option>
-            <option value="risky">Avec risques uniquement</option>
-            <option value="Critical">Critiques</option>
-            <option value="High">Élevés</option>
-            <option value="Medium">Moyens</option>
-            <option value="Low">Faibles</option>
+            <option value="all">All clauses</option>
+            <option value="risky">With risks only</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
           </select>
         </div>
 
@@ -471,7 +468,7 @@ export default function TemplateDetailsPage() {
 
         {filteredClauses.length === 0 && (
           <p className="text-center text-base-content/60 py-8">
-            Aucune clause ne correspond aux critères
+            No clauses match the criteria
           </p>
         )}
       </div>

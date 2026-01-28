@@ -13,7 +13,8 @@ const getAuthToken = (): string | null => {
   if (authData) {
     try {
       const parsed = JSON.parse(authData);
-      return parsed.token || null;
+      // Token is stored at user.token in the auth state
+      return parsed.user?.token || null;
     } catch {
       return null;
     }

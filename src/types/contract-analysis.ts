@@ -22,23 +22,15 @@ export enum RiskLevel {
   Critical = 'Critical',
 }
 
-// French translations for risk categories
-export const RiskCategoryFr: Record<RiskCategory, string> = {
-  [RiskCategory.Payment]: 'Risque de Paiement',
-  [RiskCategory.RoleResponsibility]: 'Rôle et Responsabilité',
-  [RiskCategory.Safety]: 'Sécurité et Assurance',
-  [RiskCategory.Temporal]: 'Délais et Pénalités',
-  [RiskCategory.Procedure]: 'Procédures et Réclamations',
-  [RiskCategory.Definition]: 'Définitions et Ambiguïtés',
-  [RiskCategory.Reference]: 'Documents de Référence',
-};
-
-// French translations for risk levels
-export const RiskLevelFr: Record<RiskLevel, string> = {
-  [RiskLevel.Low]: 'Faible',
-  [RiskLevel.Medium]: 'Moyen',
-  [RiskLevel.High]: 'Élevé',
-  [RiskLevel.Critical]: 'Critique',
+// English labels for risk categories
+export const RiskCategoryLabels: Record<RiskCategory, string> = {
+  [RiskCategory.Payment]: 'Payment Risk',
+  [RiskCategory.RoleResponsibility]: 'Role & Responsibility',
+  [RiskCategory.Safety]: 'Safety & Insurance',
+  [RiskCategory.Temporal]: 'Timeline & Penalties',
+  [RiskCategory.Procedure]: 'Procedures & Claims',
+  [RiskCategory.Definition]: 'Definitions & Ambiguities',
+  [RiskCategory.Reference]: 'Reference Documents',
 };
 
 // Colors for risk levels
@@ -167,17 +159,16 @@ export interface DocumentScanResult {
 // Helper function to get health status label
 export function getHealthStatus(score: number): {
   label: string;
-  labelFr: string;
   color: string;
 } {
   if (score >= 80) {
-    return { label: 'Good', labelFr: 'Bon', color: '#22c55e' };
+    return { label: 'Good', color: '#22c55e' };
   } else if (score >= 60) {
-    return { label: 'Moderate', labelFr: 'Modéré', color: '#f59e0b' };
+    return { label: 'Moderate', color: '#f59e0b' };
   } else if (score >= 40) {
-    return { label: 'Concerning', labelFr: 'Préoccupant', color: '#ef4444' };
+    return { label: 'Concerning', color: '#ef4444' };
   } else {
-    return { label: 'Critical', labelFr: 'Critique', color: '#7f1d1d' };
+    return { label: 'Critical', color: '#7f1d1d' };
   }
 }
 
