@@ -45,116 +45,311 @@ const HowItWorksModal = memo(({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-2xl">
-        <button
-          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-        <h3 className="font-bold text-lg mb-4">How Contract Analysis Works</h3>
-
-        <div className="space-y-4 text-sm">
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-            <p className="font-semibold text-primary mb-1">Based on Research</p>
-            <p className="text-base-content/80">
-              This system implements the "Toxic Clauses" classification framework from Moon et al. (2022),
-              adapted for French construction contracts.
+      <div className="modal-box max-w-5xl max-h-[90vh] p-0">
+        {/* Header */}
+        <div className="sticky top-0 bg-base-100 border-b border-base-200 px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h3 className="font-bold text-xl">How Contract Analysis Works</h3>
+            <p className="text-sm text-base-content/60 mt-1">
+              AI-powered contract risk assessment based on academic research
             </p>
           </div>
+          <button
+            className="btn btn-sm btn-circle btn-ghost"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
 
-          <div>
-            <h4 className="font-semibold mb-2">Two-Tier Analysis Approach</h4>
-            <div className="space-y-2 ml-4">
-              <div className="flex gap-2">
-                <span className="badge badge-primary badge-sm">Tier 1</span>
-                <span><strong>Template Analysis</strong> - Analyzes contract templates to establish a risk baseline</span>
+        <div className="p-6 space-y-8 overflow-y-auto">
+          {/* Introduction */}
+          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <Icon icon={fileTextIcon} className="size-6 text-primary" />
               </div>
-              <div className="flex gap-2">
-                <span className="badge badge-secondary badge-sm">Tier 2</span>
-                <span><strong>Contract Analysis</strong> - Compares specific contracts against their template baseline</span>
+              <div>
+                <h4 className="font-bold text-lg text-primary mb-2">Research-Based Classification</h4>
+                <p className="text-base-content/80">
+                  This system implements the <strong>"Toxic Clauses"</strong> classification framework from
+                  Moon et al. (2022), a peer-reviewed study that identified 7 categories of problematic
+                  clauses in construction contracts. The system has been adapted for French construction
+                  contracts and local regulatory requirements.
+                </p>
               </div>
             </div>
           </div>
 
+          {/* How It Works - Step by Step */}
           <div>
-            <h4 className="font-semibold mb-2">7 Risk Categories (Moon et al.)</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-error"></span>
-                <span><strong>Payment</strong> - Payment terms, retention, penalties</span>
+            <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm">1</span>
+              How It Works
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-base-200/50 rounded-xl p-5 border border-base-300">
+                <div className="w-10 h-10 rounded-lg bg-info/20 flex items-center justify-center mb-3">
+                  <Icon icon={uploadCloudIcon} className="size-5 text-info" />
+                </div>
+                <h5 className="font-semibold mb-2">Upload & Parse</h5>
+                <p className="text-sm text-base-content/70">
+                  The system extracts text from your contract documents (Word/PDF) and identifies
+                  individual clauses using natural language processing.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-warning"></span>
-                <span><strong>Role/Responsibility</strong> - Unclear obligations</span>
+              <div className="bg-base-200/50 rounded-xl p-5 border border-base-300">
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center mb-3">
+                  <Icon icon={scanIcon} className="size-5 text-warning" />
+                </div>
+                <h5 className="font-semibold mb-2">Analyze & Classify</h5>
+                <p className="text-sm text-base-content/70">
+                  Each clause is analyzed against a library of risk patterns across 7 categories.
+                  The system identifies potentially problematic language and assigns risk levels.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-info"></span>
-                <span><strong>Safety</strong> - Insurance, liability, HSE</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-success"></span>
-                <span><strong>Timeline</strong> - Deadlines, delays, penalties</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary"></span>
-                <span><strong>Procedure</strong> - Claims, dispute resolution</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                <span><strong>Definition</strong> - Ambiguous terms</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent"></span>
-                <span><strong>Reference</strong> - Missing/vague documents</span>
+              <div className="bg-base-200/50 rounded-xl p-5 border border-base-300">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center mb-3">
+                  <Icon icon={fileCheckIcon} className="size-5 text-success" />
+                </div>
+                <h5 className="font-semibold mb-2">Report & Recommend</h5>
+                <p className="text-sm text-base-content/70">
+                  Get a comprehensive health score, detailed risk breakdown by category, and
+                  specific recommendations for improving contract terms.
+                </p>
               </div>
             </div>
           </div>
 
+          {/* Two-Tier System */}
           <div>
-            <h4 className="font-semibold mb-2">Risk Levels</h4>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#7f1d1d' }}></span>
-                <span>Critical</span>
+            <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm">2</span>
+              Two-Tier Analysis System
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-primary/5 border-2 border-primary/30 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="badge badge-primary">Tier 1</span>
+                  <h5 className="font-bold">Template Analysis</h5>
+                </div>
+                <p className="text-sm text-base-content/80 mb-4">
+                  Analyze your standard contract templates to establish a <strong>risk baseline</strong>.
+                  This identifies inherent risks in your standard terms before any specific project begins.
+                </p>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Identifies risky standard clauses
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Establishes baseline scores per category
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Provides template improvement recommendations
+                  </li>
+                </ul>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></span>
-                <span>High</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#f59e0b' }}></span>
-                <span>Medium</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e' }}></span>
-                <span>Low</span>
+              <div className="bg-secondary/5 border-2 border-secondary/30 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="badge badge-secondary">Tier 2</span>
+                  <h5 className="font-bold">Contract Analysis</h5>
+                </div>
+                <p className="text-sm text-base-content/80 mb-4">
+                  Analyze specific contracts to identify <strong>deviations from the template</strong>.
+                  This shows what additional risks have been introduced or mitigated in negotiations.
+                </p>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Compares against template baseline
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Detects new risks from modifications
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Shows delta score (improvement/degradation)
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
 
+          {/* 7 Risk Categories */}
           <div>
-            <h4 className="font-semibold mb-2">Health Score</h4>
-            <p className="text-base-content/80">
-              Each contract receives a health score from 0-100 based on the severity and quantity of identified risks:
+            <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm">3</span>
+              7 Risk Categories (Moon et al., 2022)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-error">
+                <h5 className="font-semibold text-error mb-1">Payment</h5>
+                <p className="text-xs text-base-content/70">
+                  Payment schedules, retention terms, late payment penalties, price adjustments,
+                  and unfavorable payment conditions
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-warning">
+                <h5 className="font-semibold text-warning mb-1">Role & Responsibility</h5>
+                <p className="text-xs text-base-content/70">
+                  Unclear scope definitions, ambiguous obligations, excessive liability transfer,
+                  and responsibility misalignment
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-info">
+                <h5 className="font-semibold text-info mb-1">Safety & Insurance</h5>
+                <p className="text-xs text-base-content/70">
+                  Insurance requirements, liability caps, indemnification clauses, HSE obligations,
+                  and warranty terms
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-success">
+                <h5 className="font-semibold text-success mb-1">Timeline & Penalties</h5>
+                <p className="text-xs text-base-content/70">
+                  Unrealistic deadlines, excessive delay penalties, milestone requirements,
+                  and schedule acceleration clauses
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-primary">
+                <h5 className="font-semibold text-primary mb-1">Procedures & Claims</h5>
+                <p className="text-xs text-base-content/70">
+                  Claims procedures, dispute resolution mechanisms, notification requirements,
+                  and change order processes
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-secondary">
+                <h5 className="font-semibold text-secondary mb-1">Definitions</h5>
+                <p className="text-xs text-base-content/70">
+                  Ambiguous terminology, missing definitions, vague scope descriptions,
+                  and undefined technical terms
+                </p>
+              </div>
+              <div className="bg-base-200/50 rounded-lg p-4 border-l-4 border-accent">
+                <h5 className="font-semibold text-accent mb-1">References</h5>
+                <p className="text-xs text-base-content/70">
+                  Missing referenced documents, outdated standards, unclear document hierarchy,
+                  and incomplete specifications
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Risk Levels & Health Score */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm">4</span>
+                Risk Levels
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: '#7f1d1d10' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#7f1d1d' }}>
+                    <span className="text-white font-bold">!</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold" style={{ color: '#7f1d1d' }}>Critical</h5>
+                    <p className="text-xs text-base-content/70">Immediate attention required. Major financial or legal exposure.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-error/10">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-error">
+                    <span className="text-white font-bold">!</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-error">High</h5>
+                    <p className="text-xs text-base-content/70">Significant risk. Should be negotiated before signing.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-warning">
+                    <span className="text-white font-bold">-</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-warning">Medium</h5>
+                    <p className="text-xs text-base-content/70">Moderate concern. Review and consider mitigation.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-success/10">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-success">
+                    <span className="text-white font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-success">Low</h5>
+                    <p className="text-xs text-base-content/70">Minor issue. Standard industry practice or minor improvement possible.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm">5</span>
+                Health Score
+              </h4>
+              <p className="text-sm text-base-content/80 mb-4">
+                Each contract receives an overall health score from 0-100 based on the severity
+                and quantity of identified risks. Higher scores indicate safer contracts.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#22c55e' }}>
+                    80-100
+                  </div>
+                  <div>
+                    <span className="font-semibold text-success">Good</span>
+                    <span className="text-xs text-base-content/60 ml-2">Low risk, proceed with confidence</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#f59e0b' }}>
+                    60-79
+                  </div>
+                  <div>
+                    <span className="font-semibold text-warning">Moderate</span>
+                    <span className="text-xs text-base-content/60 ml-2">Some concerns, review recommended</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#ef4444' }}>
+                    40-59
+                  </div>
+                  <div>
+                    <span className="font-semibold text-error">Concerning</span>
+                    <span className="text-xs text-base-content/60 ml-2">Multiple issues, negotiation needed</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#7f1d1d' }}>
+                    0-39
+                  </div>
+                  <div>
+                    <span className="font-semibold" style={{ color: '#7f1d1d' }}>Critical</span>
+                    <span className="text-xs text-base-content/60 ml-2">High risk, significant revision required</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reference */}
+          <div className="bg-base-200 rounded-xl p-4 border border-base-300">
+            <p className="text-xs text-base-content/60">
+              <strong>Academic Reference:</strong> Moon, S., Chi, S., & Im, S. B. (2022).
+              "Automated Detection of Contractual Risk Clauses from Construction Specifications
+              Using Bidirectional Encoder Representations from Transformers (BERT)."
+              Journal of Construction Engineering and Management, 148(1), 04021175.
             </p>
-            <div className="flex gap-4 mt-2">
-              <span className="text-success">80-100: Good</span>
-              <span className="text-warning">60-79: Moderate</span>
-              <span className="text-error">40-59: Concerning</span>
-              <span style={{ color: '#7f1d1d' }}>0-39: Critical</span>
-            </div>
-          </div>
-
-          <div className="bg-base-200 rounded-lg p-3 text-xs text-base-content/60">
-            <p><strong>Reference:</strong> Moon, S., et al. (2022). "Toxic Clauses in Construction Contracts:
-            A Machine Learning Approach to Classification." Journal of Construction Engineering and Management.</p>
           </div>
         </div>
 
-        <div className="modal-action">
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-base-100 border-t border-base-200 px-6 py-4 flex justify-end">
           <button className="btn btn-primary" onClick={onClose}>
-            Got it
+            Got it, let's analyze!
           </button>
         </div>
       </div>
