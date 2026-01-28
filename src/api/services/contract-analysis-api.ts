@@ -23,10 +23,8 @@ const getAuthToken = (): string | null => {
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('__SAM_ADMIN_AUTH__');
-      window.location.href = '/auth/login';
-    }
+    // Don't auto-logout on 401 - let the component handle the error gracefully
+    // This prevents logout when the endpoint doesn't exist on server yet
     const errorText = await response.text();
     throw new Error(errorText || `HTTP error! status: ${response.status}`);
   }
