@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Icon } from '@iconify/react';
 import { Loader } from '@/components/Loader';
+import { useTopbarContent } from '@/contexts/topbar-content';
 import useToast from '@/hooks/use-toast';
 import {
   getTemplateProfile,
@@ -16,6 +18,10 @@ import {
   RiskLevelColors,
   RiskCategory,
 } from '@/types/contract-analysis';
+
+// Icons
+import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
+import refreshCwIcon from '@iconify/icons-lucide/refresh-cw';
 
 // Score Gauge Component
 const ScoreGauge = ({
@@ -159,11 +165,13 @@ const ClauseRiskCard = ({
             )}
           </div>
           <span
-            className={`iconify size-5 transition-transform ${
+            className={`transition-transform ${
               isExpanded ? 'rotate-180' : ''
             }`}
           >
-            lucide--chevron-down
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </span>
         </div>
 
@@ -225,6 +233,7 @@ const ClauseRiskCard = ({
 export default function TemplateDetailsPage() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
+  const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
   const [profile, setProfile] = useState<TemplateRiskProfile | null>(null);
@@ -255,7 +264,7 @@ export default function TemplateDetailsPage() {
     loadData();
   }, [loadData]);
 
-  const handleReanalyze = async () => {
+  const handleReanalyze = useCallback(async () => {
     if (!templateId) return;
 
     setIsReanalyzing(true);
@@ -272,7 +281,43 @@ export default function TemplateDetailsPage() {
     } finally {
       setIsReanalyzing(false);
     }
-  };
+  }, [templateId, loadData, toaster]);
+
+  const handleBack = useCallback(() => {
+    navigate('/dashboard/contract-analysis');
+  }, [navigate]);
+
+  // Topbar setup
+  useEffect(() => {
+    setLeftContent(
+      <button
+        onClick={handleBack}
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+        title="Back to Contract Analysis"
+      >
+        <Icon icon={arrowLeftIcon} className="size-5" />
+      </button>
+    );
+
+    setRightContent(
+      <button
+        className="btn btn-sm btn-outline"
+        onClick={handleReanalyze}
+        disabled={isReanalyzing}
+      >
+        {isReanalyzing ? (
+          <span className="loading loading-spinner loading-sm"></span>
+        ) : (
+          <Icon icon={refreshCwIcon} className="size-4" />
+        )}
+        Re-analyze
+      </button>
+    );
+
+    return () => {
+      clearContent();
+    };
+  }, [handleBack, handleReanalyze, isReanalyzing, setLeftContent, setRightContent, clearContent]);
 
   // Filter clauses by risk level
   const filteredClauses = clauses.filter((clause) => {
@@ -300,43 +345,24 @@ export default function TemplateDetailsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="p-6 space-y-6 overflow-auto h-full">
+      {/* Header Info */}
       <div className="flex justify-between items-start">
         <div>
-          <button
-            className="btn btn-ghost btn-sm mb-2"
-            onClick={() => navigate('/dashboard/contract-analysis')}
-          >
-            <span className="iconify lucide--arrow-left size-4"></span>
-            Back
-          </button>
-          <h1 className="text-2xl font-bold">{profile.templateName}</h1>
-          <p className="text-base-content/60">
+          <h1 className="text-xl font-bold">{profile.templateName}</h1>
+          <p className="text-sm text-base-content/60">
             Analyzed on {new Date(profile.generatedAt).toLocaleDateString('en-US')} •
             Version {profile.analysisVersion}
           </p>
         </div>
-        <button
-          className="btn btn-outline"
-          onClick={handleReanalyze}
-          disabled={isReanalyzing}
-        >
-          {isReanalyzing ? (
-            <span className="loading loading-spinner loading-sm"></span>
-          ) : (
-            <span className="iconify lucide--refresh-cw size-4"></span>
-          )}
-          Re-analyze
-        </button>
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Score Card */}
         <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body items-center">
-            <ScoreGauge score={profile.overallScore} size={140} label="Overall Score" />
+          <div className="card-body items-center py-4">
+            <ScoreGauge score={profile.overallScore} size={120} label="Overall Score" />
             <p className="text-center text-sm text-base-content/60 mt-2">
               {profile.summary}
             </p>
@@ -345,9 +371,9 @@ export default function TemplateDetailsPage() {
 
         {/* Risk Counts */}
         <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body">
+          <div className="card-body py-4">
             <h3 className="card-title text-base">Risk Distribution</h3>
-            <div className="space-y-3 mt-2">
+            <div className="space-y-2 mt-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Critical</span>
                 <span className="badge badge-error text-white">{profile.criticalRiskCount}</span>
@@ -375,9 +401,9 @@ export default function TemplateDetailsPage() {
 
         {/* Category Scores */}
         <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body">
+          <div className="card-body py-4">
             <h3 className="card-title text-base">Category Scores</h3>
-            <div className="space-y-3 mt-2">
+            <div className="space-y-2 mt-2">
               <CategoryScoreBar
                 category="Payment"
                 score={profile.categoryScores.payment}
@@ -421,9 +447,11 @@ export default function TemplateDetailsPage() {
       {/* Recommendations */}
       {profile.topRecommendations.length > 0 && (
         <div className="card bg-primary/5 border border-primary/20">
-          <div className="card-body">
+          <div className="card-body py-4">
             <h3 className="card-title text-base text-primary">
-              <span className="iconify lucide--lightbulb size-5"></span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
               Top Recommendations
             </h3>
             <ul className="list-disc list-inside space-y-1 text-sm">

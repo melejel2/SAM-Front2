@@ -130,6 +130,20 @@ export interface TemplateAnalysisSummary {
   lastAnalyzedAt?: string;
 }
 
+// Contract analysis summary (for list view)
+export interface ContractAnalysisSummary {
+  contractDatasetId: number;
+  contractNumber?: string;
+  projectName?: string;
+  subcontractorName?: string;
+  status?: string;
+  overallScore?: number;
+  criticalRiskCount?: number;
+  highRiskCount?: number;
+  isAnalyzed: boolean;
+  lastAnalyzedAt?: string;
+}
+
 // Analysis result from API
 export interface AnalysisResult {
   success: boolean;

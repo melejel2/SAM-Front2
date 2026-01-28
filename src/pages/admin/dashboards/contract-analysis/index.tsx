@@ -1,192 +1,75 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader } from '@/components/Loader';
+import { Icon } from '@iconify/react';
+import { Spreadsheet } from '@/components/Spreadsheet';
+import type { SpreadsheetColumn } from '@/components/Spreadsheet';
+import { useTopbarContent } from '@/contexts/topbar-content';
 import useToast from '@/hooks/use-toast';
 import {
   getTemplatesWithAnalysisStatus,
+  getContractsWithAnalysisStatus,
   analyzeTemplate,
+  analyzeContract,
   analyzeAllTemplates,
   scanDocument,
 } from '@/api/services/contract-analysis-api';
 import type {
   TemplateAnalysisSummary,
+  ContractAnalysisSummary,
   DocumentScanResult,
 } from '@/types/contract-analysis';
 import { getHealthStatus, RiskLevelColors } from '@/types/contract-analysis';
 
-// Score Gauge Component
-const ScoreGauge = ({
-  score,
-  size = 120,
-  label,
-}: {
-  score: number;
-  size?: number;
-  label?: string;
-}) => {
-  const status = getHealthStatus(score);
-  const circumference = 2 * Math.PI * 45;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+// Icons
+import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
+import fileTextIcon from '@iconify/icons-lucide/file-text';
+import fileCheckIcon from '@iconify/icons-lucide/file-check';
+import scanIcon from '@iconify/icons-lucide/scan';
+import eyeIcon from '@iconify/icons-lucide/eye';
+import refreshCwIcon from '@iconify/icons-lucide/refresh-cw';
+import playIcon from '@iconify/icons-lucide/play';
+import uploadCloudIcon from '@iconify/icons-lucide/upload-cloud';
 
+type TabType = 'templates' | 'contracts';
+
+// Score Badge Component
+const ScoreBadge = memo(({ score }: { score?: number }) => {
+  if (score === undefined) return <span className="text-base-content/50">-</span>;
+  const status = getHealthStatus(score);
   return (
-    <div className="flex flex-col items-center">
-      <svg width={size} height={size} viewBox="0 0 100 100">
-        {/* Background circle */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          className="text-base-300"
-        />
-        {/* Progress circle */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
-          fill="none"
-          stroke={status.color}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          transform="rotate(-90 50 50)"
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-        />
-        {/* Score text */}
-        <text
-          x="50"
-          y="50"
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="text-2xl font-bold"
-          fill="currentColor"
-        >
-          {Math.round(score)}
-        </text>
-      </svg>
-      {label && <span className="text-sm text-base-content/70 mt-1">{label}</span>}
-      <span
-        className="text-xs font-semibold px-2 py-0.5 rounded mt-1"
-        style={{ backgroundColor: status.color + '20', color: status.color }}
-      >
-        {status.label}
-      </span>
-    </div>
+    <span
+      className="px-2 py-0.5 rounded text-xs font-semibold"
+      style={{ backgroundColor: status.color + '20', color: status.color }}
+    >
+      {Math.round(score)}
+    </span>
   );
-};
+});
+ScoreBadge.displayName = 'ScoreBadge';
 
 // Risk Count Badge
-const RiskBadge = ({
-  count,
-  level,
-  label,
-}: {
-  count: number;
-  level: 'Critical' | 'High' | 'Medium' | 'Low';
-  label: string;
-}) => {
-  const colors: Record<string, string> = {
-    Critical: '#7f1d1d',
-    High: '#ef4444',
-    Medium: '#f59e0b',
-    Low: '#22c55e',
-  };
-
+const RiskCountBadge = memo(({ count, level }: { count?: number; level: 'critical' | 'high' }) => {
+  if (!count) return <span className="text-base-content/50">0</span>;
+  const color = level === 'critical' ? '#7f1d1d' : '#ef4444';
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-        style={{ backgroundColor: colors[level] }}
-      >
-        {count}
-      </span>
-      <span className="text-sm text-base-content/70">{label}</span>
-    </div>
+    <span
+      className="px-2 py-0.5 rounded text-xs font-semibold text-white"
+      style={{ backgroundColor: color }}
+    >
+      {count}
+    </span>
   );
-};
+});
+RiskCountBadge.displayName = 'RiskCountBadge';
 
-// Template Card Component
-const TemplateCard = ({
-  template,
-  onAnalyze,
-  onViewDetails,
-  isAnalyzing,
-}: {
-  template: TemplateAnalysisSummary;
-  onAnalyze: () => void;
-  onViewDetails: () => void;
-  isAnalyzing: boolean;
-}) => {
-  const status = template.overallScore !== undefined
-    ? getHealthStatus(template.overallScore)
-    : null;
-
-  return (
-    <div className="card bg-base-100 shadow-md border border-base-300">
-      <div className="card-body p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h3 className="font-semibold text-base">{template.templateName}</h3>
-            <p className="text-xs text-base-content/60">{template.templateType}</p>
-          </div>
-          {template.isAnalyzed && status && (
-            <ScoreGauge score={template.overallScore!} size={60} />
-          )}
-        </div>
-
-        {template.isAnalyzed ? (
-          <div className="mt-3 space-y-2">
-            <div className="flex gap-3 flex-wrap">
-              {template.criticalRiskCount! > 0 && (
-                <RiskBadge count={template.criticalRiskCount!} level="Critical" label="Critical" />
-              )}
-              {template.highRiskCount! > 0 && (
-                <RiskBadge count={template.highRiskCount!} level="High" label="High" />
-              )}
-            </div>
-            <p className="text-xs text-base-content/50">
-              Analyzed on {new Date(template.lastAnalyzedAt!).toLocaleDateString('en-US')}
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-base-content/60 mt-2">Not analyzed</p>
-        )}
-
-        <div className="card-actions justify-end mt-3">
-          {template.isAnalyzed && (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={onViewDetails}
-            >
-              <span className="iconify lucide--eye size-4"></span>
-              Details
-            </button>
-          )}
-          <button
-            className={`btn btn-sm ${template.isAnalyzed ? 'btn-outline' : 'btn-primary'}`}
-            onClick={onAnalyze}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? (
-              <span className="loading loading-spinner loading-xs"></span>
-            ) : (
-              <span className="iconify lucide--scan size-4"></span>
-            )}
-            {template.isAnalyzed ? 'Re-analyze' : 'Analyze'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Document Scanner Component
-const DocumentScanner = ({
+// Document Scanner Modal
+const DocumentScannerModal = memo(({
+  isOpen,
+  onClose,
   onScanComplete,
 }: {
+  isOpen: boolean;
+  onClose: () => void;
   onScanComplete: (result: DocumentScanResult) => void;
 }) => {
   const [isScanning, setIsScanning] = useState(false);
@@ -204,6 +87,7 @@ const DocumentScanner = ({
       const result = await scanDocument(file);
       onScanComplete(result);
       toaster.success('Analysis complete');
+      onClose();
     } catch (error: any) {
       toaster.error(error.message || 'Error during analysis');
     } finally {
@@ -219,53 +103,67 @@ const DocumentScanner = ({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
+  if (!isOpen) return null;
 
   return (
-    <div
-      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-        dragActive ? 'border-primary bg-primary/5' : 'border-base-300'
-      }`}
-      onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={handleDrop}
-    >
-      {isScanning ? (
-        <div className="flex flex-col items-center gap-2">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-sm text-base-content/70">Analyzing...</p>
+    <div className="modal modal-open">
+      <div className="modal-box">
+        <button
+          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+        <h3 className="font-bold text-lg mb-4">Scan Document</h3>
+        <p className="text-sm text-base-content/60 mb-4">
+          Upload a Word document to analyze for risk clauses
+        </p>
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            dragActive ? 'border-primary bg-primary/5' : 'border-base-300'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+        >
+          {isScanning ? (
+            <div className="flex flex-col items-center gap-2">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-sm text-base-content/70">Analyzing...</p>
+            </div>
+          ) : (
+            <>
+              <Icon icon={uploadCloudIcon} className="size-12 text-base-content/30 mx-auto" />
+              <p className="mt-2 text-sm text-base-content/70">
+                Drag a Word file here or
+              </p>
+              <label className="btn btn-primary btn-sm mt-2">
+                Browse
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".doc,.docx"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleFile(e.target.files[0]);
+                    }
+                  }}
+                />
+              </label>
+              <p className="text-xs text-base-content/50 mt-2">
+                Supported formats: .docx, .doc
+              </p>
+            </>
+          )}
         </div>
-      ) : (
-        <>
-          <span className="iconify lucide--upload-cloud size-12 text-base-content/30 mx-auto"></span>
-          <p className="mt-2 text-sm text-base-content/70">
-            Drag a Word file here or
-          </p>
-          <label className="btn btn-primary btn-sm mt-2">
-            <span className="iconify lucide--file-up size-4"></span>
-            Browse
-            <input
-              type="file"
-              className="hidden"
-              accept=".doc,.docx"
-              onChange={handleChange}
-            />
-          </label>
-          <p className="text-xs text-base-content/50 mt-2">
-            Supported formats: .docx, .doc
-          </p>
-        </>
-      )}
+      </div>
     </div>
   );
-};
+});
+DocumentScannerModal.displayName = 'DocumentScannerModal';
 
 // Scan Result Modal
-const ScanResultModal = ({
+const ScanResultModal = memo(({
   result,
   onClose,
 }: {
@@ -288,17 +186,37 @@ const ScanResultModal = ({
         <h3 className="font-bold text-lg mb-4">Analysis Results</h3>
 
         <div className="flex items-center gap-6 mb-6">
-          <ScoreGauge score={result.overallScore} size={100} label="Overall Score" />
+          <div className="flex flex-col items-center">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+              style={{ backgroundColor: status.color }}
+            >
+              {Math.round(result.overallScore)}
+            </div>
+            <span className="text-sm mt-1">{status.label}</span>
+          </div>
           <div className="flex-1">
             <p className="text-base-content/80">{result.summary}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <RiskBadge count={result.criticalCount} level="Critical" label="Critical" />
-          <RiskBadge count={result.highCount} level="High" label="High" />
-          <RiskBadge count={result.mediumCount} level="Medium" label="Medium" />
-          <RiskBadge count={result.lowCount} level="Low" label="Low" />
+          <div className="text-center">
+            <span className="text-2xl font-bold text-error">{result.criticalCount}</span>
+            <p className="text-xs text-base-content/60">Critical</p>
+          </div>
+          <div className="text-center">
+            <span className="text-2xl font-bold text-warning">{result.highCount}</span>
+            <p className="text-xs text-base-content/60">High</p>
+          </div>
+          <div className="text-center">
+            <span className="text-2xl font-bold text-info">{result.mediumCount}</span>
+            <p className="text-xs text-base-content/60">Medium</p>
+          </div>
+          <div className="text-center">
+            <span className="text-2xl font-bold text-success">{result.lowCount}</span>
+            <p className="text-xs text-base-content/60">Low</p>
+          </div>
         </div>
 
         {result.recommendations.length > 0 && (
@@ -315,7 +233,7 @@ const ScanResultModal = ({
         {result.topRisks.length > 0 && (
           <div>
             <h4 className="font-semibold mb-2">Top Risks</h4>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {result.topRisks.slice(0, 5).map((risk, i) => (
                 <div
                   key={i}
@@ -333,11 +251,6 @@ const ScanResultModal = ({
                     </span>
                   </div>
                   <p className="text-sm">{risk.riskDescription}</p>
-                  {risk.recommendation && (
-                    <p className="text-xs text-primary mt-1">
-                      {risk.recommendation}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
@@ -352,218 +265,457 @@ const ScanResultModal = ({
       </div>
     </div>
   );
-};
+});
+ScanResultModal.displayName = 'ScanResultModal';
 
-// Main Dashboard Component
-export default function ContractAnalysisDashboard() {
+// Main Component
+const ContractAnalysisDashboard = memo(() => {
   const navigate = useNavigate();
+  const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
+  const [activeTab, setActiveTab] = useState<TabType>('templates');
   const [templates, setTemplates] = useState<TemplateAnalysisSummary[]>([]);
+  const [contracts, setContracts] = useState<ContractAnalysisSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [analyzingTemplateId, setAnalyzingTemplateId] = useState<number | null>(null);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
   const [scanResult, setScanResult] = useState<DocumentScanResult | null>(null);
 
-  const loadTemplates = useCallback(async () => {
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const data = await getTemplatesWithAnalysisStatus();
-      setTemplates(data);
+      if (activeTab === 'templates') {
+        const data = await getTemplatesWithAnalysisStatus();
+        setTemplates(data);
+      } else {
+        const data = await getContractsWithAnalysisStatus();
+        setContracts(data);
+      }
     } catch (error: any) {
-      toaster.error(error.message || 'Error loading templates');
+      toaster.error(error.message || 'Error loading data');
     } finally {
       setIsLoading(false);
     }
-  }, [toaster]);
+  }, [activeTab, toaster]);
 
   useEffect(() => {
-    loadTemplates();
-  }, [loadTemplates]);
+    loadData();
+  }, [loadData]);
 
-  const handleAnalyzeTemplate = async (templateId: number) => {
-    setAnalyzingTemplateId(templateId);
+  const handleBackToDashboard = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+  }, []);
+
+  // Topbar setup
+  useEffect(() => {
+    setLeftContent(
+      <button
+        onClick={handleBackToDashboard}
+        className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+        title="Back to Dashboard"
+      >
+        <Icon icon={arrowLeftIcon} className="size-5" />
+      </button>
+    );
+
+    setCenterContent(
+      <div className="flex items-center gap-2">
+        <button
+          className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+            activeTab === 'templates'
+              ? 'btn-primary'
+              : 'btn-ghost border border-base-300 hover:border-primary/50'
+          }`}
+          onClick={() => handleTabChange('templates')}
+        >
+          <Icon icon={fileTextIcon} className="size-4" />
+          <span>Templates ({templates.length})</span>
+        </button>
+
+        <button
+          className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+            activeTab === 'contracts'
+              ? 'btn-primary'
+              : 'btn-ghost border border-base-300 hover:border-primary/50'
+          }`}
+          onClick={() => handleTabChange('contracts')}
+        >
+          <Icon icon={fileCheckIcon} className="size-4" />
+          <span>Contracts ({contracts.length})</span>
+        </button>
+      </div>
+    );
+
+    return () => {
+      clearContent();
+    };
+  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, clearContent]);
+
+  // Template actions
+  const handleAnalyzeTemplate = useCallback(async (templateId: number) => {
+    setAnalyzingId(templateId);
     try {
       const result = await analyzeTemplate(templateId);
       if (result.success) {
-        toaster.success('Analysis completed successfully');
-        loadTemplates();
+        toaster.success('Analysis completed');
+        loadData();
       } else {
         toaster.error(result.errorMessage || 'Error during analysis');
       }
     } catch (error: any) {
       toaster.error(error.message || 'Error during analysis');
     } finally {
-      setAnalyzingTemplateId(null);
+      setAnalyzingId(null);
     }
-  };
+  }, [loadData, toaster]);
 
-  const handleAnalyzeAll = async () => {
+  const handleAnalyzeAllTemplates = useCallback(async () => {
     setIsAnalyzingAll(true);
     try {
       await analyzeAllTemplates();
-      toaster.success('All templates have been analyzed');
-      loadTemplates();
+      toaster.success('All templates analyzed');
+      loadData();
     } catch (error: any) {
       toaster.error(error.message || 'Error during analysis');
     } finally {
       setIsAnalyzingAll(false);
     }
-  };
+  }, [loadData, toaster]);
 
-  const handleViewDetails = (templateId: number) => {
+  const handleViewTemplateDetails = useCallback((templateId: number) => {
     navigate(`/dashboard/contract-analysis/template/${templateId}`);
-  };
+  }, [navigate]);
 
-  // Calculate summary stats
-  const analyzedCount = templates.filter((t) => t.isAnalyzed).length;
-  const avgScore =
-    analyzedCount > 0
-      ? templates
-          .filter((t) => t.isAnalyzed)
-          .reduce((sum, t) => sum + (t.overallScore || 0), 0) / analyzedCount
-      : 0;
-  const totalCritical = templates.reduce((sum, t) => sum + (t.criticalRiskCount || 0), 0);
-  const totalHigh = templates.reduce((sum, t) => sum + (t.highRiskCount || 0), 0);
+  // Contract actions
+  const handleAnalyzeContract = useCallback(async (contractId: number) => {
+    setAnalyzingId(contractId);
+    try {
+      const result = await analyzeContract(contractId);
+      if (result.success) {
+        toaster.success('Analysis completed');
+        loadData();
+      } else {
+        toaster.error(result.errorMessage || 'Error during analysis');
+      }
+    } catch (error: any) {
+      toaster.error(error.message || 'Error during analysis');
+    } finally {
+      setAnalyzingId(null);
+    }
+  }, [loadData, toaster]);
 
-  if (isLoading) {
-    return <Loader />;
-  }
+  const handleViewContractDetails = useCallback((contractId: number) => {
+    navigate(`/dashboard/contract-analysis/contract/${contractId}`);
+  }, [navigate]);
 
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Contract Risk Analysis</h1>
-          <p className="text-base-content/60">
-            Based on Moon et al. (2022) - Toxic Clauses Classification
-          </p>
-        </div>
+  // Template columns
+  const templateColumns = useMemo((): SpreadsheetColumn<TemplateAnalysisSummary>[] => [
+    {
+      key: 'templateName',
+      label: 'Template Name',
+      width: 250,
+      align: 'left',
+      editable: false,
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'templateType',
+      label: 'Type',
+      width: 120,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'overallScore',
+      label: 'Score',
+      width: 100,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <ScoreBadge score={value} />,
+    },
+    {
+      key: 'criticalRiskCount',
+      label: 'Critical',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <RiskCountBadge count={value} level="critical" />,
+    },
+    {
+      key: 'highRiskCount',
+      label: 'High',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <RiskCountBadge count={value} level="high" />,
+    },
+    {
+      key: 'isAnalyzed',
+      label: 'Status',
+      width: 100,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => (
+        <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
+          {value ? 'Analyzed' : 'Pending'}
+        </span>
+      ),
+    },
+    {
+      key: 'lastAnalyzedAt',
+      label: 'Last Analyzed',
+      width: 130,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
+    },
+  ], []);
+
+  // Contract columns
+  const contractColumns = useMemo((): SpreadsheetColumn<ContractAnalysisSummary>[] => [
+    {
+      key: 'contractNumber',
+      label: 'Contract #',
+      width: 130,
+      align: 'left',
+      editable: false,
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'projectName',
+      label: 'Project',
+      width: 180,
+      align: 'left',
+      editable: false,
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'subcontractorName',
+      label: 'Subcontractor',
+      width: 180,
+      align: 'left',
+      editable: false,
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'overallScore',
+      label: 'Score',
+      width: 100,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <ScoreBadge score={value} />,
+    },
+    {
+      key: 'criticalRiskCount',
+      label: 'Critical',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <RiskCountBadge count={value} level="critical" />,
+    },
+    {
+      key: 'highRiskCount',
+      label: 'High',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => <RiskCountBadge count={value} level="high" />,
+    },
+    {
+      key: 'isAnalyzed',
+      label: 'Status',
+      width: 100,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (value) => (
+        <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
+          {value ? 'Analyzed' : 'Pending'}
+        </span>
+      ),
+    },
+    {
+      key: 'lastAnalyzedAt',
+      label: 'Last Analyzed',
+      width: 130,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
+    },
+  ], []);
+
+  // Render actions for templates
+  const renderTemplateActions = useCallback((row: TemplateAnalysisSummary) => (
+    <div className="flex items-center gap-1">
+      {row.isAnalyzed && (
         <button
-          className="btn btn-primary"
-          onClick={handleAnalyzeAll}
+          className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewTemplateDetails(row.contractTemplateId);
+          }}
+          title="View Details"
+        >
+          <Icon icon={eyeIcon} className="w-4 h-4" />
+        </button>
+      )}
+      <button
+        className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleAnalyzeTemplate(row.contractTemplateId);
+        }}
+        disabled={analyzingId === row.contractTemplateId}
+        title={row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
+      >
+        {analyzingId === row.contractTemplateId ? (
+          <span className="loading loading-spinner loading-xs"></span>
+        ) : (
+          <Icon icon={row.isAnalyzed ? refreshCwIcon : playIcon} className="w-4 h-4" />
+        )}
+      </button>
+    </div>
+  ), [analyzingId, handleAnalyzeTemplate, handleViewTemplateDetails]);
+
+  // Render actions for contracts
+  const renderContractActions = useCallback((row: ContractAnalysisSummary) => (
+    <div className="flex items-center gap-1">
+      {row.isAnalyzed && (
+        <button
+          className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewContractDetails(row.contractDatasetId);
+          }}
+          title="View Details"
+        >
+          <Icon icon={eyeIcon} className="w-4 h-4" />
+        </button>
+      )}
+      <button
+        className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleAnalyzeContract(row.contractDatasetId);
+        }}
+        disabled={analyzingId === row.contractDatasetId}
+        title={row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
+      >
+        {analyzingId === row.contractDatasetId ? (
+          <span className="loading loading-spinner loading-xs"></span>
+        ) : (
+          <Icon icon={row.isAnalyzed ? refreshCwIcon : playIcon} className="w-4 h-4" />
+        )}
+      </button>
+    </div>
+  ), [analyzingId, handleAnalyzeContract, handleViewContractDetails]);
+
+  // Toolbar
+  const toolbar = useMemo(() => (
+    <div className="flex items-center justify-end gap-2 w-full px-4 py-2">
+      <button
+        className="btn btn-sm btn-outline"
+        onClick={() => setShowScanModal(true)}
+      >
+        <Icon icon={scanIcon} className="size-4" />
+        Scan Document
+      </button>
+      {activeTab === 'templates' && (
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={handleAnalyzeAllTemplates}
           disabled={isAnalyzingAll}
         >
           {isAnalyzingAll ? (
-            <span className="loading loading-spinner loading-sm"></span>
+            <span className="loading loading-spinner loading-xs"></span>
           ) : (
-            <span className="iconify lucide--scan-search size-5"></span>
+            <Icon icon={playIcon} className="size-4" />
           )}
-          Analyze All Templates
+          Analyze All
         </button>
+      )}
+    </div>
+  ), [activeTab, handleAnalyzeAllTemplates, isAnalyzingAll]);
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0">
+        {activeTab === 'templates' ? (
+          <Spreadsheet<TemplateAnalysisSummary>
+            data={templates}
+            columns={templateColumns}
+            mode="view"
+            loading={isLoading}
+            emptyMessage="No templates found"
+            persistKey="contract-analysis-templates"
+            rowHeight={40}
+            actionsRender={renderTemplateActions}
+            actionsColumnWidth={100}
+            onRowDoubleClick={(row) => row.isAnalyzed && handleViewTemplateDetails(row.contractTemplateId)}
+            getRowId={(row) => row.contractTemplateId}
+            toolbar={toolbar}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+          />
+        ) : (
+          <Spreadsheet<ContractAnalysisSummary>
+            data={contracts}
+            columns={contractColumns}
+            mode="view"
+            loading={isLoading}
+            emptyMessage="No contracts found"
+            persistKey="contract-analysis-contracts"
+            rowHeight={40}
+            actionsRender={renderContractActions}
+            actionsColumnWidth={100}
+            onRowDoubleClick={(row) => row.isAnalyzed && handleViewContractDetails(row.contractDatasetId)}
+            getRowId={(row) => row.contractDatasetId}
+            toolbar={toolbar}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+          />
+        )}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-base-content/60">Templates Analyzed</p>
-                <p className="text-2xl font-bold">
-                  {analyzedCount}/{templates.length}
-                </p>
-              </div>
-              <span className="iconify lucide--file-search size-8 text-primary/50"></span>
-            </div>
-          </div>
-        </div>
+      <DocumentScannerModal
+        isOpen={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        onScanComplete={setScanResult}
+      />
 
-        <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-base-content/60">Average Score</p>
-                <p className="text-2xl font-bold">{Math.round(avgScore)}/100</p>
-              </div>
-              <ScoreGauge score={avgScore} size={50} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-base-content/60">Critical Risks</p>
-                <p className="text-2xl font-bold text-error">{totalCritical}</p>
-              </div>
-              <span className="iconify lucide--alert-octagon size-8 text-error/50"></span>
-            </div>
-          </div>
-        </div>
-
-        <div className="card bg-base-100 shadow border border-base-300">
-          <div className="card-body p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-base-content/60">High Risks</p>
-                <p className="text-2xl font-bold text-warning">{totalHigh}</p>
-              </div>
-              <span className="iconify lucide--alert-triangle size-8 text-warning/50"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Document Scanner */}
-      <div className="card bg-base-100 shadow border border-base-300">
-        <div className="card-body">
-          <h2 className="card-title text-lg mb-4">
-            <span className="iconify lucide--file-scan size-5"></span>
-            Scan a Document
-          </h2>
-          <p className="text-sm text-base-content/60 mb-4">
-            Analyze an external contract (Word file) to identify risk clauses
-          </p>
-          <DocumentScanner onScanComplete={setScanResult} />
-        </div>
-      </div>
-
-      {/* Templates Grid */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Contract Templates</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => (
-            <TemplateCard
-              key={template.contractTemplateId}
-              template={template}
-              onAnalyze={() => handleAnalyzeTemplate(template.contractTemplateId)}
-              onViewDetails={() => handleViewDetails(template.contractTemplateId)}
-              isAnalyzing={analyzingTemplateId === template.contractTemplateId}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Risk Categories Legend */}
-      <div className="card bg-base-100 shadow border border-base-300">
-        <div className="card-body">
-          <h2 className="card-title text-lg mb-4">
-            <span className="iconify lucide--info size-5"></span>
-            Risk Categories (Moon et al. 2022)
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { name: 'Payment', desc: 'Payment delays, excessive retentions' },
-              { name: 'Role/Responsibility', desc: 'Ambiguous scope, unclear obligations' },
-              { name: 'Safety', desc: 'Liability transfer, insurance issues' },
-              { name: 'Timeline', desc: 'Unrealistic deadlines, penalties' },
-              { name: 'Procedures', desc: 'Complex processes, short deadlines' },
-              { name: 'Definitions', desc: 'Vague terms, ambiguities' },
-              { name: 'References', desc: 'External documents not provided' },
-            ].map((cat) => (
-              <div key={cat.name} className="p-3 rounded-lg bg-base-200/50">
-                <p className="font-semibold text-sm">{cat.name}</p>
-                <p className="text-xs text-base-content/60">{cat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Scan Result Modal */}
-      <ScanResultModal result={scanResult} onClose={() => setScanResult(null)} />
+      <ScanResultModal
+        result={scanResult}
+        onClose={() => setScanResult(null)}
+      />
     </div>
   );
-}
+});
+
+ContractAnalysisDashboard.displayName = 'ContractAnalysisDashboard';
+
+export default ContractAnalysisDashboard;

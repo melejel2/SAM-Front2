@@ -1,6 +1,7 @@
 import { ACTIVE_API_URL } from '../api';
 import type {
   TemplateAnalysisSummary,
+  ContractAnalysisSummary,
   TemplateRiskProfile,
   ContractHealthReport,
   ContractClause,
@@ -44,6 +45,20 @@ export async function getTemplatesWithAnalysisStatus(): Promise<TemplateAnalysis
     },
   });
   return handleResponse<TemplateAnalysisSummary[]>(response);
+}
+
+/**
+ * Get list of all contracts with their analysis status
+ */
+export async function getContractsWithAnalysisStatus(): Promise<ContractAnalysisSummary[]> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/contracts`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<ContractAnalysisSummary[]>(response);
 }
 
 /**
