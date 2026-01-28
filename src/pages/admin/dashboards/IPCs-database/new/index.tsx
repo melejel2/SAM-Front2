@@ -8,6 +8,7 @@ import checkIcon from "@iconify/icons-lucide/check";
 import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
 import { useTopbarContent } from "@/contexts/topbar-content";
+import { useNavigationBlocker } from "@/contexts/navigation-blocker";
 
 import { UnsavedChangesDialog } from "../../subcontractors-BOQs/shared/components/UnsavedChangesDialog";
 import { IPCStepIndicator } from "./components/IPCStepIndicator";
@@ -20,6 +21,7 @@ const NewIPCWizardContent: React.FC = () => {
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
     const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { tryNavigate, setBlocking } = useNavigationBlocker();
 
     const {
         currentStep,
@@ -35,6 +37,15 @@ const NewIPCWizardContent: React.FC = () => {
 
     // Determine the back navigation destination (contract details or IPC list)
     const backDestination = preselectionState?.returnTo || "/dashboard/IPCs-database";
+
+    // Register navigation blocking for the wizard
+    useEffect(() => {
+        setBlocking(true, "You are about to leave the IPC wizard. Any unsaved changes will be lost.");
+
+        return () => {
+            setBlocking(false);
+        };
+    }, [setBlocking]);
 
     // Determine if we should skip step 1 (when coming from contract details)
     const isFromContract = !!preselectionState?.skipStep1;
@@ -97,6 +108,17 @@ const NewIPCWizardContent: React.FC = () => {
         // Clear any previous right content
         setRightContent(null);
 
+        // Left content: Back button to exit wizard
+        setLeftContent(
+            <button
+                onClick={() => tryNavigate(backDestination)}
+                className="btn btn-sm btn-ghost gap-1 text-base-content hover:bg-base-200"
+                title="Back to IPCs"
+            >
+                <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+            </button>
+        );
+
         // Center content: Step indicator with back/next arrows
         setCenterContent(
             <div className="flex items-center gap-3">
@@ -140,7 +162,7 @@ const NewIPCWizardContent: React.FC = () => {
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, previewLoading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
+    }, [currentStep, loading, previewLoading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setLeftContent, setCenterContent, setRightContent, clearContent, tryNavigate, backDestination]);
 
     if (loading && currentStep === firstStep) {
         return (

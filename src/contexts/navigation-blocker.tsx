@@ -137,31 +137,53 @@ export const NavigationBlockerProvider: React.FC<NavigationBlockerProviderProps>
             {showDialog && (
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[200]">
                     <div className="bg-base-100 rounded-xl shadow-lg p-8 max-w-xl w-full mx-4">
-                        <h3 className="text-xl font-semibold mb-3 text-base-content">Unsaved Changes</h3>
+                        <h3 className="text-xl font-semibold mb-3 text-base-content">
+                            {callbacksRef.current?.onSave ? "Unsaved Changes" : "Are you sure?"}
+                        </h3>
                         <p className="text-base-content/60 mb-8">
                             {blockingMessage}
                         </p>
                         <div className="flex gap-3">
-                            <Button
-                                onClick={handleSaveAndExit}
-                                className="bg-emerald-700 hover:bg-emerald-800 text-white border-none"
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save & Exit"}
-                            </Button>
-                            <Button
-                                onClick={handleExitWithoutSaving}
-                                className="bg-red-800 hover:bg-red-900 text-white border-none whitespace-nowrap px-6"
-                            >
-                                Exit without saving
-                            </Button>
-                            <Button
-                                onClick={handleCancel}
-                                variant="outline"
-                                className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400"
-                            >
-                                Cancel
-                            </Button>
+                            {callbacksRef.current?.onSave ? (
+                                <>
+                                    <Button
+                                        onClick={handleSaveAndExit}
+                                        className="bg-emerald-700 hover:bg-emerald-800 text-white border-none"
+                                        disabled={saving}
+                                    >
+                                        {saving ? "Saving..." : "Save & Exit"}
+                                    </Button>
+                                    <Button
+                                        onClick={handleExitWithoutSaving}
+                                        className="bg-red-800 hover:bg-red-900 text-white border-none whitespace-nowrap px-6"
+                                    >
+                                        Exit without saving
+                                    </Button>
+                                    <Button
+                                        onClick={handleCancel}
+                                        variant="outline"
+                                        className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button
+                                        onClick={handleExitWithoutSaving}
+                                        className="bg-red-700 hover:bg-red-800 text-white border-none px-6"
+                                    >
+                                        Yes, Leave
+                                    </Button>
+                                    <Button
+                                        onClick={handleCancel}
+                                        variant="outline"
+                                        className="border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400 px-6"
+                                    >
+                                        No, Stay
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
