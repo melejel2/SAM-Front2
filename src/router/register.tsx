@@ -123,6 +123,10 @@ const dashboardRoutes: IRoutesProps[] = [
         path: "/dashboard/contract-analysis/template/:templateId",
         element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis/template-details"))),
     },
+    {
+        path: "/dashboard/contract-analysis/contract/:contractId",
+        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis/contract-details"))),
+    },
 ];
 
 const variationOrdersRoutes: IRoutesProps[] = [

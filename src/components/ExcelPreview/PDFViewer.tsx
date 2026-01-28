@@ -79,9 +79,9 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-base-100">
+        <div className="h-full w-full flex flex-col bg-base-100">
             {/* PDF Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 h-full w-full overflow-hidden">
                 {isLoading && !error && (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
@@ -96,7 +96,6 @@ const PDFViewer: React.FC<PDFViewerProps> = memo(({ fileBlob, fileName }) => {
                         type="application/pdf"
                         className="w-full h-full border-0"
                         style={{
-                            minHeight: '500px',
                             backgroundColor: 'var(--fallback-b2, oklch(var(--b2)))'
                         }}
                         aria-label={fileName}

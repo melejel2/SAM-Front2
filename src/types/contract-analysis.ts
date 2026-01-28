@@ -35,10 +35,10 @@ export const RiskCategoryLabels: Record<RiskCategory, string> = {
 
 // Colors for risk levels
 export const RiskLevelColors: Record<RiskLevel, string> = {
-  [RiskLevel.Low]: '#22c55e', // green
-  [RiskLevel.Medium]: '#f59e0b', // amber
-  [RiskLevel.High]: '#ef4444', // red
-  [RiskLevel.Critical]: '#7f1d1d', // dark red
+  [RiskLevel.Low]: '#6b7280', // gray
+  [RiskLevel.Medium]: '#a16207', // muted amber
+  [RiskLevel.High]: '#b91c1c', // muted red
+  [RiskLevel.Critical]: '#4a1d1d', // dark muted red
 };
 
 // Category scores
@@ -176,13 +176,13 @@ export function getHealthStatus(score: number): {
   color: string;
 } {
   if (score >= 80) {
-    return { label: 'Good', color: '#22c55e' };
+    return { label: 'Good', color: '#374151' };
   } else if (score >= 60) {
-    return { label: 'Moderate', color: '#f59e0b' };
+    return { label: 'Moderate', color: '#a16207' };
   } else if (score >= 40) {
-    return { label: 'Concerning', color: '#ef4444' };
+    return { label: 'Concerning', color: '#b91c1c' };
   } else {
-    return { label: 'Critical', color: '#7f1d1d' };
+    return { label: 'Critical', color: '#4a1d1d' };
   }
 }
 

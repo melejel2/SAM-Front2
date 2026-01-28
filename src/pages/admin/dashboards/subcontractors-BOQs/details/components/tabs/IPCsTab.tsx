@@ -1,12 +1,28 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { Loader } from "@/components/Loader";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { generateIPCFileName } from "@/utils/ipc-filename";
+import { formatCurrency } from "@/utils/formatters";
 import useContractIPCs from "../../hooks/use-contract-ipcs";
+
+// Extended IPC row type that includes transformed fields from the hook
+type IPCRow = {
+    id: number;
+    number: number;
+    type: string;
+    totalAmount: number;  // HT amount (renamed in hook)
+    totalAmountWithVAT: number;  // TTC amount (added in hook)
+    status: string;
+    _statusRaw?: string;
+    isGenerated?: boolean;
+    isLastForContract?: boolean;
+    [key: string]: any;  // Allow additional properties from IpcListItem
+};
 
 interface IPCsTabProps {
     contractId: number | null;
@@ -53,21 +69,74 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
         }
     }, [contractId, fetchIPCs]);
 
-    // Row actions control - only allow delete on last IPC
-    const handleRowActions = (row: any) => {
-        const isEditable = row.status?.toLowerCase() === 'editable' || row._statusRaw?.toLowerCase() === 'editable';
-        const isLast = row.isLastForContract;
-
-        return {
-            editAction: isEditable,
-            deleteAction: isEditable && isLast,
-            generateAction: isEditable,
-            previewAction: true,
-        };
-    };
-
     // Check if contract is terminated
     const isTerminated = contractStatus?.toLowerCase() === 'terminated';
+
+    // Spreadsheet columns definition
+    const spreadsheetColumns = useMemo((): SpreadsheetColumn<IPCRow>[] => [
+        {
+            key: "number",
+            label: "IPC #",
+            width: 80,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "type",
+            label: "Type",
+            width: 120,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+            render: (value) => {
+                const typeLower = (value || "").toLowerCase();
+                let badgeClass = "badge-info";
+                if (typeLower === "final") badgeClass = "badge-success";
+                else if (typeLower === "provisoire") badgeClass = "badge-warning";
+                else if (typeLower === "retention") badgeClass = "badge-secondary";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value || "-"}</span>;
+            },
+        },
+        {
+            key: "totalAmount",
+            label: "Amount HT",
+            width: 140,
+            align: "right",
+            editable: false,
+            sortable: true,
+            filterable: false,
+            formatter: (value) => formatCurrency(value),
+        },
+        {
+            key: "totalAmountWithVAT",
+            label: "Total TTC",
+            width: 140,
+            align: "right",
+            editable: false,
+            sortable: true,
+            filterable: false,
+            formatter: (value) => formatCurrency(value),
+        },
+        {
+            key: "status",
+            label: "Status",
+            width: 100,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+            render: (value) => {
+                const statusLower = (value || "").toLowerCase();
+                let badgeClass = "badge-info";
+                if (statusLower === "issued") badgeClass = "badge-success";
+                else if (statusLower === "editable") badgeClass = "badge-warning";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value || "-"}</span>;
+            },
+        },
+    ], []);
 
     const handleCreateIPC = () => {
         if (isTerminated) return;
@@ -182,32 +251,92 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
         }
     };
 
-    const handleTableAction = (type: string, data: any) => {
-        const ipcId = data.id;
-        const status = data._statusRaw || data.status;
-        const isGenerated = data.isGenerated || status?.toLowerCase().includes('issued');
+    // Render actions column for Spreadsheet
+    const renderIPCActions = useCallback((row: IPCRow) => {
+        const status = row._statusRaw || row.status;
+        const isEditable = status?.toLowerCase() === 'editable';
+        const isGenerated = row.isGenerated || status?.toLowerCase().includes('issued');
+        const isLast = row.isLastForContract;
+        const isGenerating = generatingIpcId === row.id;
+        const isDeleting = deletingIpcId === row.id;
 
-        switch (type) {
-            case "Preview":
-                handlePreviewIPC(ipcId, status, isGenerated);
-                break;
-            case "Edit":
-                handleEditIPC(ipcId);
-                break;
-            case "Details":
-                handleViewDetails(ipcId);
-                break;
-            case "Generate":
-                handleGenerateIPC(ipcId);
-                break;
-            case "Delete":
-                handleDeleteIPC(ipcId);
-                break;
-            case "Export":
-                handleDownloadExcel(ipcId, status, isGenerated);
-                break;
-        }
-    };
+        return (
+            <div className="flex items-center gap-1">
+                {/* Preview */}
+                <button
+                    className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handlePreviewIPC(row.id, status, isGenerated);
+                    }}
+                    title="Preview"
+                >
+                    <span className="iconify lucide--eye size-4"></span>
+                </button>
+
+                {/* Edit */}
+                <button
+                    className={`btn btn-ghost btn-xs ${!isEditable ? "opacity-40 cursor-not-allowed" : "text-warning hover:bg-warning/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditable) handleEditIPC(row.id);
+                    }}
+                    disabled={!isEditable}
+                    title={isEditable ? "Edit" : "Cannot edit issued IPC"}
+                >
+                    <span className="iconify lucide--pencil size-4"></span>
+                </button>
+
+                {/* Export */}
+                <button
+                    className="btn btn-ghost btn-xs text-success hover:bg-success/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadExcel(row.id, status, isGenerated);
+                    }}
+                    title="Export"
+                >
+                    <span className="iconify lucide--download size-4"></span>
+                </button>
+
+                {/* Generate */}
+                <button
+                    className={`btn btn-ghost btn-xs ${!isEditable ? "opacity-40 cursor-not-allowed" : "text-primary hover:bg-primary/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditable) handleGenerateIPC(row.id);
+                    }}
+                    disabled={!isEditable || isGenerating}
+                    title={isEditable ? "Generate" : "Cannot generate issued IPC"}
+                >
+                    {isGenerating ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                        <span className="iconify lucide--file-check size-4"></span>
+                    )}
+                </button>
+
+                {/* Delete - only for editable and last IPC */}
+                {isEditable && isLast && (
+                    <button
+                        className="btn btn-ghost btn-xs text-error hover:bg-error/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteIPC(row.id);
+                        }}
+                        disabled={isDeleting}
+                        title="Delete"
+                    >
+                        {isDeleting ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <span className="iconify lucide--trash-2 size-4"></span>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+    }, [generatingIpcId, deletingIpcId, handlePreviewIPC, handleEditIPC, handleDownloadExcel, handleGenerateIPC, handleDeleteIPC]);
 
     return (
         <div className="h-full flex flex-col">
@@ -240,25 +369,21 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
                             />
                         </div>
                     ) : ipcs.length > 0 ? (
-                        <SAMTable
-                        columns={columns}
-                        tableData={ipcs}
-                        actions
-                        previewAction
-                        editAction
-                        exportAction
-                        deleteAction
-                        generateAction
-                        rowActions={handleRowActions}
-                        title=""
-                        loading={false}
-                        onSuccess={fetchIPCs}
-                        openStaticDialog={(type, data) => handleTableAction(type, data)}
-                        dynamicDialog={false}
-                        virtualized={true}
-                        rowHeight={40}
-                        overscan={10}
-                    />
+                        <Spreadsheet<IPCRow>
+                            data={ipcs as unknown as IPCRow[]}
+                            columns={spreadsheetColumns}
+                            mode="view"
+                            loading={false}
+                            rowHeight={40}
+                            actionsRender={renderIPCActions}
+                            actionsColumnWidth={180}
+                            getRowId={(row) => row.id}
+                            allowKeyboardNavigation
+                            allowColumnResize
+                            allowSorting
+                            allowFilters
+                            hideFormulaBar
+                        />
                     ) : (
                         <div className="py-12 text-center">
                             <span className="iconify lucide--receipt text-base-content/30 mx-auto mb-3 size-12"></span>

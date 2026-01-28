@@ -1,10 +1,23 @@
 import { useNavigate } from "react-router-dom";
+import { useCallback, useMemo } from "react";
 
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { Loader } from "@/components/Loader";
+import { formatCurrency } from "@/utils/formatters";
+
+interface VORow {
+    id: number | string;
+    voNumber: string;
+    subTrade: string;
+    type: string;
+    amount: number;
+    status: string;
+    date: string;
+}
 
 interface VOsTabProps {
-    vos: any[];
+    vos: VORow[];
     voColumns: Record<string, string>;
     loading: boolean;
     contractId: string | null;
@@ -38,28 +51,73 @@ const VOsTab = ({
 }: VOsTabProps) => {
     const navigate = useNavigate();
 
-    // Row actions control - disable edit, generate, and delete for active VOs
-    const handleVoRowActions = (row: any) => {
-        const isActive = row.status?.toLowerCase() === "active";
+    // Spreadsheet columns definition
+    const spreadsheetColumns = useMemo((): SpreadsheetColumn<VORow>[] => [
+        {
+            key: "voNumber",
+            label: "VO Number",
+            width: 120,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "subTrade",
+            label: "Sub Trade",
+            width: 180,
+            align: "left",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "type",
+            label: "Type",
+            width: 100,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+        {
+            key: "amount",
+            label: "Amount",
+            width: 140,
+            align: "right",
+            editable: false,
+            sortable: true,
+            filterable: false,
+            formatter: (value) => formatCurrency(value),
+        },
+        {
+            key: "status",
+            label: "Status",
+            width: 100,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+            render: (value) => {
+                const statusLower = (value || "").toLowerCase();
+                let badgeClass = "badge-info";
+                if (statusLower === "active" || statusLower === "issued") badgeClass = "badge-success";
+                else if (statusLower === "editable" || statusLower === "draft") badgeClass = "badge-warning";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value || "-"}</span>;
+            },
+        },
+        {
+            key: "date",
+            label: "Date Created",
+            width: 130,
+            align: "center",
+            editable: false,
+            sortable: true,
+            filterable: true,
+        },
+    ], []);
 
-        if (isActive) {
-            // Active VOs cannot be edited, generated, or deleted
-            return {
-                editAction: false,
-                deleteAction: false,
-                generateAction: false,
-            };
-        }
-
-        // Non-active VOs have all actions enabled
-        return {
-            editAction: true,
-            deleteAction: true,
-            generateAction: true,
-        };
-    };
-
-    const handleCreateVO = () => {
+    const handleCreateVO = useCallback(() => {
         if (!contractId) return;
 
         navigate(`/dashboard/contracts/details/${contractIdentifier}/create-vo`, {
@@ -75,31 +133,91 @@ const VOsTab = ({
                 contractContext: contractData,
             },
         });
-    };
+    }, [contractId, contractIdentifier, contractData, navigationData, currentProject, currentSubcontractor, navigate]);
 
-    const handleTableAction = (type: string, data: any, extraData?: any) => {
-        console.log("VO Table action:", type, data?.id);
-
-        if (type === "Edit") {
-            navigate(
-                `/dashboard/contracts/details/${extraData?.contractIdentifier || contractIdentifier}/edit-vo/${data.id}`,
-                {
-                    state: {
-                        contractId: extraData?.contractId || contractId,
-                        voDatasetId: data.id,
-                    },
+    const handleEditVO = useCallback((row: VORow) => {
+        navigate(
+            `/dashboard/contracts/details/${contractIdentifier}/edit-vo/${row.id}`,
+            {
+                state: {
+                    contractId: contractId,
+                    voDatasetId: row.id,
                 },
-            );
-        } else if (type === "Preview") {
-            onPreviewVO(data.id, data.voNumber);
-        } else if (type === "Export") {
-            onExportVO(data.id, data.voNumber);
-        } else if (type === "Delete") {
-            onDeleteVO(data.id);
-        } else if (type === "Generate") {
-            onGenerateVO(data.id);
-        }
-    };
+            },
+        );
+    }, [contractId, contractIdentifier, navigate]);
+
+    // Render actions column for Spreadsheet
+    const renderVOActions = useCallback((row: VORow) => {
+        const isActive = row.status?.toLowerCase() === "active" || row.status?.toLowerCase() === "issued";
+
+        return (
+            <div className="flex items-center gap-1">
+                {/* Preview */}
+                <button
+                    className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPreviewVO(row.id as number, row.voNumber);
+                    }}
+                    title="Preview"
+                >
+                    <span className="iconify lucide--eye size-4"></span>
+                </button>
+
+                {/* Edit */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-warning hover:bg-warning/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) handleEditVO(row);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot edit active VO" : "Edit"}
+                >
+                    <span className="iconify lucide--pencil size-4"></span>
+                </button>
+
+                {/* Export */}
+                <button
+                    className="btn btn-ghost btn-xs text-success hover:bg-success/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onExportVO(row.id as number, row.voNumber);
+                    }}
+                    title="Export"
+                >
+                    <span className="iconify lucide--download size-4"></span>
+                </button>
+
+                {/* Generate */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-primary hover:bg-primary/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) onGenerateVO(row.id as number);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot generate active VO" : "Generate"}
+                >
+                    <span className="iconify lucide--file-check size-4"></span>
+                </button>
+
+                {/* Delete */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-error hover:bg-error/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) onDeleteVO(row.id as number);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot delete active VO" : "Delete"}
+                >
+                    <span className="iconify lucide--trash-2 size-4"></span>
+                </button>
+            </div>
+        );
+    }, [onPreviewVO, onExportVO, onGenerateVO, onDeleteVO, handleEditVO]);
 
     return (
         <div className="h-full flex flex-col">
@@ -127,28 +245,20 @@ const VOsTab = ({
                                 />
                             </div>
                         ) : vos.length > 0 ? (
-                            <SAMTable
-                                columns={voColumns}
-                                tableData={vos}
-                                actions
-                                previewAction
-                                editAction
-                                exportAction
-                                deleteAction
-                                generateAction
-                                rowActions={handleVoRowActions}
-                                title=""
+                            <Spreadsheet<VORow>
+                                data={vos}
+                                columns={spreadsheetColumns}
+                                mode="view"
                                 loading={false}
-                                onSuccess={onVOsRefresh}
-                                openStaticDialog={(type, data, extraData) => {
-                                    handleTableAction(type, data, extraData);
-                                }}
-                                dynamicDialog={false}
-                                contractIdentifier={contractIdentifier}
-                                contractId={contractId ?? undefined}
-                                virtualized={true}
                                 rowHeight={40}
-                                overscan={5}
+                                actionsRender={renderVOActions}
+                                actionsColumnWidth={180}
+                                getRowId={(row) => row.id}
+                                allowKeyboardNavigation
+                                allowColumnResize
+                                allowSorting
+                                allowFilters
+                                hideFormulaBar
                             />
                         ) : (
                             <div className="py-12 text-center">

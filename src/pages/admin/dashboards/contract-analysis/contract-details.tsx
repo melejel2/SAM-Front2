@@ -5,12 +5,12 @@ import { Loader } from '@/components/Loader';
 import { useTopbarContent } from '@/contexts/topbar-content';
 import useToast from '@/hooks/use-toast';
 import {
-  getTemplateProfile,
-  getTemplateClauses,
-  analyzeTemplate,
+  getContractHealthReport,
+  getContractClauses,
+  analyzeContract,
 } from '@/api/services/contract-analysis-api';
 import type {
-  TemplateRiskProfile,
+  ContractHealthReport,
   ContractClause,
 } from '@/types/contract-analysis';
 import {
@@ -26,6 +26,8 @@ import alertTriangleIcon from '@iconify/icons-lucide/alert-triangle';
 import checkCircleIcon from '@iconify/icons-lucide/check-circle';
 import messageSquareIcon from '@iconify/icons-lucide/message-square';
 import xIcon from '@iconify/icons-lucide/x';
+import trendingUpIcon from '@iconify/icons-lucide/trending-up';
+import trendingDownIcon from '@iconify/icons-lucide/trending-down';
 
 // Risk level filter options
 const FILTER_OPTIONS = [
@@ -273,13 +275,13 @@ const ClauseDetailDialog = ({
 };
 
 // Main Component
-export default function TemplateDetailsPage() {
-  const { templateId } = useParams<{ templateId: string }>();
+export default function ContractDetailsPage() {
+  const { contractId } = useParams<{ contractId: string }>();
   const navigate = useNavigate();
   const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
-  const [profile, setProfile] = useState<TemplateRiskProfile | null>(null);
+  const [report, setReport] = useState<ContractHealthReport | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
@@ -288,30 +290,30 @@ export default function TemplateDetailsPage() {
   const [isChatOpen, setIsChatOpen] = useState(true);
 
   const loadData = useCallback(async () => {
-    if (!templateId) return;
+    if (!contractId) return;
     try {
-      const [profileData, clausesData] = await Promise.all([
-        getTemplateProfile(parseInt(templateId)),
-        getTemplateClauses(parseInt(templateId)),
+      const [reportData, clausesData] = await Promise.all([
+        getContractHealthReport(parseInt(contractId)),
+        getContractClauses(parseInt(contractId)),
       ]);
-      setProfile(profileData);
+      setReport(reportData);
       setClauses(clausesData);
     } catch (error: any) {
       toaster.error(error.message || 'Error loading data');
     } finally {
       setIsLoading(false);
     }
-  }, [templateId, toaster]);
+  }, [contractId, toaster]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   const handleReanalyze = useCallback(async () => {
-    if (!templateId) return;
+    if (!contractId) return;
     setIsReanalyzing(true);
     try {
-      const result = await analyzeTemplate(parseInt(templateId));
+      const result = await analyzeContract(parseInt(contractId));
       if (result.success) {
         toaster.success('Analysis complete');
         loadData();
@@ -323,7 +325,7 @@ export default function TemplateDetailsPage() {
     } finally {
       setIsReanalyzing(false);
     }
-  }, [templateId, loadData, toaster]);
+  }, [contractId, loadData, toaster]);
 
   const handleBack = useCallback(() => {
     navigate('/dashboard/contract-analysis');
@@ -339,9 +341,16 @@ export default function TemplateDetailsPage() {
         >
           <Icon icon={arrowLeftIcon} className="size-5" />
         </button>
-        <span className="font-semibold text-lg">
-          {profile?.templateName || 'Template Analysis'}
-        </span>
+        <div>
+          <span className="font-semibold text-lg">
+            {report?.contractNumber || 'Contract Analysis'}
+          </span>
+          {report?.projectName && (
+            <span className="text-sm text-base-content/60 ml-2">
+              {report.projectName}
+            </span>
+          )}
+        </div>
       </div>
     );
 
@@ -371,7 +380,7 @@ export default function TemplateDetailsPage() {
     );
 
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, profile?.templateName, isChatOpen, setLeftContent, setRightContent, clearContent]);
+  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setLeftContent, setRightContent, clearContent]);
 
   // Filter clauses
   const filteredClauses = useMemo(() => {
@@ -393,11 +402,11 @@ export default function TemplateDetailsPage() {
 
   if (isLoading) return <Loader />;
 
-  if (!profile) {
+  if (!report) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <p className="text-base-content/60 mb-4">Profile not found</p>
+          <p className="text-base-content/60 mb-4">Contract report not found</p>
           <button className="btn btn-primary" onClick={handleBack}>
             Back
           </button>
@@ -411,14 +420,39 @@ export default function TemplateDetailsPage() {
       {/* Left Panel - Analysis Data */}
       <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
         <div className="p-4 space-y-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Contract Info Header */}
+          {(report.subcontractorName || report.projectName) && (
+            <div className="flex items-center gap-4 px-3 py-2 bg-base-200/50 rounded-lg text-sm">
+              {report.subcontractorName && (
+                <div>
+                  <span className="text-base-content/60">Subcontractor:</span>{' '}
+                  <span className="font-medium">{report.subcontractorName}</span>
+                </div>
+              )}
+              {report.projectName && (
+                <div>
+                  <span className="text-base-content/60">Project:</span>{' '}
+                  <span className="font-medium">{report.projectName}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Top Section - Score and Stats - Compact Layout */}
           <div className="flex gap-4 items-stretch flex-shrink-0">
             {/* Score Ring - Compact */}
             <div className="flex flex-col items-center justify-center p-4 bg-base-100 rounded-xl border border-base-200 min-w-[160px]">
-              <ScoreRing score={profile.overallScore} size={100} />
+              <ScoreRing score={report.overallScore} size={100} />
               <p className="mt-2 text-xs text-center text-base-content/50 leading-tight">
-                Based on {profile.totalClauses} clauses
+                Based on {report.totalClauses} clauses
               </p>
+              {/* Delta from template */}
+              {report.deltaFromTemplate !== 0 && (
+                <div className={`mt-1 flex items-center gap-1 text-xs ${report.deltaFromTemplate > 0 ? 'text-success' : 'text-error'}`}>
+                  <Icon icon={report.deltaFromTemplate > 0 ? trendingUpIcon : trendingDownIcon} className="size-3" />
+                  <span>{report.deltaFromTemplate > 0 ? '+' : ''}{report.deltaFromTemplate} vs template</span>
+                </div>
+              )}
             </div>
 
             {/* Stats and Categories - Compact */}
@@ -427,41 +461,65 @@ export default function TemplateDetailsPage() {
               <div className="flex items-center gap-1 p-2 bg-base-100 rounded-xl border border-base-200">
                 <StatCard
                   label="Critical"
-                  value={profile.criticalRiskCount}
+                  value={report.criticalRiskCount}
                   color="#4a1d1d"
                   icon={<span className="text-sm font-bold" style={{ color: '#4a1d1d' }}>!</span>}
                 />
                 <StatCard
                   label="High"
-                  value={profile.highRiskCount}
+                  value={report.highRiskCount}
                   color="#b91c1c"
                   icon={<span className="text-sm font-bold" style={{ color: '#b91c1c' }}>!</span>}
                 />
                 <StatCard
                   label="Medium"
-                  value={profile.mediumRiskCount}
+                  value={report.mediumRiskCount}
                   color="#a16207"
                   icon={<span className="text-sm font-bold" style={{ color: '#a16207' }}>-</span>}
                 />
                 <StatCard
                   label="Low"
-                  value={profile.lowRiskCount}
+                  value={report.lowRiskCount}
                   color="#6b7280"
                   icon={<Icon icon={checkCircleIcon} className="size-4" style={{ color: '#6b7280' }} />}
                 />
               </div>
 
+              {/* Contract-specific stats */}
+              {(report.modificationsDetected > 0 || report.newRisksIntroduced > 0 || report.risksMitigated > 0) && (
+                <div className="flex items-center gap-3 px-3 py-2 bg-base-100 rounded-xl border border-base-200 text-xs">
+                  {report.modificationsDetected > 0 && (
+                    <div>
+                      <span className="text-base-content/60">Modifications:</span>{' '}
+                      <span className="font-semibold">{report.modificationsDetected}</span>
+                    </div>
+                  )}
+                  {report.newRisksIntroduced > 0 && (
+                    <div className="text-error">
+                      <span className="text-error/70">New Risks:</span>{' '}
+                      <span className="font-semibold">+{report.newRisksIntroduced}</span>
+                    </div>
+                  )}
+                  {report.risksMitigated > 0 && (
+                    <div className="text-success">
+                      <span className="text-success/70">Mitigated:</span>{' '}
+                      <span className="font-semibold">-{report.risksMitigated}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Category Scores - Compact */}
               <div className="p-3 bg-base-100 rounded-xl border border-base-200">
                 <h3 className="text-sm font-semibold mb-2.5 text-base-content/70">Risk Categories</h3>
                 <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                  <CategoryProgress label="Payment" score={profile.categoryScores.payment} />
-                  <CategoryProgress label="Responsibility" score={profile.categoryScores.roleResponsibility} />
-                  <CategoryProgress label="Safety" score={profile.categoryScores.safety} />
-                  <CategoryProgress label="Timeline" score={profile.categoryScores.temporal} />
-                  <CategoryProgress label="Procedures" score={profile.categoryScores.procedure} />
-                  <CategoryProgress label="Definitions" score={profile.categoryScores.definition} />
-                  <CategoryProgress label="References" score={profile.categoryScores.reference} />
+                  <CategoryProgress label="Payment" score={report.categoryScores.payment} />
+                  <CategoryProgress label="Responsibility" score={report.categoryScores.roleResponsibility} />
+                  <CategoryProgress label="Safety" score={report.categoryScores.safety} />
+                  <CategoryProgress label="Timeline" score={report.categoryScores.temporal} />
+                  <CategoryProgress label="Procedures" score={report.categoryScores.procedure} />
+                  <CategoryProgress label="Definitions" score={report.categoryScores.definition} />
+                  <CategoryProgress label="References" score={report.categoryScores.reference} />
                 </div>
               </div>
             </div>
@@ -520,15 +578,15 @@ export default function TemplateDetailsPage() {
       {isChatOpen && (
         <div className="w-[380px] xl:w-[420px] flex-shrink-0 border-l border-base-200 p-3 hidden lg:block">
           <ContractAiChat
-            templateName={profile.templateName}
-            templateId={parseInt(templateId || '0')}
-            overallScore={profile.overallScore}
-            criticalCount={profile.criticalRiskCount}
-            highCount={profile.highRiskCount}
-            mediumCount={profile.mediumRiskCount}
-            lowCount={profile.lowRiskCount}
-            totalClauses={profile.totalClauses}
-            categoryScores={profile.categoryScores}
+            templateName={report.contractNumber || 'Contract'}
+            contractId={parseInt(contractId || '0')}
+            overallScore={report.overallScore}
+            criticalCount={report.criticalRiskCount}
+            highCount={report.highRiskCount}
+            mediumCount={report.mediumRiskCount}
+            lowCount={report.lowRiskCount}
+            totalClauses={report.totalClauses}
+            categoryScores={report.categoryScores}
             topRisks={clauses
               .flatMap(c => c.riskAssessments)
               .filter(r => r.level === 'Critical' || r.level === 'High')
@@ -553,15 +611,15 @@ export default function TemplateDetailsPage() {
             </div>
             <div className="flex-1 overflow-hidden p-3">
               <ContractAiChat
-                templateName={profile.templateName}
-                templateId={parseInt(templateId || '0')}
-                overallScore={profile.overallScore}
-                criticalCount={profile.criticalRiskCount}
-                highCount={profile.highRiskCount}
-                mediumCount={profile.mediumRiskCount}
-                lowCount={profile.lowRiskCount}
-                totalClauses={profile.totalClauses}
-                categoryScores={profile.categoryScores}
+                templateName={report.contractNumber || 'Contract'}
+                contractId={parseInt(contractId || '0')}
+                overallScore={report.overallScore}
+                criticalCount={report.criticalRiskCount}
+                highCount={report.highRiskCount}
+                mediumCount={report.mediumRiskCount}
+                lowCount={report.lowRiskCount}
+                totalClauses={report.totalClauses}
+                categoryScores={report.categoryScores}
                 topRisks={clauses
                   .flatMap(c => c.riskAssessments)
                   .filter(r => r.level === 'Critical' || r.level === 'High')

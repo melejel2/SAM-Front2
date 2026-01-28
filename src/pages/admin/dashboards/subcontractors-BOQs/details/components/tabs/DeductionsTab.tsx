@@ -1,10 +1,52 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { Loader } from "@/components/Loader";
 import useToast from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/formatters";
 import useContractDeductions from "../../hooks/use-contract-deductions";
+
+interface LaborRow {
+    id: number;
+    ref: string;
+    laborType: string;
+    activityDescription: string;
+    unit: string;
+    unitPrice: number;
+    quantity: number;
+    amount: number;
+    _unitPriceRaw?: number;
+    _amountRaw?: number;
+}
+
+interface MaterialRow {
+    id: number;
+    bc: string;
+    designation: string;
+    unit: string;
+    saleUnit: number;
+    quantity: number;
+    allocated: number;
+    stockQte: number;
+    transferedQte: number;
+    transferedTo: string;
+    remark: string;
+    _saleUnitRaw?: number;
+}
+
+interface MachineRow {
+    id: number;
+    ref: string;
+    machineAcronym: string;
+    machineType: string;
+    unit: string;
+    unitPrice: number;
+    quantity: number;
+    amount: number;
+    _unitPriceRaw?: number;
+    _amountRaw?: number;
+}
 
 type DeductionType = "labor" | "materials" | "machines";
 
@@ -82,6 +124,41 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
         if (activeType === "materials") return formattedMaterialsData;
         return formattedMachinesData;
     }, [activeType, formattedLaborData, formattedMaterialsData, formattedMachinesData]);
+
+    // Spreadsheet columns for Labor
+    const laborSpreadsheetColumns = useMemo((): SpreadsheetColumn<LaborRow>[] => [
+        { key: "ref", label: "Ref", width: 80, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "laborType", label: "Type", width: 120, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "activityDescription", label: "Activity", width: 200, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 80, align: "center", editable: false, sortable: true, filterable: true },
+        { key: "unitPrice", label: "Unit Price", width: 120, align: "right", editable: false, sortable: true, filterable: false, formatter: (v) => formatCurrency(v) },
+        { key: "quantity", label: "Qty", width: 80, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "amount", label: "Amount", width: 120, align: "right", editable: false, sortable: true, filterable: false, formatter: (v) => formatCurrency(v) },
+    ], []);
+
+    // Spreadsheet columns for Materials
+    const materialsSpreadsheetColumns = useMemo((): SpreadsheetColumn<MaterialRow>[] => [
+        { key: "bc", label: "BC", width: 80, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "designation", label: "Designation", width: 180, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 80, align: "center", editable: false, sortable: true, filterable: true },
+        { key: "saleUnit", label: "Sale Unit", width: 100, align: "right", editable: false, sortable: true, filterable: false, formatter: (v) => formatCurrency(v) },
+        { key: "quantity", label: "Qty", width: 80, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "allocated", label: "Allocated", width: 90, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "stockQte", label: "Stock", width: 80, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "transferedQte", label: "Transferred", width: 100, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "remark", label: "Remark", width: 150, align: "left", editable: false, sortable: false, filterable: false },
+    ], []);
+
+    // Spreadsheet columns for Machines
+    const machinesSpreadsheetColumns = useMemo((): SpreadsheetColumn<MachineRow>[] => [
+        { key: "ref", label: "Ref", width: 80, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "machineAcronym", label: "Code", width: 100, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "machineType", label: "Type", width: 150, align: "left", editable: false, sortable: true, filterable: true },
+        { key: "unit", label: "Unit", width: 80, align: "center", editable: false, sortable: true, filterable: true },
+        { key: "unitPrice", label: "Unit Price", width: 120, align: "right", editable: false, sortable: true, filterable: false, formatter: (v) => formatCurrency(v) },
+        { key: "quantity", label: "Qty", width: 80, align: "right", editable: false, sortable: true, filterable: false },
+        { key: "amount", label: "Amount", width: 120, align: "right", editable: false, sortable: true, filterable: false, formatter: (v) => formatCurrency(v) },
+    ], []);
 
     // Clear modal data when closing to free memory
     const handleCloseDialog = useCallback(() => {
@@ -175,6 +252,66 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
             toaster.error(result.error || "Failed to delete item");
         }
     };
+
+    // Render actions for Labor
+    const renderLaborActions = useCallback((row: LaborRow) => (
+        <div className="flex items-center gap-1">
+            <button
+                className="btn btn-ghost btn-xs text-warning hover:bg-warning/20"
+                onClick={(e) => { e.stopPropagation(); handleEdit("labor", row); }}
+                title="Edit"
+            >
+                <span className="iconify lucide--pencil size-4"></span>
+            </button>
+            <button
+                className="btn btn-ghost btn-xs text-error hover:bg-error/20"
+                onClick={(e) => { e.stopPropagation(); handleDelete("labor", row.id); }}
+                title="Delete"
+            >
+                <span className="iconify lucide--trash-2 size-4"></span>
+            </button>
+        </div>
+    ), [handleEdit, handleDelete]);
+
+    // Render actions for Materials
+    const renderMaterialsActions = useCallback((row: MaterialRow) => (
+        <div className="flex items-center gap-1">
+            <button
+                className="btn btn-ghost btn-xs text-warning hover:bg-warning/20"
+                onClick={(e) => { e.stopPropagation(); handleEdit("materials", row); }}
+                title="Edit"
+            >
+                <span className="iconify lucide--pencil size-4"></span>
+            </button>
+            <button
+                className="btn btn-ghost btn-xs text-error hover:bg-error/20"
+                onClick={(e) => { e.stopPropagation(); handleDelete("materials", row.id); }}
+                title="Delete"
+            >
+                <span className="iconify lucide--trash-2 size-4"></span>
+            </button>
+        </div>
+    ), [handleEdit, handleDelete]);
+
+    // Render actions for Machines
+    const renderMachinesActions = useCallback((row: MachineRow) => (
+        <div className="flex items-center gap-1">
+            <button
+                className="btn btn-ghost btn-xs text-warning hover:bg-warning/20"
+                onClick={(e) => { e.stopPropagation(); handleEdit("machines", row); }}
+                title="Edit"
+            >
+                <span className="iconify lucide--pencil size-4"></span>
+            </button>
+            <button
+                className="btn btn-ghost btn-xs text-error hover:bg-error/20"
+                onClick={(e) => { e.stopPropagation(); handleDelete("machines", row.id); }}
+                title="Delete"
+            >
+                <span className="iconify lucide--trash-2 size-4"></span>
+            </button>
+        </div>
+    ), [handleEdit, handleDelete]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -277,56 +414,56 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
     );
 
     const renderLaborTable = () => (
-        <SAMTable
-            columns={laborColumns}
-            tableData={formattedLaborData}
-            actions
-            editAction
-            deleteAction
-            title=""
+        <Spreadsheet<LaborRow>
+            data={formattedLaborData}
+            columns={laborSpreadsheetColumns}
+            mode="view"
             loading={false}
-            onSuccess={fetchDeductionsData}
-            openStaticDialog={(type, data) => handleTableAction(type, data, "labor")}
-            dynamicDialog={false}
-            virtualized={true}
             rowHeight={40}
-            overscan={5}
+            actionsRender={renderLaborActions}
+            actionsColumnWidth={100}
+            getRowId={(row) => row.id}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+            hideFormulaBar
         />
     );
 
     const renderMaterialsTable = () => (
-        <SAMTable
-            columns={materialsColumns}
-            tableData={formattedMaterialsData}
-            actions
-            editAction
-            deleteAction
-            title=""
+        <Spreadsheet<MaterialRow>
+            data={formattedMaterialsData}
+            columns={materialsSpreadsheetColumns}
+            mode="view"
             loading={false}
-            onSuccess={fetchDeductionsData}
-            openStaticDialog={(type, data) => handleTableAction(type, data, "materials")}
-            dynamicDialog={false}
-            virtualized={true}
             rowHeight={40}
-            overscan={5}
+            actionsRender={renderMaterialsActions}
+            actionsColumnWidth={100}
+            getRowId={(row) => row.id}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+            hideFormulaBar
         />
     );
 
     const renderMachinesTable = () => (
-        <SAMTable
-            columns={machinesColumns}
-            tableData={formattedMachinesData}
-            actions
-            editAction
-            deleteAction
-            title=""
+        <Spreadsheet<MachineRow>
+            data={formattedMachinesData}
+            columns={machinesSpreadsheetColumns}
+            mode="view"
             loading={false}
-            onSuccess={fetchDeductionsData}
-            openStaticDialog={(type, data) => handleTableAction(type, data, "machines")}
-            dynamicDialog={false}
-            virtualized={true}
             rowHeight={40}
-            overscan={5}
+            actionsRender={renderMachinesActions}
+            actionsColumnWidth={100}
+            getRowId={(row) => row.id}
+            allowKeyboardNavigation
+            allowColumnResize
+            allowSorting
+            allowFilters
+            hideFormulaBar
         />
     );
 

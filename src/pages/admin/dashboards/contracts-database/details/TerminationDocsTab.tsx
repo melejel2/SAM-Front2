@@ -3,13 +3,16 @@ import { useState, useCallback, useMemo } from "react";
 import {
     ContractType,
     generateFinalContract,
+    generateRGContract,
     terminateContract,
     exportTerminatedContractFile,
     exportFinalDischargeFile,
+    exportRGFile,
     previewContractFile,
 } from "@/api/services/contracts-api";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
 
@@ -48,13 +51,52 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
     // Generate state
     const [generating, setGenerating] = useState<string | null>(null);
 
-    // Table columns
-    const columns = useMemo(() => ({
-        documentType: "Document Type",
-        description: "Description",
-        status: "Status",
-        exportFormat: "Export Format",
-    }), []);
+    // Table columns for Spreadsheet
+    const columns = useMemo((): SpreadsheetColumn<TerminationDocument>[] => [
+        {
+            key: "documentType",
+            label: "Document Type",
+            width: 180,
+            align: "left",
+            editable: false,
+            sortable: false,
+            filterable: false,
+        },
+        {
+            key: "description",
+            label: "Description",
+            width: 280,
+            align: "left",
+            editable: false,
+            sortable: false,
+            filterable: false,
+        },
+        {
+            key: "status",
+            label: "Status",
+            width: 120,
+            align: "center",
+            editable: false,
+            sortable: false,
+            filterable: false,
+            render: (value) => {
+                const statusLower = (value || "").toLowerCase();
+                let badgeClass = "badge-info";
+                if (statusLower === "available") badgeClass = "badge-success";
+                else if (statusLower.includes("if")) badgeClass = "badge-warning";
+                return <span className={`badge badge-sm ${badgeClass}`}>{value || "-"}</span>;
+            },
+        },
+        {
+            key: "exportFormat",
+            label: "Export Format",
+            width: 130,
+            align: "center",
+            editable: false,
+            sortable: false,
+            filterable: false,
+        },
+    ], []);
 
     // Build document rows
     const documents: TerminationDocument[] = useMemo(() => [
@@ -83,7 +125,7 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
             documentType: "Final Discharge",
             description: "Final settlement document",
             status: "Available",
-            exportFormat: "PDF",
+            exportFormat: "Word (.docx)",
             canExport: true,
             canGenerate: true,
             contractType: ContractType.Final,
@@ -91,11 +133,11 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
         {
             id: "rg",
             documentType: "RG Retention",
-            description: "Retention guarantee document (IPC-generated)",
-            status: "If Available",
-            exportFormat: "-",
-            canExport: false,
-            canGenerate: false,
+            description: "Retention guarantee document",
+            status: "Available",
+            exportFormat: "Word (.docx)",
+            canExport: true,
+            canGenerate: true,
             contractType: ContractType.RG,
         },
     ], []);
@@ -161,9 +203,11 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
                 blob = await exportTerminatedContractFile(contractId, token ?? "");
                 fileName = `Termination_${contractNumber}.docx`;
             } else if (doc.id === "final") {
-                toaster.info("Exporting final discharge... This may take a moment.");
                 blob = await exportFinalDischargeFile(contractId, token ?? "");
-                fileName = `FinalDischarge_${contractNumber}.pdf`;
+                fileName = `FinalDischarge_${contractNumber}.docx`;
+            } else if (doc.id === "rg") {
+                blob = await exportRGFile(contractId, token ?? "");
+                fileName = `RG_Retention_${contractNumber}.docx`;
             } else {
                 return;
             }
@@ -211,6 +255,13 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
                 } else {
                     toaster.error(result.error || "Failed to generate final discharge");
                 }
+            } else if (doc.id === "rg") {
+                result = await generateRGContract(contractId, token ?? "");
+                if (result.success) {
+                    toaster.success("RG retention document generated successfully");
+                } else {
+                    toaster.error(result.error || "Failed to generate RG retention document");
+                }
             }
         } catch (error) {
             toaster.error(`Failed to generate ${doc.documentType.toLowerCase()}: ${(error as Error).message}`);
@@ -219,25 +270,71 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
         }
     }, [contractId, token, toaster]);
 
-    // Row actions configuration - control which actions are available per row
-    const handleRowActions = useCallback((row: TerminationDocument) => ({
-        previewAction: true,
-        exportAction: row.canExport,
-        generateAction: row.canGenerate,
-        editAction: false,
-        deleteAction: false,
-    }), []);
+    // Render actions column for Spreadsheet
+    const renderTerminationActions = useCallback((row: TerminationDocument) => {
+        const isPreviewLoading = loadingPreview === row.id;
+        const isExporting = exporting === row.id;
+        const isGenerating = generating === row.id;
 
-    // Handle table action dispatch
-    const handleTableAction = useCallback((type: string, data: TerminationDocument) => {
-        if (type === "Preview") {
-            handlePreview(data);
-        } else if (type === "Export") {
-            handleExport(data);
-        } else if (type === "Generate") {
-            handleGenerate(data);
-        }
-    }, [handlePreview, handleExport, handleGenerate]);
+        return (
+            <div className="flex items-center gap-1">
+                {/* Preview - always enabled */}
+                <button
+                    className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handlePreview(row);
+                    }}
+                    disabled={isPreviewLoading}
+                    title="Preview"
+                >
+                    {isPreviewLoading ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                        <span className="iconify lucide--eye size-4"></span>
+                    )}
+                </button>
+
+                {/* Export - conditional based on canExport */}
+                {row.canExport && (
+                    <button
+                        className="btn btn-ghost btn-xs text-success hover:bg-success/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleExport(row);
+                        }}
+                        disabled={isExporting}
+                        title="Export"
+                    >
+                        {isExporting ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <span className="iconify lucide--download size-4"></span>
+                        )}
+                    </button>
+                )}
+
+                {/* Generate - conditional based on canGenerate */}
+                {row.canGenerate && (
+                    <button
+                        className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerate(row);
+                        }}
+                        disabled={isGenerating}
+                        title="Generate/Regenerate"
+                    >
+                        {isGenerating ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <span className="iconify lucide--refresh-cw size-4"></span>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+    }, [loadingPreview, exporting, generating, handlePreview, handleExport, handleGenerate]);
 
     return (
         <div className="h-full flex flex-col">
@@ -260,19 +357,20 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
 
                     {/* Table */}
                     <div className="flex-1 min-h-0 overflow-auto">
-                        <SAMTable
+                        <Spreadsheet<TerminationDocument>
+                            data={documents}
                             columns={columns}
-                            tableData={documents}
-                            actions
-                            previewAction
-                            exportAction
-                            generateAction
-                            rowActions={handleRowActions}
-                            title=""
-                            loading={!!loadingPreview || !!exporting || !!generating}
-                            onSuccess={() => {}}
-                            openStaticDialog={(type, data) => handleTableAction(type, data as TerminationDocument)}
-                            dynamicDialog={false}
+                            mode="view"
+                            loading={false}
+                            rowHeight={40}
+                            actionsRender={renderTerminationActions}
+                            actionsColumnWidth={140}
+                            getRowId={(row) => row.id}
+                            allowKeyboardNavigation={false}
+                            allowColumnResize
+                            allowSorting={false}
+                            allowFilters={false}
+                            hideFormulaBar
                         />
                     </div>
 
@@ -280,7 +378,7 @@ const TerminationDocsTab: React.FC<TerminationDocsTabProps> = ({
                     <div className="mt-4 p-3 bg-base-200 rounded-lg flex-shrink-0">
                         <p className="text-xs text-base-content/60">
                             <span className="iconify lucide--info size-3 inline mr-1"></span>
-                            Note: RG Retention documents are automatically generated during IPC processing and cannot be regenerated here.
+                            Note: RG Retention documents are also automatically generated during IPC processing. You can regenerate them here using the generate button.
                         </p>
                     </div>
                 </div>

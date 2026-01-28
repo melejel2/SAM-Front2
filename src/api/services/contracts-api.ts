@@ -700,13 +700,47 @@ export const exportFinalDischargeFile = async (id: number, token: string): Promi
             method: "GET",
             token,
             responseType: "blob",
-            timeout: 180000, // 3 minutes for PDF conversion
         });
 
         return response as Blob;
     } catch (error) {
-        console.error("Export final discharge PDF API Error:", error);
+        console.error("Export final discharge Word API Error:", error);
         throw error;
+    }
+};
+
+export const exportRGFile = async (id: number, token: string): Promise<Blob> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/ExportRGFile/${id}`,
+            method: "GET",
+            token,
+            responseType: "blob",
+        });
+
+        return response as Blob;
+    } catch (error) {
+        console.error("Export RG file Word API Error:", error);
+        throw error;
+    }
+};
+
+export const generateRGContract = async (id: number, token: string): Promise<ContractsApiResponse> => {
+    try {
+        const response = await apiRequest({
+            endpoint: `ContractsDatasets/GenerateRGContract/${id}`,
+            method: "POST",
+            token,
+        });
+
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error("Generate RG contract API Error:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Failed to generate RG contract",
+            message: "An error occurred while generating the RG contract",
+        };
     }
 };
 

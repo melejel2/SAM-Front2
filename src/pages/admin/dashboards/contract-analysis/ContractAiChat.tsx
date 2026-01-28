@@ -1,0 +1,507 @@
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { Icon } from '@iconify/react';
+import {
+  sendTemplateChatMessage,
+  sendContractChatMessage,
+  type ContractContext,
+  type ContractChatResponse,
+} from '@/api/services/contract-analysis-api';
+
+// Icons
+import botIcon from '@iconify/icons-lucide/bot';
+import sendIcon from '@iconify/icons-lucide/send-horizontal';
+import sparklesIcon from '@iconify/icons-lucide/sparkles';
+import fileTextIcon from '@iconify/icons-lucide/file-text';
+import alertTriangleIcon from '@iconify/icons-lucide/alert-triangle';
+import shieldIcon from '@iconify/icons-lucide/shield';
+import scaleIcon from '@iconify/icons-lucide/scale';
+import wifiOffIcon from '@iconify/icons-lucide/wifi-off';
+import trash2Icon from '@iconify/icons-lucide/trash-2';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  isError?: boolean;
+}
+
+interface QuickAction {
+  icon: typeof botIcon;
+  label: string;
+  subtitle: string;
+  prompt: string;
+}
+
+interface ContractAiChatProps {
+  templateName?: string;
+  templateId?: number;
+  contractId?: number;
+  overallScore?: number;
+  criticalCount?: number;
+  highCount?: number;
+  mediumCount?: number;
+  lowCount?: number;
+  totalClauses?: number;
+  categoryScores?: {
+    payment: number;
+    roleResponsibility: number;
+    safety: number;
+    temporal: number;
+    procedure: number;
+    definition: number;
+    reference: number;
+  };
+  topRisks?: Array<{
+    category: string;
+    level: string;
+    riskDescription?: string;
+  }>;
+}
+
+// Typing indicator component
+const TypingIndicator = memo(() => (
+  <div className="flex gap-4">
+    <div className="flex-shrink-0">
+      <div className="w-8 h-8 rounded-full bg-base-200 border border-base-300 flex items-center justify-center shadow-sm">
+        <Icon icon={botIcon} className="w-5 h-5 text-primary animate-pulse" />
+      </div>
+    </div>
+    <div className="px-3 py-2 bg-base-200 rounded-2xl rounded-bl-sm">
+      <div className="flex gap-1">
+        <div
+          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
+          style={{ animation: 'typing-bounce 0.6s ease-in-out infinite' }}
+        />
+        <div
+          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
+          style={{ animation: 'typing-bounce 0.6s ease-in-out 0.15s infinite' }}
+        />
+        <div
+          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
+          style={{ animation: 'typing-bounce 0.6s ease-in-out 0.3s infinite' }}
+        />
+      </div>
+    </div>
+  </div>
+));
+TypingIndicator.displayName = 'TypingIndicator';
+
+// Message bubble component
+const MessageBubble = memo(({
+  message,
+  isFirstInGroup,
+}: {
+  message: Message;
+  isFirstInGroup: boolean;
+}) => {
+  const isUser = message.role === 'user';
+  const isError = message.isError;
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div className="group relative max-w-[85%]">
+          <div className="bg-base-200 text-base-content px-3 py-2 rounded-2xl shadow-sm border border-base-300">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </div>
+          </div>
+          <div className="absolute right-0 -bottom-5 text-[10px] text-base-content/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-3 justify-start">
+      {isFirstInGroup ? (
+        <div className="flex-shrink-0">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm border ${
+            isError ? 'bg-error/10 border-error/30' : 'bg-base-200 border-base-300'
+          }`}>
+            <Icon icon={isError ? wifiOffIcon : botIcon} className={`w-5 h-5 ${isError ? 'text-error' : 'text-primary'}`} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-shrink-0 w-8" />
+      )}
+
+      <div className="group relative flex-1 min-w-0">
+        {isFirstInGroup && (
+          <span className={`text-xs font-semibold mb-1 block ${isError ? 'text-error' : 'text-base-content/70'}`}>
+            {isError ? 'Error' : 'Contract AI'}
+          </span>
+        )}
+        <div className={`text-sm leading-relaxed whitespace-pre-wrap ${isError ? 'text-error/80' : 'text-base-content'}`}>
+          {message.content}
+        </div>
+        <div className="absolute left-0 -bottom-5 text-[10px] text-base-content/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+    </div>
+  );
+});
+MessageBubble.displayName = 'MessageBubble';
+
+// Quick action card
+const QuickActionCard = memo(({
+  action,
+  onClick,
+}: {
+  action: QuickAction;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="relative group bg-base-200/60 hover:bg-base-200 rounded-lg p-2.5 transition-all duration-200 border border-base-300/50 hover:border-base-300 hover:shadow-sm text-left"
+  >
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-md bg-base-100 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+        <Icon
+          icon={action.icon}
+          className="w-4 h-4 text-base-content/70 group-hover:text-primary transition-colors"
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-medium text-base-content truncate">
+          {action.label}
+        </div>
+        <div className="text-[10px] text-base-content/50 truncate leading-tight">
+          {action.subtitle}
+        </div>
+      </div>
+    </div>
+  </button>
+));
+QuickActionCard.displayName = 'QuickActionCard';
+
+// Welcome state component
+const WelcomeState = memo(({
+  quickActions,
+  onActionClick,
+}: {
+  quickActions: QuickAction[];
+  onActionClick: (prompt: string) => void;
+}) => (
+  <div className="flex flex-col items-center justify-center h-full px-4 py-8">
+    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+      <Icon icon={sparklesIcon} className="w-6 h-6 text-primary" />
+    </div>
+    <h3 className="text-base font-semibold text-base-content mb-1">
+      Contract AI Assistant
+    </h3>
+    <p className="text-xs text-base-content/60 text-center mb-6 max-w-[280px]">
+      Ask questions about this contract's risks, clauses, or get recommendations
+    </p>
+    <div className="w-full grid grid-cols-2 gap-2">
+      {quickActions.map((action, index) => (
+        <QuickActionCard
+          key={index}
+          action={action}
+          onClick={() => onActionClick(action.prompt)}
+        />
+      ))}
+    </div>
+  </div>
+));
+WelcomeState.displayName = 'WelcomeState';
+
+// Main component
+const ContractAiChat = memo(({
+  templateName = 'Contract',
+  templateId,
+  contractId,
+  overallScore,
+  criticalCount,
+  highCount,
+  mediumCount,
+  lowCount,
+  totalClauses,
+  categoryScores,
+  topRisks,
+}: ContractAiChatProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const quickActions: QuickAction[] = [
+    {
+      icon: alertTriangleIcon,
+      label: 'Top Risks',
+      subtitle: 'Key risk areas',
+      prompt: 'Quels sont les risques les plus critiques dans ce contrat que je devrais traiter en priorité?',
+    },
+    {
+      icon: fileTextIcon,
+      label: 'Summary',
+      subtitle: 'Contract overview',
+      prompt: 'Donne-moi un résumé de cette analyse de contrat et de sa santé globale.',
+    },
+    {
+      icon: shieldIcon,
+      label: 'Recommendations',
+      subtitle: 'Improve safety',
+      prompt: 'Quels changements spécifiques recommanderais-tu pour améliorer le profil de risque de ce contrat?',
+    },
+    {
+      icon: scaleIcon,
+      label: 'Legal Concerns',
+      subtitle: 'Compliance issues',
+      prompt: 'Y a-t-il des préoccupations juridiques ou de conformité dont je devrais être conscient?',
+    },
+  ];
+
+  // Build context for the API
+  const buildContext = useCallback((): ContractContext => {
+    return {
+      templateName,
+      templateId,
+      contractId,
+      overallScore,
+      criticalCount,
+      highCount,
+      mediumCount,
+      lowCount,
+      totalClauses,
+      categoryScores,
+      topRisks: topRisks?.map(r => ({
+        category: r.category,
+        level: r.level,
+        description: r.riskDescription || '',
+      })),
+    };
+  }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Auto-resize textarea
+  const handleTextareaInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement;
+    target.style.height = 'auto';
+    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+  }, []);
+
+  // Send message to AI via API
+  const sendToAI = useCallback(async (userMessage: string) => {
+    setIsLoading(true);
+
+    // Cancel any existing request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const context = buildContext();
+      let result: ContractChatResponse;
+
+      if (templateId) {
+        result = await sendTemplateChatMessage(
+          templateId,
+          userMessage,
+          context,
+          sessionId,
+          abortControllerRef.current.signal
+        );
+      } else if (contractId) {
+        result = await sendContractChatMessage(
+          contractId,
+          userMessage,
+          context,
+          sessionId,
+          abortControllerRef.current.signal
+        );
+      } else {
+        throw new Error('No template or contract ID provided');
+      }
+
+      if (result.success) {
+        // Update session ID if returned
+        if (result.sessionId) {
+          setSessionId(result.sessionId);
+        }
+
+        const assistantMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: result.response,
+          timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Handle error response
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: result.error || 'Une erreur est survenue. Veuillez réessayer.',
+          timestamp: new Date(),
+          isError: true,
+        };
+
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error: unknown) {
+      // Check if request was aborted
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Désolé, une erreur de connexion est survenue. Veuillez vérifier votre connexion et réessayer.',
+        timestamp: new Date(),
+        isError: true,
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [templateId, contractId, sessionId, buildContext]);
+
+  // Handle send message
+  const handleSend = useCallback(async (text?: string) => {
+    const messageText = text || inputValue.trim();
+    if (!messageText || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    await sendToAI(messageText);
+  }, [inputValue, isLoading, sendToAI]);
+
+  // Handle form submit
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend();
+  }, [handleSend]);
+
+  // Handle key press
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }, [handleSend]);
+
+  // Check if message is first in a group from same sender
+  const isFirstInGroup = useCallback((index: number) => {
+    if (index === 0) return true;
+    return messages[index].role !== messages[index - 1].role;
+  }, [messages]);
+
+  // Clear chat history
+  const handleClearChat = useCallback(() => {
+    setMessages([]);
+    setSessionId(undefined);
+  }, []);
+
+  return (
+    <div className="flex flex-col h-full bg-base-100/50 backdrop-blur-sm rounded-xl border border-base-300/50 overflow-hidden" style={{ minHeight: '400px' }}>
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {messages.length === 0 ? (
+          <WelcomeState quickActions={quickActions} onActionClick={handleSend} />
+        ) : (
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isFirstInGroup={isFirstInGroup(index)}
+              />
+            ))}
+            {isLoading && <TypingIndicator />}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Input area */}
+      <div className="border-t border-base-300/50 p-3">
+        <form onSubmit={handleSubmit}>
+          <div className="bg-base-200 rounded-xl border border-base-300">
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onInput={handleTextareaInput}
+              onKeyDown={handleKeyDown}
+              placeholder="Posez une question sur ce contrat..."
+              className="w-full resize-none bg-transparent border-0 focus:outline-none focus:ring-0 placeholder-base-content/50 text-base-content px-4 pt-3 pb-0 text-sm leading-relaxed"
+              style={{
+                minHeight: '44px',
+                maxHeight: '120px',
+              }}
+              disabled={isLoading}
+            />
+            <div className="flex items-center justify-between px-3 pb-2">
+              <div>
+                {messages.length > 0 && !isLoading && (
+                  <button
+                    type="button"
+                    onClick={handleClearChat}
+                    className="btn btn-sm btn-ghost btn-circle text-base-content/50 hover:text-error hover:bg-error/10"
+                    title="Effacer la conversation"
+                  >
+                    <Icon icon={trash2Icon} className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isLoading}
+                className="btn btn-sm btn-circle bg-base-content text-base-100 hover:bg-base-content/80 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Icon icon={sendIcon} className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {/* Custom animation styles */}
+      <style>{`
+        @keyframes typing-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+      `}</style>
+    </div>
+  );
+});
+
+ContractAiChat.displayName = 'ContractAiChat';
+
+export default ContractAiChat;

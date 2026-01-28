@@ -207,3 +207,120 @@ export async function analyzeAllTemplates(): Promise<TemplateAnalysisSummary[]> 
   );
   return handleResponse<TemplateAnalysisSummary[]>(response);
 }
+
+// ============================================
+// CHAT API
+// ============================================
+
+/**
+ * Chat request interface
+ */
+export interface ContractChatRequest {
+  message: string;
+  templateId?: number;
+  contractId?: number;
+  sessionId?: string;
+  isNewSession?: boolean;
+}
+
+/**
+ * Chat response interface
+ */
+export interface ContractChatResponse {
+  success: boolean;
+  response: string;
+  sessionId?: string;
+  error?: string;
+  suggestions?: string[];
+}
+
+/**
+ * Contract context for chat
+ */
+export interface ContractContext {
+  templateName?: string;
+  templateId?: number;
+  contractId?: number;
+  overallScore?: number;
+  criticalCount?: number;
+  highCount?: number;
+  mediumCount?: number;
+  lowCount?: number;
+  totalClauses?: number;
+  categoryScores?: {
+    payment: number;
+    roleResponsibility: number;
+    safety: number;
+    temporal: number;
+    procedure: number;
+    definition: number;
+    reference: number;
+  };
+  topRisks?: Array<{
+    category: string;
+    level: string;
+    description: string;
+  }>;
+}
+
+/**
+ * Send a chat message about a template
+ */
+export async function sendTemplateChatMessage(
+  templateId: number,
+  message: string,
+  context: ContractContext,
+  sessionId?: string,
+  signal?: AbortSignal
+): Promise<ContractChatResponse> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/templates/${templateId}/chat`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        templateId,
+        sessionId,
+        context,
+      }),
+      signal,
+    }
+  );
+  return handleResponse<ContractChatResponse>(response);
+}
+
+/**
+ * Send a chat message about a contract
+ */
+export async function sendContractChatMessage(
+  contractId: number,
+  message: string,
+  context: ContractContext,
+  sessionId?: string,
+  signal?: AbortSignal
+): Promise<ContractChatResponse> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/contracts/${contractId}/chat`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        contractId,
+        sessionId,
+        context,
+      }),
+      signal,
+    }
+  );
+  return handleResponse<ContractChatResponse>(response);
+}

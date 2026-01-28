@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { Loader } from "@/components/Loader";
-import SAMTable from "@/components/Table";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import PDFViewer from "@/components/ExcelPreview/PDFViewer";
 import useToast from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth";
@@ -13,6 +14,16 @@ import { formatCurrency, formatDate, formatPercentage } from "@/utils/formatters
 import TerminationDocsTab from "./TerminationDocsTab";
 
 type ContractTab = "info" | "termination-docs";
+
+interface VORow {
+    id: number | string;
+    voNumber: string;
+    description: string;
+    type: string;
+    amount: number;
+    status: string;
+    date: string;
+}
 
 const ContractDatabaseDetails = () => {
     const { contractIdentifier } = useParams<{ contractIdentifier: string }>();
@@ -41,18 +52,74 @@ const ContractDatabaseDetails = () => {
     const [activeTab, setActiveTab] = useState<ContractTab>("info");
     // Contract-specific VOs hook (optimized with useMemo and useCallback)
     const useContractVOs = (contractId: string) => {
-        const [vos, setVos] = useState<any[]>([]);
+        const [vos, setVos] = useState<VORow[]>([]);
         const [loading, setLoading] = useState(false);
         const { getToken } = useAuth();
 
-        const voColumns = useMemo(() => ({
-            voNumber: "VO Number",
-            description: "Description",
-            type: "Type",
-            amount: "Amount",
-            status: "Status",
-            date: "Date Created"
-        }), []);
+        const voColumns = useMemo((): SpreadsheetColumn<VORow>[] => [
+            {
+                key: "voNumber",
+                label: "VO Number",
+                width: 120,
+                align: "left",
+                editable: false,
+                sortable: true,
+                filterable: true,
+            },
+            {
+                key: "description",
+                label: "Description",
+                width: 200,
+                align: "left",
+                editable: false,
+                sortable: true,
+                filterable: true,
+            },
+            {
+                key: "type",
+                label: "Type",
+                width: 100,
+                align: "center",
+                editable: false,
+                sortable: true,
+                filterable: true,
+            },
+            {
+                key: "amount",
+                label: "Amount",
+                width: 140,
+                align: "right",
+                editable: false,
+                sortable: true,
+                filterable: false,
+                formatter: (value) => formatCurrency(value),
+            },
+            {
+                key: "status",
+                label: "Status",
+                width: 100,
+                align: "center",
+                editable: false,
+                sortable: true,
+                filterable: true,
+                render: (value) => {
+                    const statusLower = (value || "").toLowerCase();
+                    let badgeClass = "badge-info";
+                    if (statusLower === "active") badgeClass = "badge-success";
+                    else if (statusLower === "draft") badgeClass = "badge-warning";
+                    return <span className={`badge badge-sm ${badgeClass}`}>{value || "-"}</span>;
+                },
+            },
+            {
+                key: "date",
+                label: "Date Created",
+                width: 130,
+                align: "center",
+                editable: false,
+                sortable: true,
+                filterable: true,
+            },
+        ], []);
 
         const getContractVOsData = useCallback(async () => {
             if (!contractId) return;
@@ -105,24 +172,90 @@ const ContractDatabaseDetails = () => {
     // Contract VOs management
     const { vos, voColumns, loading: vosLoading, getContractVOs } = useContractVOs(contractId || '');
 
-    // Row actions control - disable edit, generate, and delete for active VOs
-    const handleVoRowActions = useCallback((row: any) => {
-        const isActive = row.status?.toLowerCase() === 'active';
+    // VO action handlers
+    const handleVOPreview = useCallback((row: VORow) => {
+        // Navigate to VO preview/details
+        navigate(`/dashboard/vos/details/${row.id}`, {
+            state: { voId: row.id, voNumber: row.voNumber }
+        });
+    }, [navigate]);
 
-        if (isActive) {
-            return {
-                editAction: false,
-                deleteAction: false,
-                generateAction: false
-            };
-        }
+    const handleVOEdit = useCallback((row: VORow) => {
+        // Navigate to VO edit page
+        navigate(`/dashboard/vos/edit/${row.id}`, {
+            state: { voId: row.id, voNumber: row.voNumber }
+        });
+    }, [navigate]);
 
-        return {
-            editAction: true,
-            deleteAction: true,
-            generateAction: true
-        };
-    }, []);
+    const handleVODelete = useCallback((row: VORow) => {
+        // TODO: Implement VO delete with confirmation
+        toaster.info(`Delete VO ${row.voNumber} - Not implemented yet`);
+    }, [toaster]);
+
+    const handleVOGenerate = useCallback((row: VORow) => {
+        // TODO: Implement VO document generation
+        toaster.info(`Generate VO ${row.voNumber} - Not implemented yet`);
+    }, [toaster]);
+
+    // Render actions column for VOs Spreadsheet
+    const renderVOActions = useCallback((row: VORow) => {
+        const isActive = row.status?.toLowerCase() === "active";
+
+        return (
+            <div className="flex items-center gap-1">
+                {/* Preview - always enabled */}
+                <button
+                    className="btn btn-ghost btn-xs text-info hover:bg-info/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleVOPreview(row);
+                    }}
+                    title="Preview"
+                >
+                    <span className="iconify lucide--eye size-4"></span>
+                </button>
+
+                {/* Edit - disabled for active VOs */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-warning hover:bg-warning/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) handleVOEdit(row);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot edit active VO" : "Edit"}
+                >
+                    <span className="iconify lucide--pencil size-4"></span>
+                </button>
+
+                {/* Generate - disabled for active VOs */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-success hover:bg-success/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) handleVOGenerate(row);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot generate active VO" : "Generate"}
+                >
+                    <span className="iconify lucide--file-check size-4"></span>
+                </button>
+
+                {/* Delete - disabled for active VOs */}
+                <button
+                    className={`btn btn-ghost btn-xs ${isActive ? "opacity-40 cursor-not-allowed" : "text-error hover:bg-error/20"}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isActive) handleVODelete(row);
+                    }}
+                    disabled={isActive}
+                    title={isActive ? "Cannot delete active VO" : "Delete"}
+                >
+                    <span className="iconify lucide--trash-2 size-4"></span>
+                </button>
+            </div>
+        );
+    }, [handleVOPreview, handleVOEdit, handleVOGenerate, handleVODelete]);
 
     useEffect(() => {
         if (contractId) {
@@ -633,23 +766,20 @@ const ContractDatabaseDetails = () => {
                             />
                         </div>
                     ) : vos.length > 0 ? (
-                        <SAMTable
+                        <Spreadsheet<VORow>
+                            data={vos}
                             columns={voColumns}
-                            tableData={vos}
-                            actions
-                            previewAction
-                            editAction
-                            generateAction
-                            deleteAction
-                            rowActions={handleVoRowActions}
-                            title=""
+                            mode="view"
                             loading={false}
-                            onSuccess={() => {}}
-                            openStaticDialog={() => {}}
-                            dynamicDialog={false}
-                            virtualized={true}
                             rowHeight={40}
-                            overscan={5}
+                            actionsRender={renderVOActions}
+                            actionsColumnWidth={160}
+                            getRowId={(row) => row.id}
+                            allowKeyboardNavigation
+                            allowColumnResize
+                            allowSorting
+                            allowFilters
+                            hideFormulaBar
                         />
                     ) : (
                         <div className="text-center py-12">

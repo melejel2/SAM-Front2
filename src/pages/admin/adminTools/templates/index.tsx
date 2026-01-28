@@ -948,9 +948,9 @@ const Templates = memo(() => {
     }, [clearContent]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
             {viewMode === 'table' ? (
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 h-full">
                     {loading ? (
                         <Loader
                             icon="file-text"
@@ -1025,34 +1025,28 @@ const Templates = memo(() => {
                     )}
                 </div>
             ) : (
-                <div className="flex-1 min-h-0 flex flex-col">
-                    {/* Preview Content */}
-                    <div className="flex-1 min-h-0 overflow-auto">
-                        <div className="card bg-base-100 shadow-sm p-4">
-                            <div className="flex items-center space-x-3 mb-4">
-                                <div className="p-2 bg-primary/20 rounded-lg">
-                                    <Icon icon={fileTextIcon} className="w-5 h-5 text-primary" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-base-content">Template Preview</h3>
-                                    <p className="text-sm text-base-content/60">
-                                        {previewData?.fileName} - Template #{previewData?.id}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Template Preview Content */}
-                            <div className="bg-base-100 border border-base-300 rounded-lg shadow-sm">
-                                <div className="h-[calc(100vh-300px)]">
-                                    {previewData && (
-                                        <PDFViewer
-                                            fileBlob={previewData.blob}
-                                            fileName={previewData.fileName}
-                                        />
-                                    )}
-                                </div>
-                            </div>
+                <div className="h-full flex flex-col p-4 gap-3">
+                    {/* Preview Header */}
+                    <div className="flex items-center space-x-3 shrink-0">
+                        <div className="p-2 bg-primary/20 rounded-lg">
+                            <Icon icon={fileTextIcon} className="w-5 h-5 text-primary" />
                         </div>
+                        <div>
+                            <h3 className="font-semibold text-base-content">Template Preview</h3>
+                            <p className="text-sm text-base-content/60">
+                                {previewData?.fileName} - Template #{previewData?.id}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Template Preview Content - fills remaining space */}
+                    <div className="flex-1 bg-base-100 border border-base-300 rounded-lg shadow-sm overflow-hidden">
+                        {previewData && (
+                            <PDFViewer
+                                fileBlob={previewData.blob}
+                                fileName={previewData.fileName}
+                            />
+                        )}
                     </div>
                 </div>
             )}
