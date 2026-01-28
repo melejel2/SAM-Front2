@@ -29,8 +29,139 @@ import eyeIcon from '@iconify/icons-lucide/eye';
 import refreshCwIcon from '@iconify/icons-lucide/refresh-cw';
 import playIcon from '@iconify/icons-lucide/play';
 import uploadCloudIcon from '@iconify/icons-lucide/upload-cloud';
+import infoIcon from '@iconify/icons-lucide/info';
 
 type TabType = 'templates' | 'contracts';
+
+// How It Works Modal Component
+const HowItWorksModal = memo(({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal modal-open">
+      <div className="modal-box max-w-2xl">
+        <button
+          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+        <h3 className="font-bold text-lg mb-4">How Contract Analysis Works</h3>
+
+        <div className="space-y-4 text-sm">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <p className="font-semibold text-primary mb-1">Based on Research</p>
+            <p className="text-base-content/80">
+              This system implements the "Toxic Clauses" classification framework from Moon et al. (2022),
+              adapted for French construction contracts.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Two-Tier Analysis Approach</h4>
+            <div className="space-y-2 ml-4">
+              <div className="flex gap-2">
+                <span className="badge badge-primary badge-sm">Tier 1</span>
+                <span><strong>Template Analysis</strong> - Analyzes contract templates to establish a risk baseline</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="badge badge-secondary badge-sm">Tier 2</span>
+                <span><strong>Contract Analysis</strong> - Compares specific contracts against their template baseline</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">7 Risk Categories (Moon et al.)</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-error"></span>
+                <span><strong>Payment</strong> - Payment terms, retention, penalties</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-warning"></span>
+                <span><strong>Role/Responsibility</strong> - Unclear obligations</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-info"></span>
+                <span><strong>Safety</strong> - Insurance, liability, HSE</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-success"></span>
+                <span><strong>Timeline</strong> - Deadlines, delays, penalties</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary"></span>
+                <span><strong>Procedure</strong> - Claims, dispute resolution</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-secondary"></span>
+                <span><strong>Definition</strong> - Ambiguous terms</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accent"></span>
+                <span><strong>Reference</strong> - Missing/vague documents</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Risk Levels</h4>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#7f1d1d' }}></span>
+                <span>Critical</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></span>
+                <span>High</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#f59e0b' }}></span>
+                <span>Medium</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e' }}></span>
+                <span>Low</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mb-2">Health Score</h4>
+            <p className="text-base-content/80">
+              Each contract receives a health score from 0-100 based on the severity and quantity of identified risks:
+            </p>
+            <div className="flex gap-4 mt-2">
+              <span className="text-success">80-100: Good</span>
+              <span className="text-warning">60-79: Moderate</span>
+              <span className="text-error">40-59: Concerning</span>
+              <span style={{ color: '#7f1d1d' }}>0-39: Critical</span>
+            </div>
+          </div>
+
+          <div className="bg-base-200 rounded-lg p-3 text-xs text-base-content/60">
+            <p><strong>Reference:</strong> Moon, S., et al. (2022). "Toxic Clauses in Construction Contracts:
+            A Machine Learning Approach to Classification." Journal of Construction Engineering and Management.</p>
+          </div>
+        </div>
+
+        <div className="modal-action">
+          <button className="btn btn-primary" onClick={onClose}>
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+HowItWorksModal.displayName = 'HowItWorksModal';
 
 // Score Badge Component
 const ScoreBadge = memo(({ score }: { score?: number }) => {
@@ -271,7 +402,7 @@ ScanResultModal.displayName = 'ScanResultModal';
 // Main Component
 const ContractAnalysisDashboard = memo(() => {
   const navigate = useNavigate();
-  const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+  const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
   const [activeTab, setActiveTab] = useState<TabType>('templates');
@@ -282,6 +413,7 @@ const ContractAnalysisDashboard = memo(() => {
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [scanResult, setScanResult] = useState<DocumentScanResult | null>(null);
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -315,13 +447,16 @@ const ContractAnalysisDashboard = memo(() => {
   // Topbar setup
   useEffect(() => {
     setLeftContent(
-      <button
-        onClick={handleBackToDashboard}
-        className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
-        title="Back to Dashboard"
-      >
-        <Icon icon={arrowLeftIcon} className="size-5" />
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleBackToDashboard}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+          title="Back to Dashboard"
+        >
+          <Icon icon={arrowLeftIcon} className="size-5" />
+        </button>
+        <span className="font-semibold text-lg">Contract Analysis</span>
+      </div>
     );
 
     setCenterContent(
@@ -352,10 +487,20 @@ const ContractAnalysisDashboard = memo(() => {
       </div>
     );
 
+    setRightContent(
+      <button
+        onClick={() => setShowHowItWorksModal(true)}
+        className="btn btn-sm btn-ghost"
+        title="How it works"
+      >
+        <Icon icon={infoIcon} className="size-5" />
+      </button>
+    );
+
     return () => {
       clearContent();
     };
-  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, clearContent]);
+  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, setRightContent, clearContent]);
 
   // Template actions
   const handleAnalyzeTemplate = useCallback(async (templateId: number) => {
@@ -711,6 +856,11 @@ const ContractAnalysisDashboard = memo(() => {
       <ScanResultModal
         result={scanResult}
         onClose={() => setScanResult(null)}
+      />
+
+      <HowItWorksModal
+        isOpen={showHowItWorksModal}
+        onClose={() => setShowHowItWorksModal(false)}
       />
     </div>
   );
