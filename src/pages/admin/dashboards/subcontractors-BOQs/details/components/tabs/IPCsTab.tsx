@@ -374,6 +374,7 @@ const IPCsTab = ({ contractId, contractNumber, contractIdentifier, contractStatu
                             columns={spreadsheetColumns}
                             mode="view"
                             loading={false}
+                            persistKey="contract-details-ipcs"
                             rowHeight={40}
                             actionsRender={renderIPCActions}
                             actionsColumnWidth={180}

@@ -56,7 +56,9 @@ interface DeductionsTabProps {
 
 const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
     const { toaster } = useToast();
-    const [activeType, setActiveType] = useState<DeductionType>("labor");
+    const [activeType, setActiveType] = useState<DeductionType>(() => (sessionStorage.getItem("deductions-tab-type") as DeductionType) || "labor");
+
+    useEffect(() => { sessionStorage.setItem("deductions-tab-type", activeType); }, [activeType]);
 
     // Edit dialog state
     const [showEditDialog, setShowEditDialog] = useState(false);
@@ -419,6 +421,7 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
             columns={laborSpreadsheetColumns}
             mode="view"
             loading={false}
+            persistKey="contract-deductions-labor"
             rowHeight={40}
             actionsRender={renderLaborActions}
             actionsColumnWidth={100}
@@ -437,6 +440,7 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
             columns={materialsSpreadsheetColumns}
             mode="view"
             loading={false}
+            persistKey="contract-deductions-materials"
             rowHeight={40}
             actionsRender={renderMaterialsActions}
             actionsColumnWidth={100}
@@ -455,6 +459,7 @@ const DeductionsTab = ({ contractId }: DeductionsTabProps) => {
             columns={machinesSpreadsheetColumns}
             mode="view"
             loading={false}
+            persistKey="contract-deductions-machines"
             rowHeight={40}
             actionsRender={renderMachinesActions}
             actionsColumnWidth={100}

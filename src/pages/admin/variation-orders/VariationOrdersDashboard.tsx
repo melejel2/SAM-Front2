@@ -24,7 +24,12 @@ const VariationOrdersDashboard = () => {
     const { toaster } = useToast();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(() => {
+        const stored = sessionStorage.getItem("vo-dashboard-tab");
+        return stored ? Number(stored) : 0;
+    });
+    useEffect(() => { sessionStorage.setItem("vo-dashboard-tab", String(activeTab)); }, [activeTab]);
+
     // Only store data for the active tab to reduce memory usage
     const [currentTabData, setCurrentTabData] = useState<any[]>([]);
     // Store counts for tab badges (lightweight)

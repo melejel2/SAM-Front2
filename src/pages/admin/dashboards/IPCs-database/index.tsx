@@ -125,7 +125,7 @@ const IPCsDatabase = () => {
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
-    const [selectedProject, setSelectedProject] = useState<string>("All Projects");
+    const [selectedProject, setSelectedProject] = useState<string>(() => sessionStorage.getItem("ipcs-db-project") || "All Projects");
     // Un-Issue modal state
     const [showUnissueModal, setShowUnissueModal] = useState(false);
     const [unissueReason, setUnissueReason] = useState("");
@@ -138,6 +138,10 @@ const IPCsDatabase = () => {
         getIPCs();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
+
+    useEffect(() => {
+        sessionStorage.setItem("ipcs-db-project", selectedProject);
+    }, [selectedProject]);
 
     // Memoize back to dashboard handler
     const handleBackToDashboard = useCallback(() => {
@@ -570,6 +574,7 @@ const IPCsDatabase = () => {
                             columns={columns}
                             data={filteredTableData as unknown as IpcRow[]}
                             mode="view"
+                            persistKey="ipcs-database"
                             actionsRender={actionsRender}
                             actionsColumnWidth={70}
                             toolbar={toolbarContent}

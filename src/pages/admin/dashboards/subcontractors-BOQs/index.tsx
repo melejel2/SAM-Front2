@@ -14,8 +14,11 @@ const SubcontractorsBOQs = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [activeTab, setActiveTab] = useState(0);
-    const [selectedProject, setSelectedProject] = useState<string>("All Projects");
+    const [activeTab, setActiveTab] = useState(() => {
+        const stored = sessionStorage.getItem("sub-boqs-tab");
+        return stored ? Number(stored) : 0;
+    });
+    const [selectedProject, setSelectedProject] = useState<string>(() => sessionStorage.getItem("sub-boqs-project") || "All Projects");
     // Track if terminated contracts tab has been loaded (lazy loading)
     const [terminatedTabLoaded, setTerminatedTabLoaded] = useState(false);
 
@@ -31,6 +34,9 @@ const SubcontractorsBOQs = memo(() => {
         getContractsDatasets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
+
+    useEffect(() => { sessionStorage.setItem("sub-boqs-tab", String(activeTab)); }, [activeTab]);
+    useEffect(() => { sessionStorage.setItem("sub-boqs-project", selectedProject); }, [selectedProject]);
 
     const handleViewContractDetails = useCallback((row: any) => {
         // Navigate to contract details page using contract number (user-friendly) instead of ID

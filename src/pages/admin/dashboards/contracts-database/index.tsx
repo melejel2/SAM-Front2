@@ -226,7 +226,10 @@ const ContractsDatabase = () => {
     
     const { toaster } = useToast();
     const { getToken } = useAuth();
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(() => {
+        const stored = sessionStorage.getItem("contracts-db-tab");
+        return stored ? Number(stored) : 0;
+    });
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -241,10 +244,13 @@ const ContractsDatabase = () => {
     const [generatingFinalId, setGeneratingFinalId] = useState<string | null>(null);
     const [showGenerateFinalModal, setShowGenerateFinalModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
-    const [selectedProject, setSelectedProject] = useState<string>("All Projects");
+    const [selectedProject, setSelectedProject] = useState<string>(() => sessionStorage.getItem("contracts-db-project") || "All Projects");
     const [exportingRowId, setExportingRowId] = useState<string | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
+
+    useEffect(() => { sessionStorage.setItem("contracts-db-tab", String(activeTab)); }, [activeTab]);
+    useEffect(() => { sessionStorage.setItem("contracts-db-project", selectedProject); }, [selectedProject]);
 
     // Track which tabs have been loaded to avoid re-fetching
     const [loadedTabs, setLoadedTabs] = useState<Set<number>>(new Set());

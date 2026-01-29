@@ -250,6 +250,7 @@ const VOsTab = ({
                                 columns={spreadsheetColumns}
                                 mode="view"
                                 loading={false}
+                                persistKey="contract-details-vos"
                                 rowHeight={40}
                                 actionsRender={renderVOActions}
                                 actionsColumnWidth={180}

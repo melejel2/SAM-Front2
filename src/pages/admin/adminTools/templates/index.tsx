@@ -187,10 +187,15 @@ const Templates = memo(() => {
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
     const [exportingPdf, setExportingPdf] = useState(false);
     const [exportingWord, setExportingWord] = useState(false);
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(() => {
+        const stored = sessionStorage.getItem("admin-templates-tab");
+        return stored ? Number(stored) : 0;
+    });
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [templateToDelete, setTemplateToDelete] = useState<{ data: any, type: 'contract' | 'vo' | 'other' } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => { sessionStorage.setItem("admin-templates-tab", String(activeTab)); }, [activeTab]);
 
     // Upload modal state
     const [showUploadModal, setShowUploadModal] = useState(false);

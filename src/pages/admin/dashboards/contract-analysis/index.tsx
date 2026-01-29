@@ -512,7 +512,7 @@ const ContractAnalysisDashboard = memo(() => {
   const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
-  const [activeTab, setActiveTab] = useState<TabType>('templates');
+  const [activeTab, setActiveTab] = useState<TabType>(() => (sessionStorage.getItem("contract-analysis-tab") as TabType) || 'templates');
   const [templates, setTemplates] = useState<TemplateAnalysisSummary[]>([]);
   const [contracts, setContracts] = useState<ContractAnalysisSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -521,6 +521,8 @@ const ContractAnalysisDashboard = memo(() => {
   const [showScanModal, setShowScanModal] = useState(false);
   const [scanResult, setScanResult] = useState<DocumentScanResult | null>(null);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+
+  useEffect(() => { sessionStorage.setItem("contract-analysis-tab", activeTab); }, [activeTab]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);

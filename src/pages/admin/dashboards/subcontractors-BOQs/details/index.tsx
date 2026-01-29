@@ -108,8 +108,10 @@ const ContractDetails = () => {
     const [loading, setLoading] = useState(true);
 
     // Tab state - use returnTab from navigation if provided
-    const initialTab = (location.state as { returnTab?: ContractTab } | null)?.returnTab ?? "info";
+    const initialTab = (location.state as { returnTab?: ContractTab } | null)?.returnTab ?? (sessionStorage.getItem("sub-boqs-details-tab") as ContractTab) ?? "info";
     const [activeTab, setActiveTab] = useState<ContractTab>(initialTab);
+
+    useEffect(() => { sessionStorage.setItem("sub-boqs-details-tab", activeTab); }, [activeTab]);
 
     // Track which tabs have been loaded for lazy loading optimization
     const [loadedTabs, setLoadedTabs] = useState<Set<ContractTab>>(new Set([initialTab]));

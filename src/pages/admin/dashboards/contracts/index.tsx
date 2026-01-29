@@ -54,7 +54,7 @@ const ContractsManagement = memo(() => {
         generateFinalContract,
     } = useContractManagement();
 
-    const [activeTab, setActiveTab] = useState<TabType>('drafts');
+    const [activeTab, setActiveTab] = useState<TabType>(() => (sessionStorage.getItem("contracts-tab") as TabType) || 'drafts');
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [contractToGenerate, setContractToGenerate] = useState<any>(null);
     const [generating, setGenerating] = useState(false);
@@ -64,6 +64,8 @@ const ContractsManagement = memo(() => {
     const [showFinalDischargeModal, setShowFinalDischargeModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
+
+    useEffect(() => { sessionStorage.setItem("contracts-tab", activeTab); }, [activeTab]);
 
     // Track which tabs have been loaded
     const [loadedTabs, setLoadedTabs] = useState<Set<TabType>>(new Set());

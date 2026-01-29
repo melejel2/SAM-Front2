@@ -49,7 +49,9 @@ const ContractDatabaseDetails = () => {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
     const [terminating, setTerminating] = useState(false);
-    const [activeTab, setActiveTab] = useState<ContractTab>("info");
+    const [activeTab, setActiveTab] = useState<ContractTab>(() => (sessionStorage.getItem("contracts-db-details-tab") as ContractTab) || "info");
+    useEffect(() => { sessionStorage.setItem("contracts-db-details-tab", activeTab); }, [activeTab]);
+
     // Contract-specific VOs hook (optimized with useMemo and useCallback)
     const useContractVOs = (contractId: string) => {
         const [vos, setVos] = useState<VORow[]>([]);
@@ -771,6 +773,7 @@ const ContractDatabaseDetails = () => {
                             columns={voColumns}
                             mode="view"
                             loading={false}
+                            persistKey="contracts-database-vo-list"
                             rowHeight={40}
                             actionsRender={renderVOActions}
                             actionsColumnWidth={160}

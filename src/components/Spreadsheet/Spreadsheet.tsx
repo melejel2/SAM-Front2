@@ -295,10 +295,22 @@ function SpreadsheetInner<T>(
   const [selectionEnd, setSelectionEnd] = useState<CellPosition | null>(null);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const [formulaValue, setFormulaValue] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
+  const [searchTerm, setSearchTerm] = useState<string>(() => {
+    if (!persistKey) return "";
+    try { return JSON.parse(sessionStorage.getItem(`sheet-filters-${persistKey}`) || "{}").searchTerm || ""; } catch { return ""; }
+  });
+  const [sortColumn, setSortColumn] = useState<string | null>(() => {
+    if (!persistKey) return null;
+    try { return JSON.parse(sessionStorage.getItem(`sheet-filters-${persistKey}`) || "{}").sortColumn ?? null; } catch { return null; }
+  });
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(() => {
+    if (!persistKey) return "asc";
+    try { return JSON.parse(sessionStorage.getItem(`sheet-filters-${persistKey}`) || "{}").sortDirection || "asc"; } catch { return "asc"; }
+  });
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>(() => {
+    if (!persistKey) return {};
+    try { return JSON.parse(sessionStorage.getItem(`sheet-filters-${persistKey}`) || "{}").columnFilters || {}; } catch { return {}; }
+  });
   const [filterSearchTerms, setFilterSearchTerms] = useState<Record<string, string>>({});
   const [filterDropdownPosition, setFilterDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [openFilterDropdown, setOpenFilterDropdown] = useState<string | null>(null);
@@ -354,6 +366,12 @@ function SpreadsheetInner<T>(
     if (typeof window === "undefined") return;
     window.localStorage.setItem(`sheet-widths-${persistKey}`, JSON.stringify(columnWidths));
   }, [persistKey, columnWidths]);
+
+  // Persist filter/search/sort state to sessionStorage
+  useEffect(() => {
+    if (!persistKey) return;
+    sessionStorage.setItem(`sheet-filters-${persistKey}`, JSON.stringify({ searchTerm, sortColumn, sortDirection, columnFilters }));
+  }, [persistKey, searchTerm, sortColumn, sortDirection, columnFilters]);
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
