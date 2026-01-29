@@ -11,6 +11,7 @@ import { UnsavedChangesDialog } from "../shared/components/UnsavedChangesDialog"
 import { EditStepRenderer } from "./components/EditStepRenderer";
 import { Loader } from "@/components/Loader";
 import { useTopbarContent } from "@/contexts/topbar-content";
+import { useNavigationBlocker } from "@/contexts/navigation-blocker";
 
 // Inner component that uses the context
 const EditSubcontractWizardContent: React.FC = () => {
@@ -18,6 +19,7 @@ const EditSubcontractWizardContent: React.FC = () => {
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
     const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { setBlocking } = useNavigationBlocker();
 
     const {
         currentStep,
@@ -85,8 +87,16 @@ const EditSubcontractWizardContent: React.FC = () => {
         }
     }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
 
+    // Block navigation when there are unsaved changes (e.g., logo click)
+    useEffect(() => {
+        setBlocking(hasUnsavedChanges, "You have unsaved changes. Are you sure you want to leave?");
+        return () => setBlocking(false);
+    }, [hasUnsavedChanges, setBlocking]);
+
     // Set topbar content
     useEffect(() => {
+        // Clear any leftContent from previous pages (e.g., contracts list back button)
+        setLeftContent(null);
         // Clear any previous right content
         setRightContent(null);
 

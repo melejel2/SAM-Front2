@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import {
   sendTemplateChatMessage,
@@ -17,6 +17,8 @@ import shieldIcon from '@iconify/icons-lucide/shield';
 import scaleIcon from '@iconify/icons-lucide/scale';
 import wifiOffIcon from '@iconify/icons-lucide/wifi-off';
 import trash2Icon from '@iconify/icons-lucide/trash-2';
+import stopCircleIcon from '@iconify/icons-lucide/stop-circle';
+import messageSquareIcon from '@iconify/icons-lucide/message-square';
 
 interface Message {
   id: string;
@@ -24,6 +26,7 @@ interface Message {
   content: string;
   timestamp: Date;
   isError?: boolean;
+  isRevealing?: boolean;
 }
 
 interface QuickAction {
@@ -59,32 +62,190 @@ interface ContractAiChatProps {
   }>;
 }
 
-// Typing indicator component
-const TypingIndicator = memo(() => (
-  <div className="flex gap-4">
-    <div className="flex-shrink-0">
-      <div className="w-8 h-8 rounded-full bg-base-200 border border-base-300 flex items-center justify-center shadow-sm">
-        <Icon icon={botIcon} className="w-5 h-5 text-primary animate-pulse" />
+// Status messages that rotate during loading
+const STATUS_MESSAGES = [
+  'Thinking...',
+  'Analyzing your question...',
+  'Searching for relevant data...',
+  'Reviewing contract clauses...',
+  'Preparing response...',
+];
+
+// Simple markdown renderer for AI responses
+const FormattedText = memo(({ text }: { text: string }) => {
+  const rendered = useMemo(() => {
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
+    let listItems: string[] = [];
+    let listKey = 0;
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-0.5 my-1.5">
+            {listItems.map((item, i) => (
+              <li key={i} className="text-sm leading-relaxed">{formatInline(item)}</li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Bullet list items
+      if (/^[-*•]\s+/.test(trimmed)) {
+        listItems.push(trimmed.replace(/^[-*•]\s+/, ''));
+        continue;
+      }
+
+      // Numbered list items
+      if (/^\d+[.)]\s+/.test(trimmed)) {
+        listItems.push(trimmed.replace(/^\d+[.)]\s+/, ''));
+        continue;
+      }
+
+      flushList();
+
+      // Empty line = paragraph break
+      if (!trimmed) {
+        elements.push(<div key={`br-${i}`} className="h-2" />);
+        continue;
+      }
+
+      // Regular text paragraph
+      elements.push(
+        <p key={`p-${i}`} className="text-sm leading-relaxed">{formatInline(trimmed)}</p>
+      );
+    }
+
+    flushList();
+    return elements;
+  }, [text]);
+
+  return <div className="space-y-0.5">{rendered}</div>;
+});
+FormattedText.displayName = 'FormattedText';
+
+// Inline formatting: **bold**, *italic*, `code`
+function formatInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  // Match **bold**, *italic*, `code`
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Text before match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    if (match[2]) {
+      // **bold**
+      parts.push(<strong key={key++} className="font-semibold">{match[2]}</strong>);
+    } else if (match[3]) {
+      // *italic*
+      parts.push(<em key={key++}>{match[3]}</em>);
+    } else if (match[4]) {
+      // `code`
+      parts.push(
+        <code key={key++} className="px-1 py-0.5 bg-base-200 rounded text-xs font-mono">
+          {match[4]}
+        </code>
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length === 1 && typeof parts[0] === 'string' ? parts[0] : <>{parts}</>;
+}
+
+// Breathing avatar with glow effect - uses theme colors (bg-base-200, border-base-300, text-primary)
+const BreathingAvatar = memo(() => {
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let animationId: number;
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const intensity = (Math.sin(elapsed * Math.PI) + 1) / 2; // 0 to 1, 1s cycle
+      const scale = 1 + intensity * 0.1;
+      const tilt = intensity * 6;
+
+      if (avatarRef.current) {
+        avatarRef.current.style.transform = `scale(${scale}) rotate(${tilt}deg)`;
+        avatarRef.current.style.boxShadow = `0 0 0 ${1 + intensity * 2}px oklch(var(--p) / ${0.15 + intensity * 0.15})`;
+      }
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  return (
+    <div
+      ref={avatarRef}
+      className="w-8 h-8 rounded-full bg-base-200 border border-base-300 flex items-center justify-center shadow-sm transition-none"
+    >
+      <Icon icon={botIcon} className="w-5 h-5 text-primary" />
+    </div>
+  );
+});
+BreathingAvatar.displayName = 'BreathingAvatar';
+
+// Typing indicator with breathing avatar, bouncing dots, and rotating status
+const TypingIndicator = memo(() => {
+  const [statusIndex, setStatusIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusIndex(prev => (prev + 1) % STATUS_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex gap-3">
+      <div className="flex-shrink-0">
+        <BreathingAvatar />
+      </div>
+      <div>
+        <div className="bg-base-200 rounded-2xl rounded-bl-sm inline-flex items-center justify-center gap-2" style={{ padding: '10px 16px', minHeight: '36px' }}>
+          <div
+            className="w-2 h-2 bg-base-content/50 rounded-full"
+            style={{ animation: 'typing-bounce 1.2s ease-in-out infinite' }}
+          />
+          <div
+            className="w-2 h-2 bg-base-content/50 rounded-full"
+            style={{ animation: 'typing-bounce 1.2s ease-in-out 0.2s infinite' }}
+          />
+          <div
+            className="w-2 h-2 bg-base-content/50 rounded-full"
+            style={{ animation: 'typing-bounce 1.2s ease-in-out 0.4s infinite' }}
+          />
+        </div>
+        <div className="flex items-center gap-1.5 mt-1.5 animate-fadeIn" key={statusIndex}>
+          <Icon icon={messageSquareIcon} className="w-3 h-3 text-base-content/40" />
+          <span className="text-xs text-base-content/40">{STATUS_MESSAGES[statusIndex]}</span>
+        </div>
       </div>
     </div>
-    <div className="px-3 py-2 bg-base-200 rounded-2xl rounded-bl-sm">
-      <div className="flex gap-1">
-        <div
-          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
-          style={{ animation: 'typing-bounce 0.6s ease-in-out infinite' }}
-        />
-        <div
-          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
-          style={{ animation: 'typing-bounce 0.6s ease-in-out 0.15s infinite' }}
-        />
-        <div
-          className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
-          style={{ animation: 'typing-bounce 0.6s ease-in-out 0.3s infinite' }}
-        />
-      </div>
-    </div>
-  </div>
-));
+  );
+});
 TypingIndicator.displayName = 'TypingIndicator';
 
 // Message bubble component
@@ -135,8 +296,12 @@ const MessageBubble = memo(({
             {isError ? 'Error' : 'Contract AI'}
           </span>
         )}
-        <div className={`text-sm leading-relaxed whitespace-pre-wrap ${isError ? 'text-error/80' : 'text-base-content'}`}>
-          {message.content}
+        <div className={`${isError ? 'text-error/80' : 'text-base-content'}`}>
+          {isError ? (
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
+          ) : (
+            <FormattedText text={message.content} />
+          )}
         </div>
         <div className="absolute left-0 -bottom-5 text-[10px] text-base-content/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -228,9 +393,12 @@ const ContractAiChat = memo(({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
+  const [revealedText, setRevealedText] = useState<string>('');
+  const [revealingId, setRevealingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const quickActions: QuickAction[] = [
     {
@@ -280,15 +448,38 @@ const ContractAiChat = memo(({
     };
   }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks]);
 
+  // Text reveal effect
+  const revealText = useCallback((fullText: string, messageId: string) => {
+    setRevealingId(messageId);
+    setRevealedText('');
+    let index = 0;
+    const chunkSize = 4;
+    const delay = 4;
+
+    const reveal = () => {
+      index += chunkSize;
+      if (index >= fullText.length) {
+        setRevealedText(fullText);
+        setRevealingId(null);
+        return;
+      }
+      setRevealedText(fullText.slice(0, index));
+      revealTimerRef.current = setTimeout(reveal, delay);
+    };
+
+    revealTimerRef.current = setTimeout(reveal, delay);
+  }, []);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, revealedText]);
 
-  // Cleanup abort controller on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
     };
   }, []);
 
@@ -297,6 +488,12 @@ const ContractAiChat = memo(({
     const target = e.target as HTMLTextAreaElement;
     target.style.height = 'auto';
     target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+  }, []);
+
+  // Handle stop/abort
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsLoading(false);
   }, []);
 
   // Send message to AI via API
@@ -332,21 +529,22 @@ const ContractAiChat = memo(({
       }
 
       if (result.success) {
-        // Update session ID if returned
         if (result.sessionId) {
           setSessionId(result.sessionId);
         }
 
+        const messageId = Date.now().toString();
         const assistantMessage: Message = {
-          id: Date.now().toString(),
+          id: messageId,
           role: 'assistant',
           content: result.response,
           timestamp: new Date(),
+          isRevealing: true,
         };
 
         setMessages(prev => [...prev, assistantMessage]);
+        revealText(result.response, messageId);
       } else {
-        // Handle error response
         const errorMessage: Message = {
           id: Date.now().toString(),
           role: 'assistant',
@@ -354,11 +552,9 @@ const ContractAiChat = memo(({
           timestamp: new Date(),
           isError: true,
         };
-
         setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error: unknown) {
-      // Check if request was aborted
       if (error instanceof Error && error.name === 'AbortError') {
         return;
       }
@@ -371,12 +567,11 @@ const ContractAiChat = memo(({
         timestamp: new Date(),
         isError: true,
       };
-
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [templateId, contractId, sessionId, buildContext]);
+  }, [templateId, contractId, sessionId, buildContext, revealText]);
 
   // Handle send message
   const handleSend = useCallback(async (text?: string) => {
@@ -393,7 +588,6 @@ const ContractAiChat = memo(({
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -425,7 +619,18 @@ const ContractAiChat = memo(({
   const handleClearChat = useCallback(() => {
     setMessages([]);
     setSessionId(undefined);
+    setRevealingId(null);
+    setRevealedText('');
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
   }, []);
+
+  // Get display content for a message (handles text reveal)
+  const getDisplayContent = useCallback((message: Message): string => {
+    if (revealingId === message.id) {
+      return revealedText;
+    }
+    return message.content;
+  }, [revealingId, revealedText]);
 
   return (
     <div className="flex flex-col h-full bg-base-100/50 backdrop-blur-sm rounded-xl border border-base-300/50 overflow-hidden" style={{ minHeight: '400px' }}>
@@ -438,7 +643,10 @@ const ContractAiChat = memo(({
             {messages.map((message, index) => (
               <MessageBubble
                 key={message.id}
-                message={message}
+                message={{
+                  ...message,
+                  content: getDisplayContent(message),
+                }}
                 isFirstInGroup={isFirstInGroup(index)}
               />
             ))}
@@ -479,13 +687,24 @@ const ContractAiChat = memo(({
                   </button>
                 )}
               </div>
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || isLoading}
-                className="btn btn-sm btn-circle bg-base-content text-base-100 hover:bg-base-content/80 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Icon icon={sendIcon} className="w-4 h-4" />
-              </button>
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  className="btn btn-sm btn-ghost btn-circle text-error animate-pulse"
+                  title="Stop"
+                >
+                  <Icon icon={stopCircleIcon} className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim()}
+                  className="btn btn-sm btn-circle bg-base-content text-base-100 hover:bg-base-content/80 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Icon icon={sendIcon} className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </form>
@@ -496,6 +715,13 @@ const ContractAiChat = memo(({
         @keyframes typing-bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(2px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>

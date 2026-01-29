@@ -19,6 +19,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
     const [previewData, setPreviewData] = useState<{ blob: Blob; fileName: string } | null>(null);
     const [loading, setLoading] = useState(true); // Start true since preview generates immediately
     const [exporting, setExporting] = useState(false);
+    const [exportingWord, setExportingWord] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isTemplateError, setIsTemplateError] = useState(false);
 
@@ -257,6 +258,45 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
         }
     };
 
+    const exportContractWord = async () => {
+        setExportingWord(true);
+        try {
+            const token = getToken();
+            const previewModel = buildContractModel();
+
+            if (!previewModel) {
+                toaster.error("Cannot export: Contract data is not available.");
+                return;
+            }
+
+            const response = await apiRequest({
+                endpoint: "ContractsDatasets/LivePreviewWord",
+                method: "POST",
+                token: token ?? "",
+                body: previewModel,
+                responseType: "blob",
+            });
+
+            if (response && response instanceof Blob && response.size > 0) {
+                const url = window.URL.createObjectURL(response);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = (previewData?.fileName || "contract").replace(/\.pdf$/i, "") + ".docx";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else {
+                throw new Error("Failed to generate Word document.");
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to export Word document.";
+            toaster.error(errorMessage);
+        } finally {
+            setTimeout(() => setExportingWord(false), 500);
+        }
+    };
+
     if (loading) {
         return (
             <Loader
@@ -337,6 +377,22 @@ const PreviewStep: React.FC<PreviewStepProps> = ({ formData, selectedProject, se
                             <>
                                 <span className="iconify lucide--refresh-cw size-4"></span>
                                 Preview
+                            </>
+                        )}
+                    </button>
+                    <button
+                        className="btn btn-sm bg-base-200 text-base-content hover:bg-base-300 flex items-center gap-2 transition-all duration-200 ease-in-out"
+                        onClick={exportContractWord}
+                        disabled={exportingWord}>
+                        {exportingWord ? (
+                            <>
+                                <span className="loading loading-spinner loading-sm"></span>
+                                Exporting...
+                            </>
+                        ) : (
+                            <>
+                                <span className="iconify lucide--file-text size-4"></span>
+                                Export Word
                             </>
                         )}
                     </button>

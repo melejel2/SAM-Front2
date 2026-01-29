@@ -995,6 +995,7 @@ export const Topbar = () => {
   const [textIndex, setTextIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [isNotificationsDialogOpen, setIsNotificationsDialogOpen] = useState(false);
+  const [showLogoNavigateDialog, setShowLogoNavigateDialog] = useState(false);
   
   // Mock notification count - replace with real data
   const [notificationCount, setNotificationCount] = useState(0);
@@ -1025,10 +1026,23 @@ export const Topbar = () => {
         return;
       }
       event.preventDefault();
-      tryNavigate("/dashboard");
+      // If already on dashboard, no need to navigate
+      if (location.pathname === '/dashboard' || location.pathname === '/') {
+        return;
+      }
+      setShowLogoNavigateDialog(true);
     },
-    [tryNavigate]
+    [location.pathname]
   );
+
+  const handleConfirmLogoNavigate = useCallback(() => {
+    setShowLogoNavigateDialog(false);
+    navigate("/dashboard");
+  }, [navigate]);
+
+  const handleCancelLogoNavigate = useCallback(() => {
+    setShowLogoNavigateDialog(false);
+  }, []);
   
   // Dynamic text sequences based on current route - Memoized
   const logoTexts = useMemo(() => {
@@ -1203,6 +1217,36 @@ export const Topbar = () => {
           isOpen={isNotificationsDialogOpen}
           onClose={toggleNotificationsDialog}
         />
+
+        {/* Logo Navigate Confirmation Dialog */}
+        {showLogoNavigateDialog && (
+          <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                  <span className="iconify lucide--alert-triangle w-6 h-6 text-warning" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-base-content">Navigate to Dashboard</h3>
+                  <p className="text-sm text-base-content/60">Confirm navigation</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <p className="text-base-content/80">
+                  Are you sure you want to go to the dashboard? Any unsaved changes will be lost.
+                </p>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button onClick={handleCancelLogoNavigate} className="btn btn-ghost btn-sm px-6">
+                  Cancel
+                </button>
+                <button onClick={handleConfirmLogoNavigate} className="btn btn-warning btn-sm px-6">
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -1324,6 +1368,36 @@ export const Topbar = () => {
         isOpen={isNotificationsDialogOpen}
         onClose={toggleNotificationsDialog}
       />
+
+      {/* Logo Navigate Confirmation Dialog */}
+      {showLogoNavigateDialog && (
+        <div className="fixed inset-0 z-[200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[modal-fade_0.2s]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                <span className="iconify lucide--alert-triangle w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-base-content">Navigate to Dashboard</h3>
+                <p className="text-sm text-base-content/60">Confirm navigation</p>
+              </div>
+            </div>
+            <div className="mb-6">
+              <p className="text-base-content/80">
+                Are you sure you want to go to the dashboard? Any unsaved changes will be lost.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={handleCancelLogoNavigate} className="btn btn-ghost btn-sm px-6">
+                Cancel
+              </button>
+              <button onClick={handleConfirmLogoNavigate} className="btn btn-warning btn-sm px-6">
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
