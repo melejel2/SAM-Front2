@@ -293,7 +293,7 @@ const IPCsDatabase = () => {
                 toaster.success(`IPC #${row.number} generated successfully`);
                 await getIPCs();
             } else {
-                toaster.error(result.error || result.message || "Failed to generate IPC");
+                toaster.error(result.error?.message || result.message || "Failed to generate IPC");
             }
         } catch (error) {
             console.error("Error generating IPC:", error);
