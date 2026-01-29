@@ -169,10 +169,10 @@ export const VOStep1_VODetails: React.FC = () => {
                             </label>
                             <input
                                 type="text"
-                                className="input input-bordered input-sm bg-base-200"
+                                className="input input-bordered input-sm"
                                 value={formData.voNumber || ''}
-                                readOnly
-                                placeholder="Auto-generated"
+                                onChange={(e) => handleFieldChange('voNumber', e.target.value)}
+                                placeholder="VO Number"
                             />
                         </div>
 
