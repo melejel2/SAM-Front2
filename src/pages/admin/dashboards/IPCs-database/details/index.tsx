@@ -9,17 +9,20 @@ import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
 import useToast from "@/hooks/use-toast";
-import type { IpcStatus, SaveIPCVM } from "@/types/ipc";
+import type { SaveIPCVM } from "@/types/ipc";
+import IpcApprovalStatus from "../components/IpcApprovalStatus";
 import { generateIPCFileName, generateIPCZipFileName, generateIPCPreviewFileName } from "@/utils/ipc-filename";
 import { formatCurrency, formatDate, formatPercentage } from "@/utils/formatters";
 
-const getStatusBadgeClass = (status: string) => {
-    switch (status?.toLowerCase()) {
+const getStatusBadgeClass = (status: string | number | undefined) => {
+    switch (String(status ?? "").toLowerCase()) {
         case "editable":
             return "badge badge-sm badge-warning";
         case "pendingapproval":
         case "pending approval":
             return "badge badge-sm badge-info";
+        case "approved":
+            return "badge badge-sm badge-success";
         case "issued":
             return "badge badge-sm badge-success";
         default:
@@ -482,7 +485,7 @@ const IPCDetails = () => {
                             </ul>
                         </div>
 
-                        {ipcData.status !== "Issued" && (
+                        {ipcData.status === "Editable" && (
                             <button
                                 onClick={handleEditIpc}
                                 className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
@@ -529,7 +532,7 @@ const IPCDetails = () => {
                             </button>
                         )}
 
-                        {ipcData.status !== "Issued" && (
+                        {ipcData.status === "Editable" && (
                             <button
                                 onClick={handleDeleteIpc}
                                 disabled={deletingIpc}
@@ -595,6 +598,20 @@ const IPCDetails = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Approval Workflow */}
+                        {(ipcData.status === "PendingApproval" || ipcData.status === "Approved") && (
+                            <div className="card bg-base-100 border-base-300 border shadow-sm">
+                                <div className="card-body">
+                                    <IpcApprovalStatus
+                                        ipcId={ipcData.id}
+                                        ipcStatus={ipcData.status}
+                                        onApproved={() => loadIpcDetails()}
+                                        onRejected={() => loadIpcDetails()}
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Contract Information */}
                         <div className="card bg-base-100 border-base-300 border shadow-sm">

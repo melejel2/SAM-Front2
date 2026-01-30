@@ -106,7 +106,15 @@ interface IpcRow {
     _typeRaw?: string;
     isGenerated?: boolean;
     isLastForContract?: boolean;
+    currentApprovalStep?: string;
 }
+
+const APPROVAL_ROLE_LABELS: Record<string, string> = {
+    ProjectManager: "PM",
+    QuantitySurveyor: "QS",
+    ContractsManager: "CM",
+    OperationsManager: "OM",
+};
 
 const IPCsDatabase = () => {
     const {
@@ -283,8 +291,8 @@ const IPCsDatabase = () => {
     const handleGenerateIpc = async (row: any) => {
         const confirmGenerate = window.confirm(
             `Are you sure you want to generate IPC #${row.number}?\n\n` +
-            `This will finalize the IPC and change its status to "Issued". ` +
-            `Once generated, you will need to edit and save the IPC to regenerate the file.`
+            `This will generate the IPC document and submit it for approval. ` +
+            `The approval chain will be based on your role.`
         );
 
         if (!confirmGenerate) return;
@@ -490,17 +498,30 @@ const IPCsDatabase = () => {
         {
             key: "status",
             label: "Status",
-            width: 110,
+            width: 150,
             sortable: true,
             filterable: true,
             align: "center",
-            render: (value) => {
+            render: (value, row) => {
                 const statusLower = String(value).toLowerCase();
                 let badgeClass = "bg-base-200 text-base-content";
-                if (statusLower.includes("issued")) badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200";
+                if (statusLower.includes("approved")) badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200";
+                else if (statusLower.includes("issued")) badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200";
                 else if (statusLower.includes("editable")) badgeClass = "bg-amber-100 text-amber-700 border border-amber-200";
                 else if (statusLower.includes("pending")) badgeClass = "bg-sky-100 text-sky-700 border border-sky-200";
-                return <span className={`badge badge-sm ${badgeClass}`}>{value}</span>;
+                const ipcRow = row as IpcRow;
+                const awaitingRole = ipcRow?.currentApprovalStep ? APPROVAL_ROLE_LABELS[ipcRow.currentApprovalStep] || ipcRow.currentApprovalStep : null;
+                return (
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className={`badge badge-sm ${badgeClass}`}>{value}</span>
+                        {statusLower.includes("pending") && awaitingRole && (
+                            <span className="text-[10px] text-sky-600 font-medium flex items-center gap-0.5">
+                                <span className="iconify lucide--shield-check size-3" />
+                                Awaiting {awaitingRole}
+                            </span>
+                        )}
+                    </div>
+                );
             }
         },
         {
@@ -530,10 +551,12 @@ const IPCsDatabase = () => {
         }
     ], []);
 
-    // Actions renderer - single button to view details (all actions available there)
+    // Actions renderer
     const actionsRender = (row: IpcRow) => {
+        const statusLower = String(row.status).toLowerCase();
+        const isPending = statusLower.includes("pending");
         return (
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-0.5">
                 <button
                     onClick={(e) => { e.stopPropagation(); handleViewIpcDetails(row); }}
                     className="btn btn-xs btn-ghost hover:bg-primary/10 text-primary"
@@ -541,6 +564,15 @@ const IPCsDatabase = () => {
                 >
                     <Icon icon={eyeIcon} className="size-4" />
                 </button>
+                {isPending && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleViewIpcDetails(row); }}
+                        className="btn btn-xs btn-ghost hover:bg-warning/10 text-warning"
+                        title="Review Approval"
+                    >
+                        <span className="iconify lucide--shield-check size-4" />
+                    </button>
+                )}
             </div>
         );
     };
@@ -576,7 +608,7 @@ const IPCsDatabase = () => {
                             mode="view"
                             persistKey="ipcs-database"
                             actionsRender={actionsRender}
-                            actionsColumnWidth={70}
+                            actionsColumnWidth={90}
                             toolbar={toolbarContent}
                             emptyMessage="No IPCs found. Click 'Create IPC' to add one."
                             onRowDoubleClick={(row) => handleViewIpcDetails(row as IpcRow)}

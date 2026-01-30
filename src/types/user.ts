@@ -1,13 +1,14 @@
 // User Types matching the backend API
 
-export type UserRole = 
+export type UserRole =
   | 'GeneralManager'
   | 'RegionalOperationsManager'
   | 'OperationsManager'
   | 'ContractsManager'
   | 'QuantitySurveyor'
   | 'Accountant'
-  | 'Admin';
+  | 'Admin'
+  | 'ProjectManager';
 
 export interface User {
   id: number;

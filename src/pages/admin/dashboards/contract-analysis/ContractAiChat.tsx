@@ -405,25 +405,25 @@ const ContractAiChat = memo(({
       icon: alertTriangleIcon,
       label: 'Top Risks',
       subtitle: 'Key risk areas',
-      prompt: 'Quels sont les risques les plus critiques dans ce contrat que je devrais traiter en priorité?',
+      prompt: 'What are the most critical risks in this contract I should address first? Provide both client and subcontractor perspectives.',
     },
     {
       icon: fileTextIcon,
       label: 'Summary',
       subtitle: 'Contract overview',
-      prompt: 'Donne-moi un résumé de cette analyse de contrat et de sa santé globale.',
+      prompt: 'Give me a summary of this contract analysis and its overall health, from both client and subcontractor perspectives.',
     },
     {
       icon: shieldIcon,
       label: 'Recommendations',
       subtitle: 'Improve safety',
-      prompt: 'Quels changements spécifiques recommanderais-tu pour améliorer le profil de risque de ce contrat?',
+      prompt: 'What specific changes would you recommend to improve this contract risk profile? Consider both client protection and fair subcontractor terms.',
     },
     {
       icon: scaleIcon,
       label: 'Legal Concerns',
       subtitle: 'Compliance issues',
-      prompt: 'Y a-t-il des préoccupations juridiques ou de conformité dont je devrais être conscient?',
+      prompt: 'Are there any legal or compliance concerns I should be aware of? Analyze from both the client and subcontractor standpoint.',
     },
   ];
 
@@ -548,7 +548,7 @@ const ContractAiChat = memo(({
         const errorMessage: Message = {
           id: Date.now().toString(),
           role: 'assistant',
-          content: result.error || 'Une erreur est survenue. Veuillez réessayer.',
+          content: result.error || 'An error occurred. Please try again.',
           timestamp: new Date(),
           isError: true,
         };
@@ -563,7 +563,7 @@ const ContractAiChat = memo(({
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: 'Désolé, une erreur de connexion est survenue. Veuillez vérifier votre connexion et réessayer.',
+        content: 'Sorry, a connection error occurred. Please check your connection and try again.',
         timestamp: new Date(),
         isError: true,
       };
@@ -666,7 +666,7 @@ const ContractAiChat = memo(({
               onChange={e => setInputValue(e.target.value)}
               onInput={handleTextareaInput}
               onKeyDown={handleKeyDown}
-              placeholder="Posez une question sur ce contrat..."
+              placeholder="Ask a question about this contract..."
               className="w-full resize-none bg-transparent border-0 focus:outline-none focus:ring-0 placeholder-base-content/50 text-base-content px-4 pt-3 pb-0 text-sm leading-relaxed"
               style={{
                 minHeight: '44px',

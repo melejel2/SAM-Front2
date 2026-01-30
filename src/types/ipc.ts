@@ -14,6 +14,7 @@ export const FINANCIAL_CONSTANTS = {
 export enum IpcStatus {
   Editable = "Editable",
   PendingApproval = "PendingApproval",
+  Approved = "Approved",
   Issued = "Issued"
 }
 
@@ -193,6 +194,43 @@ export interface IpcDataExtended extends IpcVM {
     materials: MaterialsVM[];
 }
 
+// Approval workflow types
+export enum ApprovalAction {
+  Pending = "Pending",
+  Approved = "Approved",
+  Rejected = "Rejected",
+  AutoApproved = "AutoApproved"
+}
+
+export interface IpcApprovalStep {
+  id: number;
+  roleName: string;
+  approverRole: string;
+  approverUserId?: string;
+  approverName?: string;
+  action: string;
+  comment?: string;
+  actionDate?: string;
+  stepOrder: number;
+}
+
+export interface IpcApprovalStatus {
+  ipcId: number;
+  currentStatus: string;
+  currentApprovalStep?: string;
+  generatedByRole?: string;
+  generatedByUserId?: string;
+  steps: IpcApprovalStep[];
+}
+
+export interface ApproveIpcRequest {
+  comment?: string;
+}
+
+export interface RejectIpcRequest {
+  comment?: string;
+}
+
 // Base IPC VM
 export interface IpcVM {
   id: number;
@@ -212,6 +250,8 @@ export interface IpcVM {
   /** The trade/sheet cost code (e.g., "0302" for Waterproofing) */
   tradeCode?: string;
   contract: string;
+  currentApprovalStep?: string;
+  approvals?: IpcApprovalStep[];
 }
 
 // Enhanced Save IPC VM with new penalty fields
@@ -320,6 +360,7 @@ export interface IpcListItem {
   projectName: string;
   subcontractorId: number;
   tradeId: number;
+  currentApprovalStep?: string;
 }
 
 // API Response Types
@@ -456,7 +497,8 @@ export const IpcTypeOptions: IpcTypeOption[] = [
 
 export const IpcStatusOptions: IpcTypeOption[] = [
   { value: "Editable", label: "Editable" },
-  { value: "Pending Approval", label: "Pending Approval" },
+  { value: "PendingApproval", label: "Pending Approval" },
+  { value: "Approved", label: "Approved" },
   { value: "Issued", label: "Issued" }
 ];
 

@@ -39,6 +39,37 @@ const FILTER_OPTIONS = [
   { value: 'Low', label: 'Low' },
 ];
 
+// Renders CLIENT / SUBCONTRACTOR dual-perspective recommendations
+const DualPerspective = ({ text }: { text: string }) => {
+  const clientMatch = text.match(/CLIENT:\s*(.*?)(?=\s*SUBCONTRACTOR:|$)/is);
+  const subMatch = text.match(/SUBCONTRACTOR:\s*(.*?)$/is);
+
+  if (!clientMatch && !subMatch) {
+    return <p className="mt-2 text-xs text-base-content/70">{text}</p>;
+  }
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      {clientMatch?.[1]?.trim() && (
+        <div className="flex gap-2 text-xs">
+          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">
+            Client
+          </span>
+          <span className="text-base-content/70">{clientMatch[1].trim()}</span>
+        </div>
+      )}
+      {subMatch?.[1]?.trim() && (
+        <div className="flex gap-2 text-xs">
+          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">
+            Subcontractor
+          </span>
+          <span className="text-base-content/70">{subMatch[1].trim()}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Score Ring Component - compact circular progress
 const ScoreRing = ({ score, size = 120 }: { score: number; size?: number }) => {
   const status = getHealthStatus(score);
@@ -247,18 +278,18 @@ const ClauseDetailDialog = ({
                       >
                         {risk.level}
                       </span>
-                      <span className="text-xs text-base-content/60">{risk.category}</span>
+                      <span className="text-xs text-base-content/60">{risk.categoryEn || risk.category}</span>
                     </div>
-                    {risk.riskDescription && (
-                      <p className="text-sm mb-1">{risk.riskDescription}</p>
+                    {(risk.riskDescriptionEn || risk.riskDescription) && (
+                      <p className="text-sm mb-1">{risk.riskDescriptionEn || risk.riskDescription}</p>
                     )}
                     {risk.matchedText && (
                       <div className="mt-2 p-2 bg-base-200/50 rounded text-xs italic border-l-2 border-base-300">
                         "{risk.matchedText}"
                       </div>
                     )}
-                    {risk.recommendation && (
-                      <p className="mt-2 text-xs text-base-content/70">{risk.recommendation}</p>
+                    {(risk.recommendationEn || risk.recommendation) && (
+                      <DualPerspective text={risk.recommendationEn || risk.recommendation || ''} />
                     )}
                   </div>
                 ))}
@@ -448,9 +479,9 @@ export default function ContractDetailsPage() {
               </p>
               {/* Delta from template */}
               {report.deltaFromTemplate !== 0 && (
-                <div className={`mt-1 flex items-center gap-1 text-xs ${report.deltaFromTemplate > 0 ? 'text-success' : 'text-error'}`}>
-                  <Icon icon={report.deltaFromTemplate > 0 ? trendingUpIcon : trendingDownIcon} className="size-3" />
-                  <span>{report.deltaFromTemplate > 0 ? '+' : ''}{report.deltaFromTemplate} vs template</span>
+                <div className={`mt-1 flex items-center gap-1 text-xs ${report.deltaFromTemplate > 0 ? 'text-error' : 'text-success'}`}>
+                  <Icon icon={report.deltaFromTemplate > 0 ? trendingDownIcon : trendingUpIcon} className="size-3" />
+                  <span>{report.deltaFromTemplate > 0 ? '-' : '+'}{Math.abs(report.deltaFromTemplate)} vs template</span>
                 </div>
               )}
             </div>

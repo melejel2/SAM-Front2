@@ -4,12 +4,13 @@ import { useAuth } from "@/contexts/auth";
 import { ipcApiService } from "@/api/services/ipc-api";
 import type { IpcListItem } from "@/types/ipc";
 
-const getStatusText = (status: string): string => {
-    const statusLower = status?.toLowerCase() || '';
+const getStatusText = (status: string | number | undefined): string => {
+    const statusLower = String(status ?? '').toLowerCase();
     if (statusLower.includes('editable')) return 'Editable';
+    if (statusLower.includes('approved')) return 'Approved';
     if (statusLower.includes('issued')) return 'Issued';
     if (statusLower.includes('pending')) return 'Pending Approval';
-    return status;
+    return String(status ?? '');
 };
 
 const getTypeText = (type: string): string => {
@@ -83,7 +84,7 @@ const useIPCsDatabase = () => {
             label: "Status",
             type: "select",
             required: true,
-            options: ["Editable", "Pending Approval", "Issued"],
+            options: ["Editable", "Pending Approval", "Approved", "Issued"],
         },
         {
             name: "type",
@@ -175,7 +176,7 @@ const useIPCsDatabase = () => {
     const smartPreviewIpc = async (ipcId: string, status: string, isGenerated: boolean) => {
         try {
             const statusLower = status?.toLowerCase() || '';
-            const isIssued = statusLower.includes('issued') || isGenerated;
+            const isIssued = statusLower.includes('issued') || statusLower.includes('approved') || isGenerated;
 
             if (isIssued) {
                 // IPC is already generated - load saved file from database
@@ -221,7 +222,7 @@ const useIPCsDatabase = () => {
     const smartDownloadIpcExcel = async (ipcId: string, status: string, isGenerated: boolean) => {
         try {
             const statusLower = status?.toLowerCase() || '';
-            const isIssued = statusLower.includes('issued') || isGenerated;
+            const isIssued = statusLower.includes('issued') || statusLower.includes('approved') || isGenerated;
 
             if (isIssued) {
                 // IPC is already generated - load saved file from database

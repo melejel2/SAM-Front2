@@ -7,6 +7,7 @@ import type { IpcListItem } from "@/types/ipc";
 const getStatusText = (status: string): string => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower.includes('editable')) return 'Editable';
+    if (statusLower.includes('approved')) return 'Approved';
     if (statusLower.includes('issued')) return 'Issued';
     if (statusLower.includes('pending')) return 'Pending Approval';
     return status;
@@ -104,7 +105,7 @@ const useContractIPCs = ({ contractId }: UseContractIPCsProps) => {
         try {
             const currentToken = getToken() ?? "";
             const statusLower = status?.toLowerCase() || '';
-            const isIssued = statusLower.includes('issued') || isGenerated;
+            const isIssued = statusLower.includes('issued') || statusLower.includes('approved') || isGenerated;
 
             if (isIssued) {
                 // IPC is already generated - load saved file from database
@@ -132,7 +133,7 @@ const useContractIPCs = ({ contractId }: UseContractIPCsProps) => {
         try {
             const currentToken = getToken() ?? "";
             const statusLower = status?.toLowerCase() || '';
-            const isIssued = statusLower.includes('issued') || isGenerated;
+            const isIssued = statusLower.includes('issued') || statusLower.includes('approved') || isGenerated;
 
             if (isIssued) {
                 const response = await ipcApiService.exportIpcExcel(ipcId, currentToken);

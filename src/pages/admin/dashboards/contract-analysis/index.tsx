@@ -472,25 +472,49 @@ const ScanResultModal = memo(({
           <div>
             <h4 className="font-semibold mb-2">Top Risks</h4>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {result.topRisks.slice(0, 5).map((risk, i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-lg border border-base-300 bg-base-200/50"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className="px-2 py-0.5 rounded text-xs font-semibold text-white"
-                      style={{ backgroundColor: RiskLevelColors[risk.level as keyof typeof RiskLevelColors] || '#6b7280' }}
-                    >
-                      {risk.level}
-                    </span>
-                    <span className="text-xs text-base-content/60">
-                      {risk.category}
-                    </span>
+              {result.topRisks.slice(0, 5).map((risk, i) => {
+                const desc = risk.riskDescriptionEn || risk.riskDescription || '';
+                const rec = risk.recommendationEn || risk.recommendation || '';
+                const clientMatch = rec.match(/CLIENT:\s*(.*?)(?=\s*SUBCONTRACTOR:|$)/is);
+                const subMatch = rec.match(/SUBCONTRACTOR:\s*(.*?)$/is);
+                return (
+                  <div
+                    key={i}
+                    className="p-3 rounded-lg border border-base-300 bg-base-200/50"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-semibold text-white"
+                        style={{ backgroundColor: RiskLevelColors[risk.level as keyof typeof RiskLevelColors] || '#6b7280' }}
+                      >
+                        {risk.level}
+                      </span>
+                      <span className="text-xs text-base-content/60">
+                        {risk.categoryEn || risk.category}
+                      </span>
+                    </div>
+                    <p className="text-sm">{desc}</p>
+                    {rec && (clientMatch || subMatch) ? (
+                      <div className="mt-2 space-y-1.5">
+                        {clientMatch?.[1]?.trim() && (
+                          <div className="flex gap-2 text-xs">
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">Client</span>
+                            <span className="text-base-content/70">{clientMatch[1].trim()}</span>
+                          </div>
+                        )}
+                        {subMatch?.[1]?.trim() && (
+                          <div className="flex gap-2 text-xs">
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">Subcontractor</span>
+                            <span className="text-base-content/70">{subMatch[1].trim()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : rec ? (
+                      <p className="mt-1 text-xs text-base-content/70">{rec}</p>
+                    ) : null}
                   </div>
-                  <p className="text-sm">{risk.riskDescription}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

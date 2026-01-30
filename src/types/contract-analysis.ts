@@ -57,11 +57,14 @@ export interface RiskAssessment {
   id: number;
   category: string;
   categoryFr: string;
+  categoryEn: string;
   level: string;
   levelFr: string;
   score: number;
   riskDescription?: string;
+  riskDescriptionEn?: string;
   recommendation?: string;
+  recommendationEn?: string;
   matchedText?: string;
 }
 

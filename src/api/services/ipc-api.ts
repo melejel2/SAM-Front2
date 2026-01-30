@@ -1,4 +1,5 @@
 import type {
+    ApproveIpcRequest,
     BackendDataWrapper,
     ContractBuildingsVM,
     CorrectPreviousValueRequest,
@@ -7,8 +8,10 @@ import type {
     CorrectionResultDTO,
     CreateIpcRequest,
     IpcApiResponse,
+    IpcApprovalStatus,
     IpcListItem,
     IpcSummaryData,
+    RejectIpcRequest,
     SaveIPCVM,
     UpdateIpcRequest,
 } from "../../types/ipc";
@@ -482,6 +485,100 @@ class IpcApiService {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : "Failed to export IPC Excel",
+            };
+        }
+    }
+
+    // ============================================
+    // IPC Approval Workflow
+    // ============================================
+
+    /**
+     * Approve an IPC at the current approval step.
+     * POST /api/Ipc/ApproveIpc/{id}
+     */
+    async approveIpc(
+        ipcId: number,
+        token: string,
+        comment?: string,
+    ): Promise<IpcApiResponse<{ message: string }>> {
+        try {
+            const body: ApproveIpcRequest = { comment };
+            const response = await apiRequest<{ message: string }>({
+                endpoint: `Ipc/ApproveIpc/${ipcId}`,
+                method: "POST",
+                token,
+                body: body as unknown as Record<string, unknown>,
+            });
+
+            return {
+                success: true,
+                data: response as { message: string },
+            };
+        } catch (error) {
+            console.error("Error approving IPC:", error);
+            return {
+                success: false,
+                error: { message: error instanceof Error ? error.message : "Failed to approve IPC" },
+            };
+        }
+    }
+
+    /**
+     * Reject an IPC at the current approval step. Reverts IPC to Editable.
+     * POST /api/Ipc/RejectIpc/{id}
+     */
+    async rejectIpc(
+        ipcId: number,
+        token: string,
+        comment?: string,
+    ): Promise<IpcApiResponse<{ message: string }>> {
+        try {
+            const body: RejectIpcRequest = { comment };
+            const response = await apiRequest<{ message: string }>({
+                endpoint: `Ipc/RejectIpc/${ipcId}`,
+                method: "POST",
+                token,
+                body: body as unknown as Record<string, unknown>,
+            });
+
+            return {
+                success: true,
+                data: response as { message: string },
+            };
+        } catch (error) {
+            console.error("Error rejecting IPC:", error);
+            return {
+                success: false,
+                error: { message: error instanceof Error ? error.message : "Failed to reject IPC" },
+            };
+        }
+    }
+
+    /**
+     * Get the approval workflow status for an IPC.
+     * GET /api/Ipc/GetApprovalStatus/{id}
+     */
+    async getApprovalStatus(
+        ipcId: number,
+        token: string,
+    ): Promise<IpcApiResponse<IpcApprovalStatus>> {
+        try {
+            const response = await apiRequest<IpcApprovalStatus>({
+                endpoint: `Ipc/GetApprovalStatus/${ipcId}`,
+                method: "GET",
+                token,
+            });
+
+            return {
+                success: true,
+                data: response as IpcApprovalStatus,
+            };
+        } catch (error) {
+            console.error("Error fetching approval status:", error);
+            return {
+                success: false,
+                error: { message: error instanceof Error ? error.message : "Failed to fetch approval status" },
             };
         }
     }
