@@ -600,7 +600,7 @@ const IPCDetails = () => {
                         </div>
 
                         {/* Approval Workflow */}
-                        {(ipcData.status === "PendingApproval" || ipcData.status === "Approved") && (
+                        {(ipcData.status === "PendingApproval" || ipcData.status === "Approved" || ipcData.status === "Issued") && (
                             <div className="card bg-base-100 border-base-300 border shadow-sm">
                                 <div className="card-body">
                                     <IpcApprovalStatus
