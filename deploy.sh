@@ -103,15 +103,10 @@ if [ ! -d "$BUILD_DIR" ]; then
         error "Build failed!"
         exit 1
     fi
+    success "Build completed successfully"
 else
-    info "Existing build found. Rebuilding for fresh deployment..."
-    npm run build
-    if [ $? -ne 0 ]; then
-        error "Build failed!"
-        exit 1
-    fi
+    success "Existing build found, skipping rebuild"
 fi
-success "Build completed successfully"
 
 # ============================================================================
 # STEP 3: VALIDATE BUILD OUTPUT
