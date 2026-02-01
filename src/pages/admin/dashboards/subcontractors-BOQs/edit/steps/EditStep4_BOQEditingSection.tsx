@@ -323,7 +323,7 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = memo(({
     }, [deleteBOQItem]);
 
     // Summary row
-    const summaryRow = useCallback((rows: DisplayBOQItem[]) => {
+    const summaryRow = useCallback((rows: DisplayBOQItem[], meta?: { gridTemplateColumns: string }) => {
         const actualRows = rows.filter(r => !r._isEmptyRow);
         if (actualRows.length === 0) return null;
 
@@ -333,9 +333,30 @@ export const EditBOQEditingSection: React.FC<BOQEditingSectionProps> = memo(({
         }, 0);
 
         return (
-            <div className="flex items-center justify-between px-4 py-3 bg-base-200 border-t-2 border-base-300 font-bold">
-                <span className="text-base-content">TOTAL</span>
-                <span className="text-lg font-bold text-primary">{formatCurrency(total)}</span>
+            <div
+                className="spreadsheet-grid-base font-semibold text-xs bg-base-200"
+                style={{ gridTemplateColumns: meta?.gridTemplateColumns, minHeight: 36 }}
+            >
+                {/* Row number */}
+                <div className="spreadsheet-row-number flex items-center justify-center border-r border-b border-base-300 bg-base-200">Σ</div>
+                {/* Ref# */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Description */}
+                <div className="flex items-center px-3 border-r border-b border-base-300">Totals</div>
+                {/* Cost Code */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Unit */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Quantity */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Unit Price */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Total Price */}
+                <div className="flex items-center justify-end px-3 border-r border-b border-base-300 text-primary">
+                    {formatCurrency(total)}
+                </div>
+                {/* Actions */}
+                <div className="border-b border-base-300"></div>
             </div>
         );
     }, []);

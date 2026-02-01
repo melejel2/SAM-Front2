@@ -70,6 +70,8 @@
   --accent-soft: rgb(59 130 246 / 0.35);
   --sheet-grid-shadow: 0 25px 55px -30px rgba(0, 0, 0, 0.6);
   --sheet-shell-shadow: 0 40px 90px -50px rgba(0, 0, 0, 0.7);
+  --total-row-bg: oklch(24% 0.01 260);
+  --subtotal-row-bg: oklch(26% 0.01 260);
   --border-color: var(--sheet-border-soft);
   --cell-bg: var(--sheet-surface);
   --cell-bg-solid: var(--sheet-surface);

@@ -1,4 +1,5 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import plusIcon from "@iconify/icons-lucide/plus";
 import pencilIcon from "@iconify/icons-lucide/pencil";
@@ -9,6 +10,7 @@ import xIcon from "@iconify/icons-lucide/x";
 import hardHatIcon from "@iconify/icons-lucide/hard-hat";
 import cogIcon from "@iconify/icons-lucide/cog";
 import packageIcon from "@iconify/icons-lucide/package";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 
 import { Button, Input, Modal, ModalActions, ModalBody, ModalHeader, Select, SelectOption } from "@/components/daisyui";
 import { Spreadsheet } from "@/components/Spreadsheet";
@@ -16,6 +18,7 @@ import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { Loader } from "@/components/Loader";
 import { UnifiedDeduction } from "@/api/services/deductionsApi";
 import { useArchive } from "@/contexts/archive";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 import useUnifiedDeductions from "./use-unified-deductions";
 import useDeductionsManager from "./use-deductions-manager";
@@ -48,6 +51,8 @@ interface MaterialType {
 
 const UnifiedDeductionsPage = memo(() => {
     const { isArchiveMode } = useArchive();
+    const navigate = useNavigate();
+    const { setAllContent, clearContent } = useTopbarContent();
 
     const {
         deductions,
@@ -92,6 +97,26 @@ const UnifiedDeductionsPage = memo(() => {
         laborTypeId: undefined as number | undefined,
         machineCodeId: undefined as number | undefined,
     });
+
+    const handleBackToDashboard = useCallback(() => {
+        navigate("/dashboard");
+    }, [navigate]);
+
+    useEffect(() => {
+        setAllContent(
+            <button
+                onClick={handleBackToDashboard}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Dashboard"
+            >
+                <Icon icon={arrowLeftIcon} className="size-5" />
+            </button>,
+            null,
+            null
+        );
+
+        return () => clearContent();
+    }, [setAllContent, clearContent, handleBackToDashboard]);
 
     // Main table columns configuration for Spreadsheet
     const columns = useMemo((): SpreadsheetColumn<UnifiedDeduction>[] => [

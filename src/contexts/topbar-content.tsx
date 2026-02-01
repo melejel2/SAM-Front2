@@ -10,6 +10,7 @@ interface TopbarContentContextType extends TopbarContentState {
   setLeftContent: (content: ReactNode | null) => void;
   setCenterContent: (content: ReactNode | null) => void;
   setRightContent: (content: ReactNode | null) => void;
+  setAllContent: (left: ReactNode | null, center: ReactNode | null, right: ReactNode | null) => void;
   clearContent: () => void;
 }
 
@@ -87,6 +88,16 @@ export const TopbarContentProvider: React.FC<{ children: ReactNode }> = ({ child
     setContent(prev => ({ ...prev, rightContent }));
   }, [shouldAllowUpdate]);
 
+  const setAllContent = useCallback((leftContent: ReactNode | null, centerContent: ReactNode | null, rightContent: ReactNode | null) => {
+    if (!mountedRef.current) return;
+    if (!shouldAllowUpdate()) return;
+    if (pendingClearRef.current) {
+      clearTimeout(pendingClearRef.current);
+      pendingClearRef.current = null;
+    }
+    setContent({ leftContent, centerContent, rightContent });
+  }, [shouldAllowUpdate]);
+
   const clearContent = useCallback(() => {
     // Debounce clear to prevent rapid clear/set cycles during route transitions
     if (pendingClearRef.current) {
@@ -111,6 +122,7 @@ export const TopbarContentProvider: React.FC<{ children: ReactNode }> = ({ child
         setLeftContent,
         setCenterContent,
         setRightContent,
+        setAllContent,
         clearContent,
       }}
     >

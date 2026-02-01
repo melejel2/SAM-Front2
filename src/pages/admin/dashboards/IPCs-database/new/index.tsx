@@ -20,7 +20,7 @@ const NewIPCWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
-    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { tryNavigate, setBlocking } = useNavigationBlocker();
 
     const {
@@ -72,15 +72,19 @@ const NewIPCWizardContent: React.FC = () => {
         }
     }, [handleSubmit, navigate, backDestination, toaster]);
 
-    const handleBackClick = useCallback(() => {
-        if (currentStep === firstStep && hasUnsavedChanges) {
+    const handleExitForm = useCallback(() => {
+        if (hasUnsavedChanges) {
             setShowBackConfirmDialog(true);
-        } else if (currentStep === firstStep) {
-            navigate(backDestination);
         } else {
+            navigate(backDestination);
+        }
+    }, [hasUnsavedChanges, navigate, backDestination]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep > firstStep) {
             goToPreviousStep();
         }
-    }, [currentStep, firstStep, hasUnsavedChanges, navigate, backDestination, goToPreviousStep]);
+    }, [currentStep, firstStep, goToPreviousStep]);
 
     const handleNextClick = useCallback(() => {
         if (validateCurrentStep()) {
@@ -105,30 +109,27 @@ const NewIPCWizardContent: React.FC = () => {
 
     // Set topbar content
     useEffect(() => {
-        // Clear any previous right content
-        setRightContent(null);
-
-        // Left content: Back button to exit wizard
-        setLeftContent(
+        const leftContent = currentStep <= firstStep ? (
             <button
-                onClick={() => tryNavigate(backDestination)}
-                className="btn btn-sm btn-ghost gap-1 text-base-content hover:bg-base-200"
+                onClick={handleExitForm}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
                 title="Back to IPCs"
             >
                 <Icon icon={arrowLeftIcon} className="w-4 h-4" />
             </button>
-        );
+        ) : null;
 
-        // Center content: Step indicator with back/next arrows
-        setCenterContent(
+        const centerContent = (
             <div className="flex items-center gap-3">
-                <button
-                    onClick={handleBackClick}
-                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
-                    title="Back"
-                >
-                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                </button>
+                {currentStep > firstStep && (
+                    <button
+                        onClick={handleBackClick}
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        title="Previous step"
+                    >
+                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                    </button>
+                )}
                 <IPCStepIndicator currentStep={currentStep} />
                 {currentStep < 4 ? (
                     <button
@@ -159,10 +160,12 @@ const NewIPCWizardContent: React.FC = () => {
             </div>
         );
 
+        setAllContent(leftContent, centerContent, null);
+
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, previewLoading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setLeftContent, setCenterContent, setRightContent, clearContent, tryNavigate, backDestination]);
+    }, [currentStep, firstStep, loading, previewLoading, handleExitForm, handleBackClick, handleNextClick, handleSubmitAndNavigate, setAllContent, clearContent]);
 
     if (loading && currentStep === firstStep) {
         return (

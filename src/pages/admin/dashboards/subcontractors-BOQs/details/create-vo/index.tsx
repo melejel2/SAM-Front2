@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
+import arrowRightIcon from "@iconify/icons-lucide/arrow-right";
+import checkIcon from "@iconify/icons-lucide/check";
 import { ContractVOWizardProvider, useContractVOWizardContext } from "./context/ContractVOWizardContext";
 import { ContractVOStepIndicator } from "./components/ContractVOStepIndicator";
 import useToast from "@/hooks/use-toast";
 import { UnsavedChangesDialog } from "../../shared/components/UnsavedChangesDialog";
 import { ContractVOStepRenderer } from "./components/ContractVOStepRenderer";
 import { Loader } from "@/components/Loader";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 // Inner component that uses the context
 const CreateContractVOContent: React.FC = () => {
@@ -14,6 +19,7 @@ const CreateContractVOContent: React.FC = () => {
     const location = useLocation();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
+    const { setAllContent, clearContent } = useTopbarContent();
     
     // Get actual contract ID from navigation state (for API calls)
     const contractId = location.state?.contractId;
@@ -25,10 +31,10 @@ const CreateContractVOContent: React.FC = () => {
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
-        handleSubmit,
-        contractData,
-        isUpdate
+        handleSubmit
     } = useContractVOWizardContext();
+
+    const firstStep = 1;
 
     const handleConfirmBack = () => {
         setShowBackConfirmDialog(false);
@@ -41,7 +47,7 @@ const CreateContractVOContent: React.FC = () => {
         setShowBackConfirmDialog(false);
     };
 
-    const handleSubmitAndNavigate = async () => {
+    const handleSubmitAndNavigate = useCallback(async () => {
         await handleSubmit();
         // If submission was successful, navigate back to contract details
         if (!loading) {
@@ -49,7 +55,100 @@ const CreateContractVOContent: React.FC = () => {
                 state: { contractId }
             });
         }
-    };
+    }, [handleSubmit, loading, navigate, contractIdentifier, contractId]);
+
+    const handleExitForm = useCallback(() => {
+        if (hasUnsavedChanges) {
+            setShowBackConfirmDialog(true);
+        } else {
+            navigate(`/dashboard/contracts/details/${contractIdentifier}`, {
+                state: { contractId }
+            });
+        }
+    }, [hasUnsavedChanges, navigate, contractIdentifier, contractId]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep > firstStep) {
+            goToPreviousStep();
+        }
+    }, [currentStep, firstStep, goToPreviousStep]);
+
+    const handleNextClick = useCallback(() => {
+        if (validateCurrentStep()) {
+            goToNextStep();
+        } else {
+            // Show validation errors based on current step
+            switch (currentStep) {
+                case 1:
+                    toaster.error("Please fill in all required VO information and select at least one building");
+                    break;
+                case 2:
+                    toaster.error("Please add at least one VO line item. Items with units must have quantity and unit price greater than 0.");
+                    break;
+                default:
+                    toaster.error("Please complete all required fields");
+            }
+        }
+    }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
+
+    useEffect(() => {
+        const leftContent = currentStep <= firstStep ? (
+            <button
+                onClick={handleExitForm}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Contract"
+            >
+                <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+            </button>
+        ) : null;
+
+        const centerContent = (
+            <div className="flex items-center gap-3">
+                {currentStep > firstStep && (
+                    <button
+                        onClick={handleBackClick}
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        title="Previous step"
+                    >
+                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                    </button>
+                )}
+                <ContractVOStepIndicator currentStep={currentStep} />
+                {currentStep < 3 ? (
+                    <button
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        onClick={handleNextClick}
+                        disabled={loading}
+                        title="Next step"
+                    >
+                        <Icon icon={arrowRightIcon} className="w-4 h-4" />
+                    </button>
+                ) : (
+                    <button
+                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
+                        onClick={handleSubmitAndNavigate}
+                        disabled={loading}
+                        title="Save and Close"
+                    >
+                        {loading ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <>
+                                <Icon icon={checkIcon} className="w-4 h-4" />
+                                <span>Save & Close</span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+        );
+
+        setAllContent(leftContent, centerContent, null);
+
+        return () => {
+            clearContent();
+        };
+    }, [currentStep, firstStep, loading, handleExitForm, handleBackClick, handleNextClick, handleSubmitAndNavigate, setAllContent, clearContent]);
 
     if (loading && currentStep === 1) {
         return (
@@ -175,77 +274,6 @@ const CreateContractVOContent: React.FC = () => {
                 }
             `}</style>
             {/* Contract context banner - removed to avoid duplication */}
-
-            {/* Navigation and Timeline */}
-            <div className="flex justify-between items-center mb-6">
-                <button
-                    onClick={currentStep === 1 && hasUnsavedChanges
-                        ? () => setShowBackConfirmDialog(true)
-                        : currentStep === 1
-                            ? () => navigate(`/dashboard/contracts/details/${contractIdentifier}`, {
-                                state: { contractId }
-                            })
-                            : goToPreviousStep
-                    }
-                    className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                >
-                    <span className="iconify lucide--arrow-left size-4"></span>
-                    <span>Back</span>
-                </button>
-                
-                {/* Step Indicator */}
-                <div className="flex-1 flex justify-center">
-                    <ContractVOStepIndicator currentStep={currentStep} />
-                </div>
-
-                {/* Next/Save Button */}
-                <div>
-                    {currentStep < 3 ? (
-                        <button
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            onClick={() => {
-                                if (validateCurrentStep()) {
-                                    goToNextStep();
-                                } else {
-                                    // Show validation errors based on current step
-                                    switch (currentStep) {
-                                        case 1:
-                                            toaster.error("Please fill in all required VO information and select at least one building");
-                                            break;
-                                        case 2:
-                                            toaster.error("Please add at least one VO line item. Items with units must have quantity and unit price greater than 0.");
-                                            break;
-                                        default:
-                                            toaster.error("Please complete all required fields");
-                                    }
-                                }
-                            }}
-                            disabled={loading}
-                        >
-                            <span>Next</span>
-                            <span className="iconify lucide--arrow-right size-4"></span>
-                        </button>
-                    ) : (
-                        <button
-                            className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2"
-                            onClick={handleSubmitAndNavigate}
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <>
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    {isUpdate ? "Saving VO..." : "Creating VO..."}
-                                </>
-                            ) : (
-                                <>
-                                    <span>Save</span>
-                                    <span className="iconify lucide--check size-4"></span>
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
 
             {/* Step Content */}
             <ContractVOStepRenderer />

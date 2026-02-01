@@ -75,34 +75,32 @@ const Reports = () => {
         };
     }, [handleBackToDashboard, setLeftContent, clearContent]);
 
+    const downloadBlob = (blob: Blob, defaultFilename: string) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", defaultFilename);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    };
+
     const handleExport = async (project: Project) => {
         setExportingId(`kpi_${project.id}`);
         try {
             const token = getToken();
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            const res = await fetch(`https://localhost:7055/api/Reports/ExportKPIReport?projectId=${project.id}`, {
+            const blob = await apiRequest<Blob>({
+                endpoint: `Reports/ExportKPIReport?projectId=${project.id}`,
                 method: "GET",
-                credentials: "include",
-                headers,
+                responseType: "blob",
+                token: token || undefined,
             });
-            if (!res.ok) throw new Error("Failed to export");
-            const blob = await res.blob();
-            let filename = `KPI-Report-${project.name}.xlsx`;
-            const disp = res.headers.get("content-disposition");
-            if (disp && disp.indexOf("filename=") !== -1) {
-                filename = disp.split("filename=")[1].replace(/['"]/g, "").split(";")[0];
+            if (blob instanceof Blob) {
+                downloadBlob(blob, `KPI-Report-${project.name}.xlsx`);
+            } else {
+                throw new Error("Failed to export");
             }
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert("Export failed");
         } finally {
@@ -116,33 +114,17 @@ const Reports = () => {
             const token = getToken();
             const trade = sheets.find((sheet: any) => sheet.id === parseInt(selectedTrade, 10));
             const tradeName = trade ? trade.name : "";
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
+            const blob = await apiRequest<Blob>({
+                endpoint: `Reports/ExportReportsComp?projectId=${project.id}&tradeName=${tradeName}`,
+                method: "GET",
+                responseType: "blob",
+                token: token || undefined,
+            });
+            if (blob instanceof Blob) {
+                downloadBlob(blob, `Report-Comp-${project.name}.xlsx`);
+            } else {
+                throw new Error("Failed to export");
             }
-            const res = await fetch(
-                `https://localhost:7055/api/Reports/ExportReportsComp?projectId=${project.id}&tradeName=${tradeName}`,
-                {
-                    method: "GET",
-                    credentials: "include",
-                    headers,
-                },
-            );
-            if (!res.ok) throw new Error("Failed to export");
-            const blob = await res.blob();
-            let filename = `Report-Comp-${project.name}.xlsx`;
-            const disp = res.headers.get("content-disposition");
-            if (disp && disp.indexOf("filename=") !== -1) {
-                filename = disp.split("filename=")[1].replace(/['"]/g, "").split(";")[0];
-            }
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert("Export failed");
         } finally {
@@ -156,33 +138,17 @@ const Reports = () => {
             const token = getToken();
             const trade = sheets.find((sheet: any) => sheet.id === parseInt(selectedTrade, 10));
             const tradeName = trade ? trade.name : "";
-            const headers: Record<string, string> = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
+            const blob = await apiRequest<Blob>({
+                endpoint: `Reports/ExportReportsCompProgress?projectId=${project.id}&tradeName=${tradeName}`,
+                method: "GET",
+                responseType: "blob",
+                token: token || undefined,
+            });
+            if (blob instanceof Blob) {
+                downloadBlob(blob, `Report-Progress-${project.name}.xlsx`);
+            } else {
+                throw new Error("Failed to export");
             }
-            const res = await fetch(
-                `https://localhost:7055/api/Reports/ExportReportsCompProgress?projectId=${project.id}&tradeName=${tradeName}`,
-                {
-                    method: "GET",
-                    credentials: "include",
-                    headers,
-                },
-            );
-            if (!res.ok) throw new Error("Failed to export");
-            const blob = await res.blob();
-            let filename = `Report-Progress-${project.name}.xlsx`;
-            const disp = res.headers.get("content-disposition");
-            if (disp && disp.indexOf("filename=") !== -1) {
-                filename = disp.split("filename=")[1].replace(/['"]/g, "").split(";")[0];
-            }
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert("Export failed");
         } finally {

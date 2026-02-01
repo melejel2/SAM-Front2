@@ -43,25 +43,31 @@ const InfoTab = ({
     // Note: advancePayment field stores total BOQ amount (legacy), NOT a percentage
     const advancePercentage = parseFloat(contractData?.subcontractorAdvancePayee) || 0;
 
+    const advanceAmount = totalAmount * (advancePercentage / 100);
+
     return (
-        <div className="h-full overflow-auto">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Main Contract Info */}
-            <div className="card bg-base-100 border-base-300 border shadow-sm">
-                <div className="card-body">
-                    <h3 className="card-title text-base-content flex items-center gap-2">
-                        <span className="iconify lucide--file-text size-5 text-purple-600"></span>
-                        Contract Information
-                    </h3>
-                    <div className="mt-4 space-y-3">
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Contract Number:</span>
-                            <span className="text-base-content font-semibold">
-                                {contractData?.contractNumber || navigationData?.contractNumber || "-"}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Status:</span>
+        <div className="h-full overflow-auto space-y-6">
+            {/* Contract Overview */}
+            <div className="bg-base-100 border border-base-300 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <span className="iconify lucide--file-text size-5"></span>
+                    </div>
+                    <div>
+                        <h3 className="text-base font-semibold text-base-content">Contract Overview</h3>
+                        <p className="text-xs text-base-content/60">Key identifiers and dates</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="rounded-xl border border-base-300 bg-base-100/70 p-3">
+                        <p className="text-xs text-base-content/60">Contract Number</p>
+                        <p className="text-sm font-semibold text-base-content mt-1">
+                            {contractData?.contractNumber || navigationData?.contractNumber || "-"}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-base-300 bg-base-100/70 p-3">
+                        <p className="text-xs text-base-content/60">Status</p>
+                        <div className="mt-1">
                             <span className={`badge badge-sm ${
                                 contractData?.contractDatasetStatus === "Terminated"
                                     ? "badge-error"
@@ -72,91 +78,130 @@ const InfoTab = ({
                                 {contractData?.contractDatasetStatus || "Active"}
                             </span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Contract Date:</span>
-                            <span className="text-base-content">
-                                {formatDate(contractData?.contractDate) || navigationData?.contractDate || "-"}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Completion Date:</span>
-                            <span className="text-base-content">
-                                {formatDate(contractData?.completionDate) || navigationData?.completionDate || "-"}
-                            </span>
-                        </div>
-                        <div className="divider"></div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-base-content/70">Total Amount:</span>
-                            <span className="text-primary text-xl font-bold">
-                                {currentCurrency?.currencies || currency} {formatCurrency(totalAmount)}
-                            </span>
-                        </div>
+                    </div>
+                    <div className="rounded-xl border border-base-300 bg-base-100/70 p-3">
+                        <p className="text-xs text-base-content/60">Contract Date</p>
+                        <p className="text-sm font-semibold text-base-content mt-1">
+                            {formatDate(contractData?.contractDate) || navigationData?.contractDate || "-"}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-base-300 bg-base-100/70 p-3">
+                        <p className="text-xs text-base-content/60">Completion Date</p>
+                        <p className="text-sm font-semibold text-base-content mt-1">
+                            {formatDate(contractData?.completionDate) || navigationData?.completionDate || "-"}
+                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* Project & Parties */}
-            <div className="card bg-base-100 border-base-300 border shadow-sm">
-                <div className="card-body">
-                    <h3 className="card-title text-base-content flex items-center gap-2">
-                        <span className="iconify lucide--building-2 size-5 text-blue-600"></span>
-                        Project & Parties
-                    </h3>
-                    <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Project & Parties */}
+                <div className="bg-base-100 border border-base-300 rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                            <span className="iconify lucide--building-2 size-5"></span>
+                        </div>
                         <div>
-                            <span className="text-base-content/70 text-sm">Project:</span>
-                            <p className="text-base-content mt-1 font-semibold">
+                            <h3 className="text-base font-semibold text-base-content">Project & Parties</h3>
+                            <p className="text-xs text-base-content/60">Stakeholders and scope</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                        <div>
+                            <span className="text-base-content/60">Project</span>
+                            <p className="text-base-content font-semibold mt-1">
                                 {currentProject?.name || navigationData?.projectName || "N/A"}
                             </p>
                         </div>
                         <div>
-                            <span className="text-base-content/70 text-sm">Subcontractor:</span>
-                            <p className="text-base-content mt-1 font-semibold">
+                            <span className="text-base-content/60">Subcontractor</span>
+                            <p className="text-base-content font-semibold mt-1">
                                 {currentSubcontractor?.name || navigationData?.subcontractorName || "N/A"}
                             </p>
                         </div>
                         <div>
-                            <span className="text-base-content/70 text-sm">Trade:</span>
-                            <p className="text-base-content mt-1 font-semibold">
+                            <span className="text-base-content/60">Trade</span>
+                            <p className="text-base-content font-semibold mt-1">
                                 {navigationData?.tradeName || contractData?.subTrade || "N/A"}
                             </p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Financial Terms */}
-            <div className="card bg-base-100 border-base-300 border shadow-sm">
-                <div className="card-body">
-                    <h3 className="card-title text-base-content flex items-center gap-2">
-                        <span className="iconify lucide--calculator size-5 text-green-600"></span>
-                        Financial Terms
-                    </h3>
-                    <div className="mt-4 space-y-3">
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Advance Payment:</span>
-                            <span className="text-base-content">{formatPercentage(advancePercentage)}</span>
+                {/* Financial Terms */}
+                <div className="bg-base-100 border border-base-300 rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-xl bg-green-500/10 text-green-600 flex items-center justify-center">
+                            <span className="iconify lucide--calculator size-5"></span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Management Fees:</span>
-                            <span className="text-base-content">{contractData?.managementFees ? `${contractData.managementFees}%` : "0%"}</span>
+                        <div>
+                            <h3 className="text-base font-semibold text-base-content">Financial Terms</h3>
+                            <p className="text-xs text-base-content/60">Key percentages and terms</p>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Prorata Account:</span>
-                            <span className="text-base-content">{contractData?.prorataAccount || "0"}</span>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Advance Payment</span>
+                            <span className="text-base-content font-semibold">{formatPercentage(advancePercentage)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Retention:</span>
-                            <span className="text-base-content">{contractData?.holdWarranty ? `${contractData.holdWarranty}%` : "0%"}</span>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Management Fees</span>
+                            <span className="text-base-content font-semibold">{contractData?.managementFees ? `${contractData.managementFees}%` : "0%"}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-base-content/70">Payment Terms:</span>
-                            <span className="text-base-content">{contractData?.paymentsTerm || "30 days"}</span>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Prorata Account</span>
+                            <span className="text-base-content font-semibold">{contractData?.prorataAccount || "0"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Retention</span>
+                            <span className="text-base-content font-semibold">{contractData?.holdWarranty ? `${contractData.holdWarranty}%` : "0%"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Payment Terms</span>
+                            <span className="text-base-content font-semibold">{contractData?.paymentsTerm || "30 days"}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="bg-base-100 border border-base-300 rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                            <span className="iconify lucide--wallet size-5"></span>
+                        </div>
+                        <div>
+                            <h3 className="text-base font-semibold text-base-content">Financial Summary</h3>
+                            <p className="text-xs text-base-content/60">Totals and computed amounts</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Total Amount</span>
+                            <span className="text-primary font-semibold">
+                                {currentCurrency?.currencies || currency} {formatCurrency(totalAmount)}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Advance Amount</span>
+                            <span className="text-base-content font-semibold">
+                                {currentCurrency?.currencies || currency} {formatCurrency(advanceAmount)}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Retention</span>
+                            <span className="text-base-content font-semibold">
+                                {contractData?.holdWarranty ? `${contractData.holdWarranty}%` : "0%"}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-base-content/60">Management Fees</span>
+                            <span className="text-base-content font-semibold">
+                                {contractData?.managementFees ? `${contractData.managementFees}%` : "0%"}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     );
 };

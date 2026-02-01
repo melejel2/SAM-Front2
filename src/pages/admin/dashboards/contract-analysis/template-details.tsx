@@ -307,7 +307,7 @@ const ClauseDetailDialog = ({
 export default function TemplateDetailsPage() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
-  const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
+  const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
   const [profile, setProfile] = useState<TemplateRiskProfile | null>(null);
@@ -362,7 +362,7 @@ export default function TemplateDetailsPage() {
 
   // Topbar setup
   useEffect(() => {
-    setLeftContent(
+    const leftContent = (
       <div className="flex items-center gap-3">
         <button
           onClick={handleBack}
@@ -376,7 +376,7 @@ export default function TemplateDetailsPage() {
       </div>
     );
 
-    setRightContent(
+    const rightContent = (
       <div className="flex items-center gap-2">
         <button
           className="btn btn-sm btn-outline"
@@ -401,8 +401,10 @@ export default function TemplateDetailsPage() {
       </div>
     );
 
+    setAllContent(leftContent, null, rightContent);
+
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, profile?.templateName, isChatOpen, setLeftContent, setRightContent, clearContent]);
+  }, [handleBack, handleReanalyze, isReanalyzing, profile?.templateName, isChatOpen, setAllContent, clearContent]);
 
   // Filter clauses
   const filteredClauses = useMemo(() => {

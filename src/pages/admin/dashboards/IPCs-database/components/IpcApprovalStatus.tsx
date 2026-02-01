@@ -30,11 +30,11 @@ function getActionIcon(action: string, size = "size-5") {
         case "Approved":
             return <span className={`iconify lucide--check-circle text-success ${size}`} />;
         case "AutoApproved":
-            return <span className={`iconify lucide--check-circle-2 text-info ${size}`} />;
+            return <span className={`iconify lucide--check-circle-2 text-success ${size}`} />;
         case "Rejected":
             return <span className={`iconify lucide--x-circle text-error ${size}`} />;
         case "Pending":
-            return <span className={`iconify lucide--clock text-warning ${size}`} />;
+            return <span className={`iconify lucide--clock text-primary ${size}`} />;
         default:
             return <span className={`iconify lucide--circle text-base-content/30 ${size}`} />;
     }
@@ -45,11 +45,11 @@ function getActionBadge(action: string) {
         case "Approved":
             return <span className="badge badge-success badge-xs">Approved</span>;
         case "AutoApproved":
-            return <span className="badge badge-info badge-xs">Auto-Approved</span>;
+            return <span className="badge badge-success badge-xs">Auto-Approved</span>;
         case "Rejected":
             return <span className="badge badge-error badge-xs">Rejected</span>;
         case "Pending":
-            return <span className="badge badge-warning badge-xs">Pending</span>;
+            return <span className="badge badge-primary badge-xs">Pending</span>;
         default:
             return null;
     }
@@ -64,6 +64,51 @@ function getLineColor(action: string) {
             return "bg-error";
         default:
             return "bg-base-300";
+    }
+}
+
+function getStepperIcon(action: string, size = "size-4") {
+    switch (action) {
+        case "Approved":
+            return <span className={`iconify lucide--check-circle ${size}`} />;
+        case "AutoApproved":
+            return <span className={`iconify lucide--check-circle-2 ${size}`} />;
+        case "Rejected":
+            return <span className={`iconify lucide--x-circle ${size}`} />;
+        case "Pending":
+            return <span className={`iconify lucide--clock ${size}`} />;
+        default:
+            return <span className={`iconify lucide--circle ${size}`} />;
+    }
+}
+
+function getStepTone(action: string, isActive: boolean) {
+    switch (action) {
+        case "Approved":
+            return "bg-success/10 border-success/30 text-success";
+        case "AutoApproved":
+            return "bg-info/10 border-info/30 text-info";
+        case "Rejected":
+            return "bg-error/10 border-error/30 text-error";
+        case "Pending":
+            return isActive ? "bg-warning/10 border-warning/40 text-warning" : "bg-base-200 border-base-300 text-base-content/40";
+        default:
+            return "bg-base-200 border-base-300 text-base-content/40";
+    }
+}
+
+function getLabelTone(action: string, isActive: boolean) {
+    switch (action) {
+        case "Approved":
+            return "text-success";
+        case "AutoApproved":
+            return "text-info";
+        case "Rejected":
+            return "text-error";
+        case "Pending":
+            return isActive ? "text-warning" : "text-base-content/50";
+        default:
+            return "text-base-content/50";
     }
 }
 
@@ -116,7 +161,8 @@ export default function IpcApprovalStatus({ ipcId, ipcStatus, onApproved, onReje
         fetchStatus();
     }, [ipcId, ipcStatus]);
 
-    const canApprove = approvalStatus?.currentApprovalStep && currentUserRole === approvalStatus.currentApprovalStep;
+    const currentApprovalStep = approvalStatus?.currentApprovalStep;
+    const canApprove = currentApprovalStep && currentUserRole === currentApprovalStep;
 
     const handleApprove = async () => {
         setActionLoading(true);
@@ -146,18 +192,11 @@ export default function IpcApprovalStatus({ ipcId, ipcStatus, onApproved, onReje
         }
     };
 
-    if (ipcStatus === "Editable" || !approvalStatus) {
-        if (loading) {
-            return (
-                <div className="flex items-center gap-2 text-sm text-base-content/60">
-                    <span className="loading loading-spinner loading-xs" /> Loading approval status...
-                </div>
-            );
-        }
+    if (ipcStatus === "Editable") {
         return null;
     }
 
-    const steps = approvalStatus.steps.length > 0
+    const steps = approvalStatus?.steps?.length
         ? [...approvalStatus.steps].sort((a, b) => a.stepOrder - b.stepOrder)
         : APPROVAL_CHAIN_ROLES.map(r => ({
             id: 0,
@@ -169,22 +208,26 @@ export default function IpcApprovalStatus({ ipcId, ipcStatus, onApproved, onReje
 
     const completedSteps = steps.filter(s => s.action === "Approved" || s.action === "AutoApproved").length;
     const totalSteps = steps.length;
-    const progressPercent = Math.round((completedSteps / totalSteps) * 100);
 
     return (
         <>
-            <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+            <div className="space-y-3">
+                {/* Status + history */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[11px] uppercase tracking-wider text-base-content/50">
+                        Approvals
+                    </span>
                     <div className="flex items-center gap-2">
-                        <span className="iconify lucide--shield-check text-primary size-5" />
-                        <h3 className="font-semibold text-base-content">Approval Workflow</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {approvalStatus.currentStatus === "Approved" && (
+                        {loading && !approvalStatus && (
+                            <span className="text-xs text-base-content/50 flex items-center gap-1">
+                                <span className="loading loading-spinner loading-xs"></span>
+                                Loading status
+                            </span>
+                        )}
+                        {approvalStatus?.currentStatus === "Approved" && (
                             <span className="badge badge-success badge-sm">Fully Approved</span>
                         )}
-                        {approvalStatus.currentStatus === "PendingApproval" && (
+                        {approvalStatus?.currentStatus === "PendingApproval" && (
                             <span className="badge badge-warning badge-sm">
                                 Awaiting {getRoleLabelFromName(approvalStatus.currentApprovalStep ?? "")}
                             </span>
@@ -199,37 +242,33 @@ export default function IpcApprovalStatus({ ipcId, ipcStatus, onApproved, onReje
                     </div>
                 </div>
 
-                {/* Progress bar */}
-                <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-base-200 rounded-full h-2 overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-500 ${approvalStatus.currentStatus === "Approved" ? "bg-success" : "bg-primary"}`}
-                            style={{ width: `${progressPercent}%` }}
-                        />
-                    </div>
-                    <span className="text-xs text-base-content/60 whitespace-nowrap">{completedSteps}/{totalSteps}</span>
+                <div className="flex items-center justify-end text-[11px] uppercase tracking-wider text-base-content/50">
+                    <span>{completedSteps}/{totalSteps}</span>
                 </div>
 
-                {/* Compact horizontal stepper */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                {/* Wizard-style stepper */}
+                <div className="flex items-center w-full overflow-x-auto pb-1">
                     {steps.map((step, idx) => {
-                        const isActive = approvalStatus.currentApprovalStep === step.approverRole && step.action === "Pending";
+                        const isActive = currentApprovalStep === step.approverRole && step.action === "Pending";
                         return (
-                            <div key={step.id || idx} className="flex items-center gap-1">
-                                {idx > 0 && (
-                                    <div className={`w-6 h-0.5 flex-shrink-0 ${getLineColor(steps[idx - 1].action)}`} />
-                                )}
-                                <div
-                                    className={`flex flex-col items-center gap-0.5 p-2 rounded-lg min-w-[90px] cursor-pointer hover:bg-base-200 transition-colors ${isActive ? "bg-warning/10 border border-warning/30" : ""}`}
-                                    onClick={() => setShowHistoryModal(true)}
-                                    title={`${getRoleLabelFromName(step.roleName || step.approverRole)} - ${step.action}`}
-                                >
-                                    {getActionIcon(step.action, "size-4")}
-                                    <span className="text-[11px] font-medium text-base-content text-center leading-tight">
+                            <div key={step.id || idx} className="flex items-center flex-1 min-w-[110px]">
+                                <div className="flex flex-col items-center w-full">
+                                    <div
+                                        className={`w-9 h-9 flex items-center justify-center rounded-full border-2 transition-all duration-300 cursor-pointer ${getStepTone(step.action, isActive)}`}
+                                        onClick={() => setShowHistoryModal(true)}
+                                        title={`${getRoleLabelFromName(step.roleName || step.approverRole)} - ${step.action}`}
+                                    >
+                                        {getStepperIcon(step.action, "size-4")}
+                                    </div>
+                                    <span className={`text-xs font-medium text-center mt-1.5 transition-colors duration-300 ${getLabelTone(step.action, isActive)}`}>
                                         {getRoleLabelFromName(step.roleName || step.approverRole)}
                                     </span>
-                                    {getActionBadge(step.action)}
                                 </div>
+                                {idx < steps.length - 1 && (
+                                    <div className="flex-1 flex items-center" style={{ marginTop: "-18px", minWidth: "48px" }}>
+                                        <div className={`h-1 w-full transition-colors duration-500 ${getLineColor(step.action)}`} />
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -288,7 +327,7 @@ export default function IpcApprovalStatus({ ipcId, ipcStatus, onApproved, onReje
             </div>
 
             {/* Full History Modal */}
-            {showHistoryModal && (
+            {showHistoryModal && approvalStatus && (
                 <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setShowHistoryModal(false); }}>
                     <div className="modal-box max-w-2xl">
                         <div className="flex items-center justify-between mb-6">

@@ -46,7 +46,7 @@ export const VOStep3_ReviewPreview: React.FC = () => {
     }, []);
 
     return (
-        <div className="bg-base-100 rounded-lg border border-base-300 h-[calc(100vh-220px)] flex flex-col">
+        <div className="bg-base-100 rounded-lg border border-base-300 h-[calc(100vh-120px)] min-h-[620px] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-base-300">
                 <div className="flex items-center gap-3">

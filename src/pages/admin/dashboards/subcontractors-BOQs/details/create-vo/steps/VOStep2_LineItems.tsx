@@ -4,8 +4,10 @@ import infoIcon from "@iconify/icons-lucide/info";
 import trashIcon from "@iconify/icons-lucide/trash";
 import uploadIcon from "@iconify/icons-lucide/upload";
 import { Icon } from "@iconify/react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/utils/formatters";
+import { Spreadsheet } from "@/components/Spreadsheet";
+import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 
 import {
     BuildingsVOs,
@@ -34,6 +36,11 @@ interface VOLineItem {
     costCode?: string;
     costCodeId?: number; // Added CostCodeId
     buildingId?: number;
+}
+
+interface DisplayVOLineItem extends VOLineItem {
+    _isEmptyRow?: boolean;
+    _originalIndex?: number;
 }
 
 export const VOStep2_LineItems: React.FC = () => {
@@ -194,7 +201,7 @@ export const VOStep2_LineItems: React.FC = () => {
         }
     };
 
-    const createEmptyVOItem = (): VOLineItem => ({
+    const createEmptyVOItem = (buildingId?: number): DisplayVOLineItem => ({
         id: 0,
         no: "",
         description: "",
@@ -203,13 +210,27 @@ export const VOStep2_LineItems: React.FC = () => {
         quantity: 0,
         unitPrice: 0,
         totalPrice: 0,
+        buildingId,
+        _isEmptyRow: true,
+        _originalIndex: -1,
     });
 
-    const addNewVOItem = (initialData: Partial<VOLineItem>, fieldName: string) => {
+    const addNewVOItem = (initialData: Partial<VOLineItem>) => {
         const buildingId = selectedBuildingForItems
             ? parseInt(selectedBuildingForItems)
             : formData.selectedBuildingIds[0];
-        const newItem = { ...createEmptyVOItem(), ...initialData, buildingId };
+        const newItem: VOLineItem = {
+            id: 0,
+            no: "",
+            description: "",
+            costCode: "",
+            unit: "",
+            quantity: 0,
+            unitPrice: 0,
+            totalPrice: 0,
+            ...initialData,
+            buildingId
+        };
         const updatedItems = [...formData.lineItems, newItem];
         setFormData({ lineItems: updatedItems });
     };
@@ -231,14 +252,6 @@ export const VOStep2_LineItems: React.FC = () => {
     const deleteVOItem = (originalIndex: number) => {
         const updatedItems = formData.lineItems.filter((_, index) => index !== originalIndex);
         setFormData({ lineItems: updatedItems });
-    };
-
-    // Helper to get original index from display index
-    const getOriginalIndex = (displayIndex: number): number => {
-        if (displayIndex < itemsWithIndices.length) {
-            return itemsWithIndices[displayIndex].originalIndex;
-        }
-        return -1; // New item (empty row)
     };
 
     const handleBOQImport = (importedItems: any[]) => {
@@ -368,13 +381,16 @@ export const VOStep2_LineItems: React.FC = () => {
     // STRICT filtering: only show items that belong to the current building
     // Unassigned items (no buildingId) should be assigned when first loaded or edited
     const allItems = formData.lineItems || [];
-    const itemsWithIndices = useMemo(() => {
-        return allItems
-            .map((item, originalIndex) => ({ item, originalIndex }))
-            .filter(({ item }) => {
-                // Only show items that explicitly belong to the current building
-                return item.buildingId === currentBuildingId;
-            });
+    const displayItems = useMemo((): DisplayVOLineItem[] => {
+        const itemsForBuilding = allItems
+            .map((item, originalIndex) => ({
+                ...item,
+                _isEmptyRow: false,
+                _originalIndex: originalIndex
+            }))
+            .filter((item) => item.buildingId === currentBuildingId);
+
+        return [...itemsForBuilding, createEmptyVOItem(currentBuildingId)];
     }, [allItems, currentBuildingId]);
 
     // Auto-assign unassigned items to first selected building when items load (including async edit flow)
@@ -399,18 +415,9 @@ export const VOStep2_LineItems: React.FC = () => {
         setFormData({ lineItems: updatedItems });
     }, [formData.lineItems, formData.selectedBuildingIds, setFormData]);
 
-    const filteredItems = itemsWithIndices.map(({ item }) => item);
-
-    // Create display items with empty row at end
-    const displayItems = [...filteredItems];
-    if (displayItems.length === 0 || displayItems[displayItems.length - 1].no !== "") {
-        displayItems.push(createEmptyVOItem());
-    }
+    const filteredItems = useMemo(() => displayItems.filter((item) => !item._isEmptyRow), [displayItems]);
 
     const isAddition = formData.voType === "Addition";
-
-    // Calculate total for current building only
-    const currentBuildingTotal = filteredItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
 
     // Calculate total for all buildings (for summary)
     const allBuildingsTotal = allItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
@@ -435,6 +442,257 @@ export const VOStep2_LineItems: React.FC = () => {
             });
         }
     }, [isAddition, allBuildingsTotal, netAmount, formData.totalAdditions, formData.totalDeductions, formData.totalAmount, setFormData]);
+
+    const handleCellChange = useCallback((_rowIndex: number, columnKey: string, value: any, row: DisplayVOLineItem) => {
+        const fieldKey = columnKey as keyof VOLineItem;
+        if (row._isEmptyRow) {
+            if (value !== "" && value !== 0) {
+                addNewVOItem({ [fieldKey]: value } as Partial<VOLineItem>);
+            }
+            return;
+        }
+
+        if (typeof row._originalIndex !== "number" || row._originalIndex < 0) return;
+        updateVOItem(row._originalIndex, fieldKey, value);
+    }, [addNewVOItem, updateVOItem]);
+
+    const isCellEditable = useCallback((row: DisplayVOLineItem, column: SpreadsheetColumn<DisplayVOLineItem>) => {
+        if (row._isEmptyRow) return true;
+        if ((column.key === "quantity" || column.key === "unitPrice") && !row.unit) return false;
+        return column.editable !== false;
+    }, []);
+
+    const columns = useMemo((): SpreadsheetColumn<DisplayVOLineItem>[] => [
+        {
+            key: "no",
+            label: "Item No.",
+            width: 90,
+            align: "center",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "text",
+            render: (value: string, row: DisplayVOLineItem) => (
+                <span className={`text-xs ${row._isEmptyRow ? "text-base-content/40" : ""}`}>{value || ""}</span>
+            )
+        },
+        {
+            key: "description",
+            label: "Description",
+            width: 260,
+            align: "left",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "text",
+            render: (value: string) => (
+                <div className="truncate text-xs" title={value || ""}>{value || ""}</div>
+            )
+        },
+        {
+            key: "costCode",
+            label: "Cost Code",
+            width: 120,
+            align: "center",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "text",
+            render: (value: string, row: DisplayVOLineItem) => (
+                <div
+                    className={`flex items-center justify-center gap-1 text-xs ${row._isEmptyRow ? "text-base-content/40" : "cursor-pointer"}`}
+                    onDoubleClick={(e) => {
+                        if (row._isEmptyRow) return;
+                        e.stopPropagation();
+                        if (typeof row._originalIndex === "number" && row._originalIndex >= 0) {
+                            handleCostCodeCellDoubleClick(row._originalIndex, row.costCode);
+                        }
+                    }}
+                    title={row._isEmptyRow ? "" : "Double-click to select from cost codes"}
+                >
+                    <span className="truncate">{value || ""}</span>
+                </div>
+            )
+        },
+        {
+            key: "unit",
+            label: "Unit",
+            width: 80,
+            align: "center",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "select",
+            options: units.map((unit) => ({ label: unit.name, value: unit.name })),
+            render: (value: string, row: DisplayVOLineItem) => (
+                <span className={`text-xs ${row._isEmptyRow ? "text-base-content/40" : ""}`}>{value || ""}</span>
+            )
+        },
+        {
+            key: "quantity",
+            label: "Quantity",
+            width: 110,
+            align: "right",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "number",
+            render: (value: number, row: DisplayVOLineItem) => {
+                if (row._isEmptyRow) return "";
+                return value ? formatCurrency(value) : "";
+            }
+        },
+        {
+            key: "unitPrice",
+            label: "Unit Price",
+            width: 120,
+            align: "right",
+            editable: true,
+            sortable: false,
+            filterable: false,
+            type: "number",
+            render: (value: number, row: DisplayVOLineItem) => {
+                if (row._isEmptyRow) return "";
+                return value ? formatCurrency(value) : "";
+            }
+        },
+        {
+            key: "totalPrice",
+            label: "Total Price",
+            width: 130,
+            align: "right",
+            editable: false,
+            sortable: false,
+            filterable: false,
+            render: (_value: number, row: DisplayVOLineItem) => {
+                if (row._isEmptyRow || !row.unit) return "-";
+                const total = (row.quantity || 0) * (row.unitPrice || 0);
+                return (
+                    <span className={`text-xs font-semibold ${isAddition ? "text-success" : "text-error"}`}>
+                        {formatCurrency(total)}
+                    </span>
+                );
+            }
+        }
+    ], [units, isAddition, handleCostCodeCellDoubleClick]);
+
+    const actionsRender = useCallback((row: DisplayVOLineItem) => {
+        if (row._isEmptyRow || typeof row._originalIndex !== "number" || row._originalIndex < 0) return null;
+        return (
+            <button
+                onClick={() => deleteVOItem(row._originalIndex as number)}
+                className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
+                title="Delete item"
+            >
+                <Icon icon={trashIcon} className="h-4 w-4" />
+            </button>
+        );
+    }, [deleteVOItem]);
+
+    const summaryRow = useCallback((rows: DisplayVOLineItem[], meta?: { gridTemplateColumns: string }) => {
+        const actualRows = rows.filter((row) => !row._isEmptyRow);
+        if (actualRows.length === 0) return null;
+        const total = actualRows.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0), 0);
+        return (
+            <div
+                className="spreadsheet-grid-base font-semibold text-xs bg-base-200"
+                style={{ gridTemplateColumns: meta?.gridTemplateColumns, minHeight: 36 }}
+            >
+                {/* Row number */}
+                <div className="spreadsheet-row-number flex items-center justify-center border-r border-b border-base-300 bg-base-200">Σ</div>
+                {/* Item No. */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Description */}
+                <div className="flex items-center px-3 border-r border-b border-base-300">Totals</div>
+                {/* Cost Code */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Unit */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Quantity */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Unit Price */}
+                <div className="border-r border-b border-base-300"></div>
+                {/* Total Price */}
+                <div className={`flex items-center justify-end px-3 border-r border-b border-base-300 ${isAddition ? "text-success" : "text-error"}`}>
+                    {formatCurrency(total)}
+                </div>
+                {/* Actions */}
+                <div className="border-b border-base-300"></div>
+            </div>
+        );
+    }, [isAddition]);
+
+    const toolbarLeft = (
+        <div className="flex flex-wrap items-center gap-2">
+            {selectedBuildings.length > 1 && (
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-base-content/60">Building</span>
+                    <select
+                        className="select select-bordered select-xs w-auto max-w-xs"
+                        value={selectedBuildingForItems || ""}
+                        onChange={(e) => setSelectedBuildingForItems(e.target.value)}
+                    >
+                        {selectedBuildings.map((building) => (
+                            <option key={building.id} value={building.id.toString()}>
+                                {building.name} ({allItems.filter((i) => i.buildingId === building.id).length} items)
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+            {vos.length > 0 && (
+                <select
+                    className="select select-bordered select-xs w-auto max-w-xs"
+                    value={selectedVO}
+                    onChange={(e) => handleVOSelect(e.target.value)}
+                    disabled={loadingVOs}
+                >
+                    <option value="">Select a VO to import from</option>
+                    {filteredVOs.map((vo) => (
+                        <option key={vo.vo} value={vo.vo}>
+                            {vo.vo}
+                        </option>
+                    ))}
+                </select>
+            )}
+        </div>
+    );
+
+    const toolbar = (
+        <div className="flex flex-wrap items-center gap-2">
+            {selectedBuildings.length > 1 && filteredItems.length > 0 && (
+                <button
+                    onClick={copyToOtherBuildings}
+                    className="btn btn-outline btn-xs"
+                    title={`Copy items from ${selectedBuildings.find((b) => b.id === currentBuildingId)?.name || "current building"} to all other selected buildings`}
+                >
+                    <Icon icon={copyIcon} className="h-3.5 w-3.5" />
+                    Copy to Other Buildings
+                </button>
+            )}
+            {isUpdate && voDatasetId && (
+                <button
+                    onClick={handleClearBOQ}
+                    className="btn btn-error btn-xs"
+                    disabled={loadingBOQItems}
+                >
+                    {loadingBOQItems ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                        <Icon icon={trashIcon} className="h-3.5 w-3.5" />
+                    )}
+                    Clear BOQ
+                </button>
+            )}
+            <button
+                onClick={handleImportButtonClick}
+                className="btn btn-info btn-xs"
+            >
+                <Icon icon={uploadIcon} className="h-3.5 w-3.5" />
+                Import BOQ
+            </button>
+        </div>
+    );
 
     if (formData.selectedBuildingIds.length === 0) {
         return (
@@ -461,272 +719,42 @@ export const VOStep2_LineItems: React.FC = () => {
                 </div>
             )}
 
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-4">
-                    {selectedBuildings.length > 1 && (
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium">Building:</label>
-                            <select
-                                className="select select-bordered select-sm w-auto max-w-xs"
-                                value={selectedBuildingForItems || ""}
-                                onChange={(e) => setSelectedBuildingForItems(e.target.value)}>
-                                {selectedBuildings.map((building) => (
-                                    <option key={building.id} value={building.id.toString()}>
-                                        {building.name} ({allItems.filter((i) => i.buildingId === building.id).length} items)
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-                    {vos.length > 0 && (
-                        <select
-                            className="select select-bordered select-sm w-auto max-w-xs"
-                            value={selectedVO}
-                            onChange={(e) => handleVOSelect(e.target.value)}
-                            disabled={loadingVOs}>
-                            <option value="">Select a VO to import from</option>
-                            {filteredVOs.map((vo) => (
-                                <option key={vo.vo} value={vo.vo}>
-                                    {vo.vo}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    {/* Copy to other buildings button */}
-                    {selectedBuildings.length > 1 && filteredItems.length > 0 && (
-                        <button
-                            onClick={copyToOtherBuildings}
-                            className="btn btn-outline btn-sm transition-all duration-200 ease-in-out"
-                            title={`Copy items from ${currentBuildingName} to all other selected buildings`}>
-                            <Icon icon={copyIcon} className="h-4 w-4" />
-                            Copy to Other Buildings
-                        </button>
-                    )}
-                    {isUpdate && voDatasetId && (
-                        <button
-                            onClick={handleClearBOQ}
-                            className="btn btn-error btn-sm hover:btn-error-focus transition-all duration-200 ease-in-out"
-                            disabled={loadingBOQItems}>
-                            {loadingBOQItems ? (
-                                <span className="loading loading-spinner loading-sm"></span>
-                            ) : (
-                                <Icon icon={trashIcon} className="h-4 w-4" />
-                            )}
-                            Clear BOQ
-                        </button>
-                    )}
-                    <button
-                        onClick={handleImportButtonClick}
-                        className="btn btn-info btn-sm hover:btn-info-focus transition-all duration-200 ease-in-out">
-                        <Icon icon={uploadIcon} className="h-4 w-4" />
-                        Import BOQ
-                    </button>
-                </div>
+            <div
+                className="bg-base-100 border border-base-300 rounded-xl overflow-hidden flex flex-col relative"
+                style={{ height: "calc(100vh - 180px)", minHeight: "520px" }}
+            >
+                <Spreadsheet<DisplayVOLineItem>
+                    data={displayItems}
+                    columns={columns}
+                    mode="edit"
+                    rowHeight={38}
+                    toolbarLeft={toolbarLeft}
+                    toolbar={toolbar}
+                    onCellChange={handleCellChange}
+                    isCellEditable={isCellEditable}
+                    actionsRender={actionsRender}
+                    actionsColumnWidth={60}
+                    summaryRow={summaryRow}
+                    getRowId={(row, index) =>
+                        row._isEmptyRow ? `empty-${index}` : row.id || `row-${row._originalIndex ?? index}`
+                    }
+                    allowKeyboardNavigation
+                    allowColumnResize
+                    allowSorting={false}
+                    allowFilters={false}
+                />
+                {filteredItems.length === 0 && (
+                    <div className="pointer-events-none absolute inset-x-6 top-1/2 -translate-y-1/2 text-center">
+                        <Icon icon={infoIcon} className="text-base-content/40 mx-auto mb-2 h-8 w-8" />
+                        <p className="text-base-content/60 text-sm">
+                            Start adding line items by typing in any field in the empty row above.
+                        </p>
+                        <p className="text-base-content/50 mt-1 text-xs">
+                            Items will be automatically marked as additions or deductions based on the VO type.
+                        </p>
+                    </div>
+                )}
             </div>
-            <div className="bg-base-100 border-base-300 flex flex-col rounded-xl border">
-                <div className="overflow-x-auto">
-                    <table className="bg-base-100 w-full table-auto">
-                        <thead className="bg-base-200">
-                            <tr>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Item No.
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Description
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Cost Code
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Unit
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Quantity
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Unit Price
-                                </th>
-                                <th className="text-base-content/70 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Total Price
-                                </th>
-                                <th className="text-base-content/70 w-24 px-2 py-1 text-center text-xs font-medium tracking-wider uppercase sm:w-28 sm:px-3 sm:py-2 sm:text-xs lg:px-4 lg:text-xs">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-base-300 divide-y">
-                            {displayItems.map((item, displayIndex) => {
-                                // Get original index for existing items, -1 for new empty row
-                                const originalIndex = getOriginalIndex(displayIndex);
-                                const isEmptyRow =
-                                    item.no === "" &&
-                                    item.description === "" &&
-                                    (!item.costCode || item.costCode === "") &&
-                                    (!item.unit || item.unit === "") &&
-                                    item.quantity === 0 &&
-                                    item.unitPrice === 0;
-                                const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-                                return (
-                                    <tr key={item.id || `display-${displayIndex}`} className="bg-base-100 hover:bg-base-200">
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <input
-                                                type="text"
-                                                className="focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm"
-                                                value={item.no}
-                                                onChange={(e) => {
-                                                    if (isEmptyRow && e.target.value) {
-                                                        addNewVOItem({ no: e.target.value }, "no");
-                                                    } else if (!isEmptyRow && originalIndex >= 0) {
-                                                        updateVOItem(originalIndex, "no", e.target.value);
-                                                    }
-                                                }}
-                                                placeholder="Item No."
-                                            />
-                                        </td>
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <input
-                                                type="text"
-                                                className="focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm"
-                                                value={item.description}
-                                                onChange={(e) => {
-                                                    if (isEmptyRow && e.target.value) {
-                                                        addNewVOItem({ description: e.target.value }, "description");
-                                                    } else if (!isEmptyRow && originalIndex >= 0) {
-                                                        updateVOItem(originalIndex, "description", e.target.value);
-                                                    }
-                                                }}
-                                                placeholder="Description"
-                                            />
-                                        </td>
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <input
-                                                type="text"
-                                                value={item.costCode || ""}
-                                                onDoubleClick={() => {
-                                                    if (originalIndex >= 0) {
-                                                        handleCostCodeCellDoubleClick(originalIndex, item.costCode);
-                                                    }
-                                                }}
-                                                placeholder=""
-                                                disabled={costCodeModalOpen}
-                                                title={"Double-click to select from cost code library"}
-                                            />
-                                        </td>
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <select
-                                                className="focus:ring-primary/20 w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm"
-                                                value={item.unit || ""}
-                                                onChange={(e) => {
-                                                    const selectedUnit = units.find(
-                                                        (unit) => unit.name === e.target.value,
-                                                    );
-                                                    const unitName = selectedUnit?.name || e.target.value;
-                                                    if (isEmptyRow && unitName) {
-                                                        addNewVOItem({ unit: unitName }, "unit");
-                                                    } else if (!isEmptyRow && originalIndex >= 0) {
-                                                        updateVOItem(originalIndex, "unit", unitName);
-                                                    }
-                                                }}>
-                                                <option value=""></option>
-                                                {units.map((unit) => (
-                                                    <option key={unit.id} value={unit.name}>
-                                                        {unit.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <input
-                                                type="text"
-                                                className={`focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm ${!item.unit && !isEmptyRow ? "cursor-not-allowed opacity-50" : ""}`}
-                                                value={
-                                                    isEmptyRow ? "" : item.quantity ? formatCurrency(item.quantity) : ""
-                                                }
-                                                onChange={(e) => {
-                                                    if (!item.unit && !isEmptyRow) return;
-                                                    const cleanValue = e.target.value.replace(/,/g, "");
-                                                    const value = parseFloat(cleanValue) || 0;
-                                                    if (isEmptyRow && value !== 0) {
-                                                        addNewVOItem({ quantity: value }, "quantity");
-                                                    } else if (!isEmptyRow && originalIndex >= 0) {
-                                                        updateVOItem(originalIndex, "quantity", value);
-                                                    }
-                                                }}
-                                                placeholder=""
-                                                disabled={!item.unit && !isEmptyRow}
-                                            />
-                                        </td>
-                                        <td className="text-base-content px-2 py-1 text-center text-xs sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            <input
-                                                type="text"
-                                                className={`focus:ring-primary/20 w-full rounded bg-transparent px-1 py-0.5 text-center text-xs focus:ring-2 focus:outline-none sm:text-sm ${!item.unit && !isEmptyRow ? "cursor-not-allowed opacity-50" : ""}`}
-                                                value={
-                                                    isEmptyRow ? "" : item.unitPrice ? formatCurrency(item.unitPrice) : ""
-                                                }
-                                                onChange={(e) => {
-                                                    if (!item.unit && !isEmptyRow) return;
-                                                    const cleanValue = e.target.value.replace(/,/g, "");
-                                                    const value = parseFloat(cleanValue) || 0;
-                                                    if (isEmptyRow && value !== 0) {
-                                                        addNewVOItem({ unitPrice: value }, "unitPrice");
-                                                    } else if (!isEmptyRow && originalIndex >= 0) {
-                                                        updateVOItem(originalIndex, "unitPrice", value);
-                                                    }
-                                                }}
-                                                placeholder=""
-                                                disabled={!item.unit && !isEmptyRow}
-                                            />
-                                        </td>
-                                        <td
-                                            className={`px-2 py-1 text-center text-xs font-medium sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3 ${isAddition ? "text-success" : "text-error"}`}>
-                                            {isEmptyRow || !item.unit ? "-" : formatCurrency(itemTotal)}
-                                        </td>
-                                        <td className="text-base-content w-24 px-2 py-1 text-center text-xs font-medium sm:w-28 sm:px-3 sm:py-2 sm:text-sm lg:px-4 lg:py-3">
-                                            {!isEmptyRow && originalIndex >= 0 && (
-                                                <div className="inline-flex">
-                                                    <button
-                                                        onClick={() => deleteVOItem(originalIndex)}
-                                                        className="btn btn-ghost btn-sm text-error/70 hover:bg-error/20"
-                                                        title="Delete item">
-                                                        <Icon icon={trashIcon} className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {filteredItems.length > 0 && (
-                                <tr className="bg-base-200 border-base-300 text-base-content border-t-2 font-bold">
-                                    <td
-                                        className="px-2 py-2 text-center text-xs sm:px-3 sm:py-3 sm:text-sm lg:px-4"
-                                        colSpan={6}>
-                                        TOTAL (This Building)
-                                    </td>
-                                    <td
-                                        className={`px-2 py-2 text-center text-xs font-bold sm:px-3 sm:py-3 sm:text-sm lg:px-4 ${isAddition ? "text-primary" : "text-error"}`}>
-                                        {formatCurrency(currentBuildingTotal)}
-                                    </td>
-                                    <td className="px-2 py-2 sm:px-3 sm:py-3 lg:px-4"></td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {filteredItems.length === 0 && (
-                <div className="mt-4 py-8 text-center">
-                    <Icon icon={infoIcon} className="text-base-content/40 mx-auto mb-2 h-8 w-8" />
-                    <p className="text-base-content/60 text-sm">
-                        Start adding line items by typing in any field in the empty row above.
-                    </p>
-                    <p className="text-base-content/50 mt-1 text-xs">
-                        Items will be automatically marked as additions or deductions based on the VO type.
-                    </p>
-                </div>
-            )}
 
             {/* Cost Code Selection Modal */}
             <CostCodeSelectionModal

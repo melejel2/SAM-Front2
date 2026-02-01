@@ -17,6 +17,7 @@ import DocumentEditorModal from "@/components/WordDocumentEditor/DocumentEditorM
 import { Loader } from "@/components/Loader";
 import SAMTable from "@/components/Table";
 import { useAuth } from "@/contexts/auth";
+import { useTopbarContent } from "@/contexts/topbar-content";
 import useToast from "@/hooks/use-toast";
 import { generateContractFileName, generateVOFileName } from "@/utils/ipc-filename";
 import { formatCurrency, formatDate } from "@/utils/formatters";
@@ -34,6 +35,19 @@ const DeductionsTab = lazy(() => import("./components/tabs/DeductionsTab"));
 
 // Tab type definition
 type ContractTab = "info" | "vos" | "ipcs" | "deductions" | "termination-docs";
+
+const getContractStatusBadgeClass = (status?: string) => {
+    switch ((status || "").toLowerCase()) {
+        case "terminated":
+            return "badge badge-sm badge-error";
+        case "editable":
+            return "badge badge-sm badge-warning";
+        case "active":
+            return "badge badge-sm badge-success";
+        default:
+            return "badge badge-sm badge-neutral";
+    }
+};
 
 // Contract-specific VOs hook
 const useContractVOs = (contractId: string) => {
@@ -100,6 +114,7 @@ const ContractDetails = () => {
     const location = useLocation();
     const { toaster } = useToast();
     const { getToken } = useAuth();
+    const { setAllContent, clearContent } = useTopbarContent();
 
     // Get actual contract ID from navigation state (for API calls) or try to parse if it's numeric
     const contractId = location.state?.contractId || (!isNaN(Number(contractIdentifier)) ? contractIdentifier : null);
@@ -813,6 +828,170 @@ const ContractDetails = () => {
         }
     };
 
+    useEffect(() => {
+        if (!contractData) {
+            setAllContent(null, null, null);
+            return;
+        }
+
+        const contractNumber = contractData.contractNumber || navigationData?.contractNumber || contractIdentifier || "-";
+        const statusLabel = contractData.contractDatasetStatus || navigationData?.status || "Active";
+        const typeLabel = contractData.contractType || navigationData?.tradeName || "Contract";
+
+        const leftContent = (
+            <button
+                onClick={() => navigate("/dashboard/contracts")}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Contracts"
+            >
+                <span className="iconify lucide--arrow-left size-4"></span>
+            </button>
+        );
+
+        const centerContent = (
+            <div className="max-w-[520px]">
+                <div className="flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-4 py-1.5 shadow-sm">
+                    <span className="text-sm font-semibold text-base-content whitespace-nowrap">
+                        Contract #{contractNumber}
+                    </span>
+                    <span className={`${getContractStatusBadgeClass(statusLabel)} hidden md:inline-flex`}>
+                        {statusLabel}
+                    </span>
+                    <span className="badge badge-sm badge-neutral hidden xl:inline-flex">
+                        {typeLabel}
+                    </span>
+                </div>
+            </div>
+        );
+
+        const rightContent = (
+            <div className="flex items-center gap-2">
+                {(contractData.contractDatasetStatus === "Editable" ||
+                    contractData.contractDatasetStatus === "Active") && (
+                    <button
+                        onClick={handleEditContract}
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        title="Edit"
+                    >
+                        <span className="iconify lucide--edit size-4"></span>
+                        <span className="hidden xl:inline">Edit</span>
+                    </button>
+                )}
+
+                <div className="dropdown dropdown-end">
+                    <button
+                        tabIndex={0}
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        disabled={exportingPDF || exportingWord}
+                        title="Export"
+                    >
+                        {exportingPDF || exportingWord ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <span className="iconify lucide--download size-4"></span>
+                        )}
+                        <span className="hidden xl:inline">Export</span>
+                        <span className="iconify lucide--chevron-down size-3"></span>
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li>
+                            <button onClick={handleExportPDF} disabled={exportingPDF}>
+                                {exportingPDF ? "Exporting PDF..." : "Export as PDF"}
+                            </button>
+                        </li>
+                        <li>
+                            <button onClick={handleExportWord} disabled={exportingWord}>
+                                {exportingWord ? "Exporting Word..." : "Export as Word"}
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                {contractData.contractDatasetStatus === "Editable" && (
+                    <button
+                        onClick={handleGenerateContract}
+                        disabled={generatingContract}
+                        className="btn btn-sm btn-success text-white flex items-center gap-2"
+                    >
+                        {generatingContract ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                            <span className="iconify lucide--check-circle size-4"></span>
+                        )}
+                        <span className="hidden xl:inline">Generate</span>
+                    </button>
+                )}
+
+                <div className="dropdown dropdown-end">
+                    <button
+                        tabIndex={0}
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        title="More actions"
+                    >
+                        <span className="iconify lucide--more-horizontal size-4"></span>
+                        <span className="hidden xl:inline">More</span>
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li>
+                            <button onClick={handlePreviewContract} disabled={loadingPreview}>
+                                {loadingPreview ? "Loading Preview..." : "Preview"}
+                            </button>
+                        </li>
+                        {contractData.contractDatasetStatus === "Active" && (
+                            <li>
+                                <button onClick={handleUnGenerateContract} disabled={unGeneratingContract}>
+                                    {unGeneratingContract ? "Un-Generating..." : "Un-Generate"}
+                                </button>
+                            </li>
+                        )}
+                        {contractData.contractDatasetStatus?.toLowerCase() === "active" && (
+                            <li>
+                                <button onClick={() => setShowTerminateModal(true)} disabled={terminating} className="text-error">
+                                    {terminating ? "Terminating..." : "Terminate"}
+                                </button>
+                            </li>
+                        )}
+                        {contractData.contractDatasetStatus === "Editable" && (
+                            <li>
+                                <button onClick={handleDeleteContract} disabled={deletingContract} className="text-error">
+                                    {deletingContract ? "Deleting..." : "Delete"}
+                                </button>
+                            </li>
+                        )}
+                    </ul>
+                </div>
+            </div>
+        );
+
+        setAllContent(leftContent, centerContent, rightContent);
+    }, [
+        contractData,
+        navigationData?.contractNumber,
+        navigationData?.status,
+        navigationData?.tradeName,
+        contractIdentifier,
+        navigate,
+        handlePreviewContract,
+        loadingPreview,
+        exportingPDF,
+        exportingWord,
+        terminating,
+        unGeneratingContract,
+        generatingContract,
+        deletingContract,
+        handleExportPDF,
+        handleExportWord,
+        handleUnGenerateContract,
+        handleEditContract,
+        handleGenerateContract,
+        handleDeleteContract,
+        setAllContent,
+    ]);
+
+    useEffect(() => {
+        return () => clearContent();
+    }, [clearContent]);
+
     // Calculate total contract amount from BOQ items (fallback)
     const calculateTotalAmount = () => {
         if (!contractData?.buildings) return 0;
@@ -863,224 +1042,61 @@ const ContractDetails = () => {
     const advanceAmount = totalAmount * (advancePercentage / 100);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden -mt-6">
-            {/* Header with Back Button, Tabs, and Actions */}
-            <div className="flex items-center justify-between gap-4 flex-shrink-0 py-4">
-                {/* Left: Back Button */}
-                <div className="flex items-center">
+        <div className="h-full flex flex-col gap-6">
+            {/* Tabs */}
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-base-300 bg-base-100/80 p-1">
+                <button
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                        activeTab === "info"
+                            ? "bg-primary text-primary-content"
+                            : "text-base-content hover:bg-base-200/80"
+                    }`}
+                    onClick={() => handleTabChange("info")}>
+                    <span className="iconify lucide--file-text size-4"></span>
+                    Contract Info
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                        activeTab === "vos"
+                            ? "bg-primary text-primary-content"
+                            : "text-base-content hover:bg-base-200/80"
+                    }`}
+                    onClick={() => handleTabChange("vos")}>
+                    <span className="iconify lucide--git-branch size-4"></span>
+                    VOs ({vos.length})
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                        activeTab === "ipcs"
+                            ? "bg-primary text-primary-content"
+                            : "text-base-content hover:bg-base-200/80"
+                    }`}
+                    onClick={() => handleTabChange("ipcs")}>
+                    <span className="iconify lucide--receipt size-4"></span>
+                    IPCs
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                        activeTab === "deductions"
+                            ? "bg-primary text-primary-content"
+                            : "text-base-content hover:bg-base-200/80"
+                    }`}
+                    onClick={() => handleTabChange("deductions")}>
+                    <span className="iconify lucide--minus-circle size-4"></span>
+                    Deductions
+                </button>
+                {contractData.contractDatasetStatus === "Terminated" && (
                     <button
-                        onClick={() => navigate("/dashboard/contracts")}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        <span className="iconify lucide--arrow-left size-4"></span>
-                        Back
-                    </button>
-                </div>
-
-                {/* Center: Tab Navigation */}
-                <div className="bg-base-200 rounded-box p-1 flex gap-1">
-                    <button
-                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
-                            activeTab === "info"
+                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                            activeTab === "termination-docs"
                                 ? "bg-primary text-primary-content"
-                                : "bg-base-100 text-base-content hover:bg-base-300"
+                                : "text-base-content hover:bg-base-200/80"
                         }`}
-                        onClick={() => handleTabChange("info")}>
-                        <span className="iconify lucide--file-text size-4"></span>
-                        Contract Info
+                        onClick={() => handleTabChange("termination-docs")}>
+                        <span className="iconify lucide--file-x size-4"></span>
+                        Termination Docs
                     </button>
-                    <button
-                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
-                            activeTab === "vos"
-                                ? "bg-primary text-primary-content"
-                                : "bg-base-100 text-base-content hover:bg-base-300"
-                        }`}
-                        onClick={() => handleTabChange("vos")}>
-                        <span className="iconify lucide--git-branch size-4"></span>
-                        VOs ({vos.length})
-                    </button>
-                    <button
-                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
-                            activeTab === "ipcs"
-                                ? "bg-primary text-primary-content"
-                                : "bg-base-100 text-base-content hover:bg-base-300"
-                        }`}
-                        onClick={() => handleTabChange("ipcs")}>
-                        <span className="iconify lucide--receipt size-4"></span>
-                        IPCs
-                    </button>
-                    <button
-                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
-                            activeTab === "deductions"
-                                ? "bg-primary text-primary-content"
-                                : "bg-base-100 text-base-content hover:bg-base-300"
-                        }`}
-                        onClick={() => handleTabChange("deductions")}>
-                        <span className="iconify lucide--minus-circle size-4"></span>
-                        Deductions
-                    </button>
-                    {contractData.contractDatasetStatus === "Terminated" && (
-                        <button
-                            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
-                                activeTab === "termination-docs"
-                                    ? "bg-primary text-primary-content"
-                                    : "bg-base-100 text-base-content hover:bg-base-300"
-                            }`}
-                            onClick={() => handleTabChange("termination-docs")}>
-                            <span className="iconify lucide--file-x size-4"></span>
-                            Termination Docs
-                        </button>
-                    )}
-                </div>
-
-                {/* Right: Action Buttons */}
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handlePreviewContract}
-                        disabled={loadingPreview}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                        {loadingPreview ? (
-                            <>
-                                <span className="loading loading-spinner loading-xs"></span>
-                                <span>Loading...</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="iconify lucide--eye size-4"></span>
-                                <span>Preview</span>
-                            </>
-                        )}
-                    </button>
-
-                    <div className="dropdown dropdown-end">
-                        <button
-                            tabIndex={0}
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
-                            disabled={exportingPDF || exportingWord}>
-                            {exportingPDF || exportingWord ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Exporting...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--download size-4"></span>
-                                    <span>Export</span>
-                                    <span className="iconify lucide--chevron-down size-3"></span>
-                                </>
-                            )}
-                        </button>
-                        <ul
-                            tabIndex={0}
-                            className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-                            <li>
-                                <a
-                                    onClick={handleExportPDF}
-                                    className={exportingPDF ? "cursor-not-allowed opacity-60" : ""}>
-                                    {exportingPDF ? (
-                                        <>
-                                            <span className="loading loading-spinner loading-xs"></span>
-                                            <span>Exporting PDF...</span>
-                                        </>
-                                    ) : (
-                                        <span>Export as PDF</span>
-                                    )}
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    onClick={handleExportWord}
-                                    className={exportingWord ? "cursor-not-allowed opacity-60" : ""}>
-                                    {exportingWord ? (
-                                        <>
-                                            <span className="loading loading-spinner loading-xs"></span>
-                                            <span>Exporting Word...</span>
-                                        </>
-                                    ) : (
-                                        <span>Export as Word</span>
-                                    )}
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {contractData.contractDatasetStatus?.toLowerCase() === "active" && (
-                        <button
-                            onClick={() => setShowTerminateModal(true)}
-                            disabled={terminating}
-                            className="btn btn-sm btn-error flex items-center gap-2 text-white">
-                            <span className="iconify lucide--x-circle size-4"></span>
-                            <span>Terminate</span>
-                        </button>
-                    )}
-
-                    {contractData.contractDatasetStatus === "Active" && (
-                        <button
-                            onClick={handleUnGenerateContract}
-                            disabled={unGeneratingContract}
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                            {unGeneratingContract ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Un-Generating...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--undo-2 size-4"></span>
-                                    <span>Un-Generate</span>
-                                </>
-                            )}
-                        </button>
-                    )}
-
-                    {(contractData.contractDatasetStatus === "Editable" ||
-                        contractData.contractDatasetStatus === "Active") && (
-                        <button
-                            onClick={handleEditContract}
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                            <span className="iconify lucide--edit size-4"></span>
-                            <span>Edit</span>
-                        </button>
-                    )}
-
-                    {contractData.contractDatasetStatus === "Editable" && (
-                        <button
-                            onClick={handleGenerateContract}
-                            disabled={generatingContract}
-                            className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border">
-                            {generatingContract ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Generating...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--check-circle size-4"></span>
-                                    <span>Generate</span>
-                                </>
-                            )}
-                        </button>
-                    )}
-
-                    {/* Delete button - Only show for Editable contracts */}
-                    {contractData.contractDatasetStatus === "Editable" && (
-                        <button
-                            onClick={handleDeleteContract}
-                            disabled={deletingContract}
-                            className="btn btn-sm btn-error text-error-content hover:bg-error/10 flex items-center gap-2">
-                            {deletingContract ? (
-                                <>
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                    <span>Deleting...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="iconify lucide--trash-2 size-4"></span>
-                                    <span>Delete</span>
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Tab Content - Only load tabs that have been visited (lazy loading) */}

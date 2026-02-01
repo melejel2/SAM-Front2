@@ -127,7 +127,7 @@ const IPCsDatabase = () => {
     } = useIPCsDatabase();
     const { toaster } = useToast();
     const { getToken } = useAuth();
-    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { isArchiveMode } = useArchive();
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
     const [previewData, setPreviewData] = useState<{ blob: Blob; id: string; fileName: string; rowData: any } | null>(null);
@@ -175,19 +175,16 @@ const IPCsDatabase = () => {
 
     // Setup topbar content
     useEffect(() => {
-        // Left content: Back button
-        setLeftContent(
+        setAllContent(
+            // Left: Back button
             <button
                 onClick={handleBackToDashboard}
-                className="btn btn-sm btn-circle btn-ghost"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
                 title="Back to Dashboard"
             >
                 <Icon icon={arrowLeftIcon} className="size-5" />
-            </button>
-        );
-
-        // Center content: Project filter dropdown
-        setCenterContent(
+            </button>,
+            // Center: Project filter dropdown
             <div className="dropdown">
                 <div
                     tabIndex={0}
@@ -225,11 +222,13 @@ const IPCsDatabase = () => {
                         ))}
                     </div>
                 </div>
-            </div>
+            </div>,
+            // Right: null
+            null
         );
 
         return () => clearContent();
-    }, [setLeftContent, setCenterContent, clearContent, handleBackToDashboard, selectedProject, uniqueProjects, tableData.length, projectCounts]);
+    }, [setAllContent, clearContent, handleBackToDashboard, selectedProject, uniqueProjects, tableData.length, projectCounts]);
 
     const handlePreviewIpc = async (row: any) => {
         const result = await smartPreviewIpc(row.id, row._statusRaw || row.status, row.isGenerated);

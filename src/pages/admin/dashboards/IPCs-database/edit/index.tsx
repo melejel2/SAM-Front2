@@ -22,7 +22,7 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { toaster } = useToast();
-    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
 
     // Get return navigation from state
     const navigationState = location.state as NavigationState | null;
@@ -83,15 +83,19 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
         }
     }, [handleSubmit, toaster, setHasUnsavedChanges, navigate, backDestination]);
 
-    const handleBackClick = useCallback(() => {
-        if (currentStep === 2 && hasUnsavedChanges) {
+    const handleExitForm = useCallback(() => {
+        if (hasUnsavedChanges) {
             setShowBackConfirmDialog(true);
-        } else if (currentStep === 2) {
-            navigate(backDestination);
         } else {
+            navigate(backDestination);
+        }
+    }, [hasUnsavedChanges, navigate, backDestination]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep > 2) {
             goToPreviousStep();
         }
-    }, [currentStep, hasUnsavedChanges, navigate, backDestination, goToPreviousStep]);
+    }, [currentStep, goToPreviousStep]);
 
     const handleNextClick = useCallback(() => {
         if (validateCurrentStep()) {
@@ -113,26 +117,34 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
 
     // Set topbar content
     useEffect(() => {
-        // Clear any previous right content
-        setRightContent(null);
+        const leftContent = currentStep <= 2 ? (
+            <button
+                onClick={handleExitForm}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to IPC"
+            >
+                <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+            </button>
+        ) : null;
 
-        // Center content: Step indicator with back/next arrows
-        setCenterContent(
+        const centerContent = (
             <div className="flex items-center gap-3">
-                <button
-                    onClick={handleBackClick}
-                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
-                    title="Back"
-                >
-                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                </button>
+                {currentStep > 2 && (
+                    <button
+                        onClick={handleBackClick}
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        title="Previous step"
+                    >
+                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                    </button>
+                )}
                 <IPCStepIndicator currentStep={currentStep} />
                 {currentStep < 4 ? (
                     <button
                         className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
                         onClick={handleNextClick}
                         disabled={loading}
-                        title="Next"
+                        title="Next step"
                     >
                         <Icon icon={arrowRightIcon} className="w-4 h-4" />
                     </button>
@@ -156,10 +168,12 @@ const IPCEditContent: React.FC<{ ipcId: number }> = ({ ipcId }) => {
             </div>
         );
 
+        setAllContent(leftContent, centerContent, null);
+
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, isSaving, previewLoading, handleBackClick, handleNextClick, handleSave, setCenterContent, setRightContent, clearContent]);
+    }, [currentStep, loading, isSaving, previewLoading, handleExitForm, handleBackClick, handleNextClick, handleSave, setAllContent, clearContent]);
 
 
 

@@ -6,12 +6,14 @@ import editIcon from "@iconify/icons-lucide/pencil";
 import trashIcon from "@iconify/icons-lucide/trash";
 import eyeIcon from "@iconify/icons-lucide/eye";
 import plusIcon from "@iconify/icons-lucide/plus";
+import arrowLeftIcon from "@iconify/icons-lucide/arrow-left";
 
 import { Spreadsheet } from "@/components/Spreadsheet";
 import type { SpreadsheetColumn } from "@/components/Spreadsheet";
 import { useDialog } from "@/components/daisyui";
 import useToast from "@/hooks/use-toast";
 import { useArchive } from "@/contexts/archive";
+import { useTopbarContent } from "@/contexts/topbar-content";
 
 import BudgetBOQDialog from "./components/Dialog";
 import useBudgetBOQs from "./use-budget-boqs";
@@ -31,6 +33,7 @@ const BudgetBOQs = () => {
     const [selectedProject, setSelectedProject] = useState<any>(null);
     const navigate = useNavigate();
     const location = useLocation();
+    const { setAllContent, clearContent } = useTopbarContent();
 
     const { isArchiveMode, setArchiveMode } = useArchive();
 
@@ -46,6 +49,26 @@ const BudgetBOQs = () => {
     } = useBudgetBOQs();
     const { dialogRef, handleShow, handleHide } = useDialog();
     const { toaster } = useToast();
+
+    const handleBackToDashboard = useCallback(() => {
+        navigate("/dashboard");
+    }, [navigate]);
+
+    useEffect(() => {
+        setAllContent(
+            <button
+                onClick={handleBackToDashboard}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Dashboard"
+            >
+                <Icon icon={arrowLeftIcon} className="size-5" />
+            </button>,
+            null,
+            null
+        );
+
+        return () => clearContent();
+    }, [setAllContent, clearContent, handleBackToDashboard]);
 
     const openCreateDialog = useCallback(async (
         type: "Add" | "Edit" | "Delete" | "Preview" | "Terminate" | "Select" | "Details" | "Export" | "Generate" | "Unissue" | "Archive",

@@ -309,7 +309,7 @@ const ClauseDetailDialog = ({
 export default function ContractDetailsPage() {
   const { contractId } = useParams<{ contractId: string }>();
   const navigate = useNavigate();
-  const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
+  const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
   const [report, setReport] = useState<ContractHealthReport | null>(null);
@@ -364,7 +364,7 @@ export default function ContractDetailsPage() {
 
   // Topbar setup
   useEffect(() => {
-    setLeftContent(
+    const leftContent = (
       <div className="flex items-center gap-3">
         <button
           onClick={handleBack}
@@ -385,7 +385,7 @@ export default function ContractDetailsPage() {
       </div>
     );
 
-    setRightContent(
+    const rightContent = (
       <div className="flex items-center gap-2">
         <button
           className="btn btn-sm btn-outline"
@@ -410,8 +410,10 @@ export default function ContractDetailsPage() {
       </div>
     );
 
+    setAllContent(leftContent, null, rightContent);
+
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setLeftContent, setRightContent, clearContent]);
+  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent]);
 
   // Filter clauses
   const filteredClauses = useMemo(() => {

@@ -70,7 +70,7 @@ const BOQStep: React.FC<BOQStepProps> = ({
     selectedTrade,
     setSelectedTrade,
 }) => {
-    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
     const [showClearDialog, setShowClearDialog] = useState(false);
     const [clearScope, setClearScope] = useState<"trade" | "building" | "all">("trade");
@@ -89,33 +89,29 @@ const BOQStep: React.FC<BOQStepProps> = ({
 
     // Set topbar content - back button on left, project name in center
     useEffect(() => {
-        // Left content: Back button
-        if (onBack) {
-            setLeftContent(
-                <button
-                    onClick={onBack}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
-                    title="Back to Budget BOQs"
-                >
-                    <Icon icon={arrowLeftIcon} className="w-5 h-5" />
-                </button>
-            );
-        }
+        const leftContent = onBack ? (
+            <button
+                onClick={onBack}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Budget BOQs"
+            >
+                <Icon icon={arrowLeftIcon} className="w-5 h-5" />
+            </button>
+        ) : null;
 
-        // Center content: Project name badge
-        if (selectedProject?.name) {
-            setCenterContent(
-                <div className="badge badge-lg badge-primary gap-2 px-4 py-3">
-                    <span className="font-semibold">{selectedProject.name}</span>
-                </div>
-            );
-        }
+        const centerContent = selectedProject?.name ? (
+            <div className="badge badge-lg badge-primary gap-2 px-4 py-3">
+                <span className="font-semibold">{selectedProject.name}</span>
+            </div>
+        ) : null;
+
+        setAllContent(leftContent, centerContent, null);
 
         // Cleanup on unmount
         return () => {
             clearContent();
         };
-    }, [onBack, selectedProject?.name, setLeftContent, setCenterContent, clearContent]);
+    }, [onBack, selectedProject?.name, setAllContent, clearContent]);
 
     // Auto-select first building when buildings are loaded
     useEffect(() => {

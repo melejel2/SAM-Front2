@@ -18,7 +18,7 @@ const EditSubcontractWizardContent: React.FC = () => {
     const navigate = useNavigate();
     const [showBackConfirmDialog, setShowBackConfirmDialog] = useState(false);
     const { toaster } = useToast();
-    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { setBlocking } = useNavigationBlocker();
 
     const {
@@ -53,15 +53,19 @@ const EditSubcontractWizardContent: React.FC = () => {
         }
     }, [handleSubmit, navigate]);
 
-    const handleBackClick = useCallback(() => {
-        if (currentStep === 1 && hasUnsavedChanges) {
+    const handleExitForm = useCallback(() => {
+        if (hasUnsavedChanges) {
             setShowBackConfirmDialog(true);
-        } else if (currentStep === 1) {
-            navigate('/dashboard/contracts');
         } else {
+            navigate('/dashboard/contracts');
+        }
+    }, [hasUnsavedChanges, navigate]);
+
+    const handleBackClick = useCallback(() => {
+        if (currentStep > 1) {
             goToPreviousStep();
         }
-    }, [currentStep, hasUnsavedChanges, navigate, goToPreviousStep]);
+    }, [currentStep, goToPreviousStep]);
 
     const handleNextClick = useCallback(() => {
         if (validateCurrentStep()) {
@@ -95,21 +99,27 @@ const EditSubcontractWizardContent: React.FC = () => {
 
     // Set topbar content
     useEffect(() => {
-        // Clear any leftContent from previous pages (e.g., contracts list back button)
-        setLeftContent(null);
-        // Clear any previous right content
-        setRightContent(null);
+        const leftContent = currentStep <= 1 ? (
+            <button
+                onClick={handleExitForm}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
+                title="Back to Contracts"
+            >
+                <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+            </button>
+        ) : null;
 
-        // Center content: Step indicator with back/next arrows
-        setCenterContent(
+        const centerContent = (
             <div className="flex items-center gap-3">
-                <button
-                    onClick={handleBackClick}
-                    className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
-                    title="Back"
-                >
-                    <Icon icon={arrowLeftIcon} className="w-4 h-4" />
-                </button>
+                {currentStep > 1 && (
+                    <button
+                        onClick={handleBackClick}
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                        title="Previous step"
+                    >
+                        <Icon icon={arrowLeftIcon} className="w-4 h-4" />
+                    </button>
+                )}
                 <StepIndicator currentStep={currentStep} />
                 {currentStep < 5 ? (
                     <button
@@ -140,10 +150,12 @@ const EditSubcontractWizardContent: React.FC = () => {
             </div>
         );
 
+        setAllContent(leftContent, centerContent, null);
+
         return () => {
             clearContent();
         };
-    }, [currentStep, loading, previewLoading, handleBackClick, handleNextClick, handleSubmitAndNavigate, setCenterContent, setRightContent, clearContent]);
+    }, [currentStep, loading, previewLoading, handleExitForm, handleBackClick, handleNextClick, handleSubmitAndNavigate, setAllContent, clearContent]);
 
     if (initialDataLoading) {
         return (

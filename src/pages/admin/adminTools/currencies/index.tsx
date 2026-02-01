@@ -35,7 +35,7 @@ const Currencies = memo(() => {
     } = useCurrencies();
 
     const { canAddDeleteCurrencies, canEditCurrencyRates } = usePermissions();
-    const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { tryNavigate } = useNavigationBlocker();
 
     // Modal states
@@ -109,12 +109,8 @@ const Currencies = memo(() => {
     }, [canEditCurrencyRates, handleSyncClick, loading, syncLoading]);
 
     useEffect(() => {
-        setLeftContent(leftTopbarContent);
-    }, [leftTopbarContent, setLeftContent]);
-
-    useEffect(() => {
-        setRightContent(rightTopbarContent);
-    }, [rightTopbarContent, setRightContent]);
+        setAllContent(leftTopbarContent, null, rightTopbarContent);
+    }, [leftTopbarContent, rightTopbarContent, setAllContent]);
 
     useEffect(() => {
         return () => {

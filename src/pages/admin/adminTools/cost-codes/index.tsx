@@ -31,7 +31,7 @@ const CostCodes = memo(() => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { canManageCostCodes } = usePermissions();
-    const { setLeftContent, setRightContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { tryNavigate } = useNavigationBlocker();
 
     // Modal states
@@ -100,12 +100,8 @@ const CostCodes = memo(() => {
     }, [canManageCostCodes, triggerFileInput, uploadLoading]);
 
     useEffect(() => {
-        setLeftContent(leftTopbarContent);
-    }, [leftTopbarContent, setLeftContent]);
-
-    useEffect(() => {
-        setRightContent(rightTopbarContent);
-    }, [rightTopbarContent, setRightContent]);
+        setAllContent(leftTopbarContent, null, rightTopbarContent);
+    }, [leftTopbarContent, rightTopbarContent, setAllContent]);
 
     useEffect(() => {
         return () => {
