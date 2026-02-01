@@ -22,7 +22,6 @@ import searchIcon from "@iconify/icons-lucide/search";
 import externalLinkIcon from "@iconify/icons-lucide/external-link";
 import SheetTabs from "./SheetTabs";
 import LongTextDialog from "./LongTextDialog";
-import { useOverflowDetection } from "./useOverflowDetection";
 import { Loader } from "@/components/Loader";
 import "./spreadsheet.css";
 
@@ -73,6 +72,63 @@ const columnIndexToLetter = (index: number): string => {
 const getValue = <T,>(row: T, column: SpreadsheetColumn<T>) => {
   if (column.formatter) return column.formatter((row as any)[column.key], row, -1);
   return (row as any)[column.key];
+};
+
+const normalizeCellValue = (value: unknown) => {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isNaN(value)) return "NaN";
+  return value;
+};
+
+const safeValueEquals = (a: unknown, b: unknown) => {
+  if (Object.is(a, b)) return true;
+  const left = normalizeCellValue(a);
+  const right = normalizeCellValue(b);
+  if (Object.is(left, right)) return true;
+  if (left === null || left === undefined || right === null || right === undefined) {
+    return false;
+  }
+  const leftType = typeof left;
+  const rightType = typeof right;
+  if (leftType === "object" || rightType === "object") {
+    try {
+      return JSON.stringify(left) === JSON.stringify(right);
+    } catch (_err) {
+      return String(left) === String(right);
+    }
+  }
+  return String(left) === String(right);
+};
+
+const getRowIdentifier = <T,>(row: T, index: number, getRowId?: (row: T, index: number) => string | number) => {
+  if (getRowId) return getRowId(row, index);
+  const fallback = (row as any)?.id;
+  return fallback ?? index;
+};
+
+const rowsEqualByColumns = <T,>(
+  prev: T[],
+  next: T[],
+  columnKeys: string[],
+  getRowId?: (row: T, index: number) => string | number
+) => {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    const prevRow = prev[i];
+    const nextRow = next[i];
+    if (prevRow === nextRow) continue;
+    const prevId = getRowIdentifier(prevRow, i, getRowId);
+    const nextId = getRowIdentifier(nextRow, i, getRowId);
+    if (!safeValueEquals(prevId, nextId)) return false;
+    for (let c = 0; c < columnKeys.length; c += 1) {
+      const key = columnKeys[c];
+      const prevValue = (prevRow as any)?.[key];
+      const nextValue = (nextRow as any)?.[key];
+      if (!safeValueEquals(prevValue, nextValue)) return false;
+    }
+  }
+  return true;
 };
 
 // Types imported from ./types
@@ -285,10 +341,19 @@ function SpreadsheetInner<T>(
 
   const isViewMode = mode === "view";
 
+  const columnKeys = useMemo(() => columns.map((col) => col.key), [columns]);
+  const columnKeysSignature = useMemo(() => columnKeys.join("|"), [columnKeys]);
+
   const [rows, setRows] = useState<T[]>(data);
+  const lastSyncedDataRef = useRef<T[] | null>(null);
   useEffect(() => {
+    const lastData = lastSyncedDataRef.current;
+    if (lastData && rowsEqualByColumns(lastData, data, columnKeys, getRowId)) {
+      return;
+    }
+    lastSyncedDataRef.current = data;
     setRows(data);
-  }, [data]);
+  }, [data, columnKeysSignature, getRowId]);
 
   const [selectedCell, setSelectedCell] = useState<CellPosition | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("cell");
@@ -337,6 +402,13 @@ function SpreadsheetInner<T>(
       indexes[col.key] = index;
     });
     return indexes;
+  }, [columns]);
+
+  // O(1) column lookup by key — replaces O(n) columns.find() in hot paths
+  const columnByKey = useMemo(() => {
+    const map: Record<string, SpreadsheetColumn<T>> = {};
+    columns.forEach((col) => { map[col.key] = col; });
+    return map;
   }, [columns]);
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -441,6 +513,15 @@ function SpreadsheetInner<T>(
   const [scrollTop, setScrollTop] = useState(0);
   const lastAutoScrollRef = useRef<{ id: string | number | null; found: boolean } | null>(null);
 
+  // Ref mirrors — allow callbacks to read current values without adding
+  // them as dependencies, keeping the callbacks reference-stable across
+  // renders and breaking cascading invalidation chains.
+  const selectedCellRef = useRef(selectedCell);
+  selectedCellRef.current = selectedCell;
+  const processedRowsRef = useRef<T[]>([]);
+  const rowsRef = useRef<T[]>(data);
+  const rowIndexByRefMapRef = useRef<Map<T, number>>(new Map());
+
   const rowHeightGetter = useCallback(
     (row: T, index: number) => {
       if (typeof rowHeight === "function") {
@@ -458,7 +539,7 @@ function SpreadsheetInner<T>(
   const sortRecords = useCallback(
     (source: T[]) => {
       if (!allowSorting || !sortColumn) return source;
-      const column = columns.find((c) => c.key === sortColumn);
+      const column = columnByKey[sortColumn];
       if (!column) return source;
       const sorted = [...source].sort((a, b) => {
         const aVal = getValue(a, column);
@@ -475,22 +556,24 @@ function SpreadsheetInner<T>(
       });
       return sorted;
     },
-    [allowSorting, columns, sortColumn, sortDirection]
+    [allowSorting, columnByKey, sortColumn, sortDirection]
   );
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
+    const hasColumnFilters = allowFilters && Object.keys(columnFilters).length > 0;
+
     const passesColumnFilters = (row: T) =>
       Object.entries(columnFilters).every(([key, values]) => {
         if (!values || values.length === 0) return true;
-        const column = columns.find((c) => c.key === key);
+        const column = columnByKey[key];
         if (!column) return true;
         const value = getValue(row, column);
         return values.includes(String(value ?? ""));
       });
 
     return rows.filter((row) => {
-      if (allowFilters && Object.keys(columnFilters).length > 0 && !passesColumnFilters(row)) {
+      if (hasColumnFilters && !passesColumnFilters(row)) {
         return false;
       }
       if (!normalizedSearch) return true;
@@ -500,11 +583,18 @@ function SpreadsheetInner<T>(
         return String(value).toLowerCase().includes(normalizedSearch);
       });
     });
-  }, [rows, columnFilters, columns, allowFilters, searchTerm]);
+  }, [rows, columnFilters, columnByKey, columns, allowFilters, searchTerm]);
 
   const processedRows = useMemo(() => sortRecords(filteredRows), [filteredRows, sortRecords]);
 
-  const minRowsWithBuffer = Math.max(processedRows.length, minBufferRows, minRenderRows);
+  // Keep ref mirrors in sync after processedRows/rows are derived
+  processedRowsRef.current = processedRows;
+  rowsRef.current = rows;
+
+  const minRowsWithBuffer = useMemo(
+    () => Math.max(processedRows.length, minBufferRows, minRenderRows),
+    [processedRows.length, minBufferRows, minRenderRows]
+  );
   const heights = useMemo(() => {
     if (processedRows.length === 0) {
       return Array.from({ length: minRowsWithBuffer }, () =>
@@ -588,40 +678,63 @@ function SpreadsheetInner<T>(
     rows.forEach((row, idx) => map.set(row, idx));
     return map;
   }, [rows]);
+  rowIndexByRefMapRef.current = rowIndexByRef;
 
+  // Uses refs so this callback is stable across data/selection changes,
+  // which keeps updateCellValue and its dependents stable too.
   const resolveRowIndex = useCallback(
     (processedIndex: number) => {
-      const row = processedRows[processedIndex];
+      const currentProcessed = processedRowsRef.current;
+      const row = currentProcessed[processedIndex];
       if (!row) return processedIndex;
-      const mapped = rowIndexByRef.get(row);
+      const mapped = rowIndexByRefMapRef.current.get(row);
       if (mapped !== undefined) return mapped;
       if (!getRowId) return processedIndex;
       const targetId = getRowId(row, processedIndex);
-      const fallbackIndex = rows.findIndex((candidate, idx) => getRowId(candidate, idx) === targetId);
+      const currentRows = rowsRef.current;
+      const fallbackIndex = currentRows.findIndex((candidate, idx) => getRowId(candidate, idx) === targetId);
       return fallbackIndex === -1 ? processedIndex : fallbackIndex;
     },
-    [processedRows, rowIndexByRef, rows, getRowId]
+    [getRowId]
   );
 
   const computeVisibleRange = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return { start: 0, end: processedRows.length };
+    const len = offsets.length;
+    if (len === 0) return { start: 0, end: 0 };
+
     const viewportHeight = container.clientHeight || 0;
     const startPx = Math.max(0, scrollTop - overscan * DEFAULT_ROW_HEIGHT);
-    let startIndex = 0;
-    while (startIndex < offsets.length && offsets[startIndex] + (heights[startIndex] ?? DEFAULT_ROW_HEIGHT) < startPx) {
-      startIndex += 1;
-    }
     const endPx = scrollTop + viewportHeight + overscan * DEFAULT_ROW_HEIGHT;
-    let endIndex = startIndex;
-    while (
-      endIndex < offsets.length &&
-      offsets[endIndex] < endPx &&
-      endIndex < processedRows.length
-    ) {
-      endIndex += 1;
+
+    // Binary search for startIndex: first row whose bottom edge >= startPx
+    let lo = 0;
+    let hi = len - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (offsets[mid] + (heights[mid] ?? DEFAULT_ROW_HEIGHT) < startPx) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
     }
-    return { start: startIndex, end: Math.min(endIndex + overscan, processedRows.length) };
+    const startIndex = lo;
+
+    // Binary search for endIndex: last row whose top edge < endPx
+    lo = startIndex;
+    hi = len - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >>> 1;
+      if (offsets[mid] < endPx) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    const endIndex = Math.min(lo + 1 + overscan, processedRows.length);
+
+    return { start: startIndex, end: endIndex };
   }, [heights, offsets, overscan, processedRows.length, scrollTop]);
 
   const visibleRows = useMemo(() => {
@@ -647,14 +760,14 @@ function SpreadsheetInner<T>(
     }
     const { rowIndex, columnKey } = selectedCell;
     const row = processedRows[rowIndex];
-    const column = columns.find((c) => c.key === columnKey);
+    const column = columnByKey[columnKey];
     if (!row || !column) {
       setFormulaValue("");
       return;
     }
     const raw = getValue(row, column);
     setFormulaValue(raw === null || raw === undefined ? "" : String(raw));
-  }, [selectedCell, processedRows, columns]);
+  }, [selectedCell, processedRows, columnByKey]);
 
   const commitRows = useCallback(
     (newRows: T[]) => {
@@ -664,10 +777,12 @@ function SpreadsheetInner<T>(
     [onDataChange]
   );
 
+  // Reads rows from ref so the callback stays stable when rows change.
   const updateCellValue = useCallback(
     (rowIndex: number, column: SpreadsheetColumn<T>, value: any) => {
       const actualRowIndex = resolveRowIndex(rowIndex);
-      const next = [...rows];
+      const currentRows = rowsRef.current;
+      const next = [...currentRows];
       const currentRow = next[actualRowIndex];
       if (!currentRow) return;
       const row = { ...(currentRow as any) } as T;
@@ -679,9 +794,12 @@ function SpreadsheetInner<T>(
       onRowChange?.(actualRowIndex, row);
       commitRows(next);
     },
-    [rows, commitRows, onCellChange, onRowChange, resolveRowIndex]
+    [commitRows, onCellChange, onRowChange, resolveRowIndex]
   );
 
+  // Reads selectedCell and processedRows from refs so the callback identity
+  // stays stable across selection and data changes.  This breaks the cascade
+  // that previously invalidated handleKeyDown, handleRowHeaderMouseDown, etc.
   const beginSelection = useCallback(
     (
       rowIndex: number,
@@ -694,21 +812,22 @@ function SpreadsheetInner<T>(
         pendingEditRef.current = { value: null, commit: null };
       }
 
+      const currentSelectedCell = selectedCellRef.current;
       const cell = { rowIndex, columnKey };
-      const anchor = options?.extend && selectedCell ? selectedCell : cell;
+      const anchor = options?.extend && currentSelectedCell ? currentSelectedCell : cell;
       const end = options?.endCell || cell;
       setSelectedCell(anchor);
       setSelectionEnd(end);
       setEditingCell(null);
       setSelectionMode(options?.mode ?? "cell");
-      const selectedRow = processedRows[anchor.rowIndex] ?? null;
+      const selectedRow = processedRowsRef.current[anchor.rowIndex] ?? null;
       onSelectionChange?.(anchor, selectedRow);
       if (options?.mode) {
         isDraggingSelectionRef.current = true;
         selectionDragModeRef.current = options.mode;
       }
     },
-    [onSelectionChange, processedRows, selectedCell]
+    [onSelectionChange]
   );
 
   const stopSelectionDrag = useCallback(() => {
@@ -919,14 +1038,15 @@ function SpreadsheetInner<T>(
     (event: React.MouseEvent, rowIndex: number) => {
       event.preventDefault();
       if (!firstColumnKey) return;
-      const anchorRow = event.shiftKey && selectedCell ? selectedCell.rowIndex : rowIndex;
+      const current = selectedCellRef.current;
+      const anchorRow = event.shiftKey && current ? current.rowIndex : rowIndex;
       const safeAnchorRow = Math.min(anchorRow, lastRowIndex);
       const safeRowIndex = Math.min(rowIndex, lastRowIndex);
       const anchor: CellPosition = { rowIndex: safeAnchorRow, columnKey: firstColumnKey };
       const endCell: CellPosition = { rowIndex: safeRowIndex, columnKey: lastColumnKey || firstColumnKey };
       beginSelection(anchor.rowIndex, anchor.columnKey, { endCell, mode: "row" });
     },
-    [beginSelection, firstColumnKey, lastColumnKey, lastRowIndex, selectedCell]
+    [beginSelection, firstColumnKey, lastColumnKey, lastRowIndex]
   );
 
   const handleColumnHeaderMouseDown = useCallback(
@@ -934,12 +1054,13 @@ function SpreadsheetInner<T>(
       const target = event.target as HTMLElement;
       if (target.closest("button") || target.classList.contains("column-resize-handle")) return;
       event.preventDefault();
-      const anchorRow = event.shiftKey && selectedCell ? selectedCell.rowIndex : 0;
+      const current = selectedCellRef.current;
+      const anchorRow = event.shiftKey && current ? current.rowIndex : 0;
       const safeAnchorRow = Math.min(anchorRow, lastRowIndex);
       const endCell: CellPosition = { rowIndex: lastRowIndex, columnKey };
       beginSelection(safeAnchorRow, columnKey, { endCell, mode: "column" });
     },
-    [beginSelection, lastRowIndex, selectedCell]
+    [beginSelection, lastRowIndex]
   );
 
   const toggleFilterDropdown = useCallback(
@@ -966,10 +1087,10 @@ function SpreadsheetInner<T>(
 
   const getUniqueColumnValues = useCallback(
     (columnKey: string) => {
+      const col = columnByKey[columnKey];
+      if (!col) return [];
       const values = new Set<string>();
       rows.forEach((row) => {
-        const col = columns.find((c) => c.key === columnKey);
-        if (!col) return;
         const value = getValue(row, col);
         if (value !== undefined && value !== null) {
           values.add(String(value));
@@ -977,7 +1098,7 @@ function SpreadsheetInner<T>(
       });
       return Array.from(values).sort((a, b) => a.localeCompare(b));
     },
-    [rows, columns]
+    [rows, columnByKey]
   );
 
   // Column resizing
@@ -1018,7 +1139,7 @@ function SpreadsheetInner<T>(
 
   const handleAutoFitColumn = useCallback(
     (columnKey: string) => {
-      const col = columns.find((c) => c.key === columnKey);
+      const col = columnByKey[columnKey];
       if (!col) return;
       const maxLength = Math.max(
         col.label.length,
@@ -1027,11 +1148,11 @@ function SpreadsheetInner<T>(
       const approxWidth = Math.max(col.minWidth ?? 80, Math.min((col.maxWidth ?? 400), maxLength * 8 + 32));
       setColumnWidths((prev) => ({ ...prev, [columnKey]: approxWidth }));
     },
-    [columns, rows]
+    [columnByKey, rows]
   );
 
   const activeCellRow = selectedCell ? processedRows[selectedCell.rowIndex] : null;
-  const activeCellColumn = selectedCell ? columns.find((c) => c.key === selectedCell.columnKey) : undefined;
+  const activeCellColumn = selectedCell ? columnByKey[selectedCell.columnKey] : undefined;
   const formulaBarEditable =
     !!activeCellRow &&
     !!activeCellColumn?.editable &&
@@ -1073,7 +1194,7 @@ function SpreadsheetInner<T>(
   );
   const filteredCount = processedRows.length;
   const hasActiveFilters = Object.keys(columnFilters).length > 0;
-  const activeLongTextColumn = longTextCell ? columns.find((c) => c.key === longTextCell.columnKey) : undefined;
+  const activeLongTextColumn = longTextCell ? columnByKey[longTextCell.columnKey] : undefined;
   const longTextEditable = !!activeLongTextColumn?.editable && !isViewMode;
   const longTextTitle = activeLongTextColumn?.label || longTextCell?.columnKey;
   const activeCellLabel =
@@ -1092,21 +1213,19 @@ function SpreadsheetInner<T>(
 
   // Optimized scroll handler with requestAnimationFrame throttling
   const scrollRafRef = useRef<number | null>(null);
+  // rAF-throttled scroll handler.  startTransition was removed because
+  // layering it on top of rAF double-buffers the update (rAF defers to
+  // the next frame, then startTransition may defer further), causing
+  // visible lag during fast scrolling.
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = event.currentTarget.scrollTop;
 
-    // Cancel any pending animation frame
     if (scrollRafRef.current !== null) {
       cancelAnimationFrame(scrollRafRef.current);
     }
 
-    // Schedule update in next animation frame for smooth 60fps scrolling
     scrollRafRef.current = requestAnimationFrame(() => {
-      // Use startTransition to mark scroll updates as non-urgent
-      // This prevents blocking user interactions during rapid scrolling
-      startTransition(() => {
-        setScrollTop(newScrollTop);
-      });
+      setScrollTop(newScrollTop);
       scrollRafRef.current = null;
     });
   }, []);
@@ -1787,7 +1906,7 @@ function SpreadsheetInner<T>(
         onSave={
           longTextEditable && longTextCell
             ? (next) => {
-                const column = columns.find((c) => c.key === longTextCell.columnKey);
+                const column = columnByKey[longTextCell.columnKey];
                 if (column) {
                   updateCellValue(longTextCell.rowIndex, column, next);
                 }
@@ -1824,7 +1943,14 @@ const formatNumberDisplay = (value: number): string => {
   return rounded.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const OverflowCellContent: React.FC<OverflowCellContentProps> = ({
+// Heuristic overflow detection: average character ≈ 7.5 px at 14 px font
+// plus ~32 px cell padding.  False-positives are harmless (extra icon);
+// this eliminates the per-cell useLayoutEffect + DOM measurement that
+// previously ran for every visible cell on every scroll frame.
+const CHAR_WIDTH_EST = 7.5;
+const CELL_PAD_PX = 32;
+
+const OverflowCellContent = React.memo<OverflowCellContentProps>(({
   value,
   rowIndex,
   columnKey,
@@ -1839,29 +1965,22 @@ const OverflowCellContent: React.FC<OverflowCellContentProps> = ({
   } else {
     displayValue = String(value);
   }
-  const { textRef, isOverflowing } = useOverflowDetection<HTMLSpanElement>(displayValue, columnWidth);
 
-  if (isOverflowing) {
-    return (
-      <button
-        type="button"
-        className="excel-cell-content spreadsheet-longtext"
-        title={displayValue}
-        onClick={() => onOpenLongText(rowIndex, columnKey, displayValue)}
-      >
-        <span className="flex-1 min-w-0 truncate" ref={textRef}>
-          {displayValue}
-        </span>
-        <Icon icon={externalLinkIcon} fontSize={14} />
-      </button>
-    );
-  }
+  const isLikelyOverflowing = displayValue.length * CHAR_WIDTH_EST + CELL_PAD_PX > columnWidth;
 
   return (
-    <div className="excel-cell-content" title={undefined}>
-      <span className="block w-full truncate" ref={textRef}>
+    <div
+      className={`excel-cell-content${isLikelyOverflowing ? " spreadsheet-longtext" : ""}`}
+      title={isLikelyOverflowing ? displayValue : undefined}
+      role={isLikelyOverflowing ? "button" : undefined}
+      onClick={isLikelyOverflowing ? () => onOpenLongText(rowIndex, columnKey, displayValue) : undefined}
+    >
+      <span className="block w-full truncate">
         {displayValue}
       </span>
+      {isLikelyOverflowing && (
+        <Icon icon={externalLinkIcon} fontSize={14} style={{ flexShrink: 0, position: "absolute", right: 4 }} />
+      )}
     </div>
   );
-};
+});
