@@ -70,8 +70,8 @@ export const TradeSelectionSection: React.FC<TradeSelectionSectionProps> = ({
                     <span className="font-medium text-sm text-base-content">Select Trades</span>
                     {selectedTrades.length > 0 && (
                         <div className="flex items-center gap-1 flex-wrap">
-                            {selectedTrades.map(tradeName => (
-                                <div key={tradeName} className="badge badge-primary badge-sm">
+                            {selectedTrades.map((tradeName, idx) => (
+                                <div key={`${tradeName}-${idx}`} className="badge badge-primary badge-sm">
                                     {tradeName}
                                 </div>
                             ))}
@@ -88,12 +88,12 @@ export const TradeSelectionSection: React.FC<TradeSelectionSectionProps> = ({
                     </p>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {trades.map(trade => {
+                        {trades.map((trade, idx) => {
                             const isSelected = selectedTrades.includes(trade.name);
 
                             return (
                                 <label
-                                    key={trade.name}
+                                    key={`${trade.name}-${idx}`}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-all duration-150 hover:shadow-sm ${
                                         isSelected
                                             ? 'border-primary bg-primary/5'

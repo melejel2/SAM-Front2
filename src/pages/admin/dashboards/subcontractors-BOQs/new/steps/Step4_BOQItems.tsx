@@ -170,9 +170,9 @@ export const Step4_BOQItems: React.FC = () => {
             {/* Section 2: Building Selection per Trade */}
             {formData.selectedTrades.length > 0 && (
                 <div className="flex-shrink-0 space-y-4">
-                    {formData.selectedTrades.map(tradeName => (
+                    {formData.selectedTrades.map((tradeName, idx) => (
                         <BuildingSelectionSection
-                            key={tradeName}
+                            key={`${tradeName}-${idx}`}
                             tradeName={tradeName}
                             buildings={availableTrades.find(t => t.name === tradeName)?.buildings || []}
                             selectedBuildings={formData.buildingTradeMap[tradeName] || []}

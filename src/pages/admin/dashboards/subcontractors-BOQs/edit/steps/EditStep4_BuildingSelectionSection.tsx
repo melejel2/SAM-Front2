@@ -57,8 +57,8 @@ export const EditBuildingSelectionSection: React.FC<BuildingSelectionSectionProp
                     <span className="font-medium text-sm text-base-content">Select Buildings</span>
                     {selectedBuildings.length > 0 && (
                         <div className="flex items-center gap-1 flex-wrap">
-                            {selectedBuildingNames.map(name => (
-                                <div key={name} className="badge badge-primary badge-sm">
+                            {selectedBuildingNames.map((name, idx) => (
+                                <div key={`${name}-${idx}`} className="badge badge-primary badge-sm">
                                     {name}
                                 </div>
                             ))}
