@@ -45,18 +45,18 @@ const HowItWorksModal = memo(({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-[1400px] w-[98vw] h-[95vh] max-h-[95vh] overflow-y-auto p-8">
-        <button className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" onClick={onClose}>✕</button>
+      <div className="modal-box max-w-[1400px] w-[98vw] h-[97vh] max-h-[97vh] overflow-y-auto p-6">
+        <button className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3" onClick={onClose}>✕</button>
 
-        <h3 className="text-2xl font-semibold mb-1">Contract Risk Analysis</h3>
-        <p className="text-sm text-base-content/60 mb-6">AI-powered clause classification based on peer-reviewed academic research</p>
+        <h3 className="text-xl font-semibold mb-0.5">Contract Risk Analysis</h3>
+        <p className="text-sm text-base-content/60 mb-4">AI-powered clause classification based on peer-reviewed academic research</p>
 
         {/* Top Row: Problem + Pipeline side by side */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
           {/* The Problem */}
-          <div className="p-5 bg-error/5 border border-error/20 rounded-lg h-full">
-            <h4 className="text-sm font-semibold mb-3">The Problem</h4>
-            <p className="text-sm text-base-content/70 leading-relaxed mb-4">
+          <div className="p-4 bg-error/5 border border-error/20 rounded-lg">
+            <h4 className="text-sm font-semibold mb-2">The Problem</h4>
+            <p className="text-sm text-base-content/70 leading-relaxed mb-2">
               Construction projects suffer from contractual disputes caused by ambiguity, misunderstanding of requirements,
               and specification errors. According to recent studies, the global average cost and duration of construction
               disputes is <strong className="text-error">$54 million</strong> and <strong className="text-error">13.4 months</strong>.
@@ -68,51 +68,51 @@ const HowItWorksModal = memo(({
           </div>
 
           {/* How It Works - Pipeline */}
-          <div className="p-5 bg-base-200/30 rounded-lg h-full">
-            <h4 className="text-sm font-semibold mb-4">How It Works</h4>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <div className="flex flex-col items-center text-center min-w-[90px]">
-                <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-2 text-base-content/70 text-lg">1</div>
-                <span className="text-sm font-medium">Upload</span>
-                <span className="text-xs text-base-content/50">.docx file</span>
+          <div className="p-4 bg-base-200/30 rounded-lg">
+            <h4 className="text-sm font-semibold mb-3">How It Works</h4>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex flex-col items-center text-center min-w-[80px]">
+                <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center mb-1.5 text-base-content/70 text-base">1</div>
+                <span className="text-xs font-medium">Upload</span>
+                <span className="text-[10px] text-base-content/50">.docx file</span>
               </div>
-              <span className="text-base-content/30 text-xl">→</span>
-              <div className="flex flex-col items-center text-center min-w-[90px]">
-                <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-2 text-base-content/70 text-lg">2</div>
-                <span className="text-sm font-medium">Extract</span>
-                <span className="text-xs text-base-content/50">Parse clauses</span>
+              <span className="text-base-content/30 text-lg">→</span>
+              <div className="flex flex-col items-center text-center min-w-[80px]">
+                <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center mb-1.5 text-base-content/70 text-base">2</div>
+                <span className="text-xs font-medium">Extract</span>
+                <span className="text-[10px] text-base-content/50">Parse clauses</span>
               </div>
-              <span className="text-base-content/30 text-xl">→</span>
-              <div className="flex flex-col items-center text-center min-w-[90px]">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center mb-2 text-white font-bold text-lg">AI</div>
-                <span className="text-sm font-medium text-primary">Analyze</span>
-                <span className="text-xs text-base-content/50">LLM Classification</span>
+              <span className="text-base-content/30 text-lg">→</span>
+              <div className="flex flex-col items-center text-center min-w-[80px]">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center mb-1.5 text-white font-bold text-base">AI</div>
+                <span className="text-xs font-medium text-primary">Analyze</span>
+                <span className="text-[10px] text-base-content/50">LLM Classification</span>
               </div>
-              <span className="text-base-content/30 text-xl">→</span>
-              <div className="flex flex-col items-center text-center min-w-[90px]">
-                <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-2 text-base-content/70 text-lg">4</div>
-                <span className="text-sm font-medium">Detect</span>
-                <span className="text-xs text-base-content/50">7 risk categories</span>
+              <span className="text-base-content/30 text-lg">→</span>
+              <div className="flex flex-col items-center text-center min-w-[80px]">
+                <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center mb-1.5 text-base-content/70 text-base">4</div>
+                <span className="text-xs font-medium">Detect</span>
+                <span className="text-[10px] text-base-content/50">7 risk categories</span>
               </div>
-              <span className="text-base-content/30 text-xl">→</span>
-              <div className="flex flex-col items-center text-center min-w-[90px]">
-                <div className="w-12 h-12 rounded-full bg-base-300 flex items-center justify-center mb-2 text-base-content/70 text-lg">5</div>
-                <span className="text-sm font-medium">Report</span>
-                <span className="text-xs text-base-content/50">Score & recommendations</span>
+              <span className="text-base-content/30 text-lg">→</span>
+              <div className="flex flex-col items-center text-center min-w-[80px]">
+                <div className="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center mb-1.5 text-base-content/70 text-base">5</div>
+                <span className="text-xs font-medium">Report</span>
+                <span className="text-[10px] text-base-content/50">Score & recommendations</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Research Basis - Full Width with side-by-side stats and description */}
-        <div className="mb-6 p-5 bg-base-200/40 rounded-lg">
-          <div className="flex items-start justify-between mb-4">
+        {/* Research Foundation - compact with stats in one row */}
+        <div className="mb-4 p-4 bg-base-200/40 rounded-lg">
+          <div className="flex items-start justify-between mb-2">
             <h4 className="text-sm font-semibold">Research Foundation</h4>
             <span className="text-xs text-base-content/40">Moon, Chi & Im (2022)</span>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <p className="text-sm text-base-content/70 leading-relaxed mb-3">
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-base-content/70 leading-relaxed mb-2">
                 Our system implements research from Seoul National University, published in <em>Automation in Construction</em>.
                 The study analyzed <strong>2,807 clauses</strong> from 56 construction specifications and demonstrated that
                 AI-based classification significantly outperforms traditional rule-based methods.
@@ -123,92 +123,92 @@ const HowItWorksModal = memo(({
                 higher accuracy than keyword or regex-based approaches.
               </p>
             </div>
-            <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
-              <div className="p-4 bg-base-100 rounded-lg text-center">
-                <div className="text-3xl font-bold text-success">93.4%</div>
-                <div className="text-xs text-base-content/50 mt-1">AI F1 Score</div>
+            <div className="flex gap-2 flex-shrink-0">
+              <div className="p-3 bg-base-100 rounded-lg text-center min-w-[80px]">
+                <div className="text-2xl font-bold text-success">93.4%</div>
+                <div className="text-[10px] text-base-content/50 mt-0.5">AI F1 Score</div>
               </div>
-              <div className="p-4 bg-base-100 rounded-lg text-center">
-                <div className="text-3xl font-bold text-error">42.6%</div>
-                <div className="text-xs text-base-content/50 mt-1">Regex F1 Score</div>
+              <div className="p-3 bg-base-100 rounded-lg text-center min-w-[80px]">
+                <div className="text-2xl font-bold text-error">42.6%</div>
+                <div className="text-[10px] text-base-content/50 mt-0.5">Regex F1 Score</div>
               </div>
-              <div className="p-4 bg-base-100 rounded-lg text-center">
-                <div className="text-3xl font-bold text-primary">2.2x</div>
-                <div className="text-xs text-base-content/50 mt-1">Better Accuracy</div>
+              <div className="p-3 bg-base-100 rounded-lg text-center min-w-[80px]">
+                <div className="text-2xl font-bold text-primary">2.2x</div>
+                <div className="text-[10px] text-base-content/50 mt-0.5">Better Accuracy</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Risk Categories - 7 across in a more compact grid */}
-        <div className="mb-6">
-          <h4 className="text-sm font-semibold mb-2">7 Risk Categories (Table 2, Moon et al.)</h4>
-          <p className="text-sm text-base-content/60 mb-4">
+        {/* Risk Categories - 7 across compact */}
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold mb-1.5">7 Risk Categories (Table 2, Moon et al.)</h4>
+          <p className="text-xs text-base-content/60 mb-3">
             Based on literature review of 11 studies spanning 1990-2022, these categories are most vulnerable to disputes:
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-error mb-2"></span>
-              <div className="text-sm font-medium">Payment</div>
-              <div className="text-xs text-base-content/50 mt-1">Compensation, retention, payment terms</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2">
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-error mb-1.5"></span>
+              <div className="text-xs font-medium">Payment</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">Compensation, retention, payment terms</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-warning mb-2"></span>
-              <div className="text-sm font-medium">Temporal</div>
-              <div className="text-xs text-base-content/50 mt-1">Deadlines, delays, schedule constraints</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-warning mb-1.5"></span>
+              <div className="text-xs font-medium">Temporal</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">Deadlines, delays, schedule constraints</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-info mb-2"></span>
-              <div className="text-sm font-medium">Procedure</div>
-              <div className="text-xs text-base-content/50 mt-1">Methods, steps, notification requirements</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-info mb-1.5"></span>
+              <div className="text-xs font-medium">Procedure</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">Methods, steps, notification requirements</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-success mb-2"></span>
-              <div className="text-sm font-medium">Safety</div>
-              <div className="text-xs text-base-content/50 mt-1">HSE, insurance, liability clauses</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-success mb-1.5"></span>
+              <div className="text-xs font-medium">Safety</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">HSE, insurance, liability clauses</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-primary mb-2"></span>
-              <div className="text-sm font-medium">Role</div>
-              <div className="text-xs text-base-content/50 mt-1">Scope definition, coordination duties</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-primary mb-1.5"></span>
+              <div className="text-xs font-medium">Role</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">Scope definition, coordination duties</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-secondary mb-2"></span>
-              <div className="text-sm font-medium">Definition</div>
-              <div className="text-xs text-base-content/50 mt-1">Ambiguous terms, undefined scope</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-secondary mb-1.5"></span>
+              <div className="text-xs font-medium">Definition</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">Ambiguous terms, undefined scope</div>
             </div>
-            <div className="flex flex-col items-center text-center p-4 rounded-lg border border-base-300 bg-base-100">
-              <span className="w-4 h-4 rounded-full bg-accent mb-2"></span>
-              <div className="text-sm font-medium">Reference</div>
-              <div className="text-xs text-base-content/50 mt-1">External documents, standards, regulations</div>
+            <div className="flex flex-col items-center text-center p-3 rounded-lg border border-base-300 bg-base-100">
+              <span className="w-3 h-3 rounded-full bg-accent mb-1.5"></span>
+              <div className="text-xs font-medium">Reference</div>
+              <div className="text-[10px] text-base-content/50 mt-0.5">External documents, standards, regulations</div>
             </div>
           </div>
         </div>
 
         {/* Bottom Row: Two-Tier Approach + Risk Levels side by side */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
           {/* Two-Tier Approach */}
           <div>
-            <h4 className="text-sm font-semibold mb-3">Two-Tier Analysis Approach</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">1</span>
-                  <span className="font-semibold">Template Analysis</span>
+            <h4 className="text-sm font-semibold mb-2">Two-Tier Analysis Approach</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 border-2 border-primary/20 rounded-lg bg-primary/5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</span>
+                  <span className="text-sm font-semibold">Template Analysis</span>
                 </div>
-                <p className="text-sm text-base-content/60">
+                <p className="text-xs text-base-content/60">
                   AI analyzes your standard contract templates to establish a risk baseline.
-                  Identifies inherent risks in your template language before any project-specific modifications.
+                  Identifies inherent risks before project-specific modifications.
                 </p>
               </div>
-              <div className="p-4 border-2 border-secondary/20 rounded-lg bg-secondary/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-7 h-7 rounded-full bg-secondary text-white flex items-center justify-center text-sm font-bold">2</span>
-                  <span className="font-semibold">Contract Analysis</span>
+              <div className="p-3 border-2 border-secondary/20 rounded-lg bg-secondary/5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-secondary text-white flex items-center justify-center text-xs font-bold">2</span>
+                  <span className="text-sm font-semibold">Contract Analysis</span>
                 </div>
-                <p className="text-sm text-base-content/60">
+                <p className="text-xs text-base-content/60">
                   AI analyzes signed contracts and compares against templates to detect
-                  deviations, new risks, and modified clauses that may introduce additional exposure.
+                  deviations, new risks, and modified clauses.
                 </p>
               </div>
             </div>
@@ -216,28 +216,28 @@ const HowItWorksModal = memo(({
 
           {/* Risk Levels & Scoring */}
           <div>
-            <h4 className="text-sm font-semibold mb-3">Risk Levels & Health Scoring</h4>
-            <div className="p-4 bg-base-200/30 rounded-lg h-[calc(100%-28px)]">
-              <div className="grid grid-cols-2 gap-3 mb-4">
+            <h4 className="text-sm font-semibold mb-2">Risk Levels & Health Scoring</h4>
+            <div className="p-3 bg-base-200/30 rounded-lg">
+              <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1.5 rounded text-sm font-semibold text-white" style={{ backgroundColor: '#7f1d1d' }}>Critical</span>
-                  <span className="text-sm text-base-content/60">Immediate action</span>
+                  <span className="px-2 py-1 rounded text-xs font-semibold text-white" style={{ backgroundColor: '#7f1d1d' }}>Critical</span>
+                  <span className="text-xs text-base-content/60">Immediate action</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1.5 rounded text-sm font-semibold bg-error text-white">High</span>
-                  <span className="text-sm text-base-content/60">Address before signing</span>
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-error text-white">High</span>
+                  <span className="text-xs text-base-content/60">Address before signing</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1.5 rounded text-sm font-semibold bg-warning text-white">Medium</span>
-                  <span className="text-sm text-base-content/60">Worth negotiating</span>
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-warning text-white">Medium</span>
+                  <span className="text-xs text-base-content/60">Worth negotiating</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1.5 rounded text-sm font-semibold bg-success text-white">Low</span>
-                  <span className="text-sm text-base-content/60">Document only</span>
+                  <span className="px-2 py-1 rounded text-xs font-semibold bg-success text-white">Low</span>
+                  <span className="text-xs text-base-content/60">Document only</span>
                 </div>
               </div>
-              <div className="text-sm text-base-content/60 border-t border-base-300 pt-3">
-                <strong>Health Score (0-100):</strong><br/>
+              <div className="text-xs text-base-content/60 border-t border-base-300 pt-2">
+                <strong>Health Score (0-100):</strong>{' '}
                 <span className="text-success font-medium">≥80</span> Low risk |{' '}
                 <span className="text-warning font-medium">60-79</span> Moderate |{' '}
                 <span className="text-error font-medium">40-59</span> Concerning |{' '}
@@ -248,7 +248,7 @@ const HowItWorksModal = memo(({
         </div>
 
         {/* Footer */}
-        <div className="pt-4 border-t border-base-200 flex items-center justify-between">
+        <div className="pt-3 border-t border-base-200 flex items-center justify-between">
           <div className="text-xs text-base-content/50">
             <span>Moon, S., Chi, S., & Im, S. B. (2022). <em>Automation in Construction</em>, 142, 104465.</span>
             <a
