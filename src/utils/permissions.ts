@@ -4,13 +4,13 @@ export const ROLE_PERMISSIONS = {
   // Users management - only Admin can add/edit/delete
   USERS_MANAGE: ['Admin'],
   
-  // Subcontractors - OperationsManager and ContractsManager can add/edit, only Admin can delete
-  SUBCONTRACTORS_ADD_EDIT: ['Admin', 'OperationsManager', 'ContractsManager'],
-  SUBCONTRACTORS_DELETE: ['Admin'],
+  // Subcontractors - Admin, OperationsManager, ContractsManager, and QuantitySurveyor can add/edit/delete
+  SUBCONTRACTORS_ADD_EDIT: ['Admin', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor'],
+  SUBCONTRACTORS_DELETE: ['Admin', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor'],
   
-  // Currencies - only Admin can add/delete, OperationsManager and ContractsManager can edit conversion rates
+  // Currencies - only Admin can manage
   CURRENCIES_ADD_DELETE: ['Admin'],
-  CURRENCIES_EDIT_RATES: ['Admin', 'OperationsManager', 'ContractsManager'],
+  CURRENCIES_EDIT_RATES: ['Admin'],
   
   // Cost codes - only Admin can add/edit/delete
   COST_CODES_MANAGE: ['Admin'],
@@ -18,9 +18,9 @@ export const ROLE_PERMISSIONS = {
   // Trades - only Admin can add/edit/delete
   TRADES_MANAGE: ['Admin'],
   
-  // Templates - Admin and ContractsManager can add/edit, only Admin can delete, others can preview/download
-  TEMPLATES_ADD_EDIT: ['Admin', 'ContractsManager'],
-  TEMPLATES_DELETE: ['Admin'],
+  // Templates - Admin, OperationsManager, ContractsManager, and QuantitySurveyor can add/edit/delete, others can preview/download
+  TEMPLATES_ADD_EDIT: ['Admin', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor'],
+  TEMPLATES_DELETE: ['Admin', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor'],
   TEMPLATES_VIEW: ['Admin', 'GeneralManager', 'RegionalOperationsManager', 'OperationsManager', 'ContractsManager', 'QuantitySurveyor', 'Accountant'],
   
   // Units - only Admin can add/edit/delete

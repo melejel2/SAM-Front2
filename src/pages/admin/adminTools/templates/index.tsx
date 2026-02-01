@@ -179,8 +179,8 @@ const Templates = memo(() => {
 
     const { getToken } = useAuth();
     const { toaster } = useToast();
-    const { canManageTemplates, canDeleteTemplates, isAdmin } = usePermissions();
-    const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+    const { canManageTemplates, canDeleteTemplates } = usePermissions();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { tryNavigate } = useNavigationBlocker();
 
     const [viewMode, setViewMode] = useState<'table' | 'preview'>('table');
@@ -424,8 +424,8 @@ const Templates = memo(() => {
 
     // Handle Edit Template (Admin only)
     const handleEditTemplate = async (row: any, templateType: 'contract' | 'vo' | 'other') => {
-        if (!isAdmin) {
-            toaster.error("Only administrators can edit templates");
+        if (!canManageTemplates) {
+            toaster.error("You don't have permission to edit templates");
             return;
         }
 
@@ -695,7 +695,7 @@ const Templates = memo(() => {
                 >
                     <Icon icon={eyeIcon} className="w-4 h-4" />
                 </button>
-                {isAdmin && (
+                {canManageTemplates && (
                     <button
                         className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
                         onClick={(e) => {
@@ -721,7 +721,7 @@ const Templates = memo(() => {
                 )}
             </div>
         );
-    }, [isAdmin, canDeleteTemplates]);
+    }, [canManageTemplates, canDeleteTemplates]);
 
     // Actions render for VO Templates
     const renderVOActions = useCallback((row: VOTemplate) => {
@@ -737,7 +737,7 @@ const Templates = memo(() => {
                 >
                     <Icon icon={eyeIcon} className="w-4 h-4" />
                 </button>
-                {isAdmin && (
+                {canManageTemplates && (
                     <button
                         className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
                         onClick={(e) => {
@@ -763,7 +763,7 @@ const Templates = memo(() => {
                 )}
             </div>
         );
-    }, [isAdmin, canDeleteTemplates]);
+    }, [canManageTemplates, canDeleteTemplates]);
 
     // Actions render for Other Templates
     const renderOtherActions = useCallback((row: OtherTemplate) => {
@@ -779,7 +779,7 @@ const Templates = memo(() => {
                 >
                     <Icon icon={eyeIcon} className="w-4 h-4" />
                 </button>
-                {isAdmin && (
+                {canManageTemplates && (
                     <button
                         className="btn btn-ghost btn-xs text-primary hover:bg-primary/20"
                         onClick={(e) => {
@@ -805,7 +805,7 @@ const Templates = memo(() => {
                 )}
             </div>
         );
-    }, [isAdmin, canDeleteTemplates]);
+    }, [canManageTemplates, canDeleteTemplates]);
 
     // Toolbar for Contract Templates
     const contractToolbar = useMemo(() => {
@@ -935,16 +935,8 @@ const Templates = memo(() => {
     }, [viewMode, exportingPdf, exportingWord, handleExportPdf, handleExportWord]);
 
     useEffect(() => {
-        setLeftContent(leftTopbarContent);
-    }, [leftTopbarContent, setLeftContent]);
-
-    useEffect(() => {
-        setCenterContent(centerTopbarContent);
-    }, [centerTopbarContent, setCenterContent]);
-
-    useEffect(() => {
-        setRightContent(rightTopbarContent);
-    }, [rightTopbarContent, setRightContent]);
+        setAllContent(leftTopbarContent, centerTopbarContent, rightTopbarContent);
+    }, [leftTopbarContent, centerTopbarContent, rightTopbarContent, setAllContent]);
 
     useEffect(() => {
         return () => {
@@ -975,7 +967,7 @@ const Templates = memo(() => {
                                     persistKey="admin-contract-templates-spreadsheet"
                                     rowHeight={40}
                                     actionsRender={renderContractActions}
-                                    actionsColumnWidth={isAdmin ? 120 : 80}
+                                    actionsColumnWidth={canManageTemplates ? 120 : 80}
                                     getRowId={(row) => row.id}
                                     toolbar={contractToolbar}
                                     allowKeyboardNavigation
@@ -996,7 +988,7 @@ const Templates = memo(() => {
                                     persistKey="admin-vo-templates-spreadsheet"
                                     rowHeight={40}
                                     actionsRender={renderVOActions}
-                                    actionsColumnWidth={isAdmin ? 120 : 80}
+                                    actionsColumnWidth={canManageTemplates ? 120 : 80}
                                     getRowId={(row) => row.id}
                                     toolbar={voToolbar}
                                     allowKeyboardNavigation
@@ -1017,7 +1009,7 @@ const Templates = memo(() => {
                                     persistKey="admin-other-templates-spreadsheet"
                                     rowHeight={40}
                                     actionsRender={renderOtherActions}
-                                    actionsColumnWidth={isAdmin ? 120 : 80}
+                                    actionsColumnWidth={canManageTemplates ? 120 : 80}
                                     getRowId={(row) => row.id}
                                     toolbar={otherToolbar}
                                     allowKeyboardNavigation
