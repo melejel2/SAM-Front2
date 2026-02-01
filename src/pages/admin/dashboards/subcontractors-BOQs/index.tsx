@@ -38,7 +38,7 @@ const SubcontractorsBOQs = memo(() => {
     useEffect(() => { sessionStorage.setItem("sub-boqs-tab", String(activeTab)); }, [activeTab]);
     useEffect(() => { sessionStorage.setItem("sub-boqs-project", selectedProject); }, [selectedProject]);
 
-    const handleViewContractDetails = useCallback((row: any) => {
+    const handleViewContractDetails = useCallback(async (row: any) => {
         // Navigate to contract details page using contract number (user-friendly) instead of ID
         const contractNumber = row.contractNumber || row.id; // Fallback to ID if no contract number
         navigate(`/dashboard/contracts/details/${contractNumber}`, {
@@ -54,6 +54,8 @@ const SubcontractorsBOQs = memo(() => {
                 status: row.status
             }
         });
+        // Keep spinner visible during navigation transition
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }, [navigate]);
 
     const handleBackToDashboard = useCallback(() => {

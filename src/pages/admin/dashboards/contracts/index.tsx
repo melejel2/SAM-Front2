@@ -38,7 +38,7 @@ interface ContractRow {
 const ContractsManagement = memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { setLeftContent, setCenterContent, clearContent } = useTopbarContent();
+    const { setAllContent, clearContent } = useTopbarContent();
     const { isArchiveMode } = useArchive();
 
     const {
@@ -64,6 +64,7 @@ const ContractsManagement = memo(() => {
     const [showFinalDischargeModal, setShowFinalDischargeModal] = useState(false);
     const [contractToGenerateFinal, setContractToGenerateFinal] = useState<any>(null);
     const [generatingFinal, setGeneratingFinal] = useState(false);
+    const [navigatingRowId, setNavigatingRowId] = useState<number | string | null>(null);
 
     useEffect(() => { sessionStorage.setItem("contracts-tab", activeTab); }, [activeTab]);
 
@@ -114,10 +115,9 @@ const ContractsManagement = memo(() => {
         setActiveTab(tab);
     }, []);
 
-    // Set topbar content - back button on left, tabs in center, new contract on right
+    // Set topbar content - back button on left, tabs in center
     useEffect(() => {
-        // Left content: Back button
-        setLeftContent(
+        const leftContent = (
             <button
                 onClick={handleBackToDashboard}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
@@ -127,8 +127,7 @@ const ContractsManagement = memo(() => {
             </button>
         );
 
-        // Center content: Tab buttons
-        setCenterContent(
+        const centerContent = (
             <div className="flex items-center gap-2">
                 <button
                     className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
@@ -137,9 +136,10 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('drafts')}
+                    title={`Drafts (${draftsData.length})`}
+                    aria-label={`Drafts (${draftsData.length})`}
                 >
                     <Icon icon={fileTextIcon} className="size-4" />
-                    <span>Drafts ({draftsData.length})</span>
                 </button>
 
                 <button
@@ -149,9 +149,10 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('active')}
+                    title={`Active (${activeData.length})`}
+                    aria-label={`Active (${activeData.length})`}
                 >
                     <Icon icon={checkCircleIcon} className="size-4" />
-                    <span>Active ({activeData.length})</span>
                 </button>
 
                 <button
@@ -161,21 +162,25 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('terminated')}
+                    title={`Terminated (${terminatedData.length})`}
+                    aria-label={`Terminated (${terminatedData.length})`}
                 >
                     <Icon icon={xCircleIcon} className="size-4" />
-                    <span>Terminated ({terminatedData.length})</span>
                 </button>
             </div>
         );
+
+        setAllContent(leftContent, centerContent, null);
 
         // Cleanup on unmount
         return () => {
             clearContent();
         };
-    }, [activeTab, draftsData.length, activeData.length, terminatedData.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, clearContent]);
+    }, [activeTab, draftsData.length, activeData.length, terminatedData.length, handleBackToDashboard, handleTabChange, setAllContent, clearContent]);
 
     // Handle Preview action - different behavior based on tab
     const handlePreview = useCallback(async (row: ContractRow) => {
+        setNavigatingRowId(row.id);
         if (activeTab === 'drafts') {
             // For drafts, navigate to details page
             const contractNumber = row.contractNumber || row.id;
@@ -426,6 +431,7 @@ const ContractsManagement = memo(() => {
 
     // Render action buttons for each row
     const renderActions = useCallback((row: ContractRow) => {
+        const isNavigating = navigatingRowId === row.id;
         return (
             <div className="flex items-center gap-1">
                 <button
@@ -434,13 +440,18 @@ const ContractsManagement = memo(() => {
                         e.stopPropagation();
                         handlePreview(row);
                     }}
+                    disabled={isNavigating}
                     title="Preview"
                 >
-                    <Icon icon={eyeIcon} className="w-4 h-4" />
+                    {isNavigating ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                        <Icon icon={eyeIcon} className="w-4 h-4" />
+                    )}
                 </button>
             </div>
         );
-    }, [handlePreview]);
+    }, [handlePreview, navigatingRowId]);
 
     // Handle row double click
     const handleRowDoubleClick = useCallback((row: ContractRow) => {

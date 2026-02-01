@@ -533,7 +533,7 @@ ScanResultModal.displayName = 'ScanResultModal';
 // Main Component
 const ContractAnalysisDashboard = memo(() => {
   const navigate = useNavigate();
-  const { setLeftContent, setCenterContent, setRightContent, clearContent } = useTopbarContent();
+  const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
 
   const [activeTab, setActiveTab] = useState<TabType>(() => (sessionStorage.getItem("contract-analysis-tab") as TabType) || 'templates');
@@ -545,6 +545,7 @@ const ContractAnalysisDashboard = memo(() => {
   const [showScanModal, setShowScanModal] = useState(false);
   const [scanResult, setScanResult] = useState<DocumentScanResult | null>(null);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [navigatingId, setNavigatingId] = useState<number | null>(null);
 
   useEffect(() => { sessionStorage.setItem("contract-analysis-tab", activeTab); }, [activeTab]);
 
@@ -579,7 +580,7 @@ const ContractAnalysisDashboard = memo(() => {
 
   // Topbar setup
   useEffect(() => {
-    setLeftContent(
+    const leftContent = (
       <div className="flex items-center gap-3">
         <button
           onClick={handleBackToDashboard}
@@ -592,7 +593,7 @@ const ContractAnalysisDashboard = memo(() => {
       </div>
     );
 
-    setCenterContent(
+    const centerContent = (
       <div className="flex items-center gap-2">
         <button
           className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
@@ -620,7 +621,7 @@ const ContractAnalysisDashboard = memo(() => {
       </div>
     );
 
-    setRightContent(
+    const rightContent = (
       <button
         onClick={() => setShowHowItWorksModal(true)}
         className="btn btn-sm btn-ghost"
@@ -630,10 +631,12 @@ const ContractAnalysisDashboard = memo(() => {
       </button>
     );
 
+    setAllContent(leftContent, centerContent, rightContent);
+
     return () => {
       clearContent();
     };
-  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setLeftContent, setCenterContent, setRightContent, clearContent]);
+  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setAllContent, clearContent]);
 
   // Template actions
   const handleAnalyzeTemplate = useCallback(async (templateId: number) => {
@@ -667,6 +670,7 @@ const ContractAnalysisDashboard = memo(() => {
   }, [loadData, toaster]);
 
   const handleViewTemplateDetails = useCallback((templateId: number) => {
+    setNavigatingId(templateId);
     navigate(`/dashboard/contract-analysis/template/${templateId}`);
   }, [navigate]);
 
@@ -689,6 +693,7 @@ const ContractAnalysisDashboard = memo(() => {
   }, [loadData, toaster]);
 
   const handleViewContractDetails = useCallback((contractId: number) => {
+    setNavigatingId(contractId);
     navigate(`/dashboard/contract-analysis/contract/${contractId}`);
   }, [navigate]);
 
@@ -853,9 +858,14 @@ const ContractAnalysisDashboard = memo(() => {
             e.stopPropagation();
             handleViewTemplateDetails(row.contractTemplateId);
           }}
+          disabled={navigatingId === row.contractTemplateId}
           title="View Details"
         >
-          <Icon icon={eyeIcon} className="w-4 h-4" />
+          {navigatingId === row.contractTemplateId ? (
+            <span className="loading loading-spinner loading-xs"></span>
+          ) : (
+            <Icon icon={eyeIcon} className="w-4 h-4" />
+          )}
         </button>
       )}
       <button
@@ -874,7 +884,7 @@ const ContractAnalysisDashboard = memo(() => {
         )}
       </button>
     </div>
-  ), [analyzingId, handleAnalyzeTemplate, handleViewTemplateDetails]);
+  ), [analyzingId, navigatingId, handleAnalyzeTemplate, handleViewTemplateDetails]);
 
   // Render actions for contracts
   const renderContractActions = useCallback((row: ContractAnalysisSummary) => (
@@ -886,9 +896,14 @@ const ContractAnalysisDashboard = memo(() => {
             e.stopPropagation();
             handleViewContractDetails(row.contractDatasetId);
           }}
+          disabled={navigatingId === row.contractDatasetId}
           title="View Details"
         >
-          <Icon icon={eyeIcon} className="w-4 h-4" />
+          {navigatingId === row.contractDatasetId ? (
+            <span className="loading loading-spinner loading-xs"></span>
+          ) : (
+            <Icon icon={eyeIcon} className="w-4 h-4" />
+          )}
         </button>
       )}
       <button
@@ -907,7 +922,7 @@ const ContractAnalysisDashboard = memo(() => {
         )}
       </button>
     </div>
-  ), [analyzingId, handleAnalyzeContract, handleViewContractDetails]);
+  ), [analyzingId, navigatingId, handleAnalyzeContract, handleViewContractDetails]);
 
   // Toolbar
   const toolbar = useMemo(() => (
