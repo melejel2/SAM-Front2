@@ -503,15 +503,19 @@ export default function ContractDetailsPage() {
               <div className="grid gap-2 lg:grid-cols-[150px_minmax(0,1fr)] items-stretch">
                 {/* Score Ring */}
                 <div className="card bg-base-100 border border-base-200 shadow-sm h-full">
-                  <div className="card-body items-center p-2 gap-1.5 h-full justify-between">
-                    <ScoreRing score={report.overallScore} size={72} />
-                    <p className="text-[10px] text-center text-base-content/60 leading-tight">Based on {report.totalClauses} clauses</p>
-                    {report.deltaFromTemplate !== 0 && (
-                      <div className={`flex items-center gap-1 text-[10px] ${report.deltaFromTemplate > 0 ? 'text-error' : 'text-success'}`}>
-                        <Icon icon={report.deltaFromTemplate > 0 ? trendingDownIcon : trendingUpIcon} className="size-3" />
-                        <span>{report.deltaFromTemplate > 0 ? '-' : '+'}{Math.abs(report.deltaFromTemplate)} vs template</span>
-                      </div>
-                    )}
+                  <div className="card-body items-center p-2 gap-2 h-full">
+                    <div className="flex-1 flex items-center justify-center">
+                      <ScoreRing score={report.overallScore} size={72} />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] text-base-content/60 leading-tight">Based on {report.totalClauses} clauses</p>
+                      {report.deltaFromTemplate !== 0 && (
+                        <div className={`flex items-center justify-center gap-1 text-[10px] ${report.deltaFromTemplate > 0 ? 'text-error' : 'text-success'}`}>
+                          <Icon icon={report.deltaFromTemplate > 0 ? trendingDownIcon : trendingUpIcon} className="size-3" />
+                          <span>{report.deltaFromTemplate > 0 ? '-' : '+'}{Math.abs(report.deltaFromTemplate)} vs template</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -486,9 +486,13 @@ export default function TemplateDetailsPage() {
               <div className="grid gap-2 lg:grid-cols-[150px_minmax(0,1fr)] items-stretch">
                 {/* Score Ring */}
                 <div className="card bg-base-100 border border-base-200 shadow-sm h-full">
-                  <div className="card-body items-center p-2 gap-1.5 h-full justify-between">
-                    <ScoreRing score={profile.overallScore} size={72} />
-                    <p className="text-[10px] text-center text-base-content/60 leading-tight">Based on {profile.totalClauses} clauses</p>
+                  <div className="card-body items-center p-2 gap-2 h-full">
+                    <div className="flex-1 flex items-center justify-center">
+                      <ScoreRing score={profile.overallScore} size={72} />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] text-base-content/60 leading-tight">Based on {profile.totalClauses} clauses</p>
+                    </div>
                   </div>
                 </div>
 
