@@ -296,31 +296,29 @@ export default function ContractDetailsPage() {
     return clauses.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`);
   }, [clauses]);
 
-  // Map clause number → best matchedText for document search (highlights the problematic phrase, not just the title)
-  const clauseMatchedTextMap = useMemo(() => {
-    const map = new Map<string, string>();
-    const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-    for (const clause of clauses) {
-      const cn = clause.clauseNumber || `Clause ${clause.clauseOrder}`;
-      const bestRisk = [...clause.riskAssessments]
-        .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
-        .find(r => r.matchedText);
-      if (bestRisk?.matchedText) {
-        const text = bestRisk.matchedText.length > 120
-          ? bestRisk.matchedText.slice(0, 120)
-          : bestRisk.matchedText;
-        map.set(cn.toLowerCase(), text);
-      }
-    }
-    return map;
-  }, [clauses]);
-
   // Highlight clauses in document viewer — search for the actual problematic text when available
   const highlightClause = useCallback((clauseRefs: string[]) => {
     pdfViewerRef.current?.clearHighlights();
 
     if (clauseRefs[0]) {
-      const searchText = clauseMatchedTextMap.get(clauseRefs[0].toLowerCase()) || clauseRefs[0];
+      // Find the best matchedText for this clause to highlight the problematic phrase
+      let searchText = clauseRefs[0];
+      const key = clauseRefs[0].toLowerCase();
+      const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+      for (const clause of clauses) {
+        const cn = (clause.clauseNumber || `Clause ${clause.clauseOrder}`).toLowerCase();
+        if (cn === key) {
+          const bestRisk = [...clause.riskAssessments]
+            .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
+            .find(r => r.matchedText);
+          if (bestRisk?.matchedText) {
+            searchText = bestRisk.matchedText.length > 120
+              ? bestRisk.matchedText.slice(0, 120)
+              : bestRisk.matchedText;
+          }
+          break;
+        }
+      }
       pdfViewerRef.current?.searchAndScrollTo(searchText);
     }
 
@@ -328,7 +326,7 @@ export default function ContractDetailsPage() {
     highlightTimeoutRef.current = setTimeout(() => {
       pdfViewerRef.current?.clearHighlights();
     }, 8000);
-  }, [clauseMatchedTextMap]);
+  }, [clauses]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
