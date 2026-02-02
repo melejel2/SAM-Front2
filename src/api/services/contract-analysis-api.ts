@@ -6,6 +6,7 @@ import type {
   ContractHealthReport,
   ContractClause,
   AnalysisResult,
+  AnalysisJob,
   DocumentScanResult,
   UploadedDocumentSummary,
 } from '../../types/contract-analysis';
@@ -77,6 +78,121 @@ export async function analyzeTemplate(templateId: number): Promise<AnalysisResul
     }
   );
   return handleResponse<AnalysisResult>(response);
+}
+
+/**
+ * Start async analysis for a template (returns job info)
+ */
+export async function startTemplateAnalysisJob(templateId: number): Promise<AnalysisJob> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/templates/${templateId}/analyze-async`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<AnalysisJob>(response);
+}
+
+/**
+ * Start async analysis for a contract (returns job info)
+ */
+export async function startContractAnalysisJob(contractDatasetId: number): Promise<AnalysisJob> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/contracts/${contractDatasetId}/analyze-async`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<AnalysisJob>(response);
+}
+
+/**
+ * Get analysis job status
+ */
+export async function getAnalysisJob(jobId: string): Promise<AnalysisJob> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/analysis-jobs/${jobId}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<AnalysisJob>(response);
+}
+
+/**
+ * Get active analysis jobs by type
+ */
+export async function getActiveAnalysisJobs(jobType: 'Template' | 'Contract'): Promise<AnalysisJob[]> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/analysis-jobs/active?jobType=${jobType}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<AnalysisJob[]>(response);
+}
+
+/**
+ * Get active analysis job by target (optional helper)
+ */
+export async function getActiveAnalysisJob(jobType: 'Template' | 'Contract', targetId: number): Promise<AnalysisJob | null> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/analysis-jobs/by-target?jobType=${jobType}&targetId=${targetId}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (response.status === 404) return null;
+  return handleResponse<AnalysisJob>(response);
+}
+
+/**
+ * Poll an analysis job until it completes
+ */
+export async function waitForAnalysisJob(
+  jobId: string,
+  options?: { intervalMs?: number; timeoutMs?: number; signal?: AbortSignal }
+): Promise<AnalysisJob> {
+  const intervalMs = options?.intervalMs ?? 3000;
+  const timeoutMs = options?.timeoutMs ?? 15 * 60 * 1000;
+  const startedAt = Date.now();
+
+  while (true) {
+    if (options?.signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    const job = await getAnalysisJob(jobId);
+    if (job.status === 'Succeeded' || job.status === 'Failed') {
+      return job;
+    }
+
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error('Analysis job timed out');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
 }
 
 /**

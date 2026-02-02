@@ -201,6 +201,18 @@ export interface AnalysisResult {
   topRisks: RiskAssessment[];
 }
 
+// Async analysis job status
+export interface AnalysisJob {
+  id: string;
+  jobType: string;
+  targetId: number;
+  status: string;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
 // Document scan result (for direct upload)
 export interface DocumentScanResult {
   success: boolean;

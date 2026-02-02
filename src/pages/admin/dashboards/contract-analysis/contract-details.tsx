@@ -7,11 +7,14 @@ import useToast from '@/hooks/use-toast';
 import {
   getContractHealthReport,
   getContractClauses,
-  analyzeContract,
+  startContractAnalysisJob,
+  waitForAnalysisJob,
+  getActiveAnalysisJob,
 } from '@/api/services/contract-analysis-api';
 import type {
   ContractHealthReport,
   ContractClause,
+  AnalysisJob,
 } from '@/types/contract-analysis';
 import {
   getHealthStatus,
@@ -152,6 +155,7 @@ export default function ContractDetailsPage() {
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [activeView, setActiveView] = useState<'risks' | 'clauses' | 'document'>('document');
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<'Critical' | 'High' | 'Medium' | 'Low' | null>(null);
+  const [activeAnalysisJob, setActiveAnalysisJob] = useState<AnalysisJob | null>(null);
   const pdfViewerRef = useRef<ContractDocumentViewerHandle>(null);
   const chatRef = useRef<ContractAiChatHandle>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -174,9 +178,31 @@ export default function ContractDetailsPage() {
     }
   }, [contractId, toaster]);
 
+  const loadActiveAnalysisJob = useCallback(async () => {
+    if (!contractId || activeAnalysisJob) return;
+    try {
+      const job = await getActiveAnalysisJob('Contract', parseInt(contractId));
+      if (!job) return;
+      setActiveAnalysisJob(job);
+      const finalJob = await waitForAnalysisJob(job.id);
+      setActiveAnalysisJob(null);
+      if (finalJob.status === 'Succeeded') {
+        loadData();
+      } else if (finalJob.status === 'Failed') {
+        toaster.error(finalJob.errorMessage || 'Analysis failed');
+      }
+    } catch {
+      // Ignore polling errors for background jobs
+    }
+  }, [contractId, activeAnalysisJob, loadData, toaster]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    loadActiveAnalysisJob();
+  }, [loadActiveAnalysisJob]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -227,22 +253,27 @@ export default function ContractDetailsPage() {
   }, []);
 
   const handleReanalyze = useCallback(async () => {
-    if (!contractId) return;
+    if (!contractId || activeAnalysisJob) return;
     setIsReanalyzing(true);
     try {
-      const result = await analyzeContract(parseInt(contractId));
-      if (result.success) {
+      const job = await startContractAnalysisJob(parseInt(contractId));
+      setActiveAnalysisJob(job);
+      toaster.info('Analysis started');
+
+      const finalJob = await waitForAnalysisJob(job.id);
+      setActiveAnalysisJob(null);
+      if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis complete');
         loadData();
       } else {
-        toaster.error(result.errorMessage || 'Error');
+        toaster.error(finalJob.errorMessage || 'Error');
       }
     } catch (error: any) {
       toaster.error(error.message || 'Error');
     } finally {
       setIsReanalyzing(false);
     }
-  }, [contractId, loadData, toaster]);
+  }, [contractId, loadData, toaster, activeAnalysisJob]);
 
   const handleBack = useCallback(() => {
     navigate('/dashboard/contract-analysis');
@@ -412,12 +443,12 @@ export default function ContractDetailsPage() {
         <button
           className="btn btn-sm btn-circle btn-ghost hover:bg-base-200 tooltip tooltip-bottom"
           onClick={handleReanalyze}
-          disabled={isReanalyzing}
-          title={isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
+          disabled={isReanalyzing || !!activeAnalysisJob}
+          title={activeAnalysisJob ? "Analysis in progress..." : isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
           aria-label="Re-analyze"
-          data-tip={isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
+          data-tip={activeAnalysisJob ? "Analysis in progress..." : isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
         >
-          {isReanalyzing ? (
+          {isReanalyzing || activeAnalysisJob ? (
             <span className="loading loading-spinner loading-xs"></span>
           ) : (
             <Icon icon={refreshCwIcon} className="size-4" />
@@ -438,7 +469,7 @@ export default function ContractDetailsPage() {
 
     setAllContent(leftContent, centerContent, rightContent);
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
+  }, [handleBack, handleReanalyze, isReanalyzing, activeAnalysisJob, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
 
   if (isLoading) return <Loader />;
 
@@ -496,6 +527,9 @@ export default function ContractDetailsPage() {
                   ))
                 ) : (
                   <span className="badge badge-sm badge-outline text-base-content/50">No risks</span>
+                )}
+                {activeAnalysisJob && (
+                  <span className="badge badge-sm badge-warning">Analyzing</span>
                 )}
               </div>
               <div className="hidden md:flex items-center gap-2 min-w-[120px]">

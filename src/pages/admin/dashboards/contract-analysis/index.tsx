@@ -8,8 +8,10 @@ import useToast from '@/hooks/use-toast';
 import {
   getTemplatesWithAnalysisStatus,
   getContractsWithAnalysisStatus,
-  analyzeTemplate,
-  analyzeContract,
+  startTemplateAnalysisJob,
+  startContractAnalysisJob,
+  waitForAnalysisJob,
+  getActiveAnalysisJobs,
   analyzeAllTemplates,
   scanDocument,
   getUploadedDocuments,
@@ -20,6 +22,7 @@ import type {
   TemplateAnalysisSummary,
   ContractAnalysisSummary,
   DocumentScanResult,
+  AnalysisJob,
 } from '@/types/contract-analysis';
 import { getHealthStatus, RiskLevelColors } from '@/types/contract-analysis';
 
@@ -512,6 +515,7 @@ const ContractAnalysisDashboard = memo(() => {
   const [navigatingId, setNavigatingId] = useState<number | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<import('@/types/contract-analysis').UploadedDocumentSummary[]>([]);
   const [loadingUploadedDocs, setLoadingUploadedDocs] = useState(false);
+  const [analysisJobs, setAnalysisJobs] = useState<Record<string, AnalysisJob>>({});
 
   // Show perspective selection if not set
   useEffect(() => {
@@ -534,6 +538,29 @@ const ContractAnalysisDashboard = memo(() => {
     }
   }, []);
 
+  const getJobKey = useCallback((jobType: 'Template' | 'Contract', targetId: number) => {
+    return `${jobType}:${targetId}`;
+  }, []);
+
+  const loadActiveJobs = useCallback(async (jobType: 'Template' | 'Contract') => {
+    try {
+      const jobs = await getActiveAnalysisJobs(jobType);
+      setAnalysisJobs((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          if (key.startsWith(`${jobType}:`)) delete next[key];
+        });
+        jobs.forEach((job) => {
+          const key = getJobKey(jobType, job.targetId);
+          next[key] = job;
+        });
+        return next;
+      });
+    } catch {
+      // Ignore polling errors
+    }
+  }, [getJobKey]);
+
   const loadData = useCallback(async () => {
     if (activeTab === 'scan') {
       setIsLoading(false);
@@ -545,20 +572,34 @@ const ContractAnalysisDashboard = memo(() => {
       if (activeTab === 'templates') {
         const data = await getTemplatesWithAnalysisStatus();
         setTemplates(data);
+        loadActiveJobs('Template');
       } else {
         const data = await getContractsWithAnalysisStatus();
         setContracts(data);
+        loadActiveJobs('Contract');
       }
     } catch (error: any) {
       toaster.error(error.message || 'Error loading data');
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, toaster, loadUploadedDocs]);
+  }, [activeTab, toaster, loadUploadedDocs, loadActiveJobs]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const jobType = activeTab === 'templates' ? 'Template' : activeTab === 'contracts' ? 'Contract' : null;
+    if (!jobType) return;
+
+    loadActiveJobs(jobType);
+    const interval = setInterval(() => {
+      loadActiveJobs(jobType);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeTab, loadActiveJobs]);
 
   const handleBackToDashboard = useCallback(() => {
     navigate('/dashboard');
@@ -651,19 +692,29 @@ const ContractAnalysisDashboard = memo(() => {
   const handleAnalyzeTemplate = useCallback(async (templateId: number) => {
     setAnalyzingId(templateId);
     try {
-      const result = await analyzeTemplate(templateId);
-      if (result.success) {
+      const job = await startTemplateAnalysisJob(templateId);
+      const key = getJobKey('Template', templateId);
+      setAnalysisJobs((prev) => ({ ...prev, [key]: job }));
+      toaster.info('Analysis started');
+
+      const finalJob = await waitForAnalysisJob(job.id);
+      if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis completed');
         loadData();
       } else {
-        toaster.error(result.errorMessage || 'Error during analysis');
+        toaster.error(finalJob.errorMessage || 'Error during analysis');
       }
+      setAnalysisJobs((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     } catch (error: any) {
       toaster.error(error.message || 'Error during analysis');
     } finally {
       setAnalyzingId(null);
     }
-  }, [loadData, toaster]);
+  }, [loadData, toaster, getJobKey]);
 
   const handleAnalyzeAllTemplates = useCallback(async () => {
     setIsAnalyzingAll(true);
@@ -687,19 +738,29 @@ const ContractAnalysisDashboard = memo(() => {
   const handleAnalyzeContract = useCallback(async (contractId: number) => {
     setAnalyzingId(contractId);
     try {
-      const result = await analyzeContract(contractId);
-      if (result.success) {
+      const job = await startContractAnalysisJob(contractId);
+      const key = getJobKey('Contract', contractId);
+      setAnalysisJobs((prev) => ({ ...prev, [key]: job }));
+      toaster.info('Analysis started');
+
+      const finalJob = await waitForAnalysisJob(job.id);
+      if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis completed');
         loadData();
       } else {
-        toaster.error(result.errorMessage || 'Error during analysis');
+        toaster.error(finalJob.errorMessage || 'Error during analysis');
       }
+      setAnalysisJobs((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     } catch (error: any) {
       toaster.error(error.message || 'Error during analysis');
     } finally {
       setAnalyzingId(null);
     }
-  }, [loadData, toaster]);
+  }, [loadData, toaster, getJobKey]);
 
   const handleViewContractDetails = useCallback((contractId: number) => {
     setNavigatingId(contractId);
@@ -760,11 +821,17 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => (
-        <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
-          {value ? 'Analyzed' : 'Pending'}
-        </span>
-      ),
+      render: (value, row) => {
+        const hasJob = row ? !!analysisJobs[getJobKey('Template', row.contractTemplateId)] : false;
+        if (hasJob) {
+          return <span className="badge badge-sm badge-warning">Analyzing</span>;
+        }
+        return (
+          <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
+            {value ? 'Analyzed' : 'Pending'}
+          </span>
+        );
+      },
     },
     {
       key: 'lastAnalyzedAt',
@@ -775,7 +842,7 @@ const ContractAnalysisDashboard = memo(() => {
       sortable: true,
       formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
     },
-  ], [perspective]);
+  ], [perspective, analysisJobs, getJobKey]);
 
   // Contract columns
   const contractColumns = useMemo((): SpreadsheetColumn<ContractAnalysisSummary>[] => [
@@ -840,11 +907,17 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => (
-        <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
-          {value ? 'Analyzed' : 'Pending'}
-        </span>
-      ),
+      render: (value, row) => {
+        const hasJob = row ? !!analysisJobs[getJobKey('Contract', row.contractDatasetId)] : false;
+        if (hasJob) {
+          return <span className="badge badge-sm badge-warning">Analyzing</span>;
+        }
+        return (
+          <span className={`badge badge-sm ${value ? 'badge-success' : 'badge-ghost'}`}>
+            {value ? 'Analyzed' : 'Pending'}
+          </span>
+        );
+      },
     },
     {
       key: 'lastAnalyzedAt',
@@ -855,11 +928,14 @@ const ContractAnalysisDashboard = memo(() => {
       sortable: true,
       formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
     },
-  ], [perspective]);
+  ], [perspective, analysisJobs, getJobKey]);
 
   // Render actions for templates
   const renderTemplateActions = useCallback((row: TemplateAnalysisSummary) => (
     <div className="flex items-center gap-1">
+      {analysisJobs[getJobKey('Template', row.contractTemplateId)] && (
+        <span className="badge badge-xs badge-warning">Analyzing</span>
+      )}
       {row.isAnalyzed && (
         <button
           className="btn btn-ghost btn-xs text-info hover:bg-info/20"
@@ -883,21 +959,24 @@ const ContractAnalysisDashboard = memo(() => {
           e.stopPropagation();
           handleAnalyzeTemplate(row.contractTemplateId);
         }}
-        disabled={analyzingId === row.contractTemplateId}
-        title={row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
+        disabled={analyzingId === row.contractTemplateId || !!analysisJobs[getJobKey('Template', row.contractTemplateId)]}
+        title={analysisJobs[getJobKey('Template', row.contractTemplateId)] ? 'Analysis in progress' : row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
       >
-        {analyzingId === row.contractTemplateId ? (
+        {analyzingId === row.contractTemplateId || !!analysisJobs[getJobKey('Template', row.contractTemplateId)] ? (
           <span className="loading loading-spinner loading-xs"></span>
         ) : (
           <Icon icon={row.isAnalyzed ? refreshCwIcon : playIcon} className="w-4 h-4" />
         )}
       </button>
     </div>
-  ), [analyzingId, navigatingId, handleAnalyzeTemplate, handleViewTemplateDetails]);
+  ), [analyzingId, navigatingId, handleAnalyzeTemplate, handleViewTemplateDetails, analysisJobs, getJobKey]);
 
   // Render actions for contracts
   const renderContractActions = useCallback((row: ContractAnalysisSummary) => (
     <div className="flex items-center gap-1">
+      {analysisJobs[getJobKey('Contract', row.contractDatasetId)] && (
+        <span className="badge badge-xs badge-warning">Analyzing</span>
+      )}
       {row.isAnalyzed && (
         <button
           className="btn btn-ghost btn-xs text-info hover:bg-info/20"
@@ -921,17 +1000,17 @@ const ContractAnalysisDashboard = memo(() => {
           e.stopPropagation();
           handleAnalyzeContract(row.contractDatasetId);
         }}
-        disabled={analyzingId === row.contractDatasetId}
-        title={row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
+        disabled={analyzingId === row.contractDatasetId || !!analysisJobs[getJobKey('Contract', row.contractDatasetId)]}
+        title={analysisJobs[getJobKey('Contract', row.contractDatasetId)] ? 'Analysis in progress' : row.isAnalyzed ? 'Re-analyze' : 'Analyze'}
       >
-        {analyzingId === row.contractDatasetId ? (
+        {analyzingId === row.contractDatasetId || !!analysisJobs[getJobKey('Contract', row.contractDatasetId)] ? (
           <span className="loading loading-spinner loading-xs"></span>
         ) : (
           <Icon icon={row.isAnalyzed ? refreshCwIcon : playIcon} className="w-4 h-4" />
         )}
       </button>
     </div>
-  ), [analyzingId, navigatingId, handleAnalyzeContract, handleViewContractDetails]);
+  ), [analyzingId, navigatingId, handleAnalyzeContract, handleViewContractDetails, analysisJobs, getJobKey]);
 
   // Toolbar
   const toolbar = useMemo(() => (
