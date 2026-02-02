@@ -96,14 +96,17 @@ const Currencies = memo(() => {
         return (
             <Button
                 size="sm"
+                shape="circle"
                 color="info"
                 onClick={handleSyncClick}
                 loading={syncLoading}
                 disabled={syncLoading || loading}
-                className="flex items-center gap-2"
+                className="tooltip tooltip-bottom"
+                data-tip={syncLoading ? "Syncing currencies..." : "Sync currencies"}
+                title="Sync currencies"
+                aria-label="Sync currencies"
             >
-                <Icon icon={refreshCwIcon} className="w-4 h-4" />
-                <span>Sync Currencies</span>
+                {!syncLoading && <Icon icon={refreshCwIcon} className="w-4 h-4" />}
             </Button>
         );
     }, [canEditCurrencyRates, handleSyncClick, loading, syncLoading]);

@@ -870,27 +870,29 @@ const ContractDetails = () => {
                     contractData.contractDatasetStatus === "Active") && (
                     <button
                         onClick={handleEditContract}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm btn-circle border-base-300 bg-base-100 text-base-content hover:bg-base-200 border tooltip tooltip-bottom"
                         title="Edit"
+                        aria-label="Edit"
+                        data-tip="Edit"
                     >
                         <span className="iconify lucide--edit size-4"></span>
-                        <span className="hidden xl:inline">Edit</span>
                     </button>
                 )}
 
                 <div className="dropdown dropdown-end">
                     <button
                         tabIndex={0}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border tooltip tooltip-bottom"
                         disabled={exportingPDF || exportingWord}
                         title="Export"
+                        aria-label="Export"
+                        data-tip="Export"
                     >
                         {exportingPDF || exportingWord ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <span className="iconify lucide--download size-4"></span>
                         )}
-                        <span className="hidden xl:inline">Export</span>
                         <span className="iconify lucide--chevron-down size-3"></span>
                     </button>
                     <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-52">
@@ -911,25 +913,28 @@ const ContractDetails = () => {
                     <button
                         onClick={handleGenerateContract}
                         disabled={generatingContract}
-                        className="btn btn-sm btn-success text-white flex items-center gap-2"
+                        className="btn btn-sm btn-circle btn-success text-white tooltip tooltip-bottom"
+                        title={generatingContract ? "Generating..." : "Generate"}
+                        aria-label="Generate"
+                        data-tip={generatingContract ? "Generating..." : "Generate"}
                     >
                         {generatingContract ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <span className="iconify lucide--check-circle size-4"></span>
                         )}
-                        <span className="hidden xl:inline">Generate</span>
                     </button>
                 )}
 
                 <div className="dropdown dropdown-end">
                     <button
                         tabIndex={0}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm btn-circle border-base-300 bg-base-100 text-base-content hover:bg-base-200 border tooltip tooltip-bottom"
                         title="More actions"
+                        aria-label="More actions"
+                        data-tip="More actions"
                     >
                         <span className="iconify lucide--more-horizontal size-4"></span>
-                        <span className="hidden xl:inline">More</span>
                     </button>
                     <ul tabIndex={0} className="dropdown-content z-50 menu p-2 shadow bg-base-100 rounded-box w-52">
                         <li>

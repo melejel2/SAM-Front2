@@ -142,18 +142,17 @@ const NewIPCWizardContent: React.FC = () => {
                     </button>
                 ) : (
                     <button
-                        className="btn btn-sm border border-base-300 bg-base-100 text-base-content hover:bg-base-200 gap-1"
+                        className="btn btn-sm btn-circle border border-base-300 bg-base-100 text-base-content hover:bg-base-200 tooltip tooltip-bottom"
                         onClick={handleSubmitAndNavigate}
                         disabled={loading || previewLoading}
                         title={previewLoading ? "Wait for document to finish generating" : "Save and Close"}
+                        aria-label="Save and Close"
+                        data-tip={previewLoading ? "Wait for document to finish generating" : "Save and Close"}
                     >
                         {loading || previewLoading ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
-                            <>
-                                <Icon icon={checkIcon} className="w-4 h-4" />
-                                <span>Save & Close</span>
-                            </>
+                            <Icon icon={checkIcon} className="w-4 h-4" />
                         )}
                     </button>
                 )}

@@ -25,6 +25,7 @@
         "@iconify/react": "^6.0.2",
         "@syncfusion/ej2-base": "^32.1.23",
         "@syncfusion/ej2-react-documenteditor": "^32.1.23",
+        "@syncfusion/ej2-react-pdfviewer": "^32.1.25",
         "@tanstack/react-query": "^5.90.17",
         "@tanstack/react-virtual": "^3.13.18",
         "apexcharts": "^5.3.6",

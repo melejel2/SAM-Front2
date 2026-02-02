@@ -323,6 +323,10 @@ const DocumentScannerModal = memo(({
     setIsScanning(true);
     try {
       const result = await scanDocument(file);
+      if (!result.success) {
+        toaster.error(result.errorMessage || 'Analysis failed. Please check the file format.');
+        return;
+      }
       onScanComplete(result);
       toaster.success('Analysis complete');
       onClose();

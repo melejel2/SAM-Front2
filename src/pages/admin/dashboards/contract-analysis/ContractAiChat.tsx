@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Icon } from '@iconify/react';
 import {
   sendTemplateChatMessage,
@@ -27,6 +27,7 @@ interface Message {
   timestamp: Date;
   isError?: boolean;
   isRevealing?: boolean;
+  referencedClauses?: string[];
 }
 
 interface QuickAction {
@@ -59,7 +60,15 @@ interface ContractAiChatProps {
     category: string;
     level: string;
     riskDescription?: string;
+    clauseRef?: string;
   }>;
+  onClauseReferenceClick?: (clauseNumber: string) => void;
+  onReferencedClauses?: (clauseNumbers: string[]) => void;
+  clauseNumbers?: string[];
+}
+
+export interface ContractAiChatHandle {
+  sendMessage: (text: string) => void;
 }
 
 // Status messages that rotate during loading
@@ -71,8 +80,16 @@ const STATUS_MESSAGES = [
   'Preparing response...',
 ];
 
-// Simple markdown renderer for AI responses
-const FormattedText = memo(({ text }: { text: string }) => {
+// Simple markdown renderer for AI responses with clause link support
+const FormattedText = memo(({
+  text,
+  clauseNumbers,
+  onClauseClick,
+}: {
+  text: string;
+  clauseNumbers?: string[];
+  onClauseClick?: (clauseNumber: string) => void;
+}) => {
   const rendered = useMemo(() => {
     const lines = text.split('\n');
     const elements: React.ReactNode[] = [];
@@ -84,7 +101,7 @@ const FormattedText = memo(({ text }: { text: string }) => {
         elements.push(
           <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-0.5 my-1.5">
             {listItems.map((item, i) => (
-              <li key={i} className="text-sm leading-relaxed">{formatInline(item)}</li>
+              <li key={i} className="text-sm leading-relaxed">{formatInlineWithClauses(item, clauseNumbers, onClauseClick)}</li>
             ))}
           </ul>
         );
@@ -118,17 +135,76 @@ const FormattedText = memo(({ text }: { text: string }) => {
 
       // Regular text paragraph
       elements.push(
-        <p key={`p-${i}`} className="text-sm leading-relaxed">{formatInline(trimmed)}</p>
+        <p key={`p-${i}`} className="text-sm leading-relaxed">{formatInlineWithClauses(trimmed, clauseNumbers, onClauseClick)}</p>
       );
     }
 
     flushList();
     return elements;
-  }, [text]);
+  }, [text, clauseNumbers, onClauseClick]);
 
   return <div className="space-y-0.5">{rendered}</div>;
 });
 FormattedText.displayName = 'FormattedText';
+
+// Inline formatting with clause reference linking
+// Strategy: split by clause references FIRST on raw text, then apply markdown to non-clause segments
+function formatInlineWithClauses(
+  text: string,
+  clauseNumbers?: string[],
+  onClauseClick?: (clauseNumber: string) => void,
+): React.ReactNode {
+  // If no clause numbers or no click handler, just apply markdown formatting
+  if (!clauseNumbers?.length || !onClauseClick) {
+    return formatInline(text);
+  }
+
+  // Build regex from known clause numbers (escape special chars, sort longest first)
+  const escaped = clauseNumbers
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map(cn => cn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  if (escaped.length === 0) return formatInline(text);
+
+  const clauseRegex = new RegExp(`(${escaped.join('|')})`, 'gi');
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = clauseRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(formatInline(text.slice(lastIndex, match.index)));
+    }
+
+    const matchedClause = clauseNumbers.find(
+      cn => cn.toLowerCase() === match![0].toLowerCase()
+    ) || match[0];
+
+    parts.push(
+      <button
+        key={`clause-${key++}`}
+        onClick={() => onClauseClick(matchedClause)}
+        className="text-primary underline underline-offset-2 decoration-primary/40 hover:decoration-primary font-medium cursor-pointer bg-transparent border-none p-0 text-sm"
+        title={`Go to ${matchedClause}`}
+      >
+        {match[0]}
+      </button>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (parts.length === 0) return formatInline(text);
+
+  if (lastIndex < text.length) {
+    parts.push(formatInline(text.slice(lastIndex)));
+  }
+
+  return <>{parts}</>;
+}
 
 // Inline formatting: **bold**, *italic*, `code`
 function formatInline(text: string): React.ReactNode {
@@ -219,22 +295,22 @@ const TypingIndicator = memo(() => {
   }, []);
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 items-center">
       <div className="flex-shrink-0">
         <BreathingAvatar />
       </div>
       <div>
-        <div className="bg-base-200 rounded-2xl rounded-bl-sm inline-flex items-center justify-center gap-2" style={{ padding: '10px 16px', minHeight: '36px' }}>
+        <div className="bg-base-200 rounded-2xl rounded-bl-sm inline-flex items-center justify-center gap-1.5 px-3 py-2">
           <div
-            className="w-2 h-2 bg-base-content/50 rounded-full"
+            className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
             style={{ animation: 'typing-bounce 1.2s ease-in-out infinite' }}
           />
           <div
-            className="w-2 h-2 bg-base-content/50 rounded-full"
+            className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
             style={{ animation: 'typing-bounce 1.2s ease-in-out 0.2s infinite' }}
           />
           <div
-            className="w-2 h-2 bg-base-content/50 rounded-full"
+            className="w-1.5 h-1.5 bg-base-content/50 rounded-full"
             style={{ animation: 'typing-bounce 1.2s ease-in-out 0.4s infinite' }}
           />
         </div>
@@ -252,9 +328,13 @@ TypingIndicator.displayName = 'TypingIndicator';
 const MessageBubble = memo(({
   message,
   isFirstInGroup,
+  clauseNumbers,
+  onClauseClick,
 }: {
   message: Message;
   isFirstInGroup: boolean;
+  clauseNumbers?: string[];
+  onClauseClick?: (clauseNumber: string) => void;
 }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
@@ -300,7 +380,11 @@ const MessageBubble = memo(({
           {isError ? (
             <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
           ) : (
-            <FormattedText text={message.content} />
+            <FormattedText
+              text={message.content}
+              clauseNumbers={clauseNumbers}
+              onClauseClick={onClauseClick}
+            />
           )}
         </div>
         <div className="absolute left-0 -bottom-5 text-[10px] text-base-content/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
@@ -376,7 +460,7 @@ const WelcomeState = memo(({
 WelcomeState.displayName = 'WelcomeState';
 
 // Main component
-const ContractAiChat = memo(({
+const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
   templateName = 'Contract',
   templateId,
   contractId,
@@ -388,7 +472,10 @@ const ContractAiChat = memo(({
   totalClauses,
   categoryScores,
   topRisks,
-}: ContractAiChatProps) => {
+  onClauseReferenceClick,
+  onReferencedClauses,
+  clauseNumbers,
+}, ref) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -444,9 +531,11 @@ const ContractAiChat = memo(({
         category: r.category,
         level: r.level,
         description: r.riskDescription || '',
+        clauseRef: r.clauseRef,
       })),
+      clauseNumbers,
     };
-  }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks]);
+  }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks, clauseNumbers]);
 
   // Text reveal effect
   const revealText = useCallback((fullText: string, messageId: string) => {
@@ -540,10 +629,16 @@ const ContractAiChat = memo(({
           content: result.response,
           timestamp: new Date(),
           isRevealing: true,
+          referencedClauses: result.referencedClauses,
         };
 
         setMessages(prev => [...prev, assistantMessage]);
         revealText(result.response, messageId);
+
+        // Notify parent about referenced clauses
+        if (result.referencedClauses?.length && onReferencedClauses) {
+          onReferencedClauses(result.referencedClauses);
+        }
       } else {
         const errorMessage: Message = {
           id: Date.now().toString(),
@@ -571,7 +666,7 @@ const ContractAiChat = memo(({
     } finally {
       setIsLoading(false);
     }
-  }, [templateId, contractId, sessionId, buildContext, revealText]);
+  }, [templateId, contractId, sessionId, buildContext, revealText, onReferencedClauses]);
 
   // Handle send message
   const handleSend = useCallback(async (text?: string) => {
@@ -594,6 +689,13 @@ const ContractAiChat = memo(({
 
     await sendToAI(messageText);
   }, [inputValue, isLoading, sendToAI]);
+
+  // Expose sendMessage via ref
+  useImperativeHandle(ref, () => ({
+    sendMessage: (text: string) => {
+      handleSend(text);
+    },
+  }), [handleSend]);
 
   // Handle form submit
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -648,6 +750,8 @@ const ContractAiChat = memo(({
                   content: getDisplayContent(message),
                 }}
                 isFirstInGroup={isFirstInGroup(index)}
+                clauseNumbers={[...new Set([...(clauseNumbers || []), ...(message.referencedClauses || [])])]}
+                onClauseClick={onClauseReferenceClick}
               />
             ))}
             {isLoading && <TypingIndicator />}

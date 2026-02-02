@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { Loader } from '@/components/Loader';
@@ -15,98 +15,54 @@ import type {
 } from '@/types/contract-analysis';
 import {
   getHealthStatus,
-  RiskLevelColors,
 } from '@/types/contract-analysis';
-import ContractAiChat from './ContractAiChat';
+import ContractAiChat, { type ContractAiChatHandle } from './ContractAiChat';
+import ContractDocumentViewer, { type ContractDocumentViewerHandle } from './ContractDocumentViewer';
 
 // Icons
 import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
 import refreshCwIcon from '@iconify/icons-lucide/refresh-cw';
-import alertTriangleIcon from '@iconify/icons-lucide/alert-triangle';
 import checkCircleIcon from '@iconify/icons-lucide/check-circle';
 import messageSquareIcon from '@iconify/icons-lucide/message-square';
 import xIcon from '@iconify/icons-lucide/x';
 import trendingUpIcon from '@iconify/icons-lucide/trending-up';
 import trendingDownIcon from '@iconify/icons-lucide/trending-down';
+import chevronDownIcon from '@iconify/icons-lucide/chevron-down';
 
-// Risk level filter options
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'risky', label: 'With Risks' },
-  { value: 'Critical', label: 'Critical' },
-  { value: 'High', label: 'High' },
-  { value: 'Medium', label: 'Medium' },
-  { value: 'Low', label: 'Low' },
-];
-
-// Renders CLIENT / SUBCONTRACTOR dual-perspective recommendations
-const DualPerspective = ({ text }: { text: string }) => {
-  const clientMatch = text.match(/CLIENT:\s*(.*?)(?=\s*SUBCONTRACTOR:|$)/is);
-  const subMatch = text.match(/SUBCONTRACTOR:\s*(.*?)$/is);
-
-  if (!clientMatch && !subMatch) {
-    return <p className="mt-2 text-xs text-base-content/70">{text}</p>;
-  }
-
-  return (
-    <div className="mt-2 space-y-1.5">
-      {clientMatch?.[1]?.trim() && (
-        <div className="flex gap-2 text-xs">
-          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">
-            Client
-          </span>
-          <span className="text-base-content/70">{clientMatch[1].trim()}</span>
-        </div>
-      )}
-      {subMatch?.[1]?.trim() && (
-        <div className="flex gap-2 text-xs">
-          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">
-            Subcontractor
-          </span>
-          <span className="text-base-content/70">{subMatch[1].trim()}</span>
-        </div>
-      )}
-    </div>
-  );
+const clampValue = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const SUMMARY_STORAGE_KEY = 'sam.contractAnalysis.summaryCollapsed.contract';
+const RISK_LEVEL_COLORS: Record<'Critical' | 'High' | 'Medium' | 'Low', string> = {
+  Critical: '#4a1d1d',
+  High: '#b91c1c',
+  Medium: '#a16207',
+  Low: '#6b7280',
+};
+const getStoredSummaryState = (fallback: boolean) => {
+  if (typeof window === 'undefined') return fallback;
+  const stored = window.localStorage.getItem(SUMMARY_STORAGE_KEY);
+  if (stored === null) return fallback;
+  return stored === 'true';
 };
 
-// Score Ring Component - compact circular progress
+// Score Ring Component
 const ScoreRing = ({ score, size = 120 }: { score: number; size?: number }) => {
   const status = getHealthStatus(score);
   const strokeWidth = size > 100 ? 10 : 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
+  const isCompact = size <= 90;
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-base-200"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={status.color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          style={{ transition: 'stroke-dashoffset 0.8s ease' }}
-        />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-base-200" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={status.color} strokeWidth={strokeWidth} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold">{Math.round(score)}</span>
+        <span className={`${isCompact ? 'text-2xl' : 'text-3xl'} font-bold tabular-nums`}>{Math.round(score)}</span>
         <span
-          className="text-xs font-medium px-1.5 py-0.5 rounded-full"
+          className={`mt-0.5 ${isCompact ? 'text-[10px] px-1' : 'text-xs px-1.5'} py-0.5 rounded-full font-medium`}
           style={{ backgroundColor: status.color + '15', color: status.color }}
         >
           {status.label}
@@ -116,192 +72,56 @@ const ScoreRing = ({ score, size = 120 }: { score: number; size?: number }) => {
   );
 };
 
-// Compact Stat Card Component
+// Compact Stat Card
 const StatCard = ({
   label,
   value,
   color,
   icon,
+  onClick,
 }: {
   label: string;
   value: number;
   color: string;
   icon?: React.ReactNode;
-}) => (
-  <div className="flex items-center gap-2 px-2 py-1.5">
-    {icon && (
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: color + '20' }}
-      >
-        {icon}
-      </div>
-    )}
-    <div>
-      <div className="text-xl font-bold leading-tight" style={{ color }}>
-        {value}
-      </div>
-      <div className="text-xs text-base-content/60 leading-tight">{label}</div>
-    </div>
-  </div>
-);
-
-// Compact Category Progress Component
-const CategoryProgress = ({
-  label,
-  score,
-}: {
-  label: string;
-  score: number;
+  onClick?: () => void;
 }) => {
-  const status = getHealthStatus(score);
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm w-28 truncate text-base-content/70">{label}</span>
-      <div className="flex-1 h-2 bg-base-200 rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${score}%`, backgroundColor: status.color }}
-        />
+  const content = (
+    <div className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 shadow-sm transition-colors ${
+      onClick ? 'border-base-200 bg-base-100 hover:bg-base-200/40 hover:border-base-300' : 'border-base-200 bg-base-100'
+    }`}>
+      <div className="flex items-center gap-2 min-w-0">
+        {icon && (
+          <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-semibold" style={{ backgroundColor: color + '20', color }}>
+            {icon}
+          </div>
+        )}
+        <span className="text-[11px] uppercase tracking-wide text-base-content/50 truncate">{label}</span>
       </div>
-      <span className="text-sm font-medium w-8 text-right" style={{ color: status.color }}>
-        {Math.round(score)}
-      </span>
+      <span className="text-sm font-semibold tabular-nums" style={{ color }}>{value}</span>
     </div>
   );
-};
 
-// Clause Card Component - compact card that opens dialog on click
-const ClauseCard = ({
-  clause,
-  onClick,
-}: {
-  clause: ContractClause;
-  onClick: () => void;
-}) => {
-  const hasRisks = clause.riskAssessments.length > 0;
-  const riskCount = clause.riskAssessments.length;
-  const highestRisk = hasRisks
-    ? clause.riskAssessments.reduce((max, r) => (r.score > max.score ? r : max))
-    : null;
+  if (!onClick) return content;
 
   return (
-    <button
-      className={`border rounded-lg transition-all text-left px-3 py-2 w-full hover:shadow-sm ${hasRisks ? 'border-base-300 bg-base-200/30 hover:border-base-content/30' : 'border-base-200 hover:border-base-300'}`}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2">
-        {hasRisks ? (
-          <Icon icon={alertTriangleIcon} className="size-5 text-base-content/50 flex-shrink-0" />
-        ) : (
-          <Icon icon={checkCircleIcon} className="size-5 text-base-content/40 flex-shrink-0" />
-        )}
-        <span className="font-semibold text-base truncate flex-1">
-          {clause.clauseNumber || `Clause ${clause.clauseOrder}`}
-        </span>
-        {hasRisks && (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-medium text-white flex-shrink-0"
-            style={{
-              backgroundColor: RiskLevelColors[highestRisk!.level as keyof typeof RiskLevelColors] || '#6b7280',
-            }}
-          >
-            {riskCount}
-          </span>
-        )}
-      </div>
-      {clause.clauseTitle && (
-        <p className="text-sm text-base-content/60 truncate mt-0.5 ml-7">
-          {clause.clauseTitle}
-        </p>
-      )}
+    <button type="button" className="text-left w-full" onClick={onClick}>
+      {content}
     </button>
   );
 };
 
-// Clause Detail Dialog
-const ClauseDetailDialog = ({
-  clause,
-  onClose,
-}: {
-  clause: ContractClause;
-  onClose: () => void;
-}) => {
-  const hasRisks = clause.riskAssessments.length > 0;
-
+// Compact Category Progress
+const CategoryProgress = ({ label, score }: { label: string; score: number }) => {
+  const status = getHealthStatus(score);
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box max-w-2xl max-h-[80vh]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            {hasRisks ? (
-              <Icon icon={alertTriangleIcon} className="size-5 text-base-content/50" />
-            ) : (
-              <Icon icon={checkCircleIcon} className="size-5 text-base-content/40" />
-            )}
-            <h3 className="font-bold text-lg">
-              {clause.clauseNumber || `Clause ${clause.clauseOrder}`}
-            </h3>
-          </div>
-          <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle">
-            <Icon icon={xIcon} className="size-5" />
-          </button>
-        </div>
-
-        {clause.clauseTitle && (
-          <p className="text-sm text-base-content/70 mb-3">{clause.clauseTitle}</p>
-        )}
-
-        <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-120px)]">
-          {/* Content */}
-          {clause.clauseContent && (
-            <div className="p-3 bg-base-200/50 rounded-lg text-sm text-base-content/80 whitespace-pre-wrap">
-              {clause.clauseContent}
-            </div>
-          )}
-
-          {/* Risks */}
-          {hasRisks && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">
-                Risk Assessments ({clause.riskAssessments.length})
-              </h4>
-              <div className="space-y-2">
-                {clause.riskAssessments.map((risk, i) => (
-                  <div key={i} className="p-3 bg-base-100 rounded-lg border border-base-200">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium text-white"
-                        style={{
-                          backgroundColor: RiskLevelColors[risk.level as keyof typeof RiskLevelColors] || '#6b7280',
-                        }}
-                      >
-                        {risk.level}
-                      </span>
-                      <span className="text-xs text-base-content/60">{risk.categoryEn || risk.category}</span>
-                    </div>
-                    {(risk.riskDescriptionEn || risk.riskDescription) && (
-                      <p className="text-sm mb-1">{risk.riskDescriptionEn || risk.riskDescription}</p>
-                    )}
-                    {risk.matchedText && (
-                      <div className="mt-2 p-2 bg-base-200/50 rounded text-xs italic border-l-2 border-base-300">
-                        "{risk.matchedText}"
-                      </div>
-                    )}
-                    {(risk.recommendationEn || risk.recommendation) && (
-                      <DualPerspective text={risk.recommendationEn || risk.recommendation || ''} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="text-[11px] sm:text-xs w-20 sm:w-28 truncate text-base-content/70">{label}</span>
+      <div className="flex-1 h-1.5 sm:h-2 bg-base-200 rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${score}%`, backgroundColor: status.color }} />
       </div>
-      <form method="dialog" className="modal-backdrop">
-        <button onClick={onClose}>close</button>
-      </form>
-    </dialog>
+      <span className="text-[11px] sm:text-xs font-semibold w-7 text-right" style={{ color: status.color }}>{Math.round(score)}</span>
+    </div>
   );
 };
 
@@ -316,9 +136,19 @@ export default function ContractDetailsPage() {
   const [clauses, setClauses] = useState<ContractClause[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
-  const [selectedClause, setSelectedClause] = useState<ContractClause | null>(null);
-  const [filterLevel, setFilterLevel] = useState<string>('all');
   const [isChatOpen, setIsChatOpen] = useState(true);
+  const [summaryCollapsed, setSummaryCollapsed] = useState(() => getStoredSummaryState(true));
+  const [isNarrowScreen, setIsNarrowScreen] = useState(false);
+  const [isDesktopScreen, setIsDesktopScreen] = useState(false);
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState<'Critical' | 'High' | 'Medium' | 'Low' | null>(null);
+  const pdfViewerRef = useRef<ContractDocumentViewerHandle>(null);
+  const chatRef = useRef<ContractAiChatHandle>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+  const riskDialogRef = useRef<HTMLDialogElement>(null);
 
   const loadData = useCallback(async () => {
     if (!contractId) return;
@@ -339,6 +169,54 @@ export default function ContractDetailsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const handleChange = () => {
+      setIsNarrowScreen(mediaQuery.matches);
+      if (mediaQuery.matches) {
+        setSummaryCollapsed(true);
+      }
+    };
+
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(SUMMARY_STORAGE_KEY, String(summaryCollapsed));
+  }, [summaryCollapsed]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const handleChange = () => setIsDesktopScreen(mediaQuery.matches);
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
 
   const handleReanalyze = useCallback(async () => {
     if (!contractId) return;
@@ -362,76 +240,173 @@ export default function ContractDetailsPage() {
     navigate('/dashboard/contract-analysis');
   }, [navigate]);
 
+  const handleToggleSummary = useCallback(() => {
+    if (isNarrowScreen) return;
+    setSummaryCollapsed(prev => !prev);
+  }, [isNarrowScreen]);
+
+  const openRiskDialog = useCallback((level: 'Critical' | 'High' | 'Medium' | 'Low') => {
+    setSelectedRiskLevel(level);
+    setRiskDialogOpen(true);
+  }, []);
+
+  const handleSplitterMouseDown = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setIsDraggingSplit(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handleMove = (event: MouseEvent) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const percent = ((event.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(clampValue(percent, 30, 70));
+    };
+
+    const handleUp = () => setIsDraggingSplit(false);
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDraggingSplit]);
+
+  useEffect(() => {
+    const dialog = riskDialogRef.current;
+    if (!dialog) return;
+    if (riskDialogOpen && !dialog.open) {
+      dialog.showModal();
+    }
+    if (!riskDialogOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [riskDialogOpen]);
+
+  // Highlight clauses in document viewer — search for the actual problematic text when available
+  const highlightClause = useCallback((clauseRefs: string[]) => {
+    pdfViewerRef.current?.clearHighlights();
+
+    if (clauseRefs[0]) {
+      // Try to find the matched risk text for this clause instead of just the title
+      const searchText = clauseMatchedTextMap.get(clauseRefs[0].toLowerCase()) || clauseRefs[0];
+      pdfViewerRef.current?.searchAndScrollTo(searchText);
+    }
+
+    clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => {
+      pdfViewerRef.current?.clearHighlights();
+    }, 8000);
+  }, [clauseMatchedTextMap]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => clearTimeout(highlightTimeoutRef.current);
+  }, []);
+
+  // Clause numbers for chat linking
+  const clauseNumbers = useMemo(() => {
+    return clauses.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`);
+  }, [clauses]);
+
+  // Map clause number → best matchedText for document search (prefer critical/high risk matched text)
+  const clauseMatchedTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+    for (const clause of clauses) {
+      const cn = clause.clauseNumber || `Clause ${clause.clauseOrder}`;
+      const bestRisk = [...clause.riskAssessments]
+        .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
+        .find(r => r.matchedText);
+      if (bestRisk?.matchedText) {
+        // Use first ~120 chars of matchedText for a searchable phrase
+        const text = bestRisk.matchedText.length > 120
+          ? bestRisk.matchedText.slice(0, 120)
+          : bestRisk.matchedText;
+        map.set(cn.toLowerCase(), text);
+      }
+    }
+    return map;
+  }, [clauses]);
+
+  const riskItems = useMemo(() => {
+    return clauses.flatMap((clause) =>
+      clause.riskAssessments.map((risk) => ({
+        level: risk.level,
+        category: risk.categoryEn || risk.category || 'General',
+        description: risk.riskDescriptionEn || risk.riskDescription || '',
+        recommendation: risk.recommendationEn || risk.recommendation || '',
+        matchedText: risk.matchedText || '',
+        clauseLabel: clause.clauseNumber || `Clause ${clause.clauseOrder}`,
+      }))
+    );
+  }, [clauses]);
+
+  const filteredRiskItems = useMemo(() => {
+    if (!selectedRiskLevel) return [];
+    return riskItems.filter((risk) => risk.level === selectedRiskLevel);
+  }, [riskItems, selectedRiskLevel]);
+
   // Topbar setup
   useEffect(() => {
     const leftContent = (
       <div className="flex items-center gap-3">
-        <button
-          onClick={handleBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors"
-        >
+        <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors">
           <Icon icon={arrowLeftIcon} className="size-5" />
         </button>
-        <div>
-          <span className="font-semibold text-lg">
-            {report?.contractNumber || 'Contract Analysis'}
-          </span>
-          {report?.projectName && (
-            <span className="text-sm text-base-content/60 ml-2">
-              {report.projectName}
-            </span>
-          )}
-        </div>
+        {report?.contractNumber && (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{report.contractNumber}</span>
+            {report.projectName && <span className="text-sm text-base-content/50">— {report.projectName}</span>}
+          </div>
+        )}
       </div>
+    );
+
+    const centerContent = (
+      <span className="font-semibold text-base-content/70 text-sm tracking-wide">Contract Analysis</span>
     );
 
     const rightContent = (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <button
-          className="btn btn-sm btn-outline"
+          className="btn btn-sm btn-circle btn-ghost hover:bg-base-200 tooltip tooltip-bottom"
           onClick={handleReanalyze}
           disabled={isReanalyzing}
+          title={isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
+          aria-label="Re-analyze"
+          data-tip={isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
         >
           {isReanalyzing ? (
-            <span className="loading loading-spinner loading-sm"></span>
+            <span className="loading loading-spinner loading-xs"></span>
           ) : (
             <Icon icon={refreshCwIcon} className="size-4" />
           )}
-          Re-analyze
         </button>
+        <div className="w-px h-5 bg-base-300"></div>
         <button
-          className={`btn btn-sm ${isChatOpen ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
+          className={`btn btn-sm btn-circle tooltip tooltip-bottom ${isChatOpen ? 'btn-primary' : 'btn-ghost hover:bg-base-200'}`}
           onClick={() => setIsChatOpen(!isChatOpen)}
           title={isChatOpen ? 'Hide AI Chat' : 'Show AI Chat'}
+          aria-label={isChatOpen ? 'Hide AI Chat' : 'Show AI Chat'}
+          data-tip={isChatOpen ? 'Hide AI Chat' : 'Show AI Chat'}
         >
           <Icon icon={messageSquareIcon} className="size-4" />
-          <span className="hidden sm:inline">AI Chat</span>
         </button>
       </div>
     );
 
-    setAllContent(leftContent, null, rightContent);
-
+    setAllContent(leftContent, centerContent, rightContent);
     return () => clearContent();
   }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent]);
-
-  // Filter clauses
-  const filteredClauses = useMemo(() => {
-    return clauses.filter((clause) => {
-      if (filterLevel === 'all') return true;
-      if (filterLevel === 'risky') return clause.riskAssessments.length > 0;
-      return clause.riskAssessments.some((r) => r.level === filterLevel);
-    });
-  }, [clauses, filterLevel]);
-
-  // Stats
-  const totalRisks = useMemo(() => {
-    return clauses.reduce((sum, c) => sum + c.riskAssessments.length, 0);
-  }, [clauses]);
-
-  const clausesWithRisks = useMemo(() => {
-    return clauses.filter((c) => c.riskAssessments.length > 0).length;
-  }, [clauses]);
 
   if (isLoading) return <Loader />;
 
@@ -440,193 +415,280 @@ export default function ContractDetailsPage() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-base-content/60 mb-4">Contract report not found</p>
-          <button className="btn btn-primary" onClick={handleBack}>
-            Back
-          </button>
+          <button className="btn btn-primary" onClick={handleBack}>Back</button>
         </div>
       </div>
     );
   }
 
+  const overallStatus = getHealthStatus(report.overallScore);
+  const riskPills = [
+    { count: report.criticalRiskCount, label: 'Critical', color: '#4a1d1d' },
+    { count: report.highRiskCount, label: 'High', color: '#b91c1c' },
+    { count: report.mediumRiskCount, label: 'Med', color: '#a16207' },
+    { count: report.lowRiskCount, label: 'Low', color: '#6b7280' },
+  ].filter(pill => pill.count > 0);
+  const isSplitActive = isChatOpen && isDesktopScreen;
+  const leftPaneStyle = isSplitActive ? { flex: `0 0 ${splitPercent}%` } : { flex: '1 1 0%' };
+  const rightPaneStyle = { flex: `0 0 ${100 - splitPercent}%` };
+
   return (
-    <div className="h-full overflow-hidden flex">
-      {/* Left Panel - Analysis Data */}
-      <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
-        <div className="p-4 space-y-4 flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Contract Info Header */}
-          {(report.subcontractorName || report.projectName) && (
-            <div className="flex items-center gap-4 px-3 py-2 bg-base-200/50 rounded-lg text-sm">
-              {report.subcontractorName && (
-                <div>
-                  <span className="text-base-content/60">Subcontractor:</span>{' '}
-                  <span className="font-medium">{report.subcontractorName}</span>
-                </div>
-              )}
-              {report.projectName && (
-                <div>
-                  <span className="text-base-content/60">Project:</span>{' '}
-                  <span className="font-medium">{report.projectName}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Top Section - Score and Stats - Compact Layout */}
-          <div className="flex gap-4 items-stretch flex-shrink-0">
-            {/* Score Ring - Compact */}
-            <div className="flex flex-col items-center justify-center p-4 bg-base-100 rounded-xl border border-base-200 min-w-[160px]">
-              <ScoreRing score={report.overallScore} size={100} />
-              <p className="mt-2 text-xs text-center text-base-content/50 leading-tight">
-                Based on {report.totalClauses} clauses
-              </p>
-              {/* Delta from template */}
-              {report.deltaFromTemplate !== 0 && (
-                <div className={`mt-1 flex items-center gap-1 text-xs ${report.deltaFromTemplate > 0 ? 'text-error' : 'text-success'}`}>
-                  <Icon icon={report.deltaFromTemplate > 0 ? trendingDownIcon : trendingUpIcon} className="size-3" />
-                  <span>{report.deltaFromTemplate > 0 ? '-' : '+'}{Math.abs(report.deltaFromTemplate)} vs template</span>
-                </div>
-              )}
-            </div>
-
-            {/* Stats and Categories - Compact */}
-            <div className="flex-1 space-y-3 min-w-0">
-              {/* Risk Stats - Horizontal */}
-              <div className="flex items-center gap-1 p-2 bg-base-100 rounded-xl border border-base-200">
-                <StatCard
-                  label="Critical"
-                  value={report.criticalRiskCount}
-                  color="#4a1d1d"
-                  icon={<span className="text-sm font-bold" style={{ color: '#4a1d1d' }}>!</span>}
-                />
-                <StatCard
-                  label="High"
-                  value={report.highRiskCount}
-                  color="#b91c1c"
-                  icon={<span className="text-sm font-bold" style={{ color: '#b91c1c' }}>!</span>}
-                />
-                <StatCard
-                  label="Medium"
-                  value={report.mediumRiskCount}
-                  color="#a16207"
-                  icon={<span className="text-sm font-bold" style={{ color: '#a16207' }}>-</span>}
-                />
-                <StatCard
-                  label="Low"
-                  value={report.lowRiskCount}
-                  color="#6b7280"
-                  icon={<Icon icon={checkCircleIcon} className="size-4" style={{ color: '#6b7280' }} />}
-                />
-              </div>
-
-              {/* Contract-specific stats */}
-              {(report.modificationsDetected > 0 || report.newRisksIntroduced > 0 || report.risksMitigated > 0) && (
-                <div className="flex items-center gap-3 px-3 py-2 bg-base-100 rounded-xl border border-base-200 text-xs">
-                  {report.modificationsDetected > 0 && (
-                    <div>
-                      <span className="text-base-content/60">Modifications:</span>{' '}
-                      <span className="font-semibold">{report.modificationsDetected}</span>
-                    </div>
-                  )}
-                  {report.newRisksIntroduced > 0 && (
-                    <div className="text-error">
-                      <span className="text-error/70">New Risks:</span>{' '}
-                      <span className="font-semibold">+{report.newRisksIntroduced}</span>
-                    </div>
-                  )}
-                  {report.risksMitigated > 0 && (
-                    <div className="text-success">
-                      <span className="text-success/70">Mitigated:</span>{' '}
-                      <span className="font-semibold">-{report.risksMitigated}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Category Scores - Compact */}
-              <div className="p-3 bg-base-100 rounded-xl border border-base-200">
-                <h3 className="text-sm font-semibold mb-2.5 text-base-content/70">Risk Categories</h3>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                  <CategoryProgress label="Payment" score={report.categoryScores.payment} />
-                  <CategoryProgress label="Responsibility" score={report.categoryScores.roleResponsibility} />
-                  <CategoryProgress label="Safety" score={report.categoryScores.safety} />
-                  <CategoryProgress label="Timeline" score={report.categoryScores.temporal} />
-                  <CategoryProgress label="Procedures" score={report.categoryScores.procedure} />
-                  <CategoryProgress label="Definitions" score={report.categoryScores.definition} />
-                  <CategoryProgress label="References" score={report.categoryScores.reference} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Clauses Section */}
-          <div className="bg-base-100 rounded-xl border border-base-200 overflow-hidden flex flex-col flex-1 min-h-0">
-            {/* Header */}
-            <div className="px-3 py-2 border-b border-base-200 flex items-center justify-between flex-wrap gap-2 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <h3 className="font-semibold text-base">Clauses</h3>
-                <span className="text-sm text-base-content/60">
-                  {clausesWithRisks} of {clauses.length} have risks ({totalRisks} total)
+    <div ref={splitContainerRef} className="h-full overflow-hidden flex bg-base-100">
+      <div className="min-w-0 min-h-0 flex flex-col" style={leftPaneStyle}>
+        {/* Collapsible Summary Bar */}
+        <div className="flex-shrink-0 border-b border-base-200 bg-base-100/80 backdrop-blur">
+          <div className="flex items-center justify-between gap-3 px-3 py-1.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="hidden md:inline text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/40">Summary</span>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold tabular-nums">{Math.round(report.overallScore)}</span>
+                <span className="badge badge-sm font-medium" style={{ backgroundColor: overallStatus.color + '15', color: overallStatus.color }}>
+                  {overallStatus.label}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5">
-                {FILTER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFilterLevel(opt.value)}
-                    className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                      filterLevel === opt.value
-                        ? 'bg-primary text-primary-content'
-                        : 'hover:bg-base-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-1.5">
+                {riskPills.length > 0 ? (
+                  riskPills.map((pill) => (
+                    <span key={pill.label} className="badge badge-sm border-0 text-white" style={{ backgroundColor: pill.color }}>
+                      {pill.count} {pill.label}
+                    </span>
+                  ))
+                ) : (
+                  <span className="badge badge-sm badge-outline text-base-content/50">No risks</span>
+                )}
               </div>
+              <div className="hidden md:flex items-center gap-2 min-w-[120px]">
+                <div className="h-1 w-20 bg-base-200 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${report.overallScore}%`, backgroundColor: overallStatus.color }} />
+                </div>
+                <span className="text-[11px] text-base-content/50">Overall</span>
+              </div>
+              {report.subcontractorName && (
+                <span className="hidden xl:inline text-xs text-base-content/50 truncate max-w-[220px]">
+                  {report.subcontractorName}
+                </span>
+              )}
             </div>
+            <button
+              onClick={handleToggleSummary}
+              className="btn btn-ghost btn-xs gap-1"
+              aria-expanded={!summaryCollapsed}
+              aria-controls="contract-summary-panel"
+              disabled={isNarrowScreen}
+            >
+              <span className="hidden sm:inline text-xs">{summaryCollapsed ? 'Show details' : 'Hide details'}</span>
+              <Icon icon={chevronDownIcon} className={`size-3.5 transition-transform ${summaryCollapsed ? '' : 'rotate-180'}`} />
+            </button>
+          </div>
 
-            {/* Clauses List */}
-            <div className="flex-1 p-3 overflow-y-auto">
-              {filteredClauses.length === 0 ? (
-                <p className="text-center text-base-content/60 py-8 text-sm">
-                  No clauses match the selected filter
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {filteredClauses.map((clause) => (
-                    <ClauseCard
-                      key={clause.id}
-                      clause={clause}
-                      onClick={() => setSelectedClause(clause)}
-                    />
-                  ))}
+        <div
+          id="contract-summary-panel"
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${summaryCollapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}`}
+        >
+          <div className="overflow-hidden">
+            <div className="px-3 pb-3 space-y-2">
+              {/* Contract Info */}
+              {(report.subcontractorName || report.projectName) && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-base-200/40 px-2.5 py-1.5 text-[11px] text-base-content/60">
+                  {report.subcontractorName && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="uppercase text-[10px] tracking-wide">Subcontractor</span>
+                      <span className="font-semibold text-base-content">{report.subcontractorName}</span>
+                    </div>
+                  )}
+                  {report.projectName && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="uppercase text-[10px] tracking-wide">Project</span>
+                      <span className="font-semibold text-base-content">{report.projectName}</span>
+                    </div>
+                  )}
                 </div>
               )}
+
+              <div className="grid gap-2 lg:grid-cols-[150px_minmax(0,1fr)] items-stretch">
+                {/* Score Ring */}
+                <div className="card bg-base-100 border border-base-200 shadow-sm h-full">
+                  <div className="card-body items-center p-2 gap-1.5 h-full justify-between">
+                    <ScoreRing score={report.overallScore} size={72} />
+                    <p className="text-[10px] text-center text-base-content/60 leading-tight">Based on {report.totalClauses} clauses</p>
+                    {report.deltaFromTemplate !== 0 && (
+                      <div className={`flex items-center gap-1 text-[10px] ${report.deltaFromTemplate > 0 ? 'text-error' : 'text-success'}`}>
+                        <Icon icon={report.deltaFromTemplate > 0 ? trendingDownIcon : trendingUpIcon} className="size-3" />
+                        <span>{report.deltaFromTemplate > 0 ? '-' : '+'}{Math.abs(report.deltaFromTemplate)} vs template</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="space-y-2 min-w-0 h-full flex flex-col">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <StatCard label="Critical" value={report.criticalRiskCount} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
+                    <StatCard label="High" value={report.highRiskCount} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
+                    <StatCard label="Medium" value={report.mediumRiskCount} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
+                    <StatCard label="Low" value={report.lowRiskCount} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
+                  </div>
+
+                  {(report.modificationsDetected > 0 || report.newRisksIntroduced > 0 || report.risksMitigated > 0) && (
+                    <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-base-100 border border-base-200 px-2.5 py-1.5 text-[10px]">
+                      {report.modificationsDetected > 0 && (
+                        <span className="badge badge-outline text-[10px]">Modifications {report.modificationsDetected}</span>
+                      )}
+                      {report.newRisksIntroduced > 0 && (
+                        <span className="badge badge-error badge-outline text-[10px]">New Risks +{report.newRisksIntroduced}</span>
+                      )}
+                      {report.risksMitigated > 0 && (
+                        <span className="badge badge-success badge-outline text-[10px]">Mitigated -{report.risksMitigated}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-base-200 bg-base-100 px-2.5 py-2 shadow-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">Risk Categories</h3>
+                      <span className="text-[10px] text-base-content/40">by area</span>
+                    </div>
+                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-1.5">
+                      <CategoryProgress label="Payment" score={report.categoryScores.payment} />
+                      <CategoryProgress label="Responsibility" score={report.categoryScores.roleResponsibility} />
+                      <CategoryProgress label="Safety" score={report.categoryScores.safety} />
+                      <CategoryProgress label="Timeline" score={report.categoryScores.temporal} />
+                      <CategoryProgress label="Procedures" score={report.categoryScores.procedure} />
+                      <CategoryProgress label="Definitions" score={report.categoryScores.definition} />
+                      <CategoryProgress label="References" score={report.categoryScores.reference} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - AI Chat */}
-      {isChatOpen && (
-        <div className="w-[380px] xl:w-[420px] flex-shrink-0 border-l border-base-200 p-3 hidden lg:block">
-          <ContractAiChat
-            templateName={report.contractNumber || 'Contract'}
-            contractId={parseInt(contractId || '0')}
-            overallScore={report.overallScore}
-            criticalCount={report.criticalRiskCount}
-            highCount={report.highRiskCount}
-            mediumCount={report.mediumRiskCount}
-            lowCount={report.lowRiskCount}
-            totalClauses={report.totalClauses}
-            categoryScores={report.categoryScores}
-            topRisks={clauses
-              .flatMap(c => c.riskAssessments)
-              .filter(r => r.level === 'Critical' || r.level === 'High')
-              .slice(0, 5)}
+        {/* Contract PDF */}
+        <div className="flex-1 min-h-0 min-w-0 overflow-auto bg-base-100">
+          <ContractDocumentViewer
+            ref={pdfViewerRef}
+            contractDatasetId={parseInt(contractId || '0')}
           />
         </div>
+      </div>
+
+      {isSplitActive && (
+        <div
+          className="hidden lg:flex w-2 items-center justify-center cursor-col-resize bg-base-200/50 hover:bg-base-200 transition-colors"
+          onMouseDown={handleSplitterMouseDown}
+          onDoubleClick={() => setSplitPercent(50)}
+          role="separator"
+          aria-orientation="vertical"
+          aria-valuenow={Math.round(splitPercent)}
+          aria-valuemin={30}
+          aria-valuemax={70}
+        >
+          <div className="h-10 w-0.5 rounded-full bg-base-300" />
+        </div>
       )}
+
+      {/* RIGHT: AI Chat (desktop) */}
+      {isChatOpen && (
+        <div className="hidden lg:flex flex-col min-w-[320px] bg-base-100/90 backdrop-blur-sm shadow-lg" style={rightPaneStyle}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-base-200/70">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+              <span className="w-2 h-2 rounded-full bg-success"></span>
+              AI Assistant
+            </div>
+            <span className="text-[10px] text-base-content/40">Contextual</span>
+          </div>
+          <div className="flex-1 min-h-0 p-3">
+            <ContractAiChat
+              ref={chatRef}
+              templateName={report.contractNumber || 'Contract'}
+              contractId={parseInt(contractId || '0')}
+              overallScore={report.overallScore}
+              criticalCount={report.criticalRiskCount}
+              highCount={report.highRiskCount}
+              mediumCount={report.mediumRiskCount}
+              lowCount={report.lowRiskCount}
+              totalClauses={report.totalClauses}
+              categoryScores={report.categoryScores}
+              topRisks={clauses
+                .flatMap(c => c.riskAssessments.map(r => ({
+                  ...r,
+                  clauseRef: c.clauseNumber || `Clause ${c.clauseOrder}`,
+                })))
+                .filter(r => r.level === 'Critical' || r.level === 'High')
+                .slice(0, 5)}
+              clauseNumbers={clauseNumbers}
+              onClauseReferenceClick={(cn) => highlightClause([cn])}
+              onReferencedClauses={(refs) => highlightClause(refs)}
+            />
+          </div>
+        </div>
+      )}
+
+      <dialog
+        ref={riskDialogRef}
+        className="modal"
+        onClose={() => setRiskDialogOpen(false)}
+      >
+        <div className="modal-box w-11/12 max-w-4xl p-0 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-base-200">
+            <div>
+              <h3 className="font-semibold text-sm">
+                {selectedRiskLevel ? `${selectedRiskLevel} Risks` : 'Risks'}
+              </h3>
+              <p className="text-xs text-base-content/50">
+                {filteredRiskItems.length} item{filteredRiskItems.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <form method="dialog">
+              <button
+                className="btn btn-sm btn-circle btn-ghost"
+                aria-label="Close"
+                onClick={() => setRiskDialogOpen(false)}
+              >
+                <Icon icon={xIcon} className="size-4" />
+              </button>
+            </form>
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto p-4 space-y-3">
+            {filteredRiskItems.length === 0 ? (
+              <div className="text-sm text-base-content/60">No risks at this level.</div>
+            ) : (
+              filteredRiskItems.map((risk, index) => (
+                <div key={`${risk.clauseLabel}-${index}`} className="rounded-lg border border-base-200 bg-base-100 p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="badge badge-sm border-0 text-white"
+                      style={{ backgroundColor: RISK_LEVEL_COLORS[risk.level as keyof typeof RISK_LEVEL_COLORS] }}
+                    >
+                      {risk.level}
+                    </span>
+                    <span className="text-xs text-base-content/50">{risk.clauseLabel}</span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-base-content">{risk.category}</div>
+                  {risk.description && (
+                    <p className="text-xs text-base-content/70 mt-1 leading-relaxed">{risk.description}</p>
+                  )}
+                  {risk.matchedText && (
+                    <div className="mt-2 rounded-md bg-base-200/60 px-2 py-1 text-xs italic text-base-content/60">
+                      "{risk.matchedText}"
+                    </div>
+                  )}
+                  {risk.recommendation && (
+                    <div className="mt-2 text-xs text-base-content/70">
+                      <span className="font-semibold text-base-content/60">Recommendation:</span> {risk.recommendation}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setRiskDialogOpen(false)}>close</button>
+        </form>
+      </dialog>
 
       {/* Mobile Chat Overlay */}
       {isChatOpen && (
@@ -635,10 +697,7 @@ export default function ContractDetailsPage() {
           <div className="absolute right-0 top-0 bottom-0 w-full max-w-[400px] bg-base-100 shadow-xl flex flex-col">
             <div className="flex items-center justify-between p-3 border-b border-base-200">
               <span className="font-semibold text-sm">AI Chat Assistant</span>
-              <button
-                className="btn btn-sm btn-ghost btn-circle"
-                onClick={() => setIsChatOpen(false)}
-              >
+              <button className="btn btn-sm btn-ghost btn-circle" onClick={() => setIsChatOpen(false)}>
                 <Icon icon={xIcon} className="size-5" />
               </button>
             </div>
@@ -657,18 +716,13 @@ export default function ContractDetailsPage() {
                   .flatMap(c => c.riskAssessments)
                   .filter(r => r.level === 'Critical' || r.level === 'High')
                   .slice(0, 5)}
+                clauseNumbers={clauseNumbers}
+                onClauseReferenceClick={(cn) => highlightClause([cn])}
+                onReferencedClauses={(refs) => highlightClause(refs)}
               />
             </div>
           </div>
         </div>
-      )}
-
-      {/* Clause Detail Dialog */}
-      {selectedClause && (
-        <ClauseDetailDialog
-          clause={selectedClause}
-          onClose={() => setSelectedClause(null)}
-        />
       )}
     </div>
   );

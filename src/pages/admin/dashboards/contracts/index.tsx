@@ -136,10 +136,9 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('drafts')}
-                    title={`Drafts (${draftsData.length})`}
-                    aria-label={`Drafts (${draftsData.length})`}
                 >
                     <Icon icon={fileTextIcon} className="size-4" />
+                    <span>Drafts ({draftsData.length})</span>
                 </button>
 
                 <button
@@ -149,10 +148,9 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('active')}
-                    title={`Active (${activeData.length})`}
-                    aria-label={`Active (${activeData.length})`}
                 >
                     <Icon icon={checkCircleIcon} className="size-4" />
+                    <span>Active ({activeData.length})</span>
                 </button>
 
                 <button
@@ -162,10 +160,9 @@ const ContractsManagement = memo(() => {
                             : "btn-ghost border border-base-300 hover:border-primary/50"
                     }`}
                     onClick={() => handleTabChange('terminated')}
-                    title={`Terminated (${terminatedData.length})`}
-                    aria-label={`Terminated (${terminatedData.length})`}
                 >
                     <Icon icon={xCircleIcon} className="size-4" />
+                    <span>Terminated ({terminatedData.length})</span>
                 </button>
             </div>
         );

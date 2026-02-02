@@ -122,17 +122,16 @@ const ExportDropdown = ({
             <div
                 tabIndex={0}
                 role="button"
-                className={`btn btn-sm border border-base-300 bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-colors duration-200 ${isExporting ? 'btn-disabled' : ''}`}
+                className={`btn btn-sm border border-base-300 bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-colors duration-200 ${isExporting ? 'btn-disabled' : ''} tooltip tooltip-bottom`}
+                data-tip={isExporting ? "Exporting..." : "Export"}
+                title="Export"
+                aria-label="Export"
             >
                 {isExporting ? (
-                    <>
-                        <span className="loading loading-spinner loading-xs"></span>
-                        <span>Exporting...</span>
-                    </>
+                    <span className="loading loading-spinner loading-xs"></span>
                 ) : (
                     <>
                         <Icon icon={downloadIcon} className="w-4 h-4" />
-                        <span>Export</span>
                         <Icon icon={chevronDownIcon} className="w-3.5 h-3.5" />
                     </>
                 )}

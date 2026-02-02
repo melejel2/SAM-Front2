@@ -541,10 +541,12 @@ const IPCDetails = () => {
                 {isEditable && (
                     <button
                         onClick={() => actionsRef.current.handleEditIpc()}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm btn-circle border-base-300 bg-base-100 text-base-content hover:bg-base-200 border tooltip tooltip-bottom"
+                        title="Edit"
+                        aria-label="Edit"
+                        data-tip="Edit"
                     >
                         <span className="iconify lucide--edit size-4"></span>
-                        <span className="hidden xl:inline">Edit</span>
                     </button>
                 )}
 
@@ -552,14 +554,16 @@ const IPCDetails = () => {
                     <button
                         onClick={() => actionsRef.current.handleGenerateIpc()}
                         disabled={generatingIpc}
-                        className="btn btn-sm flex items-center gap-2 bg-green-600 text-white hover:bg-green-700"
+                        className="btn btn-sm btn-circle bg-green-600 text-white hover:bg-green-700 tooltip tooltip-bottom"
+                        title={generatingIpc ? "Generating..." : "Generate"}
+                        aria-label="Generate"
+                        data-tip={generatingIpc ? "Generating..." : "Generate"}
                     >
                         {generatingIpc ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <span className="iconify lucide--check-circle size-4"></span>
                         )}
-                        <span className="hidden xl:inline">Generate</span>
                     </button>
                 )}
 
@@ -567,29 +571,33 @@ const IPCDetails = () => {
                     <button
                         onClick={() => setShowUnissueModal(true)}
                         disabled={unissuingIpc}
-                        className="btn btn-sm flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-700"
+                        className="btn btn-sm btn-circle bg-amber-600 text-white hover:bg-amber-700 tooltip tooltip-bottom"
+                        title={unissuingIpc ? "Un-issuing..." : "Un-Issue"}
+                        aria-label="Un-Issue"
+                        data-tip={unissuingIpc ? "Un-issuing..." : "Un-Issue"}
                     >
                         {unissuingIpc ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <span className="iconify lucide--undo-2 size-4"></span>
                         )}
-                        <span className="hidden xl:inline">Un-Issue</span>
                     </button>
                 )}
 
                 <div className="dropdown dropdown-end">
                     <button
                         tabIndex={0}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border tooltip tooltip-bottom"
                         disabled={exportingPDF || exportingExcel || exportingZip}
+                        title="Export"
+                        aria-label="Export"
+                        data-tip="Export"
                     >
                         {exportingPDF || exportingExcel || exportingZip ? (
                             <span className="loading loading-spinner loading-xs"></span>
                         ) : (
                             <span className="iconify lucide--download size-4"></span>
                         )}
-                        <span className="hidden xl:inline">Export</span>
                         <span className="iconify lucide--chevron-down size-3"></span>
                     </button>
                     <ul
@@ -638,10 +646,12 @@ const IPCDetails = () => {
                 <div className="dropdown dropdown-end">
                     <button
                         tabIndex={0}
-                        className="btn btn-sm border-base-300 bg-base-100 text-base-content hover:bg-base-200 flex items-center gap-2 border"
+                        className="btn btn-sm btn-circle border-base-300 bg-base-100 text-base-content hover:bg-base-200 border tooltip tooltip-bottom"
+                        title="More actions"
+                        aria-label="More actions"
+                        data-tip="More actions"
                     >
                         <span className="iconify lucide--more-horizontal size-4"></span>
-                        <span className="hidden xl:inline">More</span>
                     </button>
                     <ul
                         tabIndex={0}

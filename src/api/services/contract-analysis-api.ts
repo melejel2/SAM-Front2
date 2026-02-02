@@ -232,6 +232,7 @@ export interface ContractChatResponse {
   sessionId?: string;
   error?: string;
   suggestions?: string[];
+  referencedClauses?: string[];
 }
 
 /**
@@ -260,7 +261,9 @@ export interface ContractContext {
     category: string;
     level: string;
     description: string;
+    clauseRef?: string;
   }>;
+  clauseNumbers?: string[];
 }
 
 /**

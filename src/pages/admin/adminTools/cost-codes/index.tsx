@@ -88,13 +88,16 @@ const CostCodes = memo(() => {
             <Button
                 color="primary"
                 size="sm"
+                shape="circle"
                 onClick={triggerFileInput}
                 disabled={uploadLoading}
                 loading={uploadLoading}
-                className="gap-2"
+                className="tooltip tooltip-bottom"
+                data-tip={uploadLoading ? "Uploading..." : "Upload Excel"}
+                title="Upload Excel"
+                aria-label="Upload Excel"
             >
-                <Icon icon={uploadIcon} className="w-4 h-4" />
-                {uploadLoading ? "Uploading..." : "Upload Excel"}
+                {!uploadLoading && <Icon icon={uploadIcon} className="w-4 h-4" />}
             </Button>
         );
     }, [canManageCostCodes, triggerFileInput, uploadLoading]);
