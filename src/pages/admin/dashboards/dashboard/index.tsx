@@ -381,6 +381,28 @@ const moduleLinks: ModuleLink[] = [
   },
 ];
 
+const chartPalette = {
+  sky: '#0ea5e9',
+  teal: '#14b8a6',
+  emerald: '#10b981',
+  violet: '#8b5cf6',
+};
+
+const chartAccentSequence = [
+  chartPalette.sky,
+  chartPalette.teal,
+  chartPalette.emerald,
+  chartPalette.violet,
+];
+
+const contractStatusColorMap: Record<string, string> = {
+  draft: chartPalette.violet,
+  active: chartPalette.emerald,
+  'pending approval': chartPalette.sky,
+  pending: chartPalette.sky,
+  terminated: chartPalette.teal,
+};
+
 
 const DashboardPage = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -425,137 +447,259 @@ const DashboardPage = () => {
     ));
   }, [pages, navigate]);
 
+  const contractStatusColors = useMemo(() => {
+    if (!summary?.contractsByStatus) return chartAccentSequence;
+    return summary.contractsByStatus.map((status, index) => {
+      const key = status.status.toLowerCase();
+      return contractStatusColorMap[key] ?? chartAccentSequence[index % chartAccentSequence.length];
+    });
+  }, [summary]);
+
+  const projectBarColors = useMemo(() => {
+    if (!summary?.topProjectsByIpcValue) return chartAccentSequence;
+    return summary.topProjectsByIpcValue.map((_, index) => chartAccentSequence[index % chartAccentSequence.length]);
+  }, [summary]);
+
+  const totalContractsByStatus = useMemo(() => {
+    if (!summary?.contractsByStatus) return 0;
+    return summary.contractsByStatus.reduce((acc, status) => acc + status.count, 0);
+  }, [summary]);
+
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-base-300/70 bg-base-100/80 p-6 md:p-8 shadow-sm animate-fade-up">
-        <div className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-0 h-56 w-56 rounded-full bg-secondary/10 blur-3xl" />
+    <section className="relative overflow-hidden rounded-3xl border border-base-300/70 bg-base-100/80 p-6 md:p-8 shadow-sm animate-fade-up">
+      <div className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-0 h-56 w-56 rounded-full bg-secondary/10 blur-3xl" />
 
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-base-200/70 px-3 py-1 text-xs font-medium text-base-content/60">
-                <span className="iconify lucide--sparkles size-3.5"></span>
-                Portfolio overview
-              </div>
-              <h1 className="text-3xl font-semibold text-base-content">Dashboard</h1>
-              <p className="max-w-2xl text-sm text-base-content/70">
-                Track budgets, contracts, deductions, IPCs, and reporting activity in one place. Jump straight to the tasks that
-                need attention this week.
-              </p>
+      <div className="relative z-10 flex flex-col gap-10">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-base-200/70 px-3 py-1 text-xs font-medium text-base-content/60">
+              <span className="iconify lucide--sparkles size-3.5"></span>
+              Portfolio overview
             </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {quickActions.map((action) => (
-                <button
-                  key={action.title}
-                  type="button"
-                  onClick={() => navigate(action.path)}
-                  className={`group rounded-2xl border ${action.border} ${action.bg} p-3 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`iconify ${action.icon} size-4 ${action.tone}`} />
-                    <span className="text-sm font-semibold text-base-content">{action.title}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-base-content/60">{action.description}</p>
-                </button>
-              ))}
-            </div>
+            <h1 className="text-3xl font-semibold text-base-content">Dashboard</h1>
+            <p className="max-w-2xl text-sm text-base-content/70">
+              Track budgets, contracts, deductions, IPCs, and reporting activity in one place. Jump straight to the tasks that
+              need attention this week.
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {overviewCards}
-          </div>
-        </div>
-      </section>
-
-      {summary && (summary.contractsByStatus.length > 0 || summary.topProjectsByIpcValue.length > 0) && (
-        <section className="grid gap-6 lg:grid-cols-2 animate-fade-up">
-          {summary.contractsByStatus.length > 0 && (
-            <div className="rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-base-content">Contracts by Status</h3>
-              <p className="text-xs text-base-content/60 mb-2">Distribution across lifecycle stages</p>
-              <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
-                <ApexCharts
-                  type="donut"
-                  height={280}
-                  series={summary.contractsByStatus.map(s => s.count)}
-                  options={{
-                    chart: { background: 'transparent' },
-                    labels: summary.contractsByStatus.map(s => s.status),
-                    colors: ['#38bdf8', '#6ee7b7', '#fbbf24', '#fb7185'],
-                    legend: { position: 'bottom', fontSize: '13px' },
-                    dataLabels: { enabled: true, formatter: (val: number) => `${val.toFixed(0)}%` },
-                    plotOptions: { pie: { donut: { size: '55%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: '600' } } } } },
-                    stroke: { width: 0 },
-                  } satisfies ApexOptions}
-                />
-              </Suspense>
-            </div>
-          )}
-
-          {summary.topProjectsByIpcValue.length > 0 && (
-            <div className="rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-base-content">Top Projects by IPC Value</h3>
-              <p className="text-xs text-base-content/60 mb-2">Total certified amounts per project</p>
-              <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
-                <ApexCharts
-                  type="bar"
-                  height={280}
-                  series={[{ name: 'IPC Value', data: summary.topProjectsByIpcValue.map(p => Math.round(p.totalAmount)) }]}
-                  options={{
-                    chart: { background: 'transparent', toolbar: { show: false } },
-                    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
-                    colors: ['#14b8a6'],
-                    xaxis: {
-                      categories: summary.topProjectsByIpcValue.map(p => p.projectName),
-                      labels: { formatter: (val: string) => {
-                        const n = Number(val);
-                        return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : val;
-                      }},
-                    },
-                    yaxis: { labels: { maxWidth: 160 } },
-                    dataLabels: { enabled: false },
-                    grid: { borderColor: 'rgba(150,150,150,0.1)' },
-                    tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
-                  } satisfies ApexOptions}
-                />
-              </Suspense>
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="animate-fade-up">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-base-content">Modules</h2>
-          <p className="text-sm text-base-content/60">Navigate to other workspaces</p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {moduleLinks.map((mod) => (
-            <button
-              key={mod.title}
-              type="button"
-              onClick={() => navigate(mod.path)}
-              className={`group relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/80 p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${mod.accent.ring} ring-1 ring-inset`}
-            >
-              <div className={`pointer-events-none absolute -top-10 right-0 h-20 w-20 rounded-full bg-gradient-to-br ${mod.accent.glow} blur-2xl`} />
-              <div className="relative z-10 flex items-center gap-3">
-                <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl ${mod.accent.bg}`}>
-                  <span className={`iconify ${mod.icon} w-5 h-5 ${mod.accent.text}`} />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {quickActions.map((action) => (
+              <button
+                key={action.title}
+                type="button"
+                onClick={() => navigate(action.path)}
+                className={`group rounded-2xl border ${action.border} ${action.bg} p-3 text-left transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`iconify ${action.icon} size-4 ${action.tone}`} />
+                  <span className="text-sm font-semibold text-base-content">{action.title}</span>
                 </div>
-                <h3 className="font-semibold text-base-content">{mod.title}</h3>
-              </div>
-              <p className="relative z-10 mt-3 text-xs text-base-content/60 leading-relaxed">{mod.description}</p>
-              <div className="relative z-10 mt-3 flex items-center gap-1 text-xs font-medium ${mod.accent.text}">
-                <span className={`${mod.accent.text}`}>Open</span>
-                <span className={`iconify lucide--arrow-right size-3.5 ${mod.accent.text} transition-transform duration-200 group-hover:translate-x-1`} />
-              </div>
-            </button>
-          ))}
+                <p className="mt-2 text-xs text-base-content/60">{action.description}</p>
+              </button>
+            ))}
+          </div>
         </div>
-      </section>
-    </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {overviewCards}
+        </div>
+
+        <div>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-base-content">Modules</h2>
+            <p className="text-sm text-base-content/60">Navigate to other workspaces</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {moduleLinks.map((mod) => (
+              <button
+                key={mod.title}
+                type="button"
+                onClick={() => navigate(mod.path)}
+                className={`group relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/80 p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${mod.accent.ring} ring-1 ring-inset`}
+              >
+                <div className={`pointer-events-none absolute -top-10 right-0 h-20 w-20 rounded-full bg-gradient-to-br ${mod.accent.glow} blur-2xl`} />
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl ${mod.accent.bg}`}>
+                    <span className={`iconify ${mod.icon} w-5 h-5 ${mod.accent.text}`} />
+                  </div>
+                  <h3 className="font-semibold text-base-content">{mod.title}</h3>
+                </div>
+                <p className="relative z-10 mt-3 text-xs text-base-content/60 leading-relaxed">{mod.description}</p>
+                <div className="relative z-10 mt-3 flex items-center gap-1 text-xs font-medium ${mod.accent.text}">
+                  <span className={`${mod.accent.text}`}>Open</span>
+                  <span className={`iconify lucide--arrow-right size-3.5 ${mod.accent.text} transition-transform duration-200 group-hover:translate-x-1`} />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {summary && (summary.contractsByStatus.length > 0 || summary.topProjectsByIpcValue.length > 0) && (
+          <div>
+            <div className="relative overflow-hidden rounded-3xl border border-base-200 bg-base-100/90 p-6 shadow-sm">
+              <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-gradient-to-br from-sky-500/15 via-teal-500/0 to-emerald-500/15 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-24 left-0 h-48 w-48 rounded-full bg-gradient-to-br from-violet-500/15 via-sky-500/0 to-transparent blur-3xl" />
+              <div className="relative z-10 flex flex-col gap-1">
+                <h2 className="text-xl font-semibold text-base-content">Portfolio Analytics</h2>
+                <p className="text-sm text-base-content/60">Contracts and IPC trends styled to match your workspace palette.</p>
+              </div>
+              <div className="relative z-10 mt-6 grid gap-6 lg:grid-cols-2">
+                {summary.contractsByStatus.length > 0 && (
+                  <div className="relative overflow-hidden rounded-2xl border border-base-200/80 bg-base-100/80 p-5 shadow-sm">
+                    <div className="pointer-events-none absolute -top-16 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-sky-500/20 via-teal-500/0 to-emerald-500/20 blur-2xl" />
+                    <div className="relative z-10">
+                      <h3 className="text-base font-semibold text-base-content">Contracts by Status</h3>
+                      <p className="text-xs text-base-content/60 mb-4">Distribution across lifecycle stages</p>
+                      <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+                        <ApexCharts
+                          type="donut"
+                          height={280}
+                          series={summary.contractsByStatus.map(s => s.count)}
+                          options={{
+                            chart: {
+                              background: 'transparent',
+                              toolbar: { show: false },
+                              fontFamily: 'inherit',
+                              foreColor: 'hsl(var(--bc) / 0.65)',
+                            },
+                            labels: summary.contractsByStatus.map(s => s.status),
+                            colors: contractStatusColors,
+                            legend: {
+                              position: 'bottom',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              labels: { colors: 'hsl(var(--bc) / 0.6)' },
+                              markers: { width: 8, height: 8, radius: 6, offsetY: 1 },
+                              itemMargin: { horizontal: 10, vertical: 6 },
+                            },
+                            dataLabels: { enabled: false },
+                            plotOptions: {
+                              pie: {
+                                donut: {
+                                  size: '62%',
+                                  labels: {
+                                    show: true,
+                                    name: {
+                                      show: true,
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      color: 'hsl(var(--bc) / 0.55)',
+                                      offsetY: -6,
+                                    },
+                                    value: {
+                                      show: true,
+                                      fontSize: '22px',
+                                      fontWeight: 700,
+                                      color: 'hsl(var(--bc))',
+                                      offsetY: 6,
+                                      formatter: (val: string) => Number(val).toLocaleString(),
+                                    },
+                                    total: {
+                                      show: true,
+                                      label: 'Total',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      color: 'hsl(var(--bc) / 0.5)',
+                                      formatter: () => totalContractsByStatus.toLocaleString(),
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                            stroke: { width: 2, colors: ['hsl(var(--b1))'] },
+                            tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
+                            states: { hover: { filter: { type: 'lighten', value: 0.05 } } },
+                          } satisfies ApexOptions}
+                        />
+                      </Suspense>
+                    </div>
+                  </div>
+                )}
+
+                {summary.topProjectsByIpcValue.length > 0 && (
+                  <div className="relative overflow-hidden rounded-2xl border border-base-200/80 bg-base-100/80 p-5 shadow-sm">
+                    <div className="pointer-events-none absolute -top-16 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500/20 via-violet-500/0 to-sky-500/15 blur-2xl" />
+                    <div className="relative z-10">
+                      <h3 className="text-base font-semibold text-base-content">Top Projects by IPC Value</h3>
+                      <p className="text-xs text-base-content/60 mb-4">Total certified amounts per project</p>
+                      <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+                        <ApexCharts
+                          type="bar"
+                          height={280}
+                          series={[{ name: 'IPC Value', data: summary.topProjectsByIpcValue.map(p => Math.round(p.totalAmount)) }]}
+                          options={{
+                            chart: {
+                              background: 'transparent',
+                              toolbar: { show: false },
+                              fontFamily: 'inherit',
+                              foreColor: 'hsl(var(--bc) / 0.65)',
+                            },
+                            plotOptions: {
+                              bar: {
+                                horizontal: true,
+                                borderRadius: 8,
+                                barHeight: '58%',
+                                distributed: true,
+                              },
+                            },
+                            colors: projectBarColors,
+                            fill: {
+                              type: 'gradient',
+                              gradient: {
+                                shade: 'light',
+                                type: 'horizontal',
+                                shadeIntensity: 0.25,
+                                opacityFrom: 0.9,
+                                opacityTo: 0.65,
+                                stops: [0, 100],
+                              },
+                            },
+                            xaxis: {
+                              categories: summary.topProjectsByIpcValue.map(p => p.projectName),
+                              labels: {
+                                formatter: (val: string) => {
+                                  const n = Number(val);
+                                  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : val;
+                                },
+                                style: { colors: 'hsl(var(--bc) / 0.5)', fontSize: '11px' },
+                              },
+                              axisBorder: { show: false },
+                              axisTicks: { show: false },
+                            },
+                            yaxis: { labels: { maxWidth: 160, style: { colors: 'hsl(var(--bc) / 0.6)', fontSize: '12px' } } },
+                            dataLabels: {
+                              enabled: true,
+                              offsetX: 6,
+                              style: { fontSize: '11px', fontWeight: 600, colors: ['hsl(var(--bc) / 0.6)'] },
+                              formatter: (val: number) => {
+                                if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
+                                if (val >= 1_000) return `${(val / 1_000).toFixed(0)}K`;
+                                return val.toLocaleString();
+                              },
+                            },
+                            grid: {
+                              borderColor: 'hsl(var(--bc) / 0.08)',
+                              strokeDashArray: 4,
+                              xaxis: { lines: { show: true } },
+                              yaxis: { lines: { show: false } },
+                              padding: { left: 4, right: 18, top: 6, bottom: 6 },
+                            },
+                            tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
+                            states: { hover: { filter: { type: 'lighten', value: 0.04 } } },
+                          } satisfies ApexOptions}
+                        />
+                      </Suspense>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 
