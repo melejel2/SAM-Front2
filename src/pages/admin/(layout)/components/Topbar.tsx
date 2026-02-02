@@ -53,6 +53,9 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes('/IPCs-database')) {
     return "IPCs Database";
   }
+  if (pathname.includes('/contract-analysis')) {
+    return "Contract Analysis";
+  }
   if (pathname.includes('/contracts')) {
     return "Contracts";
   }
@@ -90,6 +93,11 @@ const getPageTitle = (pathname: string) => {
   }
   if (pathname.includes('/admin-tools/templates')) {
     return "Templates";
+  }
+
+  // Variation Orders routes
+  if (pathname.includes('/variation-orders')) {
+    return "Variation Orders";
   }
 
   // Auth routes

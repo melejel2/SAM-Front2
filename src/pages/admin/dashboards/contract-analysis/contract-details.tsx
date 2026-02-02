@@ -291,12 +291,35 @@ export default function ContractDetailsPage() {
     }
   }, [riskDialogOpen]);
 
+  // Clause numbers for chat linking
+  const clauseNumbers = useMemo(() => {
+    return clauses.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`);
+  }, [clauses]);
+
+  // Map clause number → best matchedText for document search (highlights the problematic phrase, not just the title)
+  const clauseMatchedTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+    for (const clause of clauses) {
+      const cn = clause.clauseNumber || `Clause ${clause.clauseOrder}`;
+      const bestRisk = [...clause.riskAssessments]
+        .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
+        .find(r => r.matchedText);
+      if (bestRisk?.matchedText) {
+        const text = bestRisk.matchedText.length > 120
+          ? bestRisk.matchedText.slice(0, 120)
+          : bestRisk.matchedText;
+        map.set(cn.toLowerCase(), text);
+      }
+    }
+    return map;
+  }, [clauses]);
+
   // Highlight clauses in document viewer — search for the actual problematic text when available
   const highlightClause = useCallback((clauseRefs: string[]) => {
     pdfViewerRef.current?.clearHighlights();
 
     if (clauseRefs[0]) {
-      // Try to find the matched risk text for this clause instead of just the title
       const searchText = clauseMatchedTextMap.get(clauseRefs[0].toLowerCase()) || clauseRefs[0];
       pdfViewerRef.current?.searchAndScrollTo(searchText);
     }
@@ -311,31 +334,6 @@ export default function ContractDetailsPage() {
   useEffect(() => {
     return () => clearTimeout(highlightTimeoutRef.current);
   }, []);
-
-  // Clause numbers for chat linking
-  const clauseNumbers = useMemo(() => {
-    return clauses.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`);
-  }, [clauses]);
-
-  // Map clause number → best matchedText for document search (prefer critical/high risk matched text)
-  const clauseMatchedTextMap = useMemo(() => {
-    const map = new Map<string, string>();
-    const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-    for (const clause of clauses) {
-      const cn = clause.clauseNumber || `Clause ${clause.clauseOrder}`;
-      const bestRisk = [...clause.riskAssessments]
-        .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
-        .find(r => r.matchedText);
-      if (bestRisk?.matchedText) {
-        // Use first ~120 chars of matchedText for a searchable phrase
-        const text = bestRisk.matchedText.length > 120
-          ? bestRisk.matchedText.slice(0, 120)
-          : bestRisk.matchedText;
-        map.set(cn.toLowerCase(), text);
-      }
-    }
-    return map;
-  }, [clauses]);
 
   const riskItems = useMemo(() => {
     return clauses.flatMap((clause) =>
@@ -362,18 +360,15 @@ export default function ContractDetailsPage() {
         <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center rounded-full bg-base-200 hover:bg-base-300 transition-colors">
           <Icon icon={arrowLeftIcon} className="size-5" />
         </button>
-        {report?.contractNumber && (
-          <div className="flex items-center gap-2">
-            <span className="font-semibold">{report.contractNumber}</span>
-            {report.projectName && <span className="text-sm text-base-content/50">— {report.projectName}</span>}
-          </div>
-        )}
       </div>
     );
 
-    const centerContent = (
-      <span className="font-semibold text-base-content/70 text-sm tracking-wide">Contract Analysis</span>
-    );
+    const centerContent = report?.contractNumber ? (
+      <div className="flex items-center gap-2">
+        <span className="font-semibold">{report.contractNumber}</span>
+        {report.projectName && <span className="text-sm text-base-content/50">— {report.projectName}</span>}
+      </div>
+    ) : null;
 
     const rightContent = (
       <div className="flex items-center gap-1.5">
