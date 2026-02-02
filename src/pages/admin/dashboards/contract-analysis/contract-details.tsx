@@ -18,6 +18,7 @@ import {
 } from '@/types/contract-analysis';
 import ContractAiChat, { type ContractAiChatHandle } from './ContractAiChat';
 import ContractDocumentViewer, { type ContractDocumentViewerHandle } from './ContractDocumentViewer';
+import { usePerspective, getRecommendationForPerspective, getPerspectiveField, filterByPerspective } from './perspective-context';
 
 // Icons
 import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
@@ -28,6 +29,9 @@ import xIcon from '@iconify/icons-lucide/x';
 import trendingUpIcon from '@iconify/icons-lucide/trending-up';
 import trendingDownIcon from '@iconify/icons-lucide/trending-down';
 import chevronDownIcon from '@iconify/icons-lucide/chevron-down';
+import buildingIcon from '@iconify/icons-lucide/building';
+import hardHatIcon from '@iconify/icons-lucide/hard-hat';
+import repeatIcon from '@iconify/icons-lucide/repeat';
 
 const clampValue = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const SUMMARY_STORAGE_KEY = 'sam.contractAnalysis.summaryCollapsed.contract';
@@ -131,6 +135,7 @@ export default function ContractDetailsPage() {
   const navigate = useNavigate();
   const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
+  const { perspective, setPerspective } = usePerspective();
 
   const [report, setReport] = useState<ContractHealthReport | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
@@ -302,19 +307,25 @@ export default function ContractDetailsPage() {
     pdfViewerRef.current?.clearHighlights();
 
     if (clauseRefs[0]) {
-      // Find the best matchedText for this clause to highlight the problematic phrase
       let searchText = clauseRefs[0];
       const key = clauseRefs[0].toLowerCase().trim();
       const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
       for (const clause of clauses) {
         const cn = (clause.clauseNumber || `Clause ${clause.clauseOrder}`).toLowerCase().trim();
         if (cn === key) {
+          // Try matchedText from highest-severity risk first
           const bestRisk = [...clause.riskAssessments]
             .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
             .find(r => r.matchedText);
           if (bestRisk?.matchedText) {
-            // Syncfusion search only works within a single paragraph — use the first line only
             const firstLine = bestRisk.matchedText.split(/[\r\n]+/)[0].trim();
+            searchText = firstLine.length > 100 ? firstLine.slice(0, 100) : firstLine;
+          } else if (clause.clauseTitle) {
+            // Fall back to clause title (more likely to match than "13.7: Gardiennage")
+            searchText = clause.clauseTitle;
+          } else if (clause.clauseContent) {
+            // Last resort: first line of clause content
+            const firstLine = clause.clauseContent.split(/[\r\n]+/)[0].trim();
             searchText = firstLine.length > 100 ? firstLine.slice(0, 100) : firstLine;
           }
           break;
@@ -337,7 +348,7 @@ export default function ContractDetailsPage() {
 
   const riskItems = useMemo(() => {
     return clauses.flatMap((clause) =>
-      clause.riskAssessments.map((risk) => ({
+      filterByPerspective(clause.riskAssessments, perspective).map((risk) => ({
         level: risk.level,
         category: risk.categoryEn || risk.category || 'General',
         description: risk.riskDescriptionEn || risk.riskDescription || '',
@@ -346,7 +357,7 @@ export default function ContractDetailsPage() {
         clauseLabel: clause.clauseNumber || `Clause ${clause.clauseOrder}`,
       }))
     );
-  }, [clauses]);
+  }, [clauses, perspective]);
 
   const filteredRiskItems = useMemo(() => {
     if (!selectedRiskLevel) return [];
@@ -372,6 +383,21 @@ export default function ContractDetailsPage() {
 
     const rightContent = (
       <div className="flex items-center gap-1.5">
+        {perspective && (
+          <button
+            onClick={() => setPerspective(perspective === 'client' ? 'subcontractor' : 'client')}
+            className={`btn btn-sm gap-1.5 border-0 ${
+              perspective === 'client'
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300'
+            }`}
+            title="Switch perspective"
+          >
+            <Icon icon={perspective === 'client' ? buildingIcon : hardHatIcon} className="size-4" />
+            <span className="text-xs font-medium hidden sm:inline">{perspective === 'client' ? 'Client' : 'Subcontractor'}</span>
+            <Icon icon={repeatIcon} className="size-3 opacity-50" />
+          </button>
+        )}
         <button
           className="btn btn-sm btn-circle btn-ghost hover:bg-base-200 tooltip tooltip-bottom"
           onClick={handleReanalyze}
@@ -401,7 +427,7 @@ export default function ContractDetailsPage() {
 
     setAllContent(leftContent, centerContent, rightContent);
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent]);
+  }, [handleBack, handleReanalyze, isReanalyzing, report?.contractNumber, report?.projectName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
 
   if (isLoading) return <Loader />;
 
@@ -416,12 +442,21 @@ export default function ContractDetailsPage() {
     );
   }
 
-  const overallStatus = getHealthStatus(report.overallScore);
+  const pScore = getPerspectiveField(report, 'overallScore', perspective);
+  const pCritical = getPerspectiveField(report, 'criticalRiskCount', perspective);
+  const pHigh = getPerspectiveField(report, 'highRiskCount', perspective);
+  const pMedium = getPerspectiveField(report, 'mediumRiskCount', perspective);
+  const pLow = getPerspectiveField(report, 'lowRiskCount', perspective);
+  const pCatScores = perspective === 'client' ? report.clientCategoryScores
+    : perspective === 'subcontractor' ? report.subcontractorCategoryScores
+    : report.categoryScores;
+
+  const overallStatus = getHealthStatus(pScore);
   const riskPills = [
-    { count: report.criticalRiskCount, label: 'Critical', color: '#4a1d1d' },
-    { count: report.highRiskCount, label: 'High', color: '#b91c1c' },
-    { count: report.mediumRiskCount, label: 'Med', color: '#a16207' },
-    { count: report.lowRiskCount, label: 'Low', color: '#6b7280' },
+    { count: pCritical, label: 'Critical', color: '#4a1d1d' },
+    { count: pHigh, label: 'High', color: '#b91c1c' },
+    { count: pMedium, label: 'Med', color: '#a16207' },
+    { count: pLow, label: 'Low', color: '#6b7280' },
   ].filter(pill => pill.count > 0);
   const isSplitActive = isChatOpen && isDesktopScreen;
   const leftPaneStyle = isSplitActive ? { flex: `0 0 ${splitPercent}%` } : { flex: '1 1 0%' };
@@ -436,7 +471,7 @@ export default function ContractDetailsPage() {
             <div className="flex items-center gap-3 min-w-0">
               <span className="hidden md:inline text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/40">Summary</span>
               <div className="flex items-center gap-2">
-                <span className="text-base font-semibold tabular-nums">{Math.round(report.overallScore)}</span>
+                <span className="text-base font-semibold tabular-nums">{Math.round(pScore)}</span>
                 <span className="badge badge-sm font-medium" style={{ backgroundColor: overallStatus.color + '15', color: overallStatus.color }}>
                   {overallStatus.label}
                 </span>
@@ -454,7 +489,7 @@ export default function ContractDetailsPage() {
               </div>
               <div className="hidden md:flex items-center gap-2 min-w-[120px]">
                 <div className="h-1 w-20 bg-base-200 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${report.overallScore}%`, backgroundColor: overallStatus.color }} />
+                  <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${pScore}%`, backgroundColor: overallStatus.color }} />
                 </div>
                 <span className="text-[11px] text-base-content/50">Overall</span>
               </div>
@@ -505,7 +540,7 @@ export default function ContractDetailsPage() {
                 <div className="card bg-base-100 border border-base-200 shadow-sm h-full">
                   <div className="card-body items-center p-2 gap-2 h-full">
                     <div className="flex-1 flex items-center justify-center">
-                      <ScoreRing score={report.overallScore} size={72} />
+                      <ScoreRing score={pScore} size={72} />
                     </div>
                     <div className="text-center space-y-1">
                       <p className="text-[10px] text-base-content/60 leading-tight">Based on {report.totalClauses} clauses</p>
@@ -522,10 +557,10 @@ export default function ContractDetailsPage() {
                 {/* Stats */}
                 <div className="space-y-2 min-w-0 h-full flex flex-col">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <StatCard label="Critical" value={report.criticalRiskCount} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
-                    <StatCard label="High" value={report.highRiskCount} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
-                    <StatCard label="Medium" value={report.mediumRiskCount} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
-                    <StatCard label="Low" value={report.lowRiskCount} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
+                    <StatCard label="Critical" value={pCritical} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
+                    <StatCard label="High" value={pHigh} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
+                    <StatCard label="Medium" value={pMedium} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
+                    <StatCard label="Low" value={pLow} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
                   </div>
 
                   {(report.modificationsDetected > 0 || report.newRisksIntroduced > 0 || report.risksMitigated > 0) && (
@@ -548,13 +583,13 @@ export default function ContractDetailsPage() {
                       <span className="text-[10px] text-base-content/40">by area</span>
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-1.5">
-                      <CategoryProgress label="Payment" score={report.categoryScores.payment} />
-                      <CategoryProgress label="Responsibility" score={report.categoryScores.roleResponsibility} />
-                      <CategoryProgress label="Safety" score={report.categoryScores.safety} />
-                      <CategoryProgress label="Timeline" score={report.categoryScores.temporal} />
-                      <CategoryProgress label="Procedures" score={report.categoryScores.procedure} />
-                      <CategoryProgress label="Definitions" score={report.categoryScores.definition} />
-                      <CategoryProgress label="References" score={report.categoryScores.reference} />
+                      <CategoryProgress label="Payment" score={pCatScores.payment} />
+                      <CategoryProgress label="Responsibility" score={pCatScores.roleResponsibility} />
+                      <CategoryProgress label="Safety" score={pCatScores.safety} />
+                      <CategoryProgress label="Timeline" score={pCatScores.temporal} />
+                      <CategoryProgress label="Procedures" score={pCatScores.procedure} />
+                      <CategoryProgress label="Definitions" score={pCatScores.definition} />
+                      <CategoryProgress label="References" score={pCatScores.reference} />
                     </div>
                   </div>
                 </div>
@@ -603,20 +638,18 @@ export default function ContractDetailsPage() {
               ref={chatRef}
               templateName={report.contractNumber || 'Contract'}
               contractId={parseInt(contractId || '0')}
-              overallScore={report.overallScore}
-              criticalCount={report.criticalRiskCount}
-              highCount={report.highRiskCount}
-              mediumCount={report.mediumRiskCount}
-              lowCount={report.lowRiskCount}
+              overallScore={pScore}
+              criticalCount={pCritical}
+              highCount={pHigh}
+              mediumCount={pMedium}
+              lowCount={pLow}
               totalClauses={report.totalClauses}
-              categoryScores={report.categoryScores}
-              topRisks={clauses
+              categoryScores={pCatScores}
+              topRisks={filterByPerspective(clauses
                 .flatMap(c => c.riskAssessments.map(r => ({
                   ...r,
                   clauseRef: c.clauseNumber || `Clause ${c.clauseOrder}`,
-                })))
-                .filter(r => r.level === 'Critical' || r.level === 'High')
-                .slice(0, 5)}
+                }))), perspective)}
               clauseNumbers={clauseNumbers}
               onClauseReferenceClick={(cn) => highlightClause([cn])}
               onReferencedClauses={(refs) => highlightClause(refs)}
@@ -676,7 +709,8 @@ export default function ContractDetailsPage() {
                   )}
                   {risk.recommendation && (
                     <div className="mt-2 text-xs text-base-content/70">
-                      <span className="font-semibold text-base-content/60">Recommendation:</span> {risk.recommendation}
+                      <span className="font-semibold text-base-content/60">Recommendation:</span>{' '}
+                      {getRecommendationForPerspective(risk.recommendation, perspective)}
                     </div>
                   )}
                 </div>
@@ -704,17 +738,15 @@ export default function ContractDetailsPage() {
               <ContractAiChat
                 templateName={report.contractNumber || 'Contract'}
                 contractId={parseInt(contractId || '0')}
-                overallScore={report.overallScore}
-                criticalCount={report.criticalRiskCount}
-                highCount={report.highRiskCount}
-                mediumCount={report.mediumRiskCount}
-                lowCount={report.lowRiskCount}
+                overallScore={pScore}
+                criticalCount={pCritical}
+                highCount={pHigh}
+                mediumCount={pMedium}
+                lowCount={pLow}
                 totalClauses={report.totalClauses}
-                categoryScores={report.categoryScores}
-                topRisks={clauses
-                  .flatMap(c => c.riskAssessments)
-                  .filter(r => r.level === 'Critical' || r.level === 'High')
-                  .slice(0, 5)}
+                categoryScores={pCatScores}
+                topRisks={filterByPerspective(clauses
+                  .flatMap(c => c.riskAssessments.map(r => ({ ...r, clauseRef: c.clauseNumber || `Clause ${c.clauseOrder}` }))), perspective)}
                 clauseNumbers={clauseNumbers}
                 onClauseReferenceClick={(cn) => highlightClause([cn])}
                 onReferencedClauses={(refs) => highlightClause(refs)}

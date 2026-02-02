@@ -3,6 +3,9 @@
  * Based on Moon et al. (2022) "Toxic Clauses" classification
  */
 
+// User perspective for analysis
+export type AnalysisPerspective = 'client' | 'subcontractor';
+
 // Risk categories (7 types from Moon et al.)
 export enum RiskCategory {
   Payment = 'Payment',
@@ -66,6 +69,7 @@ export interface RiskAssessment {
   recommendation?: string;
   recommendationEn?: string;
   matchedText?: string;
+  perspectiveRelevance?: string;
 }
 
 // Contract clause with risk assessments
@@ -94,6 +98,20 @@ export interface TemplateRiskProfile {
   topRecommendations: string[];
   generatedAt: string;
   analysisVersion?: string;
+  // Client perspective
+  clientOverallScore: number;
+  clientCriticalRiskCount: number;
+  clientHighRiskCount: number;
+  clientMediumRiskCount: number;
+  clientLowRiskCount: number;
+  clientCategoryScores: CategoryScores;
+  // Subcontractor perspective
+  subcontractorOverallScore: number;
+  subcontractorCriticalRiskCount: number;
+  subcontractorHighRiskCount: number;
+  subcontractorMediumRiskCount: number;
+  subcontractorLowRiskCount: number;
+  subcontractorCategoryScores: CategoryScores;
 }
 
 // Contract health report
@@ -119,6 +137,20 @@ export interface ContractHealthReport {
   recommendations: string[];
   generatedAt: string;
   analysisVersion?: string;
+  // Client perspective
+  clientOverallScore: number;
+  clientCriticalRiskCount: number;
+  clientHighRiskCount: number;
+  clientMediumRiskCount: number;
+  clientLowRiskCount: number;
+  clientCategoryScores: CategoryScores;
+  // Subcontractor perspective
+  subcontractorOverallScore: number;
+  subcontractorCriticalRiskCount: number;
+  subcontractorHighRiskCount: number;
+  subcontractorMediumRiskCount: number;
+  subcontractorLowRiskCount: number;
+  subcontractorCategoryScores: CategoryScores;
 }
 
 // Template analysis summary (for list view)
@@ -131,6 +163,12 @@ export interface TemplateAnalysisSummary {
   highRiskCount?: number;
   isAnalyzed: boolean;
   lastAnalyzedAt?: string;
+  clientOverallScore?: number;
+  clientCriticalRiskCount?: number;
+  clientHighRiskCount?: number;
+  subcontractorOverallScore?: number;
+  subcontractorCriticalRiskCount?: number;
+  subcontractorHighRiskCount?: number;
 }
 
 // Contract analysis summary (for list view)
@@ -145,6 +183,12 @@ export interface ContractAnalysisSummary {
   highRiskCount?: number;
   isAnalyzed: boolean;
   lastAnalyzedAt?: string;
+  clientOverallScore?: number;
+  clientCriticalRiskCount?: number;
+  clientHighRiskCount?: number;
+  subcontractorOverallScore?: number;
+  subcontractorCriticalRiskCount?: number;
+  subcontractorHighRiskCount?: number;
 }
 
 // Analysis result from API
@@ -171,6 +215,43 @@ export interface DocumentScanResult {
   summary?: string;
   recommendations: string[];
   topRisks: RiskAssessment[];
+  // Clauses with risk assessments
+  clauses?: ContractClause[];
+  // Original file name
+  fileName?: string;
+  // If saved to DB
+  savedDocumentId?: number;
+  // Client perspective
+  clientOverallScore: number;
+  clientCriticalCount: number;
+  clientHighCount: number;
+  clientMediumCount: number;
+  clientLowCount: number;
+  clientCategoryScores?: CategoryScores;
+  // Subcontractor perspective
+  subcontractorOverallScore: number;
+  subcontractorCriticalCount: number;
+  subcontractorHighCount: number;
+  subcontractorMediumCount: number;
+  subcontractorLowCount: number;
+  subcontractorCategoryScores?: CategoryScores;
+}
+
+// Uploaded document summary (for list view)
+export interface UploadedDocumentSummary {
+  id: number;
+  fileName: string;
+  overallScore: number;
+  totalClauses: number;
+  criticalRiskCount: number;
+  highRiskCount: number;
+  uploadedAt: string;
+  clientOverallScore: number;
+  clientCriticalRiskCount: number;
+  clientHighRiskCount: number;
+  subcontractorOverallScore: number;
+  subcontractorCriticalRiskCount: number;
+  subcontractorHighRiskCount: number;
 }
 
 // Helper function to get health status label

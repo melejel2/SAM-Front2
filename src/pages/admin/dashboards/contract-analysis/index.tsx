@@ -12,6 +12,9 @@ import {
   analyzeContract,
   analyzeAllTemplates,
   scanDocument,
+  getUploadedDocuments,
+  getUploadedDocument,
+  deleteUploadedDocument,
 } from '@/api/services/contract-analysis-api';
 import type {
   TemplateAnalysisSummary,
@@ -19,6 +22,10 @@ import type {
   DocumentScanResult,
 } from '@/types/contract-analysis';
 import { getHealthStatus, RiskLevelColors } from '@/types/contract-analysis';
+
+import { usePerspective, extractPerspectiveText, getPerspectiveField, filterByPerspective } from './perspective-context';
+import type { AnalysisPerspective } from '@/types/contract-analysis';
+import ScanResultsView from './ScanResultsView';
 
 // Icons
 import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
@@ -30,8 +37,12 @@ import refreshCwIcon from '@iconify/icons-lucide/refresh-cw';
 import playIcon from '@iconify/icons-lucide/play';
 import uploadCloudIcon from '@iconify/icons-lucide/upload-cloud';
 import infoIcon from '@iconify/icons-lucide/info';
+import buildingIcon from '@iconify/icons-lucide/building';
+import hardHatIcon from '@iconify/icons-lucide/hard-hat';
+import repeatIcon from '@iconify/icons-lucide/repeat';
+import xIcon from '@iconify/icons-lucide/x';
 
-type TabType = 'templates' | 'contracts';
+type TabType = 'scan' | 'contracts' | 'templates';
 
 // How It Works Modal Component
 const HowItWorksModal = memo(({
@@ -404,143 +415,92 @@ const DocumentScannerModal = memo(({
 });
 DocumentScannerModal.displayName = 'DocumentScannerModal';
 
-// Scan Result Modal
-const ScanResultModal = memo(({
-  result,
-  onClose,
-}: {
-  result: DocumentScanResult | null;
-  onClose: () => void;
-}) => {
-  if (!result) return null;
 
-  const status = getHealthStatus(result.overallScore);
+// Perspective Selection Modal
+const PerspectiveSelectionModal = memo(({
+  isOpen,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onSelect: (p: AnalysisPerspective) => void;
+}) => {
+  if (!isOpen) return null;
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-3xl">
-        <button
-          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-        <h3 className="font-bold text-lg mb-4">Analysis Results</h3>
-
-        <div className="flex items-center gap-6 mb-6">
-          <div className="flex flex-col items-center">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-              style={{ backgroundColor: status.color }}
-            >
-              {Math.round(result.overallScore)}
+      <div className="modal-box max-w-lg">
+        <h3 className="text-lg font-semibold mb-1">Who are you in this contract?</h3>
+        <p className="text-sm text-base-content/60 mb-5">
+          Select your role to see risks and recommendations relevant to your position.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => onSelect('client')}
+            className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-base-300 bg-base-100 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all group"
+          >
+            <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Icon icon={buildingIcon} className="size-7 text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-sm mt-1">{status.label}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-base-content/80">{result.summary}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="text-center">
-            <span className="text-2xl font-bold text-error">{result.criticalCount}</span>
-            <p className="text-xs text-base-content/60">Critical</p>
-          </div>
-          <div className="text-center">
-            <span className="text-2xl font-bold text-warning">{result.highCount}</span>
-            <p className="text-xs text-base-content/60">High</p>
-          </div>
-          <div className="text-center">
-            <span className="text-2xl font-bold text-info">{result.mediumCount}</span>
-            <p className="text-xs text-base-content/60">Medium</p>
-          </div>
-          <div className="text-center">
-            <span className="text-2xl font-bold text-success">{result.lowCount}</span>
-            <p className="text-xs text-base-content/60">Low</p>
-          </div>
-        </div>
-
-        {result.recommendations.length > 0 && (
-          <div className="mb-4">
-            <h4 className="font-semibold mb-2">Recommendations</h4>
-            <ul className="list-disc list-inside space-y-1 text-sm text-base-content/80">
-              {result.recommendations.map((rec, i) => (
-                <li key={i}>{rec}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {result.topRisks.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2">Top Risks</h4>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {result.topRisks.slice(0, 5).map((risk, i) => {
-                const desc = risk.riskDescriptionEn || risk.riskDescription || '';
-                const rec = risk.recommendationEn || risk.recommendation || '';
-                const clientMatch = rec.match(/CLIENT:\s*(.*?)(?=\s*SUBCONTRACTOR:|$)/is);
-                const subMatch = rec.match(/SUBCONTRACTOR:\s*(.*?)$/is);
-                return (
-                  <div
-                    key={i}
-                    className="p-3 rounded-lg border border-base-300 bg-base-200/50"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-semibold text-white"
-                        style={{ backgroundColor: RiskLevelColors[risk.level as keyof typeof RiskLevelColors] || '#6b7280' }}
-                      >
-                        {risk.level}
-                      </span>
-                      <span className="text-xs text-base-content/60">
-                        {risk.categoryEn || risk.category}
-                      </span>
-                    </div>
-                    <p className="text-sm">{desc}</p>
-                    {rec && (clientMatch || subMatch) ? (
-                      <div className="mt-2 space-y-1.5">
-                        {clientMatch?.[1]?.trim() && (
-                          <div className="flex gap-2 text-xs">
-                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">Client</span>
-                            <span className="text-base-content/70">{clientMatch[1].trim()}</span>
-                          </div>
-                        )}
-                        {subMatch?.[1]?.trim() && (
-                          <div className="flex gap-2 text-xs">
-                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">Subcontractor</span>
-                            <span className="text-base-content/70">{subMatch[1].trim()}</span>
-                          </div>
-                        )}
-                      </div>
-                    ) : rec ? (
-                      <p className="mt-1 text-xs text-base-content/70">{rec}</p>
-                    ) : null}
-                  </div>
-                );
-              })}
+            <div className="text-center">
+              <div className="font-semibold text-base">Client / Employer</div>
+              <p className="text-xs text-base-content/50 mt-1">Main contractor managing subcontracts</p>
             </div>
-          </div>
-        )}
-
-        <div className="modal-action">
-          <button className="btn" onClick={onClose}>
-            Close
+          </button>
+          <button
+            onClick={() => onSelect('subcontractor')}
+            className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-base-300 bg-base-100 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all group"
+          >
+            <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Icon icon={hardHatIcon} className="size-7 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="text-center">
+              <div className="font-semibold text-base">Subcontractor</div>
+              <p className="text-xs text-base-content/50 mt-1">Reviewing contract terms before signing</p>
+            </div>
           </button>
         </div>
       </div>
     </div>
   );
 });
-ScanResultModal.displayName = 'ScanResultModal';
+PerspectiveSelectionModal.displayName = 'PerspectiveSelectionModal';
+
+// Perspective Badge (shown in topbar)
+const PerspectiveBadge = memo(({
+  perspective,
+  onSwitch,
+}: {
+  perspective: AnalysisPerspective;
+  onSwitch: () => void;
+}) => {
+  const isClient = perspective === 'client';
+  return (
+    <button
+      onClick={onSwitch}
+      className={`btn btn-sm gap-1.5 ${
+        isClient
+          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50'
+          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50'
+      } border-0`}
+      title="Switch perspective"
+    >
+      <Icon icon={isClient ? buildingIcon : hardHatIcon} className="size-4" />
+      <span className="text-xs font-medium">{isClient ? 'Client' : 'Subcontractor'}</span>
+      <Icon icon={repeatIcon} className="size-3 opacity-50" />
+    </button>
+  );
+});
+PerspectiveBadge.displayName = 'PerspectiveBadge';
 
 // Main Component
 const ContractAnalysisDashboard = memo(() => {
   const navigate = useNavigate();
   const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
+  const { perspective, setPerspective, clearPerspective } = usePerspective();
+  const [showPerspectiveModal, setShowPerspectiveModal] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<TabType>(() => (sessionStorage.getItem("contract-analysis-tab") as TabType) || 'templates');
+  const [activeTab, setActiveTab] = useState<TabType>(() => (sessionStorage.getItem("contract-analysis-tab") as TabType) || 'scan');
   const [templates, setTemplates] = useState<TemplateAnalysisSummary[]>([]);
   const [contracts, setContracts] = useState<ContractAnalysisSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -550,10 +510,36 @@ const ContractAnalysisDashboard = memo(() => {
   const [scanResult, setScanResult] = useState<DocumentScanResult | null>(null);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [navigatingId, setNavigatingId] = useState<number | null>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<import('@/types/contract-analysis').UploadedDocumentSummary[]>([]);
+  const [loadingUploadedDocs, setLoadingUploadedDocs] = useState(false);
+
+  // Show perspective selection if not set
+  useEffect(() => {
+    if (!perspective) {
+      setShowPerspectiveModal(true);
+    }
+  }, [perspective]);
 
   useEffect(() => { sessionStorage.setItem("contract-analysis-tab", activeTab); }, [activeTab]);
 
+  const loadUploadedDocs = useCallback(async () => {
+    setLoadingUploadedDocs(true);
+    try {
+      const data = await getUploadedDocuments();
+      setUploadedDocs(data);
+    } catch {
+      // Silently fail - uploaded docs list is optional
+    } finally {
+      setLoadingUploadedDocs(false);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
+    if (activeTab === 'scan') {
+      setIsLoading(false);
+      loadUploadedDocs();
+      return;
+    }
     setIsLoading(true);
     try {
       if (activeTab === 'templates') {
@@ -568,7 +554,7 @@ const ContractAnalysisDashboard = memo(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, toaster]);
+  }, [activeTab, toaster, loadUploadedDocs]);
 
   useEffect(() => {
     loadData();
@@ -593,7 +579,6 @@ const ContractAnalysisDashboard = memo(() => {
         >
           <Icon icon={arrowLeftIcon} className="size-5" />
         </button>
-        <span className="font-semibold text-lg">Contract Analysis</span>
       </div>
     );
 
@@ -601,14 +586,14 @@ const ContractAnalysisDashboard = memo(() => {
       <div className="flex items-center gap-2">
         <button
           className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
-            activeTab === 'templates'
+            activeTab === 'scan'
               ? 'btn-primary'
               : 'btn-ghost border border-base-300 hover:border-primary/50'
           }`}
-          onClick={() => handleTabChange('templates')}
+          onClick={() => handleTabChange('scan')}
         >
-          <Icon icon={fileTextIcon} className="size-4" />
-          <span>Templates ({templates.length})</span>
+          <Icon icon={uploadCloudIcon} className="size-4" />
+          <span>Scan Document</span>
         </button>
 
         <button
@@ -622,17 +607,37 @@ const ContractAnalysisDashboard = memo(() => {
           <Icon icon={fileCheckIcon} className="size-4" />
           <span>Contracts ({contracts.length})</span>
         </button>
+
+        <button
+          className={`btn btn-sm transition-all duration-200 hover:shadow-md ${
+            activeTab === 'templates'
+              ? 'btn-primary'
+              : 'btn-ghost border border-base-300 hover:border-primary/50'
+          }`}
+          onClick={() => handleTabChange('templates')}
+        >
+          <Icon icon={fileTextIcon} className="size-4" />
+          <span>Templates ({templates.length})</span>
+        </button>
       </div>
     );
 
     const rightContent = (
-      <button
-        onClick={() => setShowHowItWorksModal(true)}
-        className="btn btn-sm btn-ghost"
-        title="How it works"
-      >
-        <Icon icon={infoIcon} className="size-5" />
-      </button>
+      <div className="flex items-center gap-2">
+        {perspective && (
+          <PerspectiveBadge
+            perspective={perspective}
+            onSwitch={() => setShowPerspectiveModal(true)}
+          />
+        )}
+        <button
+          onClick={() => setShowHowItWorksModal(true)}
+          className="btn btn-sm btn-ghost"
+          title="How it works"
+        >
+          <Icon icon={infoIcon} className="size-5" />
+        </button>
+      </div>
     );
 
     setAllContent(leftContent, centerContent, rightContent);
@@ -640,7 +645,7 @@ const ContractAnalysisDashboard = memo(() => {
     return () => {
       clearContent();
     };
-  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setAllContent, clearContent]);
+  }, [activeTab, templates.length, contracts.length, handleBackToDashboard, handleTabChange, setAllContent, clearContent, perspective]);
 
   // Template actions
   const handleAnalyzeTemplate = useCallback(async (templateId: number) => {
@@ -728,7 +733,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <ScoreBadge score={value} />,
+      render: (_value, row) => <ScoreBadge score={row ? getPerspectiveField(row, 'overallScore', perspective) : _value} />,
     },
     {
       key: 'criticalRiskCount',
@@ -737,7 +742,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <RiskCountBadge count={value} level="critical" />,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'criticalRiskCount', perspective) : _value} level="critical" />,
     },
     {
       key: 'highRiskCount',
@@ -746,7 +751,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <RiskCountBadge count={value} level="high" />,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'highRiskCount', perspective) : _value} level="high" />,
     },
     {
       key: 'isAnalyzed',
@@ -770,7 +775,7 @@ const ContractAnalysisDashboard = memo(() => {
       sortable: true,
       formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
     },
-  ], []);
+  ], [perspective]);
 
   // Contract columns
   const contractColumns = useMemo((): SpreadsheetColumn<ContractAnalysisSummary>[] => [
@@ -808,7 +813,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <ScoreBadge score={value} />,
+      render: (_value, row) => <ScoreBadge score={row ? getPerspectiveField(row, 'overallScore', perspective) : _value} />,
     },
     {
       key: 'criticalRiskCount',
@@ -817,7 +822,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <RiskCountBadge count={value} level="critical" />,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'criticalRiskCount', perspective) : _value} level="critical" />,
     },
     {
       key: 'highRiskCount',
@@ -826,7 +831,7 @@ const ContractAnalysisDashboard = memo(() => {
       align: 'center',
       editable: false,
       sortable: true,
-      render: (value) => <RiskCountBadge count={value} level="high" />,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'highRiskCount', perspective) : _value} level="high" />,
     },
     {
       key: 'isAnalyzed',
@@ -850,7 +855,7 @@ const ContractAnalysisDashboard = memo(() => {
       sortable: true,
       formatter: (value) => value ? new Date(value).toLocaleDateString() : '-',
     },
-  ], []);
+  ], [perspective]);
 
   // Render actions for templates
   const renderTemplateActions = useCallback((row: TemplateAnalysisSummary) => (
@@ -955,10 +960,252 @@ const ContractAnalysisDashboard = memo(() => {
     </div>
   ), [activeTab, handleAnalyzeAllTemplates, isAnalyzingAll]);
 
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleScanFile = useCallback(async (file: File) => {
+    if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
+      toaster.error('Unsupported format. Please use a Word file (.docx)');
+      return;
+    }
+    setAnalyzingId(-1);
+    try {
+      const result = await scanDocument(file);
+      if (!result.success) {
+        toaster.error(result.errorMessage || 'Analysis failed. Please check the file format.');
+        return;
+      }
+      setScanResult(result);
+      toaster.success('Analysis complete');
+    } catch (error: any) {
+      toaster.error(error.message || 'Error during analysis');
+    } finally {
+      setAnalyzingId(null);
+    }
+  }, [toaster]);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0">
-        {activeTab === 'templates' ? (
+        {activeTab === 'scan' ? (
+          scanResult ? (
+            <ScanResultsView
+              result={scanResult}
+              onScanAnother={() => setScanResult(null)}
+              onSaved={() => loadUploadedDocs()}
+            />
+          ) : (
+          <div className="h-full overflow-y-auto">
+          <div className="flex flex-col items-center justify-center p-6 min-h-[60vh]">
+            <div
+              className={`w-full max-w-5xl border-2 border-dashed rounded-3xl py-32 px-16 text-center bg-base-100 shadow-sm
+                transition-all duration-300 ease-out
+                ${analyzingId === -1
+                  ? 'border-primary bg-primary/5 scale-[0.98]'
+                  : dragActive
+                    ? 'border-primary bg-primary/5 scale-[1.02] shadow-lg shadow-primary/10'
+                    : 'border-base-300 hover:border-primary/30'
+                }`}
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleScanFile(e.dataTransfer.files[0]);
+                }
+              }}
+            >
+              {analyzingId === -1 ? (
+                <div className="flex flex-col items-center gap-6">
+                  {/* Animated document with scan line */}
+                  <div className="relative w-48 h-64">
+                    {/* Document shadow */}
+                    <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-lg bg-primary/10 animate-pulse" />
+                    {/* Document body */}
+                    <div className="relative w-full h-full rounded-lg bg-base-100 border-2 border-primary/30 shadow-lg overflow-hidden">
+                      {/* Document corner fold */}
+                      <div className="absolute top-0 right-0 w-8 h-8">
+                        <div className="absolute top-0 right-0 w-0 h-0 border-l-[32px] border-l-transparent border-t-[32px] border-t-primary/10" />
+                      </div>
+                      {/* Fake text lines */}
+                      <div className="p-5 space-y-3 pt-6">
+                        <div className="h-2 bg-base-300/60 rounded-full w-3/4" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-5/6" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-2/3" />
+                        <div className="h-2 bg-transparent rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-4/5" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-1/2" />
+                        <div className="h-2 bg-transparent rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-5/6" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-full" />
+                        <div className="h-2 bg-base-300/60 rounded-full w-3/4" />
+                      </div>
+                      {/* Scanning beam */}
+                      <div
+                        className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-80"
+                        style={{ animation: 'scanBeam 2s ease-in-out infinite' }}
+                      />
+                      {/* Glow behind beam */}
+                      <div
+                        className="absolute left-0 right-0 h-8 bg-gradient-to-b from-primary/15 to-transparent"
+                        style={{ animation: 'scanBeam 2s ease-in-out infinite' }}
+                      />
+                    </div>
+                    {/* Floating risk badges */}
+                    <div className="absolute -right-6 top-8 px-2 py-1 rounded bg-error/90 text-white text-[10px] font-bold shadow-md"
+                      style={{ animation: 'badgePop 2s ease-in-out infinite 0.5s', opacity: 0 }}>
+                      Critical
+                    </div>
+                    <div className="absolute -left-4 top-24 px-2 py-1 rounded bg-warning/90 text-white text-[10px] font-bold shadow-md"
+                      style={{ animation: 'badgePop 2s ease-in-out infinite 1.2s', opacity: 0 }}>
+                      Medium
+                    </div>
+                    <div className="absolute -right-3 bottom-16 px-2 py-1 rounded bg-success/90 text-white text-[10px] font-bold shadow-md"
+                      style={{ animation: 'badgePop 2s ease-in-out infinite 1.8s', opacity: 0 }}>
+                      Low
+                    </div>
+                  </div>
+
+                  {/* Status text */}
+                  <div className="text-center space-y-2">
+                    <p className="text-xl font-semibold text-base-content/80">Analyzing your document</p>
+                    <p className="text-sm text-base-content/50">Scanning clauses for risks across 7 categories</p>
+                    {/* Animated dots */}
+                    <div className="flex items-center justify-center gap-1.5 pt-2">
+                      <span className="w-2 h-2 rounded-full bg-primary" style={{ animation: 'dotBounce 1.4s ease-in-out infinite' }} />
+                      <span className="w-2 h-2 rounded-full bg-primary" style={{ animation: 'dotBounce 1.4s ease-in-out infinite 0.2s' }} />
+                      <span className="w-2 h-2 rounded-full bg-primary" style={{ animation: 'dotBounce 1.4s ease-in-out infinite 0.4s' }} />
+                    </div>
+                  </div>
+
+                  {/* Inline keyframes */}
+                  <style>{`
+                    @keyframes scanBeam {
+                      0%, 100% { top: 8%; }
+                      50% { top: 85%; }
+                    }
+                    @keyframes badgePop {
+                      0%, 100% { opacity: 0; transform: scale(0.7) translateY(4px); }
+                      15%, 85% { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+                    @keyframes dotBounce {
+                      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+                      40% { transform: scale(1); opacity: 1; }
+                    }
+                  `}</style>
+                </div>
+              ) : (
+                <>
+                  <div className={`transition-transform duration-300 ${dragActive ? '-translate-y-2 scale-110' : ''}`}>
+                    <Icon icon={uploadCloudIcon} className={`size-20 mx-auto transition-colors duration-300 ${dragActive ? 'text-primary/60' : 'text-base-content/15'}`} />
+                  </div>
+                  <h3 className="mt-5 text-2xl font-semibold text-base-content">
+                    {dragActive ? 'Release to analyze' : 'Drop your contract or document here'}
+                  </h3>
+                  <p className="mt-2 text-base-content/50 max-w-md mx-auto">
+                    Upload a Word document to analyze for risk clauses and get instant recommendations
+                  </p>
+                  <div className="mt-8 flex items-center justify-center gap-3">
+                    <div className="h-px w-12 bg-base-300"></div>
+                    <span className="text-xs text-base-content/40 uppercase tracking-wider">or</span>
+                    <div className="h-px w-12 bg-base-300"></div>
+                  </div>
+                  <label className="btn btn-primary btn-md mt-4 transition-transform duration-200 hover:scale-105 active:scale-95">
+                    <Icon icon={scanIcon} className="size-4" />
+                    Browse Files
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".doc,.docx"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleScanFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                  <p className="text-xs text-base-content/35 mt-4">Supported formats: .docx, .doc</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Saved Documents List */}
+          {uploadedDocs.length > 0 && (
+            <div className="max-w-5xl mx-auto w-full px-6 pb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-base-content/70">Saved Scans</h3>
+                <span className="text-xs text-base-content/40">{uploadedDocs.length} document{uploadedDocs.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-2">
+                {uploadedDocs.map(doc => {
+                  const status = getHealthStatus(doc.overallScore);
+                  return (
+                    <div
+                      key={doc.id}
+                      className="flex items-center gap-3 rounded-lg border border-base-200 bg-base-100 px-3 py-2.5 shadow-sm hover:bg-base-200/30 cursor-pointer transition-colors group"
+                      onClick={async () => {
+                        try {
+                          const fullDoc = await getUploadedDocument(doc.id);
+                          setScanResult(fullDoc);
+                        } catch (err: any) {
+                          toaster.error(err.message || 'Error loading document');
+                        }
+                      }}
+                    >
+                      <Icon icon={fileTextIcon} className="size-5 text-base-content/30 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{doc.fileName}</p>
+                        <p className="text-[11px] text-base-content/40">
+                          {new Date(doc.uploadedAt).toLocaleDateString()} &middot; {doc.totalClauses} clauses
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-sm font-semibold tabular-nums" style={{ color: status.color }}>
+                          {Math.round(doc.overallScore)}
+                        </span>
+                        <span className="badge badge-xs font-medium" style={{ backgroundColor: status.color + '15', color: status.color }}>
+                          {status.label}
+                        </span>
+                        {doc.criticalRiskCount > 0 && (
+                          <span className="badge badge-xs border-0 text-white" style={{ backgroundColor: '#4a1d1d' }}>
+                            {doc.criticalRiskCount}C
+                          </span>
+                        )}
+                        {doc.highRiskCount > 0 && (
+                          <span className="badge badge-xs border-0 text-white" style={{ backgroundColor: '#b91c1c' }}>
+                            {doc.highRiskCount}H
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity text-error"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm('Delete this saved scan?')) return;
+                          try {
+                            await deleteUploadedDocument(doc.id);
+                            setUploadedDocs(prev => prev.filter(d => d.id !== doc.id));
+                            toaster.success('Document deleted');
+                          } catch (err: any) {
+                            toaster.error(err.message || 'Error deleting document');
+                          }
+                        }}
+                      >
+                        <Icon icon={xIcon} className="size-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          </div>
+          )
+        ) : activeTab === 'templates' ? (
           <Spreadsheet<TemplateAnalysisSummary>
             data={templates}
             columns={templateColumns}
@@ -1005,14 +1252,17 @@ const ContractAnalysisDashboard = memo(() => {
         onScanComplete={setScanResult}
       />
 
-      <ScanResultModal
-        result={scanResult}
-        onClose={() => setScanResult(null)}
-      />
-
       <HowItWorksModal
         isOpen={showHowItWorksModal}
         onClose={() => setShowHowItWorksModal(false)}
+      />
+
+      <PerspectiveSelectionModal
+        isOpen={showPerspectiveModal}
+        onSelect={(p) => {
+          setPerspective(p);
+          setShowPerspectiveModal(false);
+        }}
       />
     </div>
   );

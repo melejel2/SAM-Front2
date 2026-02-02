@@ -1,5 +1,6 @@
 import { JSX, LazyExoticComponent, lazy } from "react";
 import { RouteProps } from "react-router";
+import { PerspectiveProvider } from "@/pages/admin/dashboards/contract-analysis/perspective-context";
 
 // import { docsRoutes } from "@/pages/docs/routes";
 
@@ -11,6 +12,11 @@ export type IRoutesProps = {
 // Component Wrapper
 const cw = (Component: LazyExoticComponent<React.ComponentType<any>>) => {
     return <Component />;
+};
+
+// Component Wrapper with PerspectiveProvider
+const cwp = (Component: LazyExoticComponent<React.ComponentType<any>>) => {
+    return <PerspectiveProvider><Component /></PerspectiveProvider>;
 };
 
 const dashboardRoutes: IRoutesProps[] = [
@@ -117,15 +123,15 @@ const dashboardRoutes: IRoutesProps[] = [
     // ========== CONTRACT ANALYSIS (Risk Assessment - Moon et al. 2022) ==========
     {
         path: "/dashboard/contract-analysis",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis"))),
+        element: cwp(lazy(() => import("@/pages/admin/dashboards/contract-analysis"))),
     },
     {
         path: "/dashboard/contract-analysis/template/:templateId",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis/template-details"))),
+        element: cwp(lazy(() => import("@/pages/admin/dashboards/contract-analysis/template-details"))),
     },
     {
         path: "/dashboard/contract-analysis/contract/:contractId",
-        element: cw(lazy(() => import("@/pages/admin/dashboards/contract-analysis/contract-details"))),
+        element: cwp(lazy(() => import("@/pages/admin/dashboards/contract-analysis/contract-details"))),
     },
 ];
 

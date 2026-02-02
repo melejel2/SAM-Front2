@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef, useCallback, useState, memo } 
 import { Icon } from '@iconify/react';
 import type { ContractClause } from '@/types/contract-analysis';
 import { RiskLevelColors } from '@/types/contract-analysis';
+import { usePerspective, extractPerspectiveText, filterByPerspective } from './perspective-context';
 
 import alertTriangleIcon from '@iconify/icons-lucide/alert-triangle';
 import checkCircleIcon from '@iconify/icons-lucide/check-circle';
@@ -19,31 +20,34 @@ export interface ClauseDocumentViewHandle {
   scrollToClause: (clauseNumber: string) => void;
 }
 
-// Renders CLIENT / SUBCONTRACTOR dual-perspective recommendations
+// Renders CLIENT / SUBCONTRACTOR recommendations filtered by active perspective
 const DualPerspective = ({ text }: { text: string }) => {
-  const clientMatch = text.match(/CLIENT:\s*(.*?)(?=\s*SUBCONTRACTOR:|$)/is);
-  const subMatch = text.match(/SUBCONTRACTOR:\s*(.*?)$/is);
+  const { perspective } = usePerspective();
+  const { clientText, subText } = extractPerspectiveText(text, perspective);
 
-  if (!clientMatch && !subMatch) {
+  if (!clientText && !subText) {
     return <p className="mt-1 text-xs text-base-content/70">{text}</p>;
   }
 
+  const showClient = !perspective || perspective === 'client';
+  const showSub = !perspective || perspective === 'subcontractor';
+
   return (
     <div className="mt-1 space-y-1">
-      {clientMatch?.[1]?.trim() && (
+      {showClient && clientText && (
         <div className="flex gap-2 text-xs">
           <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">
             Client
           </span>
-          <span className="text-base-content/70">{clientMatch[1].trim()}</span>
+          <span className="text-base-content/70">{clientText}</span>
         </div>
       )}
-      {subMatch?.[1]?.trim() && (
+      {showSub && subText && (
         <div className="flex gap-2 text-xs">
           <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">
             Subcontractor
           </span>
-          <span className="text-base-content/70">{subMatch[1].trim()}</span>
+          <span className="text-base-content/70">{subText}</span>
         </div>
       )}
     </div>
@@ -67,11 +71,13 @@ const ClauseSection = memo(({
   isHighlighted: boolean;
   onClauseClick: (clauseNumber: string) => void;
 }) => {
+  const { perspective } = usePerspective();
   const [risksExpanded, setRisksExpanded] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(true);
-  const hasRisks = clause.riskAssessments.length > 0;
-  const riskCount = clause.riskAssessments.length;
-  const borderColor = getWorstRiskColor(clause);
+  const filteredRisks = filterByPerspective(clause.riskAssessments, perspective);
+  const hasRisks = filteredRisks.length > 0;
+  const riskCount = filteredRisks.length;
+  const borderColor = filteredRisks.length === 0 ? '' : RiskLevelColors[filteredRisks.reduce((max, r) => (r.score > max.score ? r : max)).level as keyof typeof RiskLevelColors] || '#6b7280';
   const clauseId = clause.clauseNumber || `Clause ${clause.clauseOrder}`;
   const isLongContent = (clause.clauseContent?.length || 0) > 800;
 
@@ -160,7 +166,7 @@ const ClauseSection = memo(({
           </button>
           {risksExpanded && (
             <div className="px-4 pb-3 space-y-2">
-              {clause.riskAssessments.map((risk, i) => (
+              {filteredRisks.map((risk, i) => (
                 <div key={i} className="rounded-lg border border-base-200 overflow-hidden">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-base-200/30">
                     <span

@@ -3,9 +3,12 @@ import { Icon } from '@iconify/react';
 import {
   sendTemplateChatMessage,
   sendContractChatMessage,
+  sendScanChatMessage,
+  sendUploadedDocumentChatMessage,
   type ContractContext,
   type ContractChatResponse,
 } from '@/api/services/contract-analysis-api';
+import { usePerspective } from './perspective-context';
 
 // Icons
 import botIcon from '@iconify/icons-lucide/bot';
@@ -41,6 +44,10 @@ interface ContractAiChatProps {
   templateName?: string;
   templateId?: number;
   contractId?: number;
+  /** For scanned documents - uses scan chat endpoint */
+  scanMode?: boolean;
+  /** For saved uploaded documents */
+  uploadedDocumentId?: number;
   overallScore?: number;
   criticalCount?: number;
   highCount?: number;
@@ -60,7 +67,11 @@ interface ContractAiChatProps {
     category: string;
     level: string;
     riskDescription?: string;
+    riskDescriptionEn?: string;
+    recommendation?: string;
+    recommendationEn?: string;
     clauseRef?: string;
+    matchedText?: string;
   }>;
   onClauseReferenceClick?: (clauseNumber: string) => void;
   onReferencedClauses?: (clauseNumbers: string[]) => void;
@@ -436,7 +447,7 @@ const WelcomeState = memo(({
   quickActions: QuickAction[];
   onActionClick: (prompt: string) => void;
 }) => (
-  <div className="flex flex-col items-center justify-center h-full px-4 py-8">
+  <div className="flex flex-col items-center justify-start h-full px-4 py-6">
     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
       <Icon icon={sparklesIcon} className="w-6 h-6 text-primary" />
     </div>
@@ -464,6 +475,8 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
   templateName = 'Contract',
   templateId,
   contractId,
+  scanMode,
+  uploadedDocumentId,
   overallScore,
   criticalCount,
   highCount,
@@ -476,6 +489,7 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
   onReferencedClauses,
   clauseNumbers,
 }, ref) => {
+  const { perspective } = usePerspective();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -487,32 +501,34 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
   const abortControllerRef = useRef<AbortController | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const quickActions: QuickAction[] = [
+  const perspectiveLabel = perspective === 'client' ? 'as the client/employer' : perspective === 'subcontractor' ? 'as the subcontractor' : 'from both client and subcontractor perspectives';
+
+  const quickActions: QuickAction[] = useMemo(() => [
     {
       icon: alertTriangleIcon,
       label: 'Top Risks',
       subtitle: 'Key risk areas',
-      prompt: 'What are the most critical risks in this contract I should address first? Provide both client and subcontractor perspectives.',
+      prompt: `What are the most critical risks in this contract I should address first ${perspectiveLabel}?`,
     },
     {
       icon: fileTextIcon,
       label: 'Summary',
       subtitle: 'Contract overview',
-      prompt: 'Give me a summary of this contract analysis and its overall health, from both client and subcontractor perspectives.',
+      prompt: `Give me a summary of this contract analysis and its overall health ${perspectiveLabel}.`,
     },
     {
       icon: shieldIcon,
       label: 'Recommendations',
       subtitle: 'Improve safety',
-      prompt: 'What specific changes would you recommend to improve this contract risk profile? Consider both client protection and fair subcontractor terms.',
+      prompt: `What specific changes would you recommend to improve this contract risk profile ${perspectiveLabel}?`,
     },
     {
       icon: scaleIcon,
       label: 'Legal Concerns',
       subtitle: 'Compliance issues',
-      prompt: 'Are there any legal or compliance concerns I should be aware of? Analyze from both the client and subcontractor standpoint.',
+      prompt: `Are there any legal or compliance concerns I should be aware of ${perspectiveLabel}?`,
     },
-  ];
+  ], [perspectiveLabel]);
 
   // Build context for the API
   const buildContext = useCallback((): ContractContext => {
@@ -530,12 +546,15 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
       topRisks: topRisks?.map(r => ({
         category: r.category,
         level: r.level,
-        description: r.riskDescription || '',
+        description: r.riskDescriptionEn || r.riskDescription || '',
+        recommendation: r.recommendationEn || r.recommendation || '',
         clauseRef: r.clauseRef,
+        matchedText: r.matchedText,
       })),
       clauseNumbers,
+      perspective: perspective || undefined,
     };
-  }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks, clauseNumbers]);
+  }, [templateName, templateId, contractId, overallScore, criticalCount, highCount, mediumCount, lowCount, totalClauses, categoryScores, topRisks, clauseNumbers, perspective]);
 
   // Text reveal effect
   const revealText = useCallback((fullText: string, messageId: string) => {
@@ -597,7 +616,24 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
       const context = buildContext();
       let result: ContractChatResponse;
 
-      if (templateId) {
+      if (scanMode) {
+        if (uploadedDocumentId) {
+          result = await sendUploadedDocumentChatMessage(
+            uploadedDocumentId,
+            userMessage,
+            context,
+            sessionId,
+            abortControllerRef.current.signal
+          );
+        } else {
+          result = await sendScanChatMessage(
+            userMessage,
+            context,
+            sessionId,
+            abortControllerRef.current.signal
+          );
+        }
+      } else if (templateId) {
         result = await sendTemplateChatMessage(
           templateId,
           userMessage,
@@ -614,7 +650,7 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
           abortControllerRef.current.signal
         );
       } else {
-        throw new Error('No template or contract ID provided');
+        throw new Error('No template, contract, or scan context provided');
       }
 
       if (result.success) {
@@ -666,7 +702,7 @@ const ContractAiChat = forwardRef<ContractAiChatHandle, ContractAiChatProps>(({
     } finally {
       setIsLoading(false);
     }
-  }, [templateId, contractId, sessionId, buildContext, revealText, onReferencedClauses]);
+  }, [templateId, contractId, scanMode, uploadedDocumentId, sessionId, buildContext, revealText, onReferencedClauses]);
 
   // Handle send message
   const handleSend = useCallback(async (text?: string) => {

@@ -1,5 +1,10 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth';
+import { getDashboardSummary, type DashboardSummary } from '@/api/services/dashboard-api';
+import type { ApexOptions } from 'apexcharts';
+
+const ApexCharts = lazy(() => import('react-apexcharts'));
 
 type TrendDirection = 'up' | 'down' | 'flat';
 
@@ -29,15 +34,6 @@ interface DashboardPageMeta {
   accent: DashboardAccent;
 }
 
-export interface DashboardCardProps extends DashboardPageMeta {
-  isHovered: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  handleClick?: () => void;
-  style?: React.CSSProperties;
-  className?: string;
-}
-
 interface OverviewCardProps extends DashboardPageMeta {
   onClick?: () => void;
   style?: React.CSSProperties;
@@ -52,25 +48,6 @@ interface QuickAction {
   tone: string;
   bg: string;
   border: string;
-}
-
-interface ActivityItem {
-  title: string;
-  meta: string;
-  time: string;
-  icon: string;
-  status: string;
-  statusClass: string;
-  iconClass: string;
-}
-
-interface PipelineStat {
-  title: string;
-  value: number;
-  meta: string;
-  icon: string;
-  barClass: string;
-  badgeClass: string;
 }
 
 interface IconContainerProps {
@@ -226,111 +203,6 @@ const OverviewCard = memo<OverviewCardProps>(({
 
 OverviewCard.displayName = 'OverviewCard';
 
-const DashboardCard = memo<DashboardCardProps>(({
-  title,
-  icon,
-  description,
-  path,
-  status,
-  colorClass,
-  isHovered,
-  onMouseEnter,
-  onMouseLeave,
-  handleClick,
-  count,
-  summary,
-  trend,
-  trendDirection,
-  trendLabel,
-  accent,
-  style,
-  className,
-}) => {
-  const navigate = useNavigate();
-  const isDisabled = useMemo(() => status === 'upcoming' || status === 'restricted', [status]);
-  const statusLabel = status === 'active' ? 'Live' : status === 'upcoming' ? 'Coming Soon' : 'Restricted';
-  const statusClass =
-    status === 'active'
-      ? accent.badge
-      : status === 'upcoming'
-        ? 'bg-warning/10 text-warning border border-warning/20'
-        : 'bg-error/10 text-error border border-error/20';
-  const trendColor =
-    trendDirection === 'up'
-      ? 'text-emerald-600'
-      : trendDirection === 'down'
-        ? 'text-rose-600'
-        : 'text-base-content/50';
-  const trendIcon =
-    trendDirection === 'up'
-      ? 'lucide--trending-up'
-      : trendDirection === 'down'
-        ? 'lucide--trending-down'
-        : 'lucide--minus';
-
-  const handleCardClick = useCallback(() => {
-    if (isDisabled) return;
-    if (handleClick) {
-      handleClick();
-      return;
-    }
-    navigate(path);
-  }, [isDisabled, handleClick, navigate, path]);
-
-  return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/90 transition-all duration-300
-        cursor-pointer ${isDisabled ? 'cursor-not-allowed opacity-60' : ''}
-        ${isHovered
-          ? 'shadow-xl border-base-300'
-          : 'shadow-md hover:-translate-y-1 hover:border-base-300'
-        } ${className || ''}`}
-      onClick={handleCardClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      style={style}
-    >
-      <div className={`pointer-events-none absolute -top-16 right-0 h-32 w-32 rounded-full bg-gradient-to-br ${accent.glow} blur-3xl`} />
-      <div className="relative z-10 p-6 flex flex-col gap-4">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex items-center gap-4">
-            <IconContainer icon={icon} title={title} accent={accent} size="lg" />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-base-content truncate">{title}</h3>
-              <p className="text-xs text-base-content/50 mt-0.5">{summary}</p>
-            </div>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusClass}`}>{statusLabel}</span>
-        </div>
-
-        <p className="text-sm text-base-content/70 leading-relaxed min-h-[3rem]">{description}</p>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-2xl font-semibold text-base-content">{count}</p>
-            <div className={`flex items-center gap-2 text-xs ${trendColor}`}>
-              <span className={`iconify ${trendIcon} size-3.5`} />
-              <span>{trend}</span>
-              <span className="text-base-content/40">{trendLabel}</span>
-            </div>
-          </div>
-          <button
-            className={`btn btn-sm ${colorClass} border-none text-white text-sm font-medium px-5 transition-all duration-200 ${
-              isDisabled ? 'btn-disabled opacity-60' : 'hover:shadow-md'
-            }`}
-            disabled={isDisabled}
-          >
-            <span className="iconify lucide--arrow-right size-4 transition-transform duration-200 group-hover:translate-x-1"></span>
-            Open
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-DashboardCard.displayName = 'DashboardCard';
-
 const dashboardPages: DashboardPageMeta[] = [
   {
     title: 'Budget BOQs',
@@ -340,12 +212,12 @@ const dashboardPages: DashboardPageMeta[] = [
     path: '/dashboard/budget-BOQs',
     status: 'active',
     colorClass: 'bg-emerald-600',
-    count: 3,
+    count: 0,
     summary: 'Active projects',
-    trend: '+12%',
-    trendDirection: 'up',
-    trendLabel: 'vs last 30 days',
-    sparkline: [6, 8, 7, 9, 10, 9, 12],
+    trend: '',
+    trendDirection: 'flat',
+    trendLabel: '',
+    sparkline: [],
     accent: {
       text: 'text-emerald-600',
       bg: 'bg-emerald-500/10',
@@ -363,12 +235,12 @@ const dashboardPages: DashboardPageMeta[] = [
     path: '/dashboard/contracts',
     status: 'active',
     colorClass: 'bg-sky-600',
-    count: 12,
+    count: 0,
     summary: 'Active agreements',
-    trend: '+4',
-    trendDirection: 'up',
-    trendLabel: 'vs last month',
-    sparkline: [8, 10, 9, 12, 11, 13, 15],
+    trend: '',
+    trendDirection: 'flat',
+    trendLabel: '',
+    sparkline: [],
     accent: {
       text: 'text-sky-600',
       bg: 'bg-sky-500/10',
@@ -379,29 +251,6 @@ const dashboardPages: DashboardPageMeta[] = [
     },
   },
   {
-    title: 'Deductions',
-    shortTitle: 'Deductions',
-    icon: 'lucide--minus-circle',
-    description: 'Track labor, materials, and equipment deductions with penalties, transfers, and stock movements in one ledger.',
-    path: '/dashboard/deductions-database',
-    status: 'active',
-    colorClass: 'bg-amber-600',
-    count: 0,
-    summary: 'Open items',
-    trend: 'Stable',
-    trendDirection: 'flat',
-    trendLabel: 'vs last 30 days',
-    sparkline: [4, 3, 3, 2, 2, 1, 1],
-    accent: {
-      text: 'text-amber-600',
-      bg: 'bg-amber-500/10',
-      ring: 'ring-amber-500/20',
-      glow: 'from-amber-500/25 via-amber-500/0',
-      badge: 'bg-amber-500/10 text-amber-700 border-amber-200',
-      bar: 'bg-amber-500',
-    },
-  },
-  {
     title: 'IPCs',
     shortTitle: 'IPCs',
     icon: 'lucide--file-bar-chart',
@@ -409,12 +258,12 @@ const dashboardPages: DashboardPageMeta[] = [
     path: '/dashboard/IPCs-database',
     status: 'active',
     colorClass: 'bg-teal-600',
-    count: 8,
+    count: 0,
     summary: 'Issued IPCs',
-    trend: '+2',
-    trendDirection: 'up',
-    trendLabel: 'vs last month',
-    sparkline: [5, 6, 6, 7, 7, 8, 9],
+    trend: '',
+    trendDirection: 'flat',
+    trendLabel: '',
+    sparkline: [],
     accent: {
       text: 'text-teal-600',
       bg: 'bg-teal-500/10',
@@ -422,29 +271,6 @@ const dashboardPages: DashboardPageMeta[] = [
       glow: 'from-teal-500/25 via-teal-500/0',
       badge: 'bg-teal-500/10 text-teal-700 border-teal-200',
       bar: 'bg-teal-500',
-    },
-  },
-  {
-    title: 'Reports',
-    shortTitle: 'Reports',
-    icon: 'lucide--file-text',
-    description: 'Generate budget analysis, contract summaries, IPC tracking, and performance insights with exportable outputs.',
-    path: '/dashboard/reports',
-    status: 'active',
-    colorClass: 'bg-rose-600',
-    count: 3,
-    summary: 'Generated packs',
-    trend: '+1',
-    trendDirection: 'up',
-    trendLabel: 'vs last month',
-    sparkline: [2, 3, 2, 4, 3, 4, 5],
-    accent: {
-      text: 'text-rose-600',
-      bg: 'bg-rose-500/10',
-      ring: 'ring-rose-500/20',
-      glow: 'from-rose-500/25 via-rose-500/0',
-      badge: 'bg-rose-500/10 text-rose-700 border-rose-200',
-      bar: 'bg-rose-500',
     },
   },
 ];
@@ -478,105 +304,117 @@ const quickActions: QuickAction[] = [
     border: 'border-emerald-500/20',
   },
   {
-    title: 'Run Report',
-    description: 'Export performance pack',
+    title: 'Analyze Contract',
+    description: 'AI-powered contract review',
+    icon: 'lucide--scan-search',
+    path: '/dashboard/contract-analysis',
+    tone: 'text-violet-700',
+    bg: 'bg-violet-500/10',
+    border: 'border-violet-500/20',
+  },
+];
+
+interface ModuleLink {
+  title: string;
+  description: string;
+  icon: string;
+  path: string;
+  accent: DashboardAccent;
+}
+
+const moduleLinks: ModuleLink[] = [
+  {
+    title: 'Deductions',
+    description: 'Track labor, materials, and equipment deductions with penalties, transfers, and stock movements.',
+    icon: 'lucide--minus-circle',
+    path: '/dashboard/deductions-database',
+    accent: {
+      text: 'text-amber-600',
+      bg: 'bg-amber-500/10',
+      ring: 'ring-amber-500/20',
+      glow: 'from-amber-500/25 via-amber-500/0',
+      badge: 'bg-amber-500/10 text-amber-700 border-amber-200',
+      bar: 'bg-amber-500',
+    },
+  },
+  {
+    title: 'Reports',
+    description: 'Generate budget analysis, contract summaries, IPC tracking, and performance insights.',
     icon: 'lucide--file-text',
     path: '/dashboard/reports',
-    tone: 'text-rose-700',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/20',
+    accent: {
+      text: 'text-rose-600',
+      bg: 'bg-rose-500/10',
+      ring: 'ring-rose-500/20',
+      glow: 'from-rose-500/25 via-rose-500/0',
+      badge: 'bg-rose-500/10 text-rose-700 border-rose-200',
+      bar: 'bg-rose-500',
+    },
+  },
+  {
+    title: 'Contract Analysis',
+    description: 'AI-powered contract review, clause extraction, and risk assessment across your portfolio.',
+    icon: 'lucide--scan-search',
+    path: '/dashboard/contract-analysis',
+    accent: {
+      text: 'text-violet-600',
+      bg: 'bg-violet-500/10',
+      ring: 'ring-violet-500/20',
+      glow: 'from-violet-500/25 via-violet-500/0',
+      badge: 'bg-violet-500/10 text-violet-700 border-violet-200',
+      bar: 'bg-violet-500',
+    },
+  },
+  {
+    title: 'Admin Tools',
+    description: 'Manage users, projects, subcontractors, cost codes, currencies, units, and templates.',
+    icon: 'lucide--settings',
+    path: '/admin-tools',
+    accent: {
+      text: 'text-slate-600',
+      bg: 'bg-slate-500/10',
+      ring: 'ring-slate-500/20',
+      glow: 'from-slate-500/25 via-slate-500/0',
+      badge: 'bg-slate-500/10 text-slate-700 border-slate-200',
+      bar: 'bg-slate-500',
+    },
   },
 ];
 
-const activityItems: ActivityItem[] = [
-  {
-    title: 'IPC #2043 issued',
-    meta: 'Cedar Residence • $128k',
-    time: '2h ago',
-    icon: 'lucide--check-circle',
-    status: 'Issued',
-    statusClass: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
-    iconClass: 'text-emerald-600',
-  },
-  {
-    title: 'Contract CN-128 ready for signature',
-    meta: 'Summit Tower • Legal review complete',
-    time: '6h ago',
-    icon: 'lucide--file-check',
-    status: 'Awaiting sign-off',
-    statusClass: 'bg-sky-500/10 text-sky-700 border-sky-200',
-    iconClass: 'text-sky-600',
-  },
-  {
-    title: 'Budget BOQ update submitted',
-    meta: 'Northbridge Phase 2 • 18 line items',
-    time: '1d ago',
-    icon: 'lucide--calculator',
-    status: 'Reviewing',
-    statusClass: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
-    iconClass: 'text-emerald-600',
-  },
-  {
-    title: 'Deductions batch resolved',
-    meta: 'Equipment • 6 entries closed',
-    time: '3d ago',
-    icon: 'lucide--minus-circle',
-    status: 'Closed',
-    statusClass: 'bg-amber-500/10 text-amber-700 border-amber-200',
-    iconClass: 'text-amber-600',
-  },
-  {
-    title: 'Monthly performance report exported',
-    meta: 'Portfolio overview • PDF + Excel',
-    time: '5d ago',
-    icon: 'lucide--file-text',
-    status: 'Delivered',
-    statusClass: 'bg-rose-500/10 text-rose-700 border-rose-200',
-    iconClass: 'text-rose-600',
-  },
-];
-
-const pipelineStats: PipelineStat[] = [
-  {
-    title: 'Contracts signed',
-    value: 72,
-    meta: '9 pending review',
-    icon: 'lucide--file-signature',
-    barClass: 'bg-emerald-500',
-    badgeClass: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
-  },
-  {
-    title: 'IPCs approved',
-    value: 58,
-    meta: '4 awaiting approval',
-    icon: 'lucide--stamp',
-    barClass: 'bg-teal-500',
-    badgeClass: 'bg-teal-500/10 text-teal-700 border-teal-200',
-  },
-  {
-    title: 'Deductions resolved',
-    value: 46,
-    meta: '3 escalations',
-    icon: 'lucide--shield-alert',
-    barClass: 'bg-amber-500',
-    badgeClass: 'bg-amber-500/10 text-amber-700 border-amber-200',
-  },
-];
 
 const DashboardPage = () => {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const navigate = useNavigate();
+  const { getToken } = useAuth();
 
-  const handleMouseEnter = useCallback((title: string) => {
-    setHoveredCard(title);
-  }, []);
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const token = getToken();
+      console.log('[Dashboard] token present:', !!token);
+      if (!token) return;
+      const data = await getDashboardSummary(token);
+      console.log('[Dashboard] API response:', data);
+      if (data) {
+        console.log('[Dashboard] Setting summary:', data);
+        setSummary(data);
+      } else {
+        console.warn('[Dashboard] No data returned from getDashboardSummary');
+      }
+    };
+    fetchSummary();
+  }, [getToken]);
 
-  const handleMouseLeave = useCallback(() => {
-    setHoveredCard(null);
-  }, []);
+  const pages = useMemo(() => {
+    const countMap = [
+      summary?.activeProjects ?? 0,
+      summary?.activeContracts ?? 0,
+      summary?.issuedIpcs ?? 0,
+    ];
+    return dashboardPages.map((p, i) => ({ ...p, count: countMap[i] }));
+  }, [summary]);
 
   const overviewCards = useMemo(() => {
-    return dashboardPages.map((page, index) => (
+    return pages.map((page, index) => (
       <OverviewCard
         key={page.title}
         {...page}
@@ -585,32 +423,7 @@ const DashboardPage = () => {
         className="animate-fade-up"
       />
     ));
-  }, [navigate]);
-
-  const workstreamPulse = useMemo(() => {
-    const maxCount = Math.max(...dashboardPages.map((page) => page.count), 1);
-
-    return dashboardPages.map((page) => ({
-      title: page.shortTitle,
-      value: page.count,
-      percent: Math.round((page.count / maxCount) * 100),
-      accent: page.accent,
-    }));
-  }, []);
-
-  const renderedCards = useMemo(() => {
-    return dashboardPages.map((page, index) => (
-      <DashboardCard
-        key={page.title}
-        {...page}
-        isHovered={hoveredCard === page.title}
-        onMouseEnter={() => handleMouseEnter(page.title)}
-        onMouseLeave={handleMouseLeave}
-        style={{ animationDelay: `${index * 90}ms` }}
-        className="animate-fade-up"
-      />
-    ));
-  }, [hoveredCard, handleMouseEnter, handleMouseLeave]);
+  }, [pages, navigate]);
 
   return (
     <div className="space-y-8">
@@ -650,113 +463,96 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {overviewCards}
           </div>
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <div className="relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm animate-fade-up">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-base-content">Workstream pulse</h2>
-              <p className="text-xs text-base-content/60">Active volume by module</p>
+      {summary && (summary.contractsByStatus.length > 0 || summary.topProjectsByIpcValue.length > 0) && (
+        <section className="grid gap-6 lg:grid-cols-2 animate-fade-up">
+          {summary.contractsByStatus.length > 0 && (
+            <div className="rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-base-content">Contracts by Status</h3>
+              <p className="text-xs text-base-content/60 mb-2">Distribution across lifecycle stages</p>
+              <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+                <ApexCharts
+                  type="donut"
+                  height={280}
+                  series={summary.contractsByStatus.map(s => s.count)}
+                  options={{
+                    chart: { background: 'transparent' },
+                    labels: summary.contractsByStatus.map(s => s.status),
+                    colors: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'],
+                    legend: { position: 'bottom', fontSize: '13px' },
+                    dataLabels: { enabled: true, formatter: (val: number) => `${val.toFixed(0)}%` },
+                    plotOptions: { pie: { donut: { size: '55%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: '600' } } } } },
+                    stroke: { width: 0 },
+                  } satisfies ApexOptions}
+                />
+              </Suspense>
             </div>
-            <span className="badge badge-sm bg-base-200 text-base-content/60">Last 30 days</span>
-          </div>
-          <div className="mt-5 space-y-4">
-            {workstreamPulse.map((item) => (
-              <div key={item.title} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-base-content">{item.title}</span>
-                  <span className="text-xs text-base-content/60">{item.value} items</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-base-200">
-                  <div
-                    className={`h-2 rounded-full ${item.accent.bar} transition-all duration-500`}
-                    style={{ width: `${item.percent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          )}
 
-        <div className="relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm animate-fade-up">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-base-content">Approval pipeline</h2>
-              <p className="text-xs text-base-content/60">Completion by workflow</p>
+          {summary.topProjectsByIpcValue.length > 0 && (
+            <div className="rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-base-content">Top Projects by IPC Value</h3>
+              <p className="text-xs text-base-content/60 mb-2">Total certified amounts per project</p>
+              <Suspense fallback={<div className="h-[280px] flex items-center justify-center"><span className="loading loading-spinner loading-md"></span></div>}>
+                <ApexCharts
+                  type="bar"
+                  height={280}
+                  series={[{ name: 'IPC Value', data: summary.topProjectsByIpcValue.map(p => Math.round(p.totalAmount)) }]}
+                  options={{
+                    chart: { background: 'transparent', toolbar: { show: false } },
+                    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
+                    colors: ['#14b8a6'],
+                    xaxis: {
+                      categories: summary.topProjectsByIpcValue.map(p => p.projectName),
+                      labels: { formatter: (val: string) => {
+                        const n = Number(val);
+                        return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : val;
+                      }},
+                    },
+                    yaxis: { labels: { maxWidth: 160 } },
+                    dataLabels: { enabled: false },
+                    grid: { borderColor: 'rgba(150,150,150,0.1)' },
+                    tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
+                  } satisfies ApexOptions}
+                />
+              </Suspense>
             </div>
-            <span className="badge badge-sm bg-base-200 text-base-content/60">This month</span>
-          </div>
-          <div className="mt-5 space-y-4">
-            {pipelineStats.map((stat) => (
-              <div key={stat.title} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className={`iconify ${stat.icon} size-4 text-base-content/60`} />
-                    <span className="font-medium text-base-content">{stat.title}</span>
-                  </div>
-                  <span className={`badge badge-sm border ${stat.badgeClass}`}>{stat.value}%</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-base-200">
-                  <div
-                    className={`h-2 rounded-full ${stat.barClass}`}
-                    style={{ width: `${stat.value}%` }}
-                  />
-                </div>
-                <p className="text-xs text-base-content/50">{stat.meta}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+          )}
+        </section>
+      )}
 
-        <div className="relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/90 p-5 shadow-sm animate-fade-up">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-base-content">Recent activity</h2>
-              <p className="text-xs text-base-content/60">Latest updates across modules</p>
-            </div>
+      <section className="animate-fade-up">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-base-content">Modules</h2>
+          <p className="text-sm text-base-content/60">Navigate to other workspaces</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {moduleLinks.map((mod) => (
             <button
+              key={mod.title}
               type="button"
-              onClick={() => navigate('/dashboard/reports')}
-              className="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content"
+              onClick={() => navigate(mod.path)}
+              className={`group relative overflow-hidden rounded-2xl border border-base-200 bg-base-100/80 p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${mod.accent.ring} ring-1 ring-inset`}
             >
-              View all
-            </button>
-          </div>
-          <div className="mt-4 space-y-3">
-            {activityItems.map((item) => (
-              <div key={item.title} className="flex items-start gap-3 rounded-xl border border-base-200/70 bg-base-100/70 p-3">
-                <span className={`iconify ${item.icon} size-5 ${item.iconClass}`} />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-base-content">{item.title}</p>
-                    <span className="text-xs text-base-content/50">{item.time}</span>
-                  </div>
-                  <p className="text-xs text-base-content/60">{item.meta}</p>
-                  <span className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${item.statusClass}`}>
-                    {item.status}
-                  </span>
+              <div className={`pointer-events-none absolute -top-10 right-0 h-20 w-20 rounded-full bg-gradient-to-br ${mod.accent.glow} blur-2xl`} />
+              <div className="relative z-10 flex items-center gap-3">
+                <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl ${mod.accent.bg}`}>
+                  <span className={`iconify ${mod.icon} w-5 h-5 ${mod.accent.text}`} />
                 </div>
+                <h3 className="font-semibold text-base-content">{mod.title}</h3>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-base-content">Modules</h2>
-            <p className="text-sm text-base-content/60">Jump into each workspace with live context and highlights.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {renderedCards}
+              <p className="relative z-10 mt-3 text-xs text-base-content/60 leading-relaxed">{mod.description}</p>
+              <div className="relative z-10 mt-3 flex items-center gap-1 text-xs font-medium ${mod.accent.text}">
+                <span className={`${mod.accent.text}`}>Open</span>
+                <span className={`iconify lucide--arrow-right size-3.5 ${mod.accent.text} transition-transform duration-200 group-hover:translate-x-1`} />
+              </div>
+            </button>
+          ))}
         </div>
       </section>
     </div>
@@ -764,4 +560,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-export { DashboardCard };

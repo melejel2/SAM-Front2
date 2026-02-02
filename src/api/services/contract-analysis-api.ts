@@ -7,6 +7,7 @@ import type {
   ContractClause,
   AnalysisResult,
   DocumentScanResult,
+  UploadedDocumentSummary,
 } from '../../types/contract-analysis';
 
 const getAuthToken = (): string | null => {
@@ -117,6 +118,42 @@ export async function getTemplateClauses(
 }
 
 /**
+ * Get contract template document in SFDT format for Document Editor
+ */
+export async function getTemplateSfdt(templateId: number): Promise<string> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Missing authentication token');
+  }
+
+  const response = await fetch(
+    `${ACTIVE_API_URL}Templates/GetTemplateSfdt/${templateId}?isVo=false`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP error! status: ${response.status}`);
+  }
+
+  const rawText = await response.text();
+  try {
+    const json = JSON.parse(rawText);
+    if (json && typeof json === 'object' && 'success' in json && !json.success) {
+      throw new Error((json as any).message || 'Failed to load template document');
+    }
+    return JSON.stringify(json);
+  } catch {
+    return rawText;
+  }
+}
+
+/**
  * Analyze a contract dataset (Tier 2)
  */
 export async function analyzeContract(
@@ -209,6 +246,164 @@ export async function analyzeAllTemplates(): Promise<TemplateAnalysisSummary[]> 
 }
 
 // ============================================
+// UPLOADED DOCUMENTS API
+// ============================================
+
+/**
+ * Save a scan result to the database
+ */
+export async function saveScanResult(result: DocumentScanResult): Promise<{ id: number }> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/scan/save`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fileName: result.fileName || 'Scanned Document',
+      overallScore: result.overallScore,
+      totalClauses: result.totalClauses,
+      criticalCount: result.criticalCount,
+      highCount: result.highCount,
+      mediumCount: result.mediumCount,
+      lowCount: result.lowCount,
+      categoryScores: result.categoryScores,
+      summary: result.summary,
+      recommendations: result.recommendations,
+      topRisks: result.topRisks,
+      clauses: result.clauses,
+      clientOverallScore: result.clientOverallScore,
+      clientCriticalCount: result.clientCriticalCount,
+      clientHighCount: result.clientHighCount,
+      clientMediumCount: result.clientMediumCount,
+      clientLowCount: result.clientLowCount,
+      subcontractorOverallScore: result.subcontractorOverallScore,
+      subcontractorCriticalCount: result.subcontractorCriticalCount,
+      subcontractorHighCount: result.subcontractorHighCount,
+      subcontractorMediumCount: result.subcontractorMediumCount,
+      subcontractorLowCount: result.subcontractorLowCount,
+    }),
+  });
+  return handleResponse<{ id: number }>(response);
+}
+
+/**
+ * Get all uploaded documents
+ */
+export async function getUploadedDocuments(): Promise<UploadedDocumentSummary[]> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/uploaded-documents`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<UploadedDocumentSummary[]>(response);
+}
+
+/**
+ * Get an uploaded document with full details
+ */
+export async function getUploadedDocument(id: number): Promise<DocumentScanResult> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/uploaded-documents/${id}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleResponse<DocumentScanResult>(response);
+}
+
+/**
+ * Get clauses for an uploaded document
+ */
+export async function getUploadedDocumentClauses(id: number): Promise<ContractClause[]> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/uploaded-documents/${id}/clauses`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<ContractClause[]>(response);
+}
+
+/**
+ * Delete an uploaded document
+ */
+export async function deleteUploadedDocument(id: number): Promise<void> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/uploaded-documents/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  await handleResponse<void>(response);
+}
+
+/**
+ * Send a chat message about a scanned document (in-memory)
+ */
+export async function sendScanChatMessage(
+  message: string,
+  context: ContractContext,
+  sessionId?: string,
+  signal?: AbortSignal
+): Promise<ContractChatResponse> {
+  const token = getAuthToken();
+  const response = await fetch(`${ACTIVE_API_URL}ContractAnalysis/scan/chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message,
+      sessionId,
+      context,
+    }),
+    signal,
+  });
+  return handleResponse<ContractChatResponse>(response);
+}
+
+/**
+ * Send a chat message about a saved uploaded document
+ */
+export async function sendUploadedDocumentChatMessage(
+  documentId: number,
+  message: string,
+  context: ContractContext,
+  sessionId?: string,
+  signal?: AbortSignal
+): Promise<ContractChatResponse> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/uploaded-documents/${documentId}/chat`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        sessionId,
+        context,
+      }),
+      signal,
+    }
+  );
+  return handleResponse<ContractChatResponse>(response);
+}
+
+// ============================================
 // CHAT API
 // ============================================
 
@@ -261,9 +456,12 @@ export interface ContractContext {
     category: string;
     level: string;
     description: string;
+    recommendation?: string;
     clauseRef?: string;
+    matchedText?: string;
   }>;
   clauseNumbers?: string[];
+  perspective?: 'client' | 'subcontractor';
 }
 
 /**

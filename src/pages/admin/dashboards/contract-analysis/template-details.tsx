@@ -18,6 +18,7 @@ import {
 } from '@/types/contract-analysis';
 import ContractAiChat, { type ContractAiChatHandle } from './ContractAiChat';
 import ClauseDocumentView, { type ClauseDocumentViewHandle } from './ClauseDocumentView';
+import { usePerspective, getRecommendationForPerspective, getPerspectiveField, filterByPerspective } from './perspective-context';
 
 // Icons
 import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
@@ -26,6 +27,9 @@ import checkCircleIcon from '@iconify/icons-lucide/check-circle';
 import messageSquareIcon from '@iconify/icons-lucide/message-square';
 import xIcon from '@iconify/icons-lucide/x';
 import chevronDownIcon from '@iconify/icons-lucide/chevron-down';
+import buildingIcon from '@iconify/icons-lucide/building';
+import hardHatIcon from '@iconify/icons-lucide/hard-hat';
+import repeatIcon from '@iconify/icons-lucide/repeat';
 
 const clampValue = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const SUMMARY_STORAGE_KEY = 'sam.contractAnalysis.summaryCollapsed.template';
@@ -139,6 +143,8 @@ export default function TemplateDetailsPage() {
   const navigate = useNavigate();
   const { setAllContent, clearContent } = useTopbarContent();
   const { toaster } = useToast();
+  const { perspective, setPerspective } = usePerspective();
+  const [showPerspectiveSwitch, setShowPerspectiveSwitch] = useState(false);
 
   const [profile, setProfile] = useState<TemplateRiskProfile | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
@@ -332,7 +338,7 @@ export default function TemplateDetailsPage() {
 
   const riskItems = useMemo(() => {
     return clauses.flatMap((clause) =>
-      clause.riskAssessments.map((risk) => ({
+      filterByPerspective(clause.riskAssessments, perspective).map((risk) => ({
         level: risk.level,
         category: risk.categoryEn || risk.category || 'General',
         description: risk.riskDescriptionEn || risk.riskDescription || '',
@@ -341,7 +347,7 @@ export default function TemplateDetailsPage() {
         clauseLabel: clause.clauseNumber || `Clause ${clause.clauseOrder}`,
       }))
     );
-  }, [clauses]);
+  }, [clauses, perspective]);
 
   const filteredRiskItems = useMemo(() => {
     if (!selectedRiskLevel) return [];
@@ -351,20 +357,21 @@ export default function TemplateDetailsPage() {
   // Filter clauses
   const filteredClauses = useMemo(() => {
     return clauses.filter((clause) => {
+      const relevant = filterByPerspective(clause.riskAssessments, perspective);
       if (filterLevel === 'all') return true;
-      if (filterLevel === 'risky') return clause.riskAssessments.length > 0;
-      return clause.riskAssessments.some((r) => r.level === filterLevel);
+      if (filterLevel === 'risky') return relevant.length > 0;
+      return relevant.some((r) => r.level === filterLevel);
     });
-  }, [clauses, filterLevel]);
+  }, [clauses, filterLevel, perspective]);
 
   // Stats
   const totalRisks = useMemo(() => {
-    return clauses.reduce((sum, c) => sum + c.riskAssessments.length, 0);
-  }, [clauses]);
+    return clauses.reduce((sum, c) => sum + filterByPerspective(c.riskAssessments, perspective).length, 0);
+  }, [clauses, perspective]);
 
   const clausesWithRisks = useMemo(() => {
-    return clauses.filter((c) => c.riskAssessments.length > 0).length;
-  }, [clauses]);
+    return clauses.filter((c) => filterByPerspective(c.riskAssessments, perspective).length > 0).length;
+  }, [clauses, perspective]);
 
   // Topbar setup
   useEffect(() => {
@@ -379,6 +386,21 @@ export default function TemplateDetailsPage() {
 
     const rightContent = (
       <div className="flex items-center gap-2">
+        {perspective && (
+          <button
+            onClick={() => setPerspective(perspective === 'client' ? 'subcontractor' : 'client')}
+            className={`btn btn-sm gap-1.5 border-0 ${
+              perspective === 'client'
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300'
+            }`}
+            title="Switch perspective"
+          >
+            <Icon icon={perspective === 'client' ? buildingIcon : hardHatIcon} className="size-4" />
+            <span className="text-xs font-medium hidden sm:inline">{perspective === 'client' ? 'Client' : 'Subcontractor'}</span>
+            <Icon icon={repeatIcon} className="size-3 opacity-50" />
+          </button>
+        )}
         <button
           className="btn btn-sm btn-outline btn-circle tooltip tooltip-bottom"
           onClick={handleReanalyze}
@@ -407,7 +429,7 @@ export default function TemplateDetailsPage() {
 
     setAllContent(leftContent, null, rightContent);
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, profile?.templateName, isChatOpen, setAllContent, clearContent]);
+  }, [handleBack, handleReanalyze, isReanalyzing, profile?.templateName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
 
   if (isLoading) return <Loader />;
 
@@ -422,12 +444,21 @@ export default function TemplateDetailsPage() {
     );
   }
 
-  const overallStatus = getHealthStatus(profile.overallScore);
+  const pScore = getPerspectiveField(profile, 'overallScore', perspective);
+  const pCritical = getPerspectiveField(profile, 'criticalRiskCount', perspective);
+  const pHigh = getPerspectiveField(profile, 'highRiskCount', perspective);
+  const pMedium = getPerspectiveField(profile, 'mediumRiskCount', perspective);
+  const pLow = getPerspectiveField(profile, 'lowRiskCount', perspective);
+  const pCatScores = perspective === 'client' ? profile.clientCategoryScores
+    : perspective === 'subcontractor' ? profile.subcontractorCategoryScores
+    : profile.categoryScores;
+
+  const overallStatus = getHealthStatus(pScore);
   const riskPills = [
-    { count: profile.criticalRiskCount, label: 'Critical', color: '#4a1d1d' },
-    { count: profile.highRiskCount, label: 'High', color: '#b91c1c' },
-    { count: profile.mediumRiskCount, label: 'Med', color: '#a16207' },
-    { count: profile.lowRiskCount, label: 'Low', color: '#6b7280' },
+    { count: pCritical, label: 'Critical', color: '#4a1d1d' },
+    { count: pHigh, label: 'High', color: '#b91c1c' },
+    { count: pMedium, label: 'Med', color: '#a16207' },
+    { count: pLow, label: 'Low', color: '#6b7280' },
   ].filter(pill => pill.count > 0);
   const isSplitActive = isChatOpen && isDesktopScreen;
   const leftPaneStyle = isSplitActive ? { flex: `0 0 ${splitPercent}%` } : { flex: '1 1 0%' };
@@ -442,7 +473,7 @@ export default function TemplateDetailsPage() {
             <div className="flex items-center gap-3 min-w-0">
               <span className="hidden md:inline text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/40">Summary</span>
               <div className="flex items-center gap-2">
-                <span className="text-base font-semibold tabular-nums">{Math.round(profile.overallScore)}</span>
+                <span className="text-base font-semibold tabular-nums">{Math.round(pScore)}</span>
                 <span className="badge badge-sm font-medium" style={{ backgroundColor: overallStatus.color + '15', color: overallStatus.color }}>
                   {overallStatus.label}
                 </span>
@@ -460,7 +491,7 @@ export default function TemplateDetailsPage() {
               </div>
               <div className="hidden md:flex items-center gap-2 min-w-[120px]">
                 <div className="h-1 w-20 bg-base-200 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${profile.overallScore}%`, backgroundColor: overallStatus.color }} />
+                  <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${pScore}%`, backgroundColor: overallStatus.color }} />
                 </div>
                 <span className="text-[11px] text-base-content/50">Overall</span>
               </div>
@@ -488,7 +519,7 @@ export default function TemplateDetailsPage() {
                 <div className="card bg-base-100 border border-base-200 shadow-sm h-full">
                   <div className="card-body items-center p-2 gap-2 h-full">
                     <div className="flex-1 flex items-center justify-center">
-                      <ScoreRing score={profile.overallScore} size={72} />
+                      <ScoreRing score={pScore} size={72} />
                     </div>
                     <div className="text-center space-y-1">
                       <p className="text-[10px] text-base-content/60 leading-tight">Based on {profile.totalClauses} clauses</p>
@@ -499,10 +530,10 @@ export default function TemplateDetailsPage() {
                 {/* Stats */}
                 <div className="space-y-2 min-w-0 h-full flex flex-col">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <StatCard label="Critical" value={profile.criticalRiskCount} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
-                    <StatCard label="High" value={profile.highRiskCount} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
-                    <StatCard label="Medium" value={profile.mediumRiskCount} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
-                    <StatCard label="Low" value={profile.lowRiskCount} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
+                    <StatCard label="Critical" value={pCritical} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
+                    <StatCard label="High" value={pHigh} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
+                    <StatCard label="Medium" value={pMedium} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
+                    <StatCard label="Low" value={pLow} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
                   </div>
 
                   <div className="rounded-lg border border-base-200 bg-base-100 px-2.5 py-2 shadow-sm">
@@ -511,13 +542,13 @@ export default function TemplateDetailsPage() {
                       <span className="text-[10px] text-base-content/40">by area</span>
                     </div>
                     <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-1.5">
-                      <CategoryProgress label="Payment" score={profile.categoryScores.payment} />
-                      <CategoryProgress label="Responsibility" score={profile.categoryScores.roleResponsibility} />
-                      <CategoryProgress label="Safety" score={profile.categoryScores.safety} />
-                      <CategoryProgress label="Timeline" score={profile.categoryScores.temporal} />
-                      <CategoryProgress label="Procedures" score={profile.categoryScores.procedure} />
-                      <CategoryProgress label="Definitions" score={profile.categoryScores.definition} />
-                      <CategoryProgress label="References" score={profile.categoryScores.reference} />
+                      <CategoryProgress label="Payment" score={pCatScores.payment} />
+                      <CategoryProgress label="Responsibility" score={pCatScores.roleResponsibility} />
+                      <CategoryProgress label="Safety" score={pCatScores.safety} />
+                      <CategoryProgress label="Timeline" score={pCatScores.temporal} />
+                      <CategoryProgress label="Procedures" score={pCatScores.procedure} />
+                      <CategoryProgress label="Definitions" score={pCatScores.definition} />
+                      <CategoryProgress label="References" score={pCatScores.reference} />
                     </div>
                   </div>
                 </div>
@@ -593,17 +624,15 @@ export default function TemplateDetailsPage() {
               ref={chatRef}
               templateName={profile.templateName}
               templateId={parseInt(templateId || '0')}
-              overallScore={profile.overallScore}
-              criticalCount={profile.criticalRiskCount}
-              highCount={profile.highRiskCount}
-              mediumCount={profile.mediumRiskCount}
-              lowCount={profile.lowRiskCount}
+              overallScore={pScore}
+              criticalCount={pCritical}
+              highCount={pHigh}
+              mediumCount={pMedium}
+              lowCount={pLow}
               totalClauses={profile.totalClauses}
-              categoryScores={profile.categoryScores}
-              topRisks={clauses
-                .flatMap(c => c.riskAssessments)
-                .filter(r => r.level === 'Critical' || r.level === 'High')
-                .slice(0, 5)}
+              categoryScores={pCatScores}
+              topRisks={filterByPerspective(clauses
+                .flatMap(c => c.riskAssessments.map(r => ({ ...r, clauseRef: c.clauseNumber || `Clause ${c.clauseOrder}` }))), perspective)}
               clauseNumbers={clauseNumbers}
               onClauseReferenceClick={(cn) => highlightClause([cn])}
               onReferencedClauses={(refs) => highlightClause(refs)}
@@ -663,7 +692,8 @@ export default function TemplateDetailsPage() {
                   )}
                   {risk.recommendation && (
                     <div className="mt-2 text-xs text-base-content/70">
-                      <span className="font-semibold text-base-content/60">Recommendation:</span> {risk.recommendation}
+                      <span className="font-semibold text-base-content/60">Recommendation:</span>{' '}
+                      {getRecommendationForPerspective(risk.recommendation, perspective)}
                     </div>
                   )}
                 </div>
@@ -691,17 +721,15 @@ export default function TemplateDetailsPage() {
               <ContractAiChat
                 templateName={profile.templateName}
                 templateId={parseInt(templateId || '0')}
-                overallScore={profile.overallScore}
-                criticalCount={profile.criticalRiskCount}
-                highCount={profile.highRiskCount}
-                mediumCount={profile.mediumRiskCount}
-                lowCount={profile.lowRiskCount}
+                overallScore={pScore}
+                criticalCount={pCritical}
+                highCount={pHigh}
+                mediumCount={pMedium}
+                lowCount={pLow}
                 totalClauses={profile.totalClauses}
-                categoryScores={profile.categoryScores}
-                topRisks={clauses
-                  .flatMap(c => c.riskAssessments)
-                  .filter(r => r.level === 'Critical' || r.level === 'High')
-                  .slice(0, 5)}
+                categoryScores={pCatScores}
+                topRisks={filterByPerspective(clauses
+                  .flatMap(c => c.riskAssessments.map(r => ({ ...r, clauseRef: c.clauseNumber || `Clause ${c.clauseOrder}` }))), perspective)}
                 clauseNumbers={clauseNumbers}
                 onClauseReferenceClick={(cn) => highlightClause([cn])}
                 onReferencedClauses={(refs) => highlightClause(refs)}
