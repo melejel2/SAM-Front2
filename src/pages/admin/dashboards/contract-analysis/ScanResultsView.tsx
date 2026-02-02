@@ -157,6 +157,7 @@ const ScanResultsView = memo(({ result, onScanAnother, onSaved }: ScanResultsVie
 
   const handleRiskLevelClick = useCallback((level: string) => {
     setSelectedRiskLevel(prev => prev === level ? null : level);
+    setActiveView('risks');
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -177,6 +178,57 @@ const ScanResultsView = memo(({ result, onScanAnother, onSaved }: ScanResultsVie
     result.clauses?.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`).filter(Boolean) as string[] || [],
     [result.clauses]
   );
+
+  const handleClauseClick = useCallback((clauseNumber: string) => {
+    const prompt = `Analyze the risks in ${clauseNumber}`;
+    if (!showChat) {
+      pendingChatMessageRef.current = prompt;
+      setShowChat(true);
+      return;
+    }
+    chatRef.current?.sendMessage(prompt);
+  }, [showChat]);
+
+  useEffect(() => {
+    if (showChat && pendingChatMessageRef.current && chatRef.current) {
+      chatRef.current.sendMessage(pendingChatMessageRef.current);
+      pendingChatMessageRef.current = null;
+    }
+  }, [showChat]);
+
+  const performHighlight = useCallback((clauseRefs: string[]) => {
+    setHighlightedClauses(clauseRefs);
+    if (clauseRefs[0]) {
+      clauseViewRef.current?.scrollToClause(clauseRefs[0]);
+    }
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedClauses([]);
+    }, 8000);
+  }, []);
+
+  const requestHighlight = useCallback((clauseRefs: string[]) => {
+    if (!clauseRefs.length) return;
+    pendingHighlightRef.current = clauseRefs;
+    setActiveView('document');
+  }, []);
+
+  useEffect(() => {
+    if (activeView !== 'document' || !pendingHighlightRef.current) return;
+    const refs = pendingHighlightRef.current;
+    pendingHighlightRef.current = null;
+    performHighlight(refs);
+  }, [activeView, performHighlight]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-base-100">
@@ -286,264 +338,102 @@ const ScanResultsView = memo(({ result, onScanAnother, onSaved }: ScanResultsVie
       {/* Main Content Area - Split view when chat is open */}
       <div className="flex-1 min-h-0 flex">
         {/* Left panel: Analysis content */}
-        <div className={`${showChat ? 'w-1/2 border-r border-base-200' : 'w-full'} overflow-y-auto transition-all duration-300`}>
-          <div className="max-w-6xl mx-auto p-4 space-y-4">
-            {/* View Toggle: Risks vs Clauses */}
-            {result.clauses && result.clauses.length > 0 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setActiveView('risks')}
-                  className={`btn btn-xs gap-1 ${activeView === 'risks' ? 'btn-primary' : 'btn-ghost'}`}
-                >
-                  Risk Findings ({filteredRisks.length})
+        <div className={`${showChat ? 'w-1/2 border-r border-base-200' : 'w-full'} min-h-0 flex flex-col transition-all duration-300`}>
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-base-200 bg-base-100/80 backdrop-blur flex-wrap">
+            <button
+              onClick={() => setActiveView('risks')}
+              className={`btn btn-xs gap-1 ${activeView === 'risks' ? 'btn-primary' : 'btn-ghost'}`}
+            >
+              Risk Findings ({filteredRisks.length})
+            </button>
+            <button
+              onClick={() => setActiveView('clauses')}
+              className={`btn btn-xs gap-1 ${activeView === 'clauses' ? 'btn-primary' : 'btn-ghost'}`}
+              disabled={!result.clauses || result.clauses.length === 0}
+            >
+              <Icon icon={fileTextIcon} className="size-3.5" />
+              Clauses ({result.clauses?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveView('document')}
+              className={`btn btn-xs gap-1 ${activeView === 'document' ? 'btn-primary' : 'btn-ghost'}`}
+              disabled={!result.clauses || result.clauses.length === 0}
+            >
+              Document
+            </button>
+            {selectedRiskLevel && (
+              <>
+                <span className="text-xs text-base-content/50">|</span>
+                <span className="badge badge-sm border-0 text-white" style={{ backgroundColor: RISK_LEVEL_COLORS[selectedRiskLevel] }}>
+                  {selectedRiskLevel}
+                </span>
+                <button className="btn btn-ghost btn-xs btn-circle" onClick={() => setSelectedRiskLevel(null)}>
+                  <Icon icon={xIcon} className="size-3" />
                 </button>
-                <button
-                  onClick={() => setActiveView('clauses')}
-                  className={`btn btn-xs gap-1 ${activeView === 'clauses' ? 'btn-primary' : 'btn-ghost'}`}
-                >
-                  <Icon icon={fileTextIcon} className="size-3.5" />
-                  Clauses ({result.clauses.length})
-                </button>
-                {selectedRiskLevel && (
-                  <>
-                    <span className="text-xs text-base-content/50">|</span>
-                    <span className="badge badge-sm border-0 text-white" style={{ backgroundColor: RISK_LEVEL_COLORS[selectedRiskLevel] }}>
-                      {selectedRiskLevel}
-                    </span>
-                    <button className="btn btn-ghost btn-xs btn-circle" onClick={() => setSelectedRiskLevel(null)}>
-                      <Icon icon={xIcon} className="size-3" />
-                    </button>
-                  </>
-                )}
-              </div>
+              </>
             )}
+          </div>
 
-            {activeView === 'risks' ? (
-              /* Risks View */
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4">
-                {/* Left: Summary + Recommendations */}
-                <div className="space-y-4">
-                  {result.summary && (
-                    <div className="rounded-lg border border-base-200 bg-base-100 p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold mb-2">Summary</h3>
-                      <p className="text-sm text-base-content/70 leading-relaxed">{result.summary}</p>
-                    </div>
-                  )}
-
-                  {result.recommendations.length > 0 && (
-                    <div className="rounded-lg border border-base-200 bg-base-100 p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold mb-2">Recommendations</h3>
-                      <ul className="space-y-2">
-                        {result.recommendations.map((rec, i) => (
-                          <li key={i} className="flex gap-2 text-sm">
-                            <span className="text-primary mt-0.5 flex-shrink-0">
-                              <Icon icon={checkCircleIcon} className="size-4" />
-                            </span>
-                            <span className="text-base-content/70">{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right: Risks */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">
-                      Risk Findings
-                      <span className="ml-2 text-xs font-normal text-base-content/50">
-                        {filteredRisks.length} item{filteredRisks.length === 1 ? '' : 's'}
-                      </span>
-                    </h3>
-                  </div>
-
-                  {filteredRisks.length === 0 ? (
-                    <div className="rounded-lg border border-base-200 bg-base-100 p-8 text-center">
-                      <Icon icon={checkCircleIcon} className="size-8 text-success/50 mx-auto" />
-                      <p className="mt-2 text-sm text-base-content/50">No risks found at this level</p>
-                    </div>
-                  ) : (
-                    filteredRisks.map((risk, i) => {
-                      const desc = risk.riskDescriptionEn || risk.riskDescription || '';
-                      const rec = risk.recommendationEn || risk.recommendation || '';
-                      const { clientText, subText } = extractPerspectiveText(rec, null);
-                      const showClient = !perspective || perspective === 'client';
-                      const showSub = !perspective || perspective === 'subcontractor';
-
-                      return (
-                        <div key={i} className="rounded-lg border border-base-200 bg-base-100 p-3 shadow-sm">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="badge badge-sm border-0 text-white"
-                                style={{ backgroundColor: RISK_LEVEL_COLORS[risk.level] || '#6b7280' }}
-                              >
-                                {risk.level}
-                              </span>
-                              <span className="text-xs text-base-content/60 font-medium">
-                                {risk.categoryEn || risk.category}
-                              </span>
-                            </div>
-                            {risk.score !== undefined && (
-                              <span className="text-[10px] text-base-content/40">Score: {risk.score}</span>
-                            )}
-                          </div>
-                          {desc && <p className="text-sm mt-2 text-base-content/80">{desc}</p>}
-                          {risk.matchedText && (
-                            <div className="mt-2 rounded-md bg-base-200/60 px-2 py-1 text-xs italic text-base-content/60">
-                              &quot;{risk.matchedText}&quot;
-                            </div>
-                          )}
-                          {rec && (clientText || subText) ? (
-                            <div className="mt-2 space-y-1.5">
-                              {showClient && clientText && (
-                                <div className="flex gap-2 text-xs">
-                                  <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium flex-shrink-0 h-fit">Client</span>
-                                  <span className="text-base-content/70">{clientText}</span>
-                                </div>
-                              )}
-                              {showSub && subText && (
-                                <div className="flex gap-2 text-xs">
-                                  <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium flex-shrink-0 h-fit">Subcontractor</span>
-                                  <span className="text-base-content/70">{subText}</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : rec ? (
-                            <p className="mt-2 text-xs text-base-content/70">{rec}</p>
-                          ) : null}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* Clauses View */
-              <div className="space-y-2">
-                {result.clauses?.map((clause) => {
-                  const isExpanded = expandedClauses.has(clause.clauseOrder);
-                  const riskCount = clause.riskAssessments?.length || 0;
-                  const maxRiskLevel = clause.riskAssessments?.reduce((max, r) => {
-                    const levels = ['Low', 'Medium', 'High', 'Critical'];
-                    return levels.indexOf(r.level) > levels.indexOf(max) ? r.level : max;
-                  }, 'Low') || 'Low';
-
-                  return (
-                    <div key={clause.clauseOrder} className="rounded-lg border border-base-200 bg-base-100 shadow-sm overflow-hidden">
-                      <button
-                        onClick={() => toggleClause(clause.clauseOrder)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-base-200/30 transition-colors"
-                      >
-                        <Icon
-                          icon={chevronRightIcon}
-                          className={`size-4 text-base-content/40 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-base-content/70">
-                              {clause.clauseNumber || `Clause ${clause.clauseOrder}`}
-                            </span>
-                            {clause.clauseTitle && (
-                              <span className="text-xs text-base-content/50 truncate">{clause.clauseTitle}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {riskCount > 0 && (
-                            <span
-                              className="badge badge-xs border-0 text-white"
-                              style={{ backgroundColor: RISK_LEVEL_COLORS[maxRiskLevel] }}
-                            >
-                              {riskCount} risk{riskCount > 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="border-t border-base-200 px-3 py-3 space-y-3">
-                          {/* Clause Content */}
-                          {clause.clauseContent && (
-                            <div className="text-sm text-base-content/70 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-                              {clause.clauseContent}
-                            </div>
-                          )}
-
-                          {/* Clause Risks */}
-                          {clause.riskAssessments && clause.riskAssessments.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-base-content/50">
-                                Risks in this clause
-                              </h4>
-                              {clause.riskAssessments.map((risk, ri) => (
-                                <div key={ri} className="rounded-md bg-base-200/40 p-2.5">
-                                  <div className="flex items-center gap-2">
-                                    <span
-                                      className="badge badge-xs border-0 text-white"
-                                      style={{ backgroundColor: RISK_LEVEL_COLORS[risk.level] || '#6b7280' }}
-                                    >
-                                      {risk.level}
-                                    </span>
-                                    <span className="text-xs text-base-content/60">
-                                      {risk.categoryEn || risk.category}
-                                    </span>
-                                  </div>
-                                  {(risk.riskDescriptionEn || risk.riskDescription) && (
-                                    <p className="text-xs mt-1.5 text-base-content/70">
-                                      {risk.riskDescriptionEn || risk.riskDescription}
-                                    </p>
-                                  )}
-                                  {(risk.recommendationEn || risk.recommendation) && (
-                                    <p className="text-xs mt-1 text-primary/80">
-                                      {risk.recommendationEn || risk.recommendation}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {(!result.clauses || result.clauses.length === 0) && (
-                  <div className="rounded-lg border border-base-200 bg-base-100 p-8 text-center">
-                    <Icon icon={fileTextIcon} className="size-8 text-base-content/30 mx-auto" />
-                    <p className="mt-2 text-sm text-base-content/50">No clauses available for this scan</p>
-                  </div>
-                )}
-              </div>
-            )}
+          <div className="flex-1 min-h-0">
+            <div className={`${activeView === 'risks' ? 'h-full overflow-y-auto p-4' : 'hidden'}`}>
+              <RiskFindingsView
+                summary={result.summary}
+                recommendations={result.recommendations}
+                risks={filteredRisks}
+              />
+            </div>
+            <div className={`${activeView === 'clauses' ? 'h-full overflow-y-auto p-4' : 'hidden'}`}>
+              <ClauseListView
+                clauses={result.clauses || []}
+                onAskAi={handleClauseClick}
+              />
+            </div>
+            <div className={`${activeView === 'document' ? 'h-full flex flex-col p-4' : 'hidden'}`}>
+              <ClauseDocumentView
+                ref={clauseViewRef}
+                clauses={result.clauses || []}
+                highlightedClauses={highlightedClauses}
+                onClauseClick={handleClauseClick}
+              />
+            </div>
           </div>
         </div>
 
         {/* Right panel: AI Chat */}
         {showChat && (
-          <div className="w-1/2 min-h-0 flex flex-col">
-            <ContractAiChat
-              ref={chatRef}
-              templateName={result.fileName || 'Scanned Document'}
-              scanMode
-              uploadedDocumentId={savedId}
-              overallScore={pScore}
-              criticalCount={pCritical}
-              highCount={pHigh}
-              mediumCount={pMedium}
-              lowCount={pLow}
-              totalClauses={result.totalClauses}
-              categoryScores={pCategoryScores}
-              topRisks={result.topRisks.map(r => ({
-                category: r.categoryEn || r.category,
-                level: r.level,
-                riskDescription: r.riskDescriptionEn || r.riskDescription,
-                clauseRef: r.matchedText,
-              }))}
-              clauseNumbers={clauseNumbers}
-            />
+          <div className="w-1/2 min-h-0 flex flex-col bg-base-100/90 backdrop-blur-sm shadow-lg">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-base-200/70">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+                <span className="w-2 h-2 rounded-full bg-success"></span>
+                AI Assistant
+              </div>
+              <span className="text-[10px] text-base-content/40">Contextual</span>
+            </div>
+            <div className="flex-1 min-h-0 p-3">
+              <ContractAiChat
+                ref={chatRef}
+                templateName={result.fileName || 'Scanned Document'}
+                scanMode
+                uploadedDocumentId={savedId}
+                overallScore={pScore}
+                criticalCount={pCritical}
+                highCount={pHigh}
+                mediumCount={pMedium}
+                lowCount={pLow}
+                totalClauses={result.totalClauses}
+                categoryScores={pCategoryScores}
+                topRisks={perspectiveRisks.map(r => ({
+                  category: r.categoryEn || r.category,
+                  level: r.level,
+                  riskDescription: r.riskDescriptionEn || r.riskDescription,
+                  clauseRef: r.matchedText,
+                  matchedText: r.matchedText,
+                }))}
+                clauseNumbers={clauseNumbers}
+                onClauseReferenceClick={(cn) => requestHighlight([cn])}
+                onReferencedClauses={requestHighlight}
+              />
+            </div>
           </div>
         )}
       </div>

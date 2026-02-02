@@ -18,7 +18,9 @@ import {
 } from '@/types/contract-analysis';
 import ContractAiChat, { type ContractAiChatHandle } from './ContractAiChat';
 import ContractDocumentViewer, { type ContractDocumentViewerHandle } from './ContractDocumentViewer';
-import { usePerspective, getRecommendationForPerspective, getPerspectiveField, filterByPerspective } from './perspective-context';
+import ClauseListView from './ClauseListView';
+import RiskFindingsView from './RiskFindingsView';
+import { usePerspective, getPerspectiveField, filterByPerspective } from './perspective-context';
 
 // Icons
 import arrowLeftIcon from '@iconify/icons-lucide/arrow-left';
@@ -29,6 +31,7 @@ import xIcon from '@iconify/icons-lucide/x';
 import trendingUpIcon from '@iconify/icons-lucide/trending-up';
 import trendingDownIcon from '@iconify/icons-lucide/trending-down';
 import chevronDownIcon from '@iconify/icons-lucide/chevron-down';
+import fileTextIcon from '@iconify/icons-lucide/file-text';
 import buildingIcon from '@iconify/icons-lucide/building';
 import hardHatIcon from '@iconify/icons-lucide/hard-hat';
 import repeatIcon from '@iconify/icons-lucide/repeat';
@@ -92,7 +95,7 @@ const StatCard = ({
 }) => {
   const content = (
     <div className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 shadow-sm transition-colors ${
-      onClick ? 'border-base-200 bg-base-100 hover:bg-base-200/40 hover:border-base-300' : 'border-base-200 bg-base-100'
+      onClick ? 'border-base-200 bg-base-100 hover:bg-base-200/40 hover:border-base-300 cursor-pointer' : 'border-base-200 bg-base-100'
     }`}>
       <div className="flex items-center gap-2 min-w-0">
         {icon && (
@@ -147,13 +150,13 @@ export default function ContractDetailsPage() {
   const [isDesktopScreen, setIsDesktopScreen] = useState(false);
   const [splitPercent, setSplitPercent] = useState(50);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
-  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [activeView, setActiveView] = useState<'risks' | 'clauses' | 'document'>('document');
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<'Critical' | 'High' | 'Medium' | 'Low' | null>(null);
   const pdfViewerRef = useRef<ContractDocumentViewerHandle>(null);
   const chatRef = useRef<ContractAiChatHandle>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const splitContainerRef = useRef<HTMLDivElement>(null);
-  const riskDialogRef = useRef<HTMLDialogElement>(null);
+  const pendingChatMessageRef = useRef<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!contractId) return;
@@ -250,9 +253,9 @@ export default function ContractDetailsPage() {
     setSummaryCollapsed(prev => !prev);
   }, [isNarrowScreen]);
 
-  const openRiskDialog = useCallback((level: 'Critical' | 'High' | 'Medium' | 'Low') => {
-    setSelectedRiskLevel(level);
-    setRiskDialogOpen(true);
+  const handleRiskLevelClick = useCallback((level: 'Critical' | 'High' | 'Medium' | 'Low') => {
+    setSelectedRiskLevel(prev => prev === level ? null : level);
+    setActiveView('risks');
   }, []);
 
   const handleSplitterMouseDown = useCallback((event: React.MouseEvent) => {
@@ -285,17 +288,6 @@ export default function ContractDetailsPage() {
     };
   }, [isDraggingSplit]);
 
-  useEffect(() => {
-    const dialog = riskDialogRef.current;
-    if (!dialog) return;
-    if (riskDialogOpen && !dialog.open) {
-      dialog.showModal();
-    }
-    if (!riskDialogOpen && dialog.open) {
-      dialog.close();
-    }
-  }, [riskDialogOpen]);
-
   // Clause numbers for chat linking
   const clauseNumbers = useMemo(() => {
     return clauses.map(c => c.clauseNumber || `Clause ${c.clauseOrder}`);
@@ -303,6 +295,8 @@ export default function ContractDetailsPage() {
 
   // Highlight clauses in document viewer — search for the actual problematic text when available
   const highlightClause = useCallback((clauseRefs: string[]) => {
+    if (!clauseRefs.length) return;
+    setActiveView('document');
     console.log('[ContractDetails] highlightClause called with:', clauseRefs, 'ref available:', !!pdfViewerRef.current);
     pdfViewerRef.current?.clearHighlights();
 
@@ -313,18 +307,16 @@ export default function ContractDetailsPage() {
       for (const clause of clauses) {
         const cn = (clause.clauseNumber || `Clause ${clause.clauseOrder}`).toLowerCase().trim();
         if (cn === key) {
-          // Try matchedText from highest-severity risk first
-          const bestRisk = [...clause.riskAssessments]
+          const relevantRisks = filterByPerspective(clause.riskAssessments, perspective);
+          const bestRisk = [...relevantRisks]
             .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
             .find(r => r.matchedText);
           if (bestRisk?.matchedText) {
             const firstLine = bestRisk.matchedText.split(/[\r\n]+/)[0].trim();
             searchText = firstLine.length > 100 ? firstLine.slice(0, 100) : firstLine;
           } else if (clause.clauseTitle) {
-            // Fall back to clause title (more likely to match than "13.7: Gardiennage")
             searchText = clause.clauseTitle;
           } else if (clause.clauseContent) {
-            // Last resort: first line of clause content
             const firstLine = clause.clauseContent.split(/[\r\n]+/)[0].trim();
             searchText = firstLine.length > 100 ? firstLine.slice(0, 100) : firstLine;
           }
@@ -339,30 +331,49 @@ export default function ContractDetailsPage() {
     highlightTimeoutRef.current = setTimeout(() => {
       pdfViewerRef.current?.clearHighlights();
     }, 8000);
-  }, [clauses]);
+  }, [clauses, perspective]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => clearTimeout(highlightTimeoutRef.current);
   }, []);
 
-  const riskItems = useMemo(() => {
-    return clauses.flatMap((clause) =>
+  const analysisRisks = useMemo(() => {
+    const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+    const flattened = clauses.flatMap((clause) =>
       filterByPerspective(clause.riskAssessments, perspective).map((risk) => ({
-        level: risk.level,
-        category: risk.categoryEn || risk.category || 'General',
-        description: risk.riskDescriptionEn || risk.riskDescription || '',
-        recommendation: risk.recommendationEn || risk.recommendation || '',
-        matchedText: risk.matchedText || '',
-        clauseLabel: clause.clauseNumber || `Clause ${clause.clauseOrder}`,
+        ...risk,
+        clauseRef: clause.clauseNumber || `Clause ${clause.clauseOrder}`,
       }))
     );
+    return flattened.sort((a, b) => {
+      const levelDiff = (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9);
+      if (levelDiff !== 0) return levelDiff;
+      return (b.score ?? 0) - (a.score ?? 0);
+    });
   }, [clauses, perspective]);
 
-  const filteredRiskItems = useMemo(() => {
-    if (!selectedRiskLevel) return [];
-    return riskItems.filter((risk) => risk.level === selectedRiskLevel);
-  }, [riskItems, selectedRiskLevel]);
+  const filteredRisks = useMemo(() => {
+    if (!selectedRiskLevel) return analysisRisks;
+    return analysisRisks.filter((risk) => risk.level === selectedRiskLevel);
+  }, [analysisRisks, selectedRiskLevel]);
+
+  const handleClauseClick = useCallback((clauseNumber: string) => {
+    const prompt = `Analyze the risks in ${clauseNumber}`;
+    if (!isChatOpen) {
+      pendingChatMessageRef.current = prompt;
+      setIsChatOpen(true);
+      return;
+    }
+    chatRef.current?.sendMessage(prompt);
+  }, [isChatOpen]);
+
+  useEffect(() => {
+    if (isChatOpen && pendingChatMessageRef.current && chatRef.current) {
+      chatRef.current.sendMessage(pendingChatMessageRef.current);
+      pendingChatMessageRef.current = null;
+    }
+  }, [isChatOpen]);
 
   // Topbar setup
   useEffect(() => {
@@ -557,10 +568,10 @@ export default function ContractDetailsPage() {
                 {/* Stats */}
                 <div className="space-y-2 min-w-0 h-full flex flex-col">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <StatCard label="Critical" value={pCritical} color="#4a1d1d" icon={<span>!</span>} onClick={() => openRiskDialog('Critical')} />
-                    <StatCard label="High" value={pHigh} color="#b91c1c" icon={<span>!</span>} onClick={() => openRiskDialog('High')} />
-                    <StatCard label="Medium" value={pMedium} color="#a16207" icon={<span>-</span>} onClick={() => openRiskDialog('Medium')} />
-                    <StatCard label="Low" value={pLow} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => openRiskDialog('Low')} />
+                    <StatCard label="Critical" value={pCritical} color="#4a1d1d" icon={<span>!</span>} onClick={() => handleRiskLevelClick('Critical')} />
+                    <StatCard label="High" value={pHigh} color="#b91c1c" icon={<span>!</span>} onClick={() => handleRiskLevelClick('High')} />
+                    <StatCard label="Medium" value={pMedium} color="#a16207" icon={<span>-</span>} onClick={() => handleRiskLevelClick('Medium')} />
+                    <StatCard label="Low" value={pLow} color="#6b7280" icon={<Icon icon={checkCircleIcon} className="size-3.5" />} onClick={() => handleRiskLevelClick('Low')} />
                   </div>
 
                   {(report.modificationsDetected > 0 || report.newRisksIntroduced > 0 || report.risksMitigated > 0) && (
@@ -599,14 +610,59 @@ export default function ContractDetailsPage() {
         </div>
       </div>
 
-        {/* Contract PDF */}
-        <div className="flex-1 min-h-0 min-w-0 overflow-auto bg-base-100">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-base-200 bg-base-100/80 backdrop-blur flex-wrap">
+        <button
+          onClick={() => setActiveView('risks')}
+          className={`btn btn-xs gap-1 ${activeView === 'risks' ? 'btn-primary' : 'btn-ghost'}`}
+        >
+          Risk Findings ({filteredRisks.length})
+        </button>
+        <button
+          onClick={() => setActiveView('clauses')}
+          className={`btn btn-xs gap-1 ${activeView === 'clauses' ? 'btn-primary' : 'btn-ghost'}`}
+          disabled={clauses.length === 0}
+        >
+          <Icon icon={fileTextIcon} className="size-3.5" />
+          Clauses ({clauses.length})
+        </button>
+        <button
+          onClick={() => setActiveView('document')}
+          className={`btn btn-xs gap-1 ${activeView === 'document' ? 'btn-primary' : 'btn-ghost'}`}
+        >
+          Document
+        </button>
+        {selectedRiskLevel && (
+          <>
+            <span className="text-xs text-base-content/50">|</span>
+            <span className="badge badge-sm border-0 text-white" style={{ backgroundColor: RISK_LEVEL_COLORS[selectedRiskLevel] }}>
+              {selectedRiskLevel}
+            </span>
+            <button className="btn btn-ghost btn-xs btn-circle" onClick={() => setSelectedRiskLevel(null)}>
+              <Icon icon={xIcon} className="size-3" />
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <div className={`${activeView === 'document' ? 'h-full min-h-0 min-w-0' : 'hidden'}`}>
           <ContractDocumentViewer
             ref={pdfViewerRef}
             contractDatasetId={parseInt(contractId || '0')}
           />
         </div>
+        <div className={`${activeView === 'risks' ? 'h-full overflow-y-auto p-4' : 'hidden'}`}>
+          <RiskFindingsView
+            summary={report.summary}
+            recommendations={report.recommendations}
+            risks={filteredRisks}
+          />
+        </div>
+        <div className={`${activeView === 'clauses' ? 'h-full overflow-y-auto p-4' : 'hidden'}`}>
+          <ClauseListView clauses={clauses} onAskAi={handleClauseClick} />
+        </div>
       </div>
+    </div>
 
       {isSplitActive && (
         <div
@@ -657,71 +713,6 @@ export default function ContractDetailsPage() {
           </div>
         </div>
       )}
-
-      <dialog
-        ref={riskDialogRef}
-        className="modal"
-        onClose={() => setRiskDialogOpen(false)}
-      >
-        <div className="modal-box w-11/12 max-w-4xl p-0 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-base-200">
-            <div>
-              <h3 className="font-semibold text-sm">
-                {selectedRiskLevel ? `${selectedRiskLevel} Risks` : 'Risks'}
-              </h3>
-              <p className="text-xs text-base-content/50">
-                {filteredRiskItems.length} item{filteredRiskItems.length === 1 ? '' : 's'}
-              </p>
-            </div>
-            <form method="dialog">
-              <button
-                className="btn btn-sm btn-circle btn-ghost"
-                aria-label="Close"
-                onClick={() => setRiskDialogOpen(false)}
-              >
-                <Icon icon={xIcon} className="size-4" />
-              </button>
-            </form>
-          </div>
-          <div className="max-h-[70vh] overflow-y-auto p-4 space-y-3">
-            {filteredRiskItems.length === 0 ? (
-              <div className="text-sm text-base-content/60">No risks at this level.</div>
-            ) : (
-              filteredRiskItems.map((risk, index) => (
-                <div key={`${risk.clauseLabel}-${index}`} className="rounded-lg border border-base-200 bg-base-100 p-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="badge badge-sm border-0 text-white"
-                      style={{ backgroundColor: RISK_LEVEL_COLORS[risk.level as keyof typeof RISK_LEVEL_COLORS] }}
-                    >
-                      {risk.level}
-                    </span>
-                    <span className="text-xs text-base-content/50">{risk.clauseLabel}</span>
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-base-content">{risk.category}</div>
-                  {risk.description && (
-                    <p className="text-xs text-base-content/70 mt-1 leading-relaxed">{risk.description}</p>
-                  )}
-                  {risk.matchedText && (
-                    <div className="mt-2 rounded-md bg-base-200/60 px-2 py-1 text-xs italic text-base-content/60">
-                      "{risk.matchedText}"
-                    </div>
-                  )}
-                  {risk.recommendation && (
-                    <div className="mt-2 text-xs text-base-content/70">
-                      <span className="font-semibold text-base-content/60">Recommendation:</span>{' '}
-                      {getRecommendationForPerspective(risk.recommendation, perspective)}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={() => setRiskDialogOpen(false)}>close</button>
-        </form>
-      </dialog>
 
       {/* Mobile Chat Overlay */}
       {isChatOpen && (

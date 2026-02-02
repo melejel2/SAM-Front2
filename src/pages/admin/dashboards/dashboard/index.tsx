@@ -483,7 +483,7 @@ const DashboardPage = () => {
                   options={{
                     chart: { background: 'transparent' },
                     labels: summary.contractsByStatus.map(s => s.status),
-                    colors: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'],
+                    colors: ['#38bdf8', '#6ee7b7', '#fbbf24', '#fb7185'],
                     legend: { position: 'bottom', fontSize: '13px' },
                     dataLabels: { enabled: true, formatter: (val: number) => `${val.toFixed(0)}%` },
                     plotOptions: { pie: { donut: { size: '55%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '14px', fontWeight: '600' } } } } },
