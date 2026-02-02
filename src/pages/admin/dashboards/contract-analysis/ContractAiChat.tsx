@@ -176,7 +176,7 @@ function formatInlineWithClauses(
 
   while ((match = clauseRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(formatInline(text.slice(lastIndex, match.index)));
+      parts.push(<span key={`t-${key++}`}>{formatInline(text.slice(lastIndex, match.index))}</span>);
     }
 
     const matchedClause = clauseNumbers.find(
@@ -200,7 +200,7 @@ function formatInlineWithClauses(
   if (parts.length === 0) return formatInline(text);
 
   if (lastIndex < text.length) {
-    parts.push(formatInline(text.slice(lastIndex)));
+    parts.push(<span key={`t-${key++}`}>{formatInline(text.slice(lastIndex))}</span>);
   }
 
   return <>{parts}</>;

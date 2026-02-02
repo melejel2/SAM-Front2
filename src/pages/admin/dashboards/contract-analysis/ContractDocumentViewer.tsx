@@ -36,6 +36,43 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
     const [docReady, setDocReady] = useState(false);
     const pendingSearchRef = useRef<string | null>(null);
 
+    // Core search logic — shared by direct calls and pending search
+    const executeSearch = useCallback((text: string) => {
+      const editor = containerRef.current?.documentEditor;
+      if (!editor) {
+        console.warn('[DocViewer] No documentEditor instance');
+        return;
+      }
+
+      // Access searchModule — Syncfusion exposes it after Search is injected
+      const search = editor.searchModule;
+      if (!search) {
+        console.warn('[DocViewer] searchModule not available — Search service may not be injected');
+        return;
+      }
+
+      try {
+        search.clearSearchHighlight();
+        search.findAll(text, 'None');
+
+        // Access searchResults via the public property on Search
+        const sr = (search as any).searchResultsInternal ?? (search as any).searchResults;
+        console.log('[DocViewer] Search results for', JSON.stringify(text.slice(0, 60)), '→', sr?.length ?? 'no results object');
+
+        if (sr && sr.length > 0) {
+          if (sr.length > 1) {
+            // Skip the first match (typically the TOC/legend listing)
+            sr.index = 1;
+          } else {
+            sr.index = 0;
+          }
+          sr.navigate();
+        }
+      } catch (e) {
+        console.warn('[DocViewer] Search/navigate failed:', e);
+      }
+    }, []);
+
     // Load SFDT on mount
     useEffect(() => {
       let cancelled = false;
@@ -54,8 +91,11 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
 
           if (containerRef.current?.documentEditor) {
             containerRef.current.documentEditor.open(sfdt);
+            console.log('[DocViewer] Document opened, searchModule:', !!containerRef.current.documentEditor.searchModule);
             setDocReady(true);
             onDocumentLoaded?.();
+          } else {
+            console.warn('[DocViewer] containerRef.current?.documentEditor not available after SFDT load');
           }
         } catch (err: any) {
           if (cancelled) return;
@@ -78,13 +118,10 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
       if (docReady && pendingSearchRef.current) {
         const text = pendingSearchRef.current;
         pendingSearchRef.current = null;
-        const editor = containerRef.current?.documentEditor;
-        if (editor?.searchModule) {
-          editor.searchModule.clearSearchHighlight();
-          editor.searchModule.findAll(text, 'None');
-        }
+        console.log('[DocViewer] Executing pending search:', text.slice(0, 60));
+        executeSearch(text);
       }
-    }, [docReady]);
+    }, [docReady, executeSearch]);
 
     const handleCreated = useCallback(() => {
       if (containerRef.current?.documentEditor) {
@@ -92,41 +129,24 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
       }
     }, []);
 
-    // Search and scroll to clause — skips TOC/legend by jumping to second match if multiple exist
     const searchAndScrollTo = useCallback((text: string) => {
+      console.log('[DocViewer] searchAndScrollTo called, docReady:', docReady, 'text:', text.slice(0, 60));
       if (!containerRef.current?.documentEditor || !docReady) {
+        console.log('[DocViewer] Document not ready, queuing search');
         pendingSearchRef.current = text;
         return;
       }
-      try {
-        const search = containerRef.current.documentEditor.searchModule as Search | undefined;
-        if (!search) return;
-        search.clearSearchHighlight();
-        search.findAll(text, 'None');
-        const sr = (search as unknown as { searchResults?: { length: number; index: number; navigate: () => void } }).searchResults;
-        if (sr && sr.length > 1) {
-          // Skip the first match (typically the TOC/legend listing) and go to the actual section
-          sr.index = 1;
-          sr.navigate();
-        }
-      } catch (e) {
-        console.warn('Search failed for:', text, e);
-      }
-    }, [docReady]);
+      executeSearch(text);
+    }, [docReady, executeSearch]);
 
     const highlightClause = useCallback((text: string) => {
+      console.log('[DocViewer] highlightClause called, docReady:', docReady, 'text:', text.slice(0, 60));
       if (!containerRef.current?.documentEditor || !docReady) {
         pendingSearchRef.current = text;
         return;
       }
-      try {
-        const editor = containerRef.current.documentEditor;
-        editor.searchModule?.clearSearchHighlight();
-        editor.searchModule?.findAll(text, 'None');
-      } catch (e) {
-        console.warn('Highlight failed for:', text, e);
-      }
-    }, [docReady]);
+      executeSearch(text);
+    }, [docReady, executeSearch]);
 
     const clearHighlights = useCallback(() => {
       pendingSearchRef.current = null;

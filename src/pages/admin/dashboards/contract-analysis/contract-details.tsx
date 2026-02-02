@@ -298,27 +298,29 @@ export default function ContractDetailsPage() {
 
   // Highlight clauses in document viewer — search for the actual problematic text when available
   const highlightClause = useCallback((clauseRefs: string[]) => {
+    console.log('[ContractDetails] highlightClause called with:', clauseRefs, 'ref available:', !!pdfViewerRef.current);
     pdfViewerRef.current?.clearHighlights();
 
     if (clauseRefs[0]) {
       // Find the best matchedText for this clause to highlight the problematic phrase
       let searchText = clauseRefs[0];
-      const key = clauseRefs[0].toLowerCase();
+      const key = clauseRefs[0].toLowerCase().trim();
       const levelPriority: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
       for (const clause of clauses) {
-        const cn = (clause.clauseNumber || `Clause ${clause.clauseOrder}`).toLowerCase();
+        const cn = (clause.clauseNumber || `Clause ${clause.clauseOrder}`).toLowerCase().trim();
         if (cn === key) {
           const bestRisk = [...clause.riskAssessments]
             .sort((a, b) => (levelPriority[a.level] ?? 9) - (levelPriority[b.level] ?? 9))
             .find(r => r.matchedText);
           if (bestRisk?.matchedText) {
-            searchText = bestRisk.matchedText.length > 120
-              ? bestRisk.matchedText.slice(0, 120)
-              : bestRisk.matchedText;
+            // Syncfusion search only works within a single paragraph — use the first line only
+            const firstLine = bestRisk.matchedText.split(/[\r\n]+/)[0].trim();
+            searchText = firstLine.length > 100 ? firstLine.slice(0, 100) : firstLine;
           }
           break;
         }
       }
+      console.log('[ContractDetails] Searching for text:', searchText.slice(0, 80));
       pdfViewerRef.current?.searchAndScrollTo(searchText);
     }
 
