@@ -571,7 +571,8 @@ const DashboardPage = () => {
                               fontSize: '12px',
                               fontWeight: 500,
                               labels: { colors: 'hsl(var(--bc) / 0.6)' },
-                              markers: { width: 8, height: 8, radius: 6, offsetY: 1 },
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              markers: { width: 8, height: 8, radius: 6, offsetY: 1 } as any,
                               itemMargin: { horizontal: 10, vertical: 6 },
                             },
                             dataLabels: { enabled: false },
@@ -610,7 +611,8 @@ const DashboardPage = () => {
                             },
                             stroke: { width: 2, colors: ['hsl(var(--b1))'] },
                             tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
-                            states: { hover: { filter: { type: 'lighten', value: 0.05 } } },
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            states: { hover: { filter: { type: 'lighten', value: 0.05 } as any } },
                           } satisfies ApexOptions}
                         />
                       </Suspense>
@@ -687,7 +689,8 @@ const DashboardPage = () => {
                               padding: { left: 4, right: 18, top: 6, bottom: 6 },
                             },
                             tooltip: { y: { formatter: (val: number) => val.toLocaleString() } },
-                            states: { hover: { filter: { type: 'lighten', value: 0.04 } } },
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            states: { hover: { filter: { type: 'lighten', value: 0.04 } as any } },
                           } satisfies ApexOptions}
                         />
                       </Suspense>
