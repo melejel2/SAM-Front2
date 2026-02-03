@@ -35,6 +35,7 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
     const [error, setError] = useState<string | null>(null);
     const [docReady, setDocReady] = useState(false);
     const pendingSearchRef = useRef<string | null>(null);
+    const documentLoadedRef = useRef(false);
 
     // Try a single search term, return result count
     const trySearch = useCallback((search: any, text: string): number => {
@@ -123,23 +124,28 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
         }
 
         try {
+          setIsLoading(true);
+          setDocReady(false);
+          setError(null);
+          documentLoadedRef.current = false;
+
           const sfdt = await getContractSfdt(contractDatasetId, token);
           if (cancelled) return;
 
           if (containerRef.current?.documentEditor) {
             containerRef.current.documentEditor.open(sfdt);
             console.log('[DocViewer] Document opened, searchModule:', !!containerRef.current.documentEditor.searchModule);
-            setDocReady(true);
-            onDocumentLoaded?.();
           } else {
             console.warn('[DocViewer] containerRef.current?.documentEditor not available after SFDT load');
+            setError('Document editor unavailable');
+            setIsLoading(false);
           }
         } catch (err: any) {
           if (cancelled) return;
           console.error('Failed to load contract document:', err);
           setError(err.message || 'Failed to load contract document');
+          setIsLoading(false);
         } finally {
-          if (!cancelled) setIsLoading(false);
         }
       };
 
@@ -159,6 +165,14 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
         executeSearch(text);
       }
     }, [docReady, executeSearch]);
+
+    const handleDocumentChange = useCallback(() => {
+      if (documentLoadedRef.current) return;
+      documentLoadedRef.current = true;
+      setDocReady(true);
+      setIsLoading(false);
+      onDocumentLoaded?.();
+    }, [onDocumentLoaded]);
 
     const handleCreated = useCallback(() => {
       if (containerRef.current?.documentEditor) {
@@ -232,7 +246,9 @@ const ContractDocumentViewer = forwardRef<ContractDocumentViewerHandle, Contract
           enableComment={false}
           enableTrackChanges={false}
           showPropertiesPane={false}
+          autoResizeOnVisibilityChange={true}
           created={handleCreated}
+          documentChange={handleDocumentChange}
         >
           <Inject services={[Toolbar, Search]} />
         </DocumentEditorContainerComponent>

@@ -31,6 +31,7 @@ const TemplateDocumentViewer = forwardRef<TemplateDocumentViewerHandle, Template
     const [error, setError] = useState<string | null>(null);
     const [docReady, setDocReady] = useState(false);
     const pendingSearchRef = useRef<string | null>(null);
+    const documentLoadedRef = useRef(false);
 
     const trySearch = useCallback((search: any, text: string): number => {
       search.clearSearchHighlight();
@@ -99,22 +100,27 @@ const TemplateDocumentViewer = forwardRef<TemplateDocumentViewerHandle, Template
         }
 
         try {
+          setIsLoading(true);
+          setDocReady(false);
+          setError(null);
+          documentLoadedRef.current = false;
+
           const sfdt = await getTemplateSfdt(templateId);
           if (cancelled) return;
 
           if (containerRef.current?.documentEditor) {
             containerRef.current.documentEditor.open(sfdt);
-            setDocReady(true);
-            onDocumentLoaded?.();
           } else {
             console.warn('[TemplateDocViewer] documentEditor not available after SFDT load');
+            setError('Document editor unavailable');
+            setIsLoading(false);
           }
         } catch (err: any) {
           if (cancelled) return;
           console.error('Failed to load template document:', err);
           setError(err.message || 'Failed to load template document');
+          setIsLoading(false);
         } finally {
-          if (!cancelled) setIsLoading(false);
         }
       };
 
@@ -132,6 +138,14 @@ const TemplateDocumentViewer = forwardRef<TemplateDocumentViewerHandle, Template
         executeSearch(text);
       }
     }, [docReady, executeSearch]);
+
+    const handleDocumentChange = useCallback(() => {
+      if (documentLoadedRef.current) return;
+      documentLoadedRef.current = true;
+      setDocReady(true);
+      setIsLoading(false);
+      onDocumentLoaded?.();
+    }, [onDocumentLoaded]);
 
     const handleCreated = useCallback(() => {
       if (containerRef.current?.documentEditor) {
@@ -201,7 +215,9 @@ const TemplateDocumentViewer = forwardRef<TemplateDocumentViewerHandle, Template
           enableComment={false}
           enableTrackChanges={false}
           showPropertiesPane={false}
+          autoResizeOnVisibilityChange={true}
           created={handleCreated}
+          documentChange={handleDocumentChange}
         >
           <Inject services={[Toolbar, Search]} />
         </DocumentEditorContainerComponent>

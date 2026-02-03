@@ -12,6 +12,7 @@ import {
   startContractAnalysisJob,
   waitForAnalysisJob,
   getActiveAnalysisJobs,
+  cancelAnalysisJob,
   analyzeAllTemplates,
   scanDocument,
   getUploadedDocuments,
@@ -300,13 +301,18 @@ const ScoreBadge = memo(({ score }: { score?: number }) => {
 ScoreBadge.displayName = 'ScoreBadge';
 
 // Risk Count Badge
-const RiskCountBadge = memo(({ count, level }: { count?: number; level: 'critical' | 'high' }) => {
+const RiskCountBadge = memo(({ count, level }: { count?: number; level: 'critical' | 'high' | 'medium' | 'low' }) => {
   if (!count) return <span className="text-base-content/50">0</span>;
-  const color = level === 'critical' ? '#7f1d1d' : '#ef4444';
+  const colors: Record<typeof level, string> = {
+    critical: '#7f1d1d',
+    high: '#ef4444',
+    medium: '#f59e0b',
+    low: '#6b7280',
+  };
   return (
     <span
       className="px-2 py-0.5 rounded text-xs font-semibold text-white"
-      style={{ backgroundColor: color }}
+      style={{ backgroundColor: colors[level] }}
     >
       {count}
     </span>
@@ -701,6 +707,8 @@ const ContractAnalysisDashboard = memo(() => {
       if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis completed');
         loadData();
+      } else if (finalJob.status === 'Canceled') {
+        toaster.info('Analysis canceled');
       } else {
         toaster.error(finalJob.errorMessage || 'Error during analysis');
       }
@@ -747,6 +755,8 @@ const ContractAnalysisDashboard = memo(() => {
       if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis completed');
         loadData();
+      } else if (finalJob.status === 'Canceled') {
+        toaster.info('Analysis canceled');
       } else {
         toaster.error(finalJob.errorMessage || 'Error during analysis');
       }
@@ -766,6 +776,27 @@ const ContractAnalysisDashboard = memo(() => {
     setNavigatingId(contractId);
     navigate(`/dashboard/contract-analysis/contract/${contractId}`);
   }, [navigate]);
+
+  const handleCancelAnalysis = useCallback(async (jobType: 'Template' | 'Contract', targetId: number) => {
+    const key = getJobKey(jobType, targetId);
+    const job = analysisJobs[key];
+    if (!job) return;
+
+    try {
+      await cancelAnalysisJob(job.id);
+      toaster.success('Analysis canceled');
+      setAnalysisJobs((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      if (analyzingId === targetId) {
+        setAnalyzingId(null);
+      }
+    } catch (error: any) {
+      toaster.error(error.message || 'Failed to cancel analysis');
+    }
+  }, [analysisJobs, getJobKey, toaster, analyzingId]);
 
   // Template columns
   const templateColumns = useMemo((): SpreadsheetColumn<TemplateAnalysisSummary>[] => [
@@ -813,6 +844,24 @@ const ContractAnalysisDashboard = memo(() => {
       editable: false,
       sortable: true,
       render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'highRiskCount', perspective) : _value} level="high" />,
+    },
+    {
+      key: 'mediumRiskCount',
+      label: 'Medium',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'mediumRiskCount', perspective) : _value} level="medium" />,
+    },
+    {
+      key: 'lowRiskCount',
+      label: 'Low',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'lowRiskCount', perspective) : _value} level="low" />,
     },
     {
       key: 'isAnalyzed',
@@ -901,6 +950,24 @@ const ContractAnalysisDashboard = memo(() => {
       render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'highRiskCount', perspective) : _value} level="high" />,
     },
     {
+      key: 'mediumRiskCount',
+      label: 'Medium',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'mediumRiskCount', perspective) : _value} level="medium" />,
+    },
+    {
+      key: 'lowRiskCount',
+      label: 'Low',
+      width: 80,
+      align: 'center',
+      editable: false,
+      sortable: true,
+      render: (_value, row) => <RiskCountBadge count={row ? getPerspectiveField(row, 'lowRiskCount', perspective) : _value} level="low" />,
+    },
+    {
       key: 'isAnalyzed',
       label: 'Status',
       width: 100,
@@ -936,6 +1003,18 @@ const ContractAnalysisDashboard = memo(() => {
       {analysisJobs[getJobKey('Template', row.contractTemplateId)] && (
         <span className="badge badge-xs badge-warning">Analyzing</span>
       )}
+      {analysisJobs[getJobKey('Template', row.contractTemplateId)] && (
+        <button
+          className="btn btn-ghost btn-xs text-error hover:bg-error/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCancelAnalysis('Template', row.contractTemplateId);
+          }}
+          title="Stop analysis"
+        >
+          <Icon icon={xIcon} className="w-4 h-4" />
+        </button>
+      )}
       {row.isAnalyzed && (
         <button
           className="btn btn-ghost btn-xs text-info hover:bg-info/20"
@@ -969,13 +1048,25 @@ const ContractAnalysisDashboard = memo(() => {
         )}
       </button>
     </div>
-  ), [analyzingId, navigatingId, handleAnalyzeTemplate, handleViewTemplateDetails, analysisJobs, getJobKey]);
+  ), [analyzingId, navigatingId, handleAnalyzeTemplate, handleViewTemplateDetails, analysisJobs, getJobKey, handleCancelAnalysis]);
 
   // Render actions for contracts
   const renderContractActions = useCallback((row: ContractAnalysisSummary) => (
     <div className="flex items-center gap-1">
       {analysisJobs[getJobKey('Contract', row.contractDatasetId)] && (
         <span className="badge badge-xs badge-warning">Analyzing</span>
+      )}
+      {analysisJobs[getJobKey('Contract', row.contractDatasetId)] && (
+        <button
+          className="btn btn-ghost btn-xs text-error hover:bg-error/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCancelAnalysis('Contract', row.contractDatasetId);
+          }}
+          title="Stop analysis"
+        >
+          <Icon icon={xIcon} className="w-4 h-4" />
+        </button>
       )}
       {row.isAnalyzed && (
         <button
@@ -1010,7 +1101,7 @@ const ContractAnalysisDashboard = memo(() => {
         )}
       </button>
     </div>
-  ), [analyzingId, navigatingId, handleAnalyzeContract, handleViewContractDetails, analysisJobs, getJobKey]);
+  ), [analyzingId, navigatingId, handleAnalyzeContract, handleViewContractDetails, analysisJobs, getJobKey, handleCancelAnalysis]);
 
   // Toolbar
   const toolbar = useMemo(() => (

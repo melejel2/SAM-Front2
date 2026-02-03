@@ -161,14 +161,20 @@ export interface TemplateAnalysisSummary {
   overallScore?: number;
   criticalRiskCount?: number;
   highRiskCount?: number;
+  mediumRiskCount?: number;
+  lowRiskCount?: number;
   isAnalyzed: boolean;
   lastAnalyzedAt?: string;
   clientOverallScore?: number;
   clientCriticalRiskCount?: number;
   clientHighRiskCount?: number;
+  clientMediumRiskCount?: number;
+  clientLowRiskCount?: number;
   subcontractorOverallScore?: number;
   subcontractorCriticalRiskCount?: number;
   subcontractorHighRiskCount?: number;
+  subcontractorMediumRiskCount?: number;
+  subcontractorLowRiskCount?: number;
 }
 
 // Contract analysis summary (for list view)
@@ -181,14 +187,20 @@ export interface ContractAnalysisSummary {
   overallScore?: number;
   criticalRiskCount?: number;
   highRiskCount?: number;
+  mediumRiskCount?: number;
+  lowRiskCount?: number;
   isAnalyzed: boolean;
   lastAnalyzedAt?: string;
   clientOverallScore?: number;
   clientCriticalRiskCount?: number;
   clientHighRiskCount?: number;
+  clientMediumRiskCount?: number;
+  clientLowRiskCount?: number;
   subcontractorOverallScore?: number;
   subcontractorCriticalRiskCount?: number;
   subcontractorHighRiskCount?: number;
+  subcontractorMediumRiskCount?: number;
+  subcontractorLowRiskCount?: number;
 }
 
 // Analysis result from API

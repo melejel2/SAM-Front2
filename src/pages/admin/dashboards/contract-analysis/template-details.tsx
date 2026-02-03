@@ -10,6 +10,7 @@ import {
   startTemplateAnalysisJob,
   waitForAnalysisJob,
   getActiveAnalysisJob,
+  cancelAnalysisJob,
 } from '@/api/services/contract-analysis-api';
 import type {
   TemplateRiskProfile,
@@ -145,6 +146,7 @@ export default function TemplateDetailsPage() {
   const [clauses, setClauses] = useState<ContractClause[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [summaryCollapsed, setSummaryCollapsed] = useState(() => getStoredSummaryState(true));
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
@@ -187,6 +189,8 @@ export default function TemplateDetailsPage() {
       setActiveAnalysisJob(null);
       if (finalJob.status === 'Succeeded') {
         loadData();
+      } else if (finalJob.status === 'Canceled') {
+        toaster.info('Analysis canceled');
       } else if (finalJob.status === 'Failed') {
         toaster.error(finalJob.errorMessage || 'Analysis failed');
       }
@@ -264,6 +268,8 @@ export default function TemplateDetailsPage() {
       if (finalJob.status === 'Succeeded') {
         toaster.success('Analysis complete');
         loadData();
+      } else if (finalJob.status === 'Canceled') {
+        toaster.info('Analysis canceled');
       } else {
         toaster.error(finalJob.errorMessage || 'Error');
       }
@@ -273,6 +279,20 @@ export default function TemplateDetailsPage() {
       setIsReanalyzing(false);
     }
   }, [templateId, loadData, toaster, activeAnalysisJob]);
+
+  const handleCancelAnalysis = useCallback(async () => {
+    if (!activeAnalysisJob) return;
+    setIsCanceling(true);
+    try {
+      await cancelAnalysisJob(activeAnalysisJob.id);
+      toaster.info('Analysis canceled');
+      setActiveAnalysisJob(null);
+    } catch (error: any) {
+      toaster.error(error.message || 'Failed to cancel analysis');
+    } finally {
+      setIsCanceling(false);
+    }
+  }, [activeAnalysisJob, toaster]);
 
   const handleBack = useCallback(() => {
     navigate('/dashboard/contract-analysis');
@@ -448,6 +468,22 @@ export default function TemplateDetailsPage() {
             <Icon icon={refreshCwIcon} className="size-4" />
           )}
         </button>
+        {activeAnalysisJob && (
+          <button
+            className="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10 tooltip tooltip-bottom"
+            onClick={handleCancelAnalysis}
+            disabled={isCanceling}
+            title="Stop analysis"
+            aria-label="Stop analysis"
+            data-tip="Stop analysis"
+          >
+            {isCanceling ? (
+              <span className="loading loading-spinner loading-xs"></span>
+            ) : (
+              <Icon icon={xIcon} className="size-4" />
+            )}
+          </button>
+        )}
         <button
           className={`btn btn-sm btn-circle tooltip tooltip-bottom ${isChatOpen ? 'btn-primary' : 'btn-ghost border border-base-300'}`}
           onClick={() => setIsChatOpen(!isChatOpen)}
@@ -462,7 +498,7 @@ export default function TemplateDetailsPage() {
 
     setAllContent(leftContent, null, rightContent);
     return () => clearContent();
-  }, [handleBack, handleReanalyze, isReanalyzing, activeAnalysisJob, profile?.templateName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
+  }, [handleBack, handleReanalyze, handleCancelAnalysis, isReanalyzing, isCanceling, activeAnalysisJob, profile?.templateName, isChatOpen, setAllContent, clearContent, perspective, setPerspective]);
 
   if (isLoading) return <Loader />;
 

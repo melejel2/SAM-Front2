@@ -149,6 +149,23 @@ export async function getActiveAnalysisJobs(jobType: 'Template' | 'Contract'): P
 }
 
 /**
+ * Cancel an analysis job
+ */
+export async function cancelAnalysisJob(jobId: string): Promise<AnalysisJob> {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${ACTIVE_API_URL}ContractAnalysis/analysis-jobs/${jobId}/cancel`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return handleResponse<AnalysisJob>(response);
+}
+
+/**
  * Get active analysis job by target (optional helper)
  */
 export async function getActiveAnalysisJob(jobType: 'Template' | 'Contract', targetId: number): Promise<AnalysisJob | null> {
@@ -183,7 +200,7 @@ export async function waitForAnalysisJob(
     }
 
     const job = await getAnalysisJob(jobId);
-    if (job.status === 'Succeeded' || job.status === 'Failed') {
+    if (job.status === 'Succeeded' || job.status === 'Failed' || job.status === 'Canceled') {
       return job;
     }
 
