@@ -28,6 +28,7 @@ const CreateContractVOContent: React.FC = () => {
         currentStep,
         hasUnsavedChanges,
         loading,
+        formData,
         validateCurrentStep,
         goToNextStep,
         goToPreviousStep,
@@ -82,14 +83,30 @@ const CreateContractVOContent: React.FC = () => {
                 case 1:
                     toaster.error("Please fill in all required VO information and select at least one building");
                     break;
-                case 2:
-                    toaster.error("Please add at least one VO line item. Items with units must have quantity and unit price greater than 0.");
+                case 2: {
+                    if (formData.lineItems.length === 0) {
+                        toaster.error("Please add at least one VO line item.");
+                    } else {
+                        const invalidItems = formData.lineItems.filter(
+                            (item) => item.unit && item.unit.trim() !== "" && (item.quantity <= 0 || item.unitPrice <= 0)
+                        );
+                        const missingNoItems = formData.lineItems.filter(
+                            (item) => !item.no || item.no.trim() === ""
+                        );
+                        if (missingNoItems.length > 0) {
+                            toaster.error(`${missingNoItems.length} item(s) are missing an item number.`);
+                        } else if (invalidItems.length > 0) {
+                            const itemNos = invalidItems.map((i) => i.no).join(", ");
+                            toaster.error(`Item(s) ${itemNos} have a unit but missing quantity or unit price. Please fill in or remove them.`);
+                        }
+                    }
                     break;
+                }
                 default:
                     toaster.error("Please complete all required fields");
             }
         }
-    }, [validateCurrentStep, goToNextStep, currentStep, toaster]);
+    }, [validateCurrentStep, goToNextStep, currentStep, toaster, formData.lineItems]);
 
     useEffect(() => {
         const leftContent = currentStep <= firstStep ? (
