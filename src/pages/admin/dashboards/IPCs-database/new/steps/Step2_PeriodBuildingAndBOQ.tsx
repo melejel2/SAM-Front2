@@ -541,7 +541,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
     };
 
     // Handle quantity input change - updates percentage and amounts automatically
-    // No restrictions - allows free input
+    // Allows any value including negative for billing corrections/downgrades
     const handleBOQQuantityChange = (buildingId: number, boqId: number, actualQte: number) => {
         const safeBuildings = formData.buildings || [];
         const building = safeBuildings.find(b => b.id === buildingId);
@@ -549,9 +549,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
         if (!boqItem) return;
 
-        // Allow any value >= 0
-        const validatedQte = Math.max(0, actualQte);
-        updateBOQItem(buildingId, boqId, validatedQte);
+        // Allow any value including negative
+        updateBOQItem(buildingId, boqId, actualQte);
     };
 
     // Handle CUMULATIVE percentage input - calculates actual qty from cumulative target
@@ -566,14 +565,14 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         const cumulQte = (cumulPercent / 100) * boqItem.qte;
         const precedQte = boqItem.precedQte || 0;
 
-        // Calculate actual qty = cumul qty - previous qty
-        const actualQte = Math.max(0, cumulQte - precedQte);
+        // Calculate actual qty = cumul qty - previous qty (allow negative for downgrades)
+        const actualQte = cumulQte - precedQte;
 
         updateBOQItem(buildingId, boqId, actualQte);
     };
 
     // Handle cumulative quantity input change - calculates actual qty by subtracting previous
-    // No restrictions - allows free input
+    // Allows negative values for billing corrections/downgrades
     const handleBOQCumulQtyChange = (buildingId: number, boqId: number, cumulQte: number) => {
         const safeBuildings = formData.buildings || [];
         const building = safeBuildings.find(b => b.id === buildingId);
@@ -582,8 +581,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         if (!boqItem) return;
 
         const precedQte = boqItem.precedQte || 0;
-        // Calculate actual qty = cumulative - previous (allow any value >= 0)
-        const actualQte = Math.max(0, cumulQte - precedQte);
+        // Calculate actual qty = cumulative - previous (allow negative for downgrades)
+        const actualQte = cumulQte - precedQte;
 
         updateBOQItem(buildingId, boqId, actualQte);
     };
@@ -639,7 +638,7 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         });
     };
 
-    // Handle VO quantity input change - no restrictions
+    // Handle VO quantity input change - allows negative values for corrections
     const handleVOBOQQuantityChange = (voId: number, buildingId: number, boqId: number, actualQte: number) => {
         const vos = (formData.vos || []) as Vos[];
         const vo = vos.find(v => v.id === voId);
@@ -648,8 +647,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
         if (!boqItem) return;
 
-        const validatedQte = Math.max(0, actualQte);
-        updateVOBOQItem(voId, buildingId, boqId, validatedQte);
+        // Allow any value including negative
+        updateVOBOQItem(voId, buildingId, boqId, actualQte);
     };
 
     // Handle VO CUMULATIVE percentage input - calculates actual qty from cumulative target
@@ -664,12 +663,13 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         // Convert cumulative percentage to cumulative quantity
         const cumulQte = (cumulPercent / 100) * boqItem.qte;
         const precedQte = boqItem.precedQte || 0;
-        const actualQte = Math.max(0, cumulQte - precedQte);
+        // Allow negative for downgrades
+        const actualQte = cumulQte - precedQte;
 
         updateVOBOQItem(voId, buildingId, boqId, actualQte);
     };
 
-    // Handle VO cumulative quantity input change - no restrictions
+    // Handle VO cumulative quantity input change - allows negative values
     const handleVOBOQCumulQtyChange = (voId: number, buildingId: number, boqId: number, cumulQte: number) => {
         const vos = (formData.vos || []) as Vos[];
         const vo = vos.find(v => v.id === voId);
@@ -679,7 +679,8 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
         if (!boqItem) return;
 
         const precedQte = boqItem.precedQte || 0;
-        const actualQte = Math.max(0, cumulQte - precedQte);
+        // Allow negative for downgrades
+        const actualQte = cumulQte - precedQte;
 
         updateVOBOQItem(voId, buildingId, boqId, actualQte);
     };
@@ -1338,16 +1339,16 @@ export const Step2_PeriodBuildingAndBOQ: React.FC = () => {
 
                     // If Cumul Qty is inconsistent with Actual Qty, user edited Cumul Qty
                     if (Math.abs(importedCumulQty - expectedCumulFromActual) > 0.001) {
-                        finalActualQte = Math.max(0, importedCumulQty - precedQte);
+                        finalActualQte = importedCumulQty - precedQte; // Allow negative for downgrades
                     }
                     // If Cumul % is inconsistent with Actual Qty, user edited Cumul %
                     else if (Math.abs(importedCumulPercent - expectedPercentFromActual) > 0.1 && boq.qte > 0) {
                         const cumulQtyFromPercent = (importedCumulPercent / 100) * boq.qte;
-                        finalActualQte = Math.max(0, cumulQtyFromPercent - precedQte);
+                        finalActualQte = cumulQtyFromPercent - precedQte; // Allow negative for downgrades
                     }
                     // All values are consistent, use Actual Qty directly
                     else {
-                        finalActualQte = Math.max(0, importedActualQty);
+                        finalActualQte = importedActualQty; // Allow negative values
                     }
 
                     // Calculate all derived values
