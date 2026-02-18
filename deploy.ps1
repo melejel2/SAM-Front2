@@ -32,8 +32,49 @@ function Remove-TempFiles {
 }
 
 # ── Password-aware SSH/SCP helpers ──────────────────────────────────────
-# Primary: sshpass -f <tempfile>   (if sshpass is on PATH — e.g. via Git-for-Windows / MSYS2)
-# Fallback: SSH_ASKPASS trick      (works with stock Windows OpenSSH)
+# Uses SSH_ASKPASS with a temp .bat file + System.Diagnostics.Process
+# (CreateNoWindow = true) so SSH has no terminal and is forced to call ASKPASS.
+
+function New-AskPassBat {
+    param([string]$Password)
+    $batPath = Join-Path $env:TEMP "sam_askpass_$([guid]::NewGuid().ToString('N').Substring(0,8)).bat"
+    $script:TempFiles += $batPath
+    # Escape batch-special characters (^ must be first)
+    $esc = $Password -replace '\^','^^' -replace '&','^&' -replace '<','^<' -replace '>','^>' -replace '\|','^|' -replace '%','%%'
+    [System.IO.File]::WriteAllText($batPath, "@echo $esc")
+    return $batPath
+}
+
+function Start-SshProcess {
+    param(
+        [string]$Exe,
+        [string]$Arguments,
+        [string]$AskPassBat
+    )
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $Exe
+    $psi.Arguments = $Arguments
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.EnvironmentVariables["DISPLAY"] = "none"
+    $psi.EnvironmentVariables["SSH_ASKPASS"] = $AskPassBat
+    $psi.EnvironmentVariables["SSH_ASKPASS_REQUIRE"] = "force"
+
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $psi
+    $proc.Start() | Out-Null
+
+    # Read stderr async to prevent deadlock
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
+    $stdout = $proc.StandardOutput.ReadToEnd()
+    $proc.WaitForExit()
+    $stderr = $stderrTask.GetAwaiter().GetResult()
+
+    if ($stdout.Trim()) { Write-Host $stdout.Trim() }
+    return $proc.ExitCode
+}
 
 function Invoke-SshWithPassword {
     param(
@@ -43,50 +84,13 @@ function Invoke-SshWithPassword {
         [string]$Command,
         [string]$Password
     )
-    $sshpassPath = Get-Command sshpass -ErrorAction SilentlyContinue
-
-    if ($sshpassPath) {
-        # sshpass method — write password to a temp file
-        $pwFile = [System.IO.Path]::GetTempFileName()
-        $script:TempFiles += $pwFile
-        try {
-            [System.IO.File]::WriteAllText($pwFile, $Password)
-            $args = @("sshpass", "-f", $pwFile, "ssh", "-p", $Port) + ($SshOpts -split ' ') + @($UserHost, $Command)
-            & $args[0] $args[1..($args.Length - 1)] 2>$null
-            return $LASTEXITCODE
-        } finally {
-            Remove-Item -Force $pwFile -ErrorAction SilentlyContinue
-            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $pwFile }
-        }
-    } else {
-        # SSH_ASKPASS fallback — create a temp .bat that echoes the password
-        $askPassBat = Join-Path $env:TEMP "sam_askpass_$([System.IO.Path]::GetRandomFileName()).bat"
-        $script:TempFiles += $askPassBat
-        try {
-            # Escape special characters for batch echo
-            $escapedPw = $Password -replace '\^', '^^' -replace '&', '^&' -replace '<', '^<' -replace '>', '^>' -replace '\|', '^|'
-            [System.IO.File]::WriteAllText($askPassBat, "@echo $escapedPw")
-
-            $env:SSH_ASKPASS = $askPassBat
-            $env:SSH_ASKPASS_REQUIRE = "force"
-            $env:DISPLAY = "none"
-
-            $sshArgs = @("-p", $Port) + ($SshOpts -split ' ') + @($UserHost, $Command)
-            & ssh @sshArgs 2>$null
-            $exitCode = $LASTEXITCODE
-
-            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
-
-            return $exitCode
-        } finally {
-            Remove-Item -Force $askPassBat -ErrorAction SilentlyContinue
-            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $askPassBat }
-            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
-        }
+    $bat = New-AskPassBat -Password $Password
+    try {
+        $argStr = "-p $Port $SshOpts $UserHost $Command"
+        return Start-SshProcess -Exe "ssh" -Arguments $argStr -AskPassBat $bat
+    } finally {
+        Remove-Item -Force $bat -ErrorAction SilentlyContinue
+        $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $bat }
     }
 }
 
@@ -98,47 +102,13 @@ function Invoke-ScpWithPassword {
         [string]$Destination,
         [string]$Password
     )
-    $sshpassPath = Get-Command sshpass -ErrorAction SilentlyContinue
-
-    if ($sshpassPath) {
-        $pwFile = [System.IO.Path]::GetTempFileName()
-        $script:TempFiles += $pwFile
-        try {
-            [System.IO.File]::WriteAllText($pwFile, $Password)
-            $args = @("sshpass", "-f", $pwFile, "scp", "-P", $Port) + ($SshOpts -split ' ') + @("-r", $Source, $Destination)
-            & $args[0] $args[1..($args.Length - 1)]
-            return $LASTEXITCODE
-        } finally {
-            Remove-Item -Force $pwFile -ErrorAction SilentlyContinue
-            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $pwFile }
-        }
-    } else {
-        $askPassBat = Join-Path $env:TEMP "sam_askpass_$([System.IO.Path]::GetRandomFileName()).bat"
-        $script:TempFiles += $askPassBat
-        try {
-            $escapedPw = $Password -replace '\^', '^^' -replace '&', '^&' -replace '<', '^<' -replace '>', '^>' -replace '\|', '^|'
-            [System.IO.File]::WriteAllText($askPassBat, "@echo $escapedPw")
-
-            $env:SSH_ASKPASS = $askPassBat
-            $env:SSH_ASKPASS_REQUIRE = "force"
-            $env:DISPLAY = "none"
-
-            $scpArgs = @("-P", $Port) + ($SshOpts -split ' ') + @("-r", $Source, $Destination)
-            & scp @scpArgs
-            $exitCode = $LASTEXITCODE
-
-            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
-
-            return $exitCode
-        } finally {
-            Remove-Item -Force $askPassBat -ErrorAction SilentlyContinue
-            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $askPassBat }
-            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
-            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
-        }
+    $bat = New-AskPassBat -Password $Password
+    try {
+        $argStr = "-P $Port $SshOpts -r $Source $Destination"
+        return Start-SshProcess -Exe "scp" -Arguments $argStr -AskPassBat $bat
+    } finally {
+        Remove-Item -Force $bat -ErrorAction SilentlyContinue
+        $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $bat }
     }
 }
 
@@ -211,13 +181,7 @@ if (-not $scpCmd) {
 }
 Write-Success "SCP is available"
 
-# Check password-passing method
-$sshpassCmd = Get-Command sshpass -ErrorAction SilentlyContinue
-if ($sshpassCmd) {
-    Write-Success "sshpass found — using sshpass for automated authentication"
-} else {
-    Write-Info "sshpass not found — using SSH_ASKPASS fallback for automated authentication"
-}
+Write-Success "Automated authentication via SSH_ASKPASS"
 
 # ============================================================================
 # STEP 2: VERIFY BUILD OUTPUT EXISTS
@@ -377,7 +341,7 @@ if ($scpResult -eq 0) {
     Write-Error "File upload failed!"
     # Attempt cleanup even on failure
     Write-Info "Attempting SSH connection cleanup..."
-    Invoke-SshWithPassword -Port $Port -SshOpts "-o ConnectTimeout=10" -UserHost "$Username@$ServerHost" -Command "exit" -Password $ServerPassword 2>$null
+    Invoke-SshWithPassword -Port $Port -SshOpts "-o ConnectTimeout=10" -UserHost "$Username@$ServerHost" -Command "exit" -Password $ServerPassword
     exit 1
 }
 
