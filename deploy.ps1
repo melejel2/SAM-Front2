@@ -212,6 +212,22 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
+# Clean old assets from remote server before uploading new build
+Write-Info "Cleaning old assets from remote server..."
+try {
+    # Remote path is in SCP format with leading slash (e.g., /C:/inetpub/...) — strip leading / for SSH command
+    $RemotePathWin = $RemotePath -replace '^/', ''
+    $cleanupArgs = @("-p", $Port) + ($SshOpts -split ' ') + @("$Username@$ServerHost", "powershell -Command `"Remove-Item -Recurse -Force '$RemotePathWin/assets' -ErrorAction SilentlyContinue`"")
+    & ssh @cleanupArgs 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "Remote assets/ folder cleaned"
+    } else {
+        Write-Warning "Could not clean remote assets/ folder (may not exist yet - this is OK on first deploy)"
+    }
+} catch {
+    Write-Warning "Could not clean remote assets/ folder: $($_.Exception.Message)"
+}
+
 Write-Info "Uploading $FileCount files to server..."
 Write-Warning "You will be prompted for password again..."
 Write-Host ""

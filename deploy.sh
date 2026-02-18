@@ -213,6 +213,19 @@ else
     exit 1
 fi
 
+# Clean old assets from remote server before uploading new build
+info "Cleaning old assets from remote server..."
+set +e
+# Remote path is in SCP format with leading slash (e.g., /C:/inetpub/...) — strip leading / for SSH command
+REMOTE_PATH_WIN=$(echo "$REMOTE_PATH" | sed 's|^/||')
+ssh -p "$PORT" $SSH_OPTS "$USERNAME@$SERVER_HOST" "powershell -Command \"Remove-Item -Recurse -Force '${REMOTE_PATH_WIN}/assets' -ErrorAction SilentlyContinue\"" 2>/dev/null
+if [ $? -eq 0 ]; then
+    success "Remote assets/ folder cleaned"
+else
+    warning "Could not clean remote assets/ folder (may not exist yet — this is OK on first deploy)"
+fi
+set -e
+
 info "Uploading $FILE_COUNT files to server..."
 warning "You will be prompted for password again..."
 echo ""

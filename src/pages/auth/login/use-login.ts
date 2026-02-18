@@ -230,14 +230,11 @@ const useLogin = () => {
                     instance.setActiveAccount(null);
 
                     // Silently logout to clear Microsoft session for this account
-                    // Using redirect to avoid popup blockers, but staying on same page
+                    // Using popup to avoid full-page redirect while clearing cache
                     try {
-                        await instance.logoutRedirect({
+                        await instance.logoutPopup({
                             account: msalAccount,
-                            onRedirectNavigate: () => {
-                                // Return false to prevent navigation - just clear local cache
-                                return false;
-                            }
+                            mainWindowRedirectUri: window.location.href,
                         });
                     } catch {
                         // Ignore logout errors - prompt: "select_account" will still work

@@ -1,7 +1,7 @@
 {
     "name": "sam-front",
     "private": true,
-    "version": "1.0.0",
+    "version": "1.2.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
@@ -10,10 +10,11 @@
         "lint": "eslint .",
         "format": "prettier . --write",
         "latest": "yarn upgrade-interactive",
-        "deploy": "./deploy.sh",
-        "deploy:win": "powershell -ExecutionPolicy Bypass -File deploy.ps1",
-        "build:deploy": "npm run build && ./deploy.sh",
-        "build:deploy:win": "npm run build && powershell -ExecutionPolicy Bypass -File deploy.ps1"
+        "version:bump": "node scripts/version-bump.mjs",
+        "deploy": "node scripts/version-bump.mjs && ./deploy.sh",
+        "deploy:win": "node scripts/version-bump.mjs && powershell -ExecutionPolicy Bypass -File deploy.ps1",
+        "build:deploy": "node scripts/version-bump.mjs && npm run build && ./deploy.sh",
+        "build:deploy:win": "node scripts/version-bump.mjs && npm run build && powershell -ExecutionPolicy Bypass -File deploy.ps1"
     },
     "engines": {
         "node": ">=20.9.0"
