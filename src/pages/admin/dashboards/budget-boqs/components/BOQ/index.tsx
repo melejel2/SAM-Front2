@@ -373,7 +373,9 @@ const BOQStep: React.FC<BOQStepProps> = ({
                                         subContractorLevel: buildingModel.subContractorLevel ?? existingBuilding.subContractorLevel
                                     };
                                 } else {
-                                    updatedBuildings.push(buildingModel);
+                                    // Skip buildings that don't belong to this project
+                                    // (prevents cross-project data contamination)
+                                    console.warn(`Skipping unmatched building from import: ${buildingModel.name} (id: ${buildingModel.id})`);
                                 }
                             });
 
@@ -458,8 +460,9 @@ const BOQStep: React.FC<BOQStepProps> = ({
                                 }
                             }
                         } else {
-                            // Add new building
-                            updatedBuildings.push(buildingModel);
+                            // Skip buildings that don't belong to this project
+                            // (prevents cross-project data contamination)
+                            console.warn(`Skipping unmatched building from import: ${buildingModel.name} (id: ${buildingModel.id})`);
                         }
                     });
 
