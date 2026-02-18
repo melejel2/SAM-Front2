@@ -243,9 +243,9 @@ export const VerticalAppNav: React.FC = () => {
       </div>
 
       {/* Version footer */}
-      <div className={`border-t border-base-200 py-2 text-center ${isCollapsed ? 'px-1' : 'px-3'}`}>
-        <span className="text-[10px] text-base-content/40 select-none">
-          {isCollapsed ? `v${__APP_PKG_VERSION__}` : `SAM v${__APP_PKG_VERSION__}`}
+      <div className="pb-3 pt-2 flex justify-center border-t border-base-200">
+        <span className="px-2 py-0.5 rounded-full bg-base-200/60 text-[10px] font-medium text-base-content/50 select-none">
+          v{__APP_PKG_VERSION__}
         </span>
       </div>
     </nav>

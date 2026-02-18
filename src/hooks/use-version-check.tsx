@@ -23,14 +23,72 @@ async function fetchRemoteVersion(): Promise<string | null> {
 }
 
 function showUpdateToast() {
-    toast.info("A new version of SAM is available.", {
-        id: TOAST_ID,
-        duration: Infinity,
-        action: {
-            label: "Refresh",
-            onClick: () => cacheBustingReload(),
+    toast.custom(
+        (id) => (
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    color: '#fff',
+                    boxShadow: '0 4px 24px rgba(37, 99, 235, 0.3)',
+                    minWidth: '320px',
+                    maxWidth: '480px',
+                    fontSize: '13px',
+                }}
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0, opacity: 0.9 }}
+                >
+                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                    <path d="M21 3v5h-5" />
+                </svg>
+                <span style={{ flex: 1 }}>
+                    A new version is available
+                </span>
+                <button
+                    onClick={() => {
+                        toast.dismiss(id);
+                        cacheBustingReload();
+                    }}
+                    style={{
+                        padding: '5px 14px',
+                        borderRadius: '6px',
+                        background: 'rgba(255,255,255,0.2)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        backdropFilter: 'blur(4px)',
+                        transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+                >
+                    Update Now
+                </button>
+            </div>
+        ),
+        {
+            id: TOAST_ID,
+            position: 'top-center',
+            duration: Infinity,
         },
-    });
+    );
 }
 
 /**
