@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 
 $StepCount = 0
 $TotalSteps = 6
+$TempFiles = @()
 
 function Write-Step {
     param([string]$Message)
@@ -21,11 +22,133 @@ function Write-Error { param([string]$Message) Write-Host "[X] $Message" -Foregr
 function Write-Warning { param([string]$Message) Write-Host "[!] $Message" -ForegroundColor Yellow }
 function Write-Info { param([string]$Message) Write-Host "[>] $Message" -ForegroundColor Blue }
 
+function Remove-TempFiles {
+    foreach ($f in $script:TempFiles) {
+        if (Test-Path $f) {
+            Remove-Item -Force $f -ErrorAction SilentlyContinue
+        }
+    }
+    $script:TempFiles = @()
+}
+
+# ── Password-aware SSH/SCP helpers ──────────────────────────────────────
+# Primary: sshpass -f <tempfile>   (if sshpass is on PATH — e.g. via Git-for-Windows / MSYS2)
+# Fallback: SSH_ASKPASS trick      (works with stock Windows OpenSSH)
+
+function Invoke-SshWithPassword {
+    param(
+        [string]$Port,
+        [string]$SshOpts,
+        [string]$UserHost,
+        [string]$Command,
+        [string]$Password
+    )
+    $sshpassPath = Get-Command sshpass -ErrorAction SilentlyContinue
+
+    if ($sshpassPath) {
+        # sshpass method — write password to a temp file
+        $pwFile = [System.IO.Path]::GetTempFileName()
+        $script:TempFiles += $pwFile
+        try {
+            [System.IO.File]::WriteAllText($pwFile, $Password)
+            $args = @("sshpass", "-f", $pwFile, "ssh", "-p", $Port) + ($SshOpts -split ' ') + @($UserHost, $Command)
+            & $args[0] $args[1..($args.Length - 1)] 2>$null
+            return $LASTEXITCODE
+        } finally {
+            Remove-Item -Force $pwFile -ErrorAction SilentlyContinue
+            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $pwFile }
+        }
+    } else {
+        # SSH_ASKPASS fallback — create a temp .bat that echoes the password
+        $askPassBat = Join-Path $env:TEMP "sam_askpass_$([System.IO.Path]::GetRandomFileName()).bat"
+        $script:TempFiles += $askPassBat
+        try {
+            # Escape special characters for batch echo
+            $escapedPw = $Password -replace '\^', '^^' -replace '&', '^&' -replace '<', '^<' -replace '>', '^>' -replace '\|', '^|'
+            [System.IO.File]::WriteAllText($askPassBat, "@echo $escapedPw")
+
+            $env:SSH_ASKPASS = $askPassBat
+            $env:SSH_ASKPASS_REQUIRE = "force"
+            $env:DISPLAY = "none"
+
+            $sshArgs = @("-p", $Port) + ($SshOpts -split ' ') + @($UserHost, $Command)
+            & ssh @sshArgs 2>$null
+            $exitCode = $LASTEXITCODE
+
+            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
+
+            return $exitCode
+        } finally {
+            Remove-Item -Force $askPassBat -ErrorAction SilentlyContinue
+            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $askPassBat }
+            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Invoke-ScpWithPassword {
+    param(
+        [string]$Port,
+        [string]$SshOpts,
+        [string]$Source,
+        [string]$Destination,
+        [string]$Password
+    )
+    $sshpassPath = Get-Command sshpass -ErrorAction SilentlyContinue
+
+    if ($sshpassPath) {
+        $pwFile = [System.IO.Path]::GetTempFileName()
+        $script:TempFiles += $pwFile
+        try {
+            [System.IO.File]::WriteAllText($pwFile, $Password)
+            $args = @("sshpass", "-f", $pwFile, "scp", "-P", $Port) + ($SshOpts -split ' ') + @("-r", $Source, $Destination)
+            & $args[0] $args[1..($args.Length - 1)]
+            return $LASTEXITCODE
+        } finally {
+            Remove-Item -Force $pwFile -ErrorAction SilentlyContinue
+            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $pwFile }
+        }
+    } else {
+        $askPassBat = Join-Path $env:TEMP "sam_askpass_$([System.IO.Path]::GetRandomFileName()).bat"
+        $script:TempFiles += $askPassBat
+        try {
+            $escapedPw = $Password -replace '\^', '^^' -replace '&', '^&' -replace '<', '^<' -replace '>', '^>' -replace '\|', '^|'
+            [System.IO.File]::WriteAllText($askPassBat, "@echo $escapedPw")
+
+            $env:SSH_ASKPASS = $askPassBat
+            $env:SSH_ASKPASS_REQUIRE = "force"
+            $env:DISPLAY = "none"
+
+            $scpArgs = @("-P", $Port) + ($SshOpts -split ' ') + @("-r", $Source, $Destination)
+            & scp @scpArgs
+            $exitCode = $LASTEXITCODE
+
+            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
+
+            return $exitCode
+        } finally {
+            Remove-Item -Force $askPassBat -ErrorAction SilentlyContinue
+            $script:TempFiles = $script:TempFiles | Where-Object { $_ -ne $askPassBat }
+            Remove-Item -Name SSH_ASKPASS -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name SSH_ASKPASS_REQUIRE -Path Env: -ErrorAction SilentlyContinue
+            Remove-Item -Name DISPLAY -Path Env: -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Blue
 Write-Host "           SAM-Front2 Production Deployment                    " -ForegroundColor Blue
 Write-Host "================================================================" -ForegroundColor Blue
 Write-Host ""
+
+try {
 
 # ============================================================================
 # STEP 1: VALIDATE CONFIGURATION
@@ -45,7 +168,7 @@ $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
 $ServerHost = $Config.production.host
 $Port = $Config.production.port
 $Username = $Config.production.username
-$Password = $Config.production.password
+$ServerPassword = $Config.production.password
 $RemotePath = $Config.production.remotePath
 
 # Validate each configuration value
@@ -67,6 +190,12 @@ if (-not $Username) {
 }
 Write-Success "Username: $Username"
 
+if (-not $ServerPassword) {
+    Write-Error "Missing 'password' in configuration"
+    exit 1
+}
+Write-Success "Password: (loaded from config)"
+
 if (-not $RemotePath) {
     Write-Error "Missing 'remotePath' in configuration"
     exit 1
@@ -74,13 +203,21 @@ if (-not $RemotePath) {
 Write-Success "Remote Path: $RemotePath"
 
 # Check if scp is available
-$scpPath = Get-Command scp -ErrorAction SilentlyContinue
-if (-not $scpPath) {
+$scpCmd = Get-Command scp -ErrorAction SilentlyContinue
+if (-not $scpCmd) {
     Write-Error "SCP is not available!"
     Write-Host "  Please ensure OpenSSH is installed (Windows 10+ has it built-in)"
     exit 1
 }
 Write-Success "SCP is available"
+
+# Check password-passing method
+$sshpassCmd = Get-Command sshpass -ErrorAction SilentlyContinue
+if ($sshpassCmd) {
+    Write-Success "sshpass found — using sshpass for automated authentication"
+} else {
+    Write-Info "sshpass not found — using SSH_ASKPASS fallback for automated authentication"
+}
 
 # ============================================================================
 # STEP 2: VERIFY BUILD OUTPUT EXISTS
@@ -191,18 +328,16 @@ if ($Confirm -ne "y" -and $Confirm -ne "Y") {
 Write-Step "Deploying to Server"
 
 Write-Info "Testing SSH connection..."
-Write-Warning "You will be prompted for password..."
 
 $StartTime = Get-Date
 
 # SSH connection options to prevent hung sftp-server processes
 $SshOpts = "-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
 
-# Test SSH connection
-$sshArgs = @("-p", $Port) + ($SshOpts -split ' ') + @("$Username@$ServerHost", "echo connected")
-& ssh @sshArgs 2>$null
+# Test SSH connection using automated password
+$sshResult = Invoke-SshWithPassword -Port $Port -SshOpts $SshOpts -UserHost "$Username@$ServerHost" -Command "echo connected" -Password $ServerPassword
 
-if ($LASTEXITCODE -eq 0) {
+if ($sshResult -eq 0) {
     Write-Success "SSH connection successful"
 } else {
     Write-Error "Cannot connect to server!"
@@ -217,9 +352,8 @@ Write-Info "Cleaning old assets from remote server..."
 try {
     # Remote path is in SCP format with leading slash (e.g., /C:/inetpub/...) — strip leading / for SSH command
     $RemotePathWin = $RemotePath -replace '^/', ''
-    $cleanupArgs = @("-p", $Port) + ($SshOpts -split ' ') + @("$Username@$ServerHost", "powershell -Command `"Remove-Item -Recurse -Force '$RemotePathWin/assets' -ErrorAction SilentlyContinue`"")
-    & ssh @cleanupArgs 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $cleanResult = Invoke-SshWithPassword -Port $Port -SshOpts $SshOpts -UserHost "$Username@$ServerHost" -Command "powershell -Command `"Remove-Item -Recurse -Force '$RemotePathWin/assets' -ErrorAction SilentlyContinue`"" -Password $ServerPassword
+    if ($cleanResult -eq 0) {
         Write-Success "Remote assets/ folder cleaned"
     } else {
         Write-Warning "Could not clean remote assets/ folder (may not exist yet - this is OK on first deploy)"
@@ -229,14 +363,12 @@ try {
 }
 
 Write-Info "Uploading $FileCount files to server..."
-Write-Warning "You will be prompted for password again..."
 Write-Host ""
 
-# Deploy using scp with timeout options to prevent hung connections
-$scpArgs = @("-P", $Port) + ($SshOpts -split ' ') + @("-r", "$BuildDir\*", "${Username}@${ServerHost}:$RemotePath/")
-& scp @scpArgs
+# Deploy using scp with automated password
+$scpResult = Invoke-ScpWithPassword -Port $Port -SshOpts $SshOpts -Source "$BuildDir\*" -Destination "${Username}@${ServerHost}:$RemotePath/" -Password $ServerPassword
 
-if ($LASTEXITCODE -eq 0) {
+if ($scpResult -eq 0) {
     $EndTime = Get-Date
     $Duration = [math]::Round(($EndTime - $StartTime).TotalSeconds)
     Write-Success "Files uploaded successfully"
@@ -245,13 +377,13 @@ if ($LASTEXITCODE -eq 0) {
     Write-Error "File upload failed!"
     # Attempt cleanup even on failure
     Write-Info "Attempting SSH connection cleanup..."
-    & ssh -p $Port -o ConnectTimeout=10 "$Username@$ServerHost" "exit" 2>$null
+    Invoke-SshWithPassword -Port $Port -SshOpts "-o ConnectTimeout=10" -UserHost "$Username@$ServerHost" -Command "exit" -Password $ServerPassword 2>$null
     exit 1
 }
 
 # Explicit SSH session cleanup to prevent hung sftp-server processes
 Write-Info "Cleaning up SSH connection..."
-& ssh -p $Port -o ConnectTimeout=10 "$Username@$ServerHost" "exit" 2>$null
+Invoke-SshWithPassword -Port $Port -SshOpts "-o ConnectTimeout=10" -UserHost "$Username@$ServerHost" -Command "exit" -Password $ServerPassword 2>$null
 Start-Sleep -Seconds 2
 Write-Success "SSH connection cleanup completed"
 
@@ -305,3 +437,8 @@ Write-Host "  Production URL: $ProdUrl" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Deployment completed at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Write-Host ""
+
+} finally {
+    # Always clean up temp files
+    Remove-TempFiles
+}

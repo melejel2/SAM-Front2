@@ -6,4 +6,5 @@ declare const __APP_PKG_VERSION__: string;
 /** Unique build ID injected into index.html by versionPlugin */
 interface Window {
     __APP_VERSION__?: string;
+    __APP_PKG_VERSION_EMBEDDED__?: string;
 }

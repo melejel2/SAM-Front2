@@ -1,47 +1,42 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import fs from "fs";
+import fs, { existsSync, readFileSync } from "fs";
 import { defineConfig } from "vite";
+var pkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "package.json"), "utf-8"));
 /**
- * Vite plugin that emits /version.json with a unique build ID
- * and injects window.__APP_VERSION__ into index.html at build time.
+ * Vite plugin that emits /version.json with a unique build ID,
+ * package version, release timestamp, and release notes.
+ * Injects window.__APP_VERSION__ and window.__APP_PKG_VERSION_EMBEDDED__ into index.html.
  */
-function versionPlugin() {
-    var buildId = "".concat(Date.now(), "-").concat(Math.random().toString(36).slice(2, 8));
-    var pkgVersion = "0.0.0";
+function appVersionPlugin() {
+    var buildId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    var releasedAt = new Date().toISOString();
+    var releaseNotesPath = path.resolve(path.resolve(), "scripts", "release-notes.txt");
+    var releaseNotes = existsSync(releaseNotesPath)
+        ? readFileSync(releaseNotesPath, "utf-8").trim()
+        : "What's new in v".concat(pkg.version);
     return {
-        name: "version-plugin",
-        configResolved: function () {
-            // Read version from package.json at build time
-            try {
-                var pkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "package.json"), "utf-8"));
-                pkgVersion = pkg.version || "0.0.0";
-            }
-            catch (_a) {
-                // fallback to 0.0.0
-            }
-        },
+        name: "app-version",
+        apply: "build",
         generateBundle: function () {
-            // Emit version.json into the build output
             this.emitFile({
                 type: "asset",
                 fileName: "version.json",
                 source: JSON.stringify({
-                    version: pkgVersion,
-                    buildId: buildId,
-                    buildTime: new Date().toISOString(),
+                    version: buildId,
+                    packageVersion: pkg.version,
+                    releasedAt: releasedAt,
+                    releaseNotes: releaseNotes,
                 }),
             });
         },
         transformIndexHtml: function () {
-            // Inject window.__APP_VERSION__ into index.html
             return [
                 {
                     tag: "script",
-                    attrs: { type: "text/javascript" },
-                    children: "window.__APP_VERSION__=\"".concat(buildId, "\";"),
-                    injectTo: "head-prepend",
+                    children: "window.__APP_VERSION__ = \"".concat(buildId, "\"; window.__APP_PKG_VERSION_EMBEDDED__ = \"").concat(pkg.version, "\";"),
+                    injectTo: "head",
                 },
             ];
         },
@@ -49,7 +44,7 @@ function versionPlugin() {
 }
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [tailwindcss(), react(), versionPlugin()],
+    plugins: [tailwindcss(), react(), appVersionPlugin()],
     define: {
         __APP_PKG_VERSION__: JSON.stringify(process.env.npm_package_version || "0.0.0"),
     },
