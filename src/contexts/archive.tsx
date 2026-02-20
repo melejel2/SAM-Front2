@@ -28,6 +28,16 @@ export const ArchiveProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsArchiveModeState((prev) => !prev);
     }, []);
 
+    // Listen for external archiveModeChanged events (e.g., auto-revert from API interceptor)
+    useEffect(() => {
+        const handleExternalChange = () => {
+            const stored = localStorage.getItem("__SAM_ARCHIVE_MODE__") === "true";
+            setIsArchiveModeState(stored);
+        };
+        window.addEventListener("archiveModeChanged", handleExternalChange);
+        return () => window.removeEventListener("archiveModeChanged", handleExternalChange);
+    }, []);
+
     return (
         <ArchiveContext.Provider value={{ isArchiveMode, setArchiveMode, toggleArchiveMode }}>
             {children}

@@ -110,6 +110,13 @@ const apiRequest = async <T = any>({
                     const debugPrefix = url.includes("DeleteProject") ? "🗑️" : "🎯💾";
                     console.error(`${debugPrefix} PARSED ERROR DATA:`, errorData);
                 }
+
+                // Auto-revert archive mode if the archive database is unavailable
+                if (errorData?.errorCode === "ARCHIVE_DB_UNAVAILABLE") {
+                    console.warn("🔓 Archive database unavailable — reverting to normal mode automatically.");
+                    localStorage.setItem("__SAM_ARCHIVE_MODE__", "false");
+                    window.dispatchEvent(new Event("archiveModeChanged"));
+                }
             } catch {
                 // If JSON parsing fails, use the raw error text if available
                 if (errorText && errorText.trim()) {
