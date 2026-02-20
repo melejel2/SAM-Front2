@@ -20,7 +20,7 @@ echo -e "${BLUE}================================================================
 echo ""
 
 STEP_COUNT=0
-total_steps() { echo "6"; }
+total_steps() { echo "5"; }
 
 step() {
     STEP_COUNT=$((STEP_COUNT + 1))
@@ -166,9 +166,9 @@ TOTAL_SIZE=$(du -sh "$BUILD_DIR" | cut -f1)
 success "Build validation complete"
 
 # ============================================================================
-# STEP 4: CONFIRM DEPLOYMENT
+# STEP 4: DEPLOY TO SERVER
 # ============================================================================
-step "Deployment Confirmation"
+step "Deploying to Server"
 
 echo "----------------------------------------------------------------"
 echo "                    Deployment Details                          "
@@ -182,17 +182,6 @@ echo "  Directories: $DIR_COUNT directories"
 echo "  Total Size:  $TOTAL_SIZE"
 echo "----------------------------------------------------------------"
 echo ""
-
-read -p "Do you want to proceed with deployment? [y/n] " CONFIRM
-if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
-    warning "Deployment cancelled by user."
-    exit 0
-fi
-
-# ============================================================================
-# STEP 5: DEPLOY TO SERVER
-# ============================================================================
-step "Deploying to Server"
 
 info "Testing SSH connection..."
 warning "You will be prompted for password..."
@@ -251,7 +240,7 @@ sleep 2
 success "SSH connection cleanup completed"
 
 # ============================================================================
-# STEP 6: POST-DEPLOY VERIFICATION
+# STEP 5: POST-DEPLOY VERIFICATION
 # ============================================================================
 step "Post-Deploy Verification"
 

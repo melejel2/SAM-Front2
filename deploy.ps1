@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $StepCount = 0
-$TotalSteps = 6
+$TotalSteps = 5
 $TempFiles = @()
 
 function Write-Step {
@@ -263,9 +263,9 @@ $TotalSize = "$TotalSizeMB MB"
 Write-Success "Build validation complete"
 
 # ============================================================================
-# STEP 4: CONFIRM DEPLOYMENT
+# STEP 4: DEPLOY TO SERVER
 # ============================================================================
-Write-Step "Deployment Confirmation"
+Write-Step "Deploying to Server"
 
 Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host "                    Deployment Details                          " -ForegroundColor Cyan
@@ -279,17 +279,6 @@ Write-Host "  Directories: $DirCount directories"
 Write-Host "  Total Size:  $TotalSize"
 Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host ""
-
-$Confirm = Read-Host "Do you want to proceed with deployment? [y/n]"
-if ($Confirm -ne "y" -and $Confirm -ne "Y") {
-    Write-Warning "Deployment cancelled by user."
-    exit 0
-}
-
-# ============================================================================
-# STEP 5: DEPLOY TO SERVER
-# ============================================================================
-Write-Step "Deploying to Server"
 
 Write-Info "Testing SSH connection..."
 
@@ -352,7 +341,7 @@ Start-Sleep -Seconds 2
 Write-Success "SSH connection cleanup completed"
 
 # ============================================================================
-# STEP 6: POST-DEPLOY VERIFICATION
+# STEP 5: POST-DEPLOY VERIFICATION
 # ============================================================================
 Write-Step "Post-Deploy Verification"
 
